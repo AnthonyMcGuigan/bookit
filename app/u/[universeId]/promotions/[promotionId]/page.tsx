@@ -9,6 +9,8 @@ import { PromotionLogo, WrestlerAvatar } from "@/components/artwork";
 import { ActionForm } from "@/components/action-form";
 import { savePromotionAction, setPromotionArchivedAction } from "@/features/promotions/actions";
 import { PromotionFields } from "@/features/promotions/promotion-fields";
+import { ImageUpload } from "@/components/image-upload";
+import { removeEntityImageAction, uploadEntityImageAction } from "@/features/media/actions";
 
 export const metadata: Metadata = { title: "Promotion" };
 
@@ -57,8 +59,16 @@ export default async function PromotionPage({ params }: { params: Promise<{ univ
           {shows[0] && <p className="border-t border-border px-4 py-2 text-xs text-muted">Last show: {shows[0].name}, {formatGameDate(shows[0].show_date)} ({shows[0].rating?.toFixed(2)})</p>}
         </Card>
         <Card className="lg:col-span-2">
-          <CardHeader title="Edit promotion" subtitle="Custom logos can be uploaded once image uploads are enabled for your account." />
+          <CardHeader title="Edit promotion"  />
           <div className="p-4">
+            <div className="mb-4"><ImageUpload
+            uploadAction={uploadEntityImageAction}
+            removeAction={removeEntityImageAction}
+            hasImage={Boolean(p.logo_asset_id)}
+            label="Logo"
+            hidden={<><input type="hidden" name="universeId" value={universeId} /><input type="hidden" name="target" value="promotion" /><input type="hidden" name="entityId" value={p.id} /></>}
+          />
+</div>
             <ActionForm action={savePromotionAction} submitLabel="Save promotion">
               <input type="hidden" name="universeId" value={universeId} />
               <input type="hidden" name="promotionId" value={p.id} />

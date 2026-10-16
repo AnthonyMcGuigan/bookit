@@ -18,6 +18,8 @@ import {
   vacateChampionshipAction,
 } from "@/features/championships/actions";
 import { ChampionshipFields } from "@/features/championships/championship-fields";
+import { ImageUpload } from "@/components/image-upload";
+import { removeEntityImageAction, uploadEntityImageAction } from "@/features/media/actions";
 
 export const metadata: Metadata = { title: "Championship" };
 
@@ -184,6 +186,14 @@ export default async function ChampionshipPage({ params }: { params: Promise<{ u
       <Card className="mb-4">
         <CardHeader title="Edit championship" />
         <div className="p-4">
+          <div className="mb-4"><ImageUpload
+            uploadAction={uploadEntityImageAction}
+            removeAction={removeEntityImageAction}
+            hasImage={Boolean(c.image_asset_id)}
+            label="Belt image"
+            hidden={<><input type="hidden" name="universeId" value={universeId} /><input type="hidden" name="target" value="championship" /><input type="hidden" name="entityId" value={c.id} /></>}
+          />
+</div>
           <ActionForm action={saveChampionshipAction} submitLabel="Save championship">
             {hidden}
             <ChampionshipFields championship={c} promotions={state.promotions.filter((p) => !p.archived_at || p.id === c.promotion_id)} />

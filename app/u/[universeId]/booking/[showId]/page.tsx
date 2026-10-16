@@ -6,7 +6,7 @@ import { indexById, participantsOf, segmentsOf } from "@/lib/domain/selectors";
 import { CROWD_REACTION_LABELS, FINISH_LABELS, MATCH_TYPE_LABELS, SEGMENT_KIND_LABELS, SHOW_TYPE_LABELS, STIPULATION_LABELS, type Finish } from "@/lib/domain/enums";
 import { daysBetween, formatGameDate } from "@/lib/domain/dates";
 import { Alert, Badge, Card, CardHeader, Checkbox, Field, Input, LinkButton, PageHeader, Select, Stars, Stat, Textarea, formatMoney } from "@/components/ui";
-import { PromotionLogo } from "@/components/artwork";
+import { PosterArt, PromotionLogo } from "@/components/artwork";
 import { ActionForm } from "@/components/action-form";
 import { validateCard } from "@/lib/booking/validate";
 import { blockingProblems } from "@/lib/simulation/plan";
@@ -14,6 +14,8 @@ import { starRatingFor } from "@/lib/simulation/scoring";
 import { autoBookAction, deleteShowAction, editResultAction, saveShowAction, setShowStatusAction, simulateShowAction } from "@/features/booking/actions";
 import { ShowFields } from "@/features/booking/show-fields";
 import { CardList, type CardItem } from "@/features/booking/card-list";
+import { ImageUpload } from "@/components/image-upload";
+import { removeEntityImageAction, uploadEntityImageAction } from "@/features/media/actions";
 import type { SegmentOutcome, ShowFinances, ShowRatingBreakdown } from "@/lib/simulation/types";
 
 export const metadata: Metadata = { title: "Show" };
@@ -63,11 +65,14 @@ export default async function ShowPage({ params, searchParams }: { params: Promi
   };
 
   const header = (
+    <>
+    {show.poster_asset_id && <PosterArt title={show.name} assetId={show.poster_asset_id} className="mb-4" />}
     <PageHeader
       back={{ href: `${base}/booking`, label: "Booking" }}
       title={<span className="flex items-center gap-3"><PromotionLogo name={promotion.name} abbreviation={promotion.abbreviation} primary={promotion.primary_color} secondary={promotion.secondary_color} assetId={promotion.logo_asset_id} size={40} /><span className="min-w-0 truncate">{show.name}</span></span>}
       subtitle={`${SHOW_TYPE_LABELS[show.show_type]}${show.custom_type_label ? ` (${show.custom_type_label})` : ""} · ${formatGameDate(show.show_date, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${show.venue_id ? ` · ${state.venues.find((v) => v.id === show.venue_id)?.name ?? ""}` : ""}`}
     />
+    </>
   );
 
   // ---------------------------------------------------------------- Results
@@ -299,6 +304,14 @@ export default async function ShowPage({ params, searchParams }: { params: Promi
               <details>
                 <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Show details</summary>
                 <div className="border-t border-border p-4">
+                  <div className="mb-4"><ImageUpload
+            uploadAction={uploadEntityImageAction}
+            removeAction={removeEntityImageAction}
+            hasImage={Boolean(show.poster_asset_id)}
+            label="Event poster"
+            hidden={<><input type="hidden" name="universeId" value={universeId} /><input type="hidden" name="target" value="show" /><input type="hidden" name="entityId" value={show.id} /></>}
+          />
+</div>
                   <ActionForm action={saveShowAction} submitLabel="Save details">
                     {hidden}
                     <ShowFields show={show} promotions={state.promotions.filter((p) => p.controlled_by === "player" && !p.archived_at)} venues={state.venues} minDate={state.universe.game_date} defaultDate={show.show_date} />

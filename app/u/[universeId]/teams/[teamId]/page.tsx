@@ -10,6 +10,8 @@ import { TeamLogo, WrestlerAvatar } from "@/components/artwork";
 import { ActionForm } from "@/components/action-form";
 import { addTeamMemberAction, disbandTeamAction, removeTeamMemberAction, saveTeamAction, setMemberRoleAction } from "@/features/teams/actions";
 import { TeamFields } from "@/features/teams/team-fields";
+import { ImageUpload } from "@/components/image-upload";
+import { removeEntityImageAction, uploadEntityImageAction } from "@/features/media/actions";
 
 export const metadata: Metadata = { title: "Team" };
 
@@ -120,6 +122,14 @@ export default async function TeamPage({ params }: { params: Promise<{ universeI
         <Card className="lg:col-span-2">
           <CardHeader title="Edit team" />
           <div className="p-4">
+            <div className="mb-4"><ImageUpload
+            uploadAction={uploadEntityImageAction}
+            removeAction={removeEntityImageAction}
+            hasImage={Boolean(team.logo_asset_id)}
+            label="Team logo"
+            hidden={<><input type="hidden" name="universeId" value={universeId} /><input type="hidden" name="target" value="team" /><input type="hidden" name="entityId" value={team.id} /></>}
+          />
+</div>
             <ActionForm action={saveTeamAction} submitLabel="Save team">
               {hidden}
               <TeamFields team={team} promotions={state.promotions.filter((p) => !p.archived_at)} />
