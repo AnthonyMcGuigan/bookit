@@ -28,9 +28,11 @@ const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "sh
 
 function ReasonField({ name = "reason", label = "Reason (shown to the creator and logged)" }: { name?: string; label?: string }) {
   return (
-    <Field label={label} htmlFor={name}>
-      <Textarea id={name} name={name} rows={2} required minLength={3} maxLength={2000} />
-    </Field>
+    // Wrapping label (no id) because several of these forms appear on one page.
+    <label className="flex flex-col gap-1">
+      <span className="text-sm font-medium">{label}</span>
+      <Textarea name={name} rows={2} required minLength={3} maxLength={2000} />
+    </label>
   );
 }
 

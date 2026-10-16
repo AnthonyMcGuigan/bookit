@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { FormMessage, SubmitButton, fieldError, type ActionState } from "@/components/forms";
+import { FormMessage, FormPendingContext, SubmitButton, fieldError, keepValuesSubmit, type ActionState } from "@/components/forms";
 import { Checkbox, Field, Input } from "@/components/ui";
 import {
   requestPasswordResetAction,
@@ -15,11 +15,12 @@ import {
 const initial: ActionState = {};
 
 export function SignInForm({ next }: { next?: string }) {
-  const [state, action] = useActionState(signInAction, initial);
-  const [resendState, resend] = useActionState(resendConfirmationAction, initial);
+  const [state, action, pending] = useActionState(signInAction, initial);
+  const [resendState, resend, resendPending] = useActionState(resendConfirmationAction, initial);
   return (
     <div className="space-y-4">
-      <form action={action} className="space-y-4" noValidate>
+      <form action={action} onSubmit={keepValuesSubmit(action)} className="space-y-4" noValidate>
+      <FormPendingContext value={pending}>
         <input type="hidden" name="next" value={next ?? ""} />
         <Field label="Email" htmlFor="email" error={fieldError(state, "email")}>
           <Input id="email" name="email" type="email" autoComplete="email" required />
@@ -29,14 +30,17 @@ export function SignInForm({ next }: { next?: string }) {
         </Field>
         <FormMessage state={state} />
         <SubmitButton className="w-full" pendingLabel="Signing in…">Sign in</SubmitButton>
+      </FormPendingContext>
       </form>
       {state.data?.unconfirmed ? (
-        <form action={resend} className="space-y-2 rounded-lg border border-border p-3">
+        <form action={resend} onSubmit={keepValuesSubmit(resend)} className="space-y-2 rounded-lg border border-border p-3">
+          <FormPendingContext value={resendPending}>
           <p className="text-sm">Didn&apos;t get the email?</p>
           <Input name="email" type="email" placeholder="you@example.com" aria-label="Email for confirmation" required />
           <FormMessage state={resendState} />
           <SubmitButton variant="secondary" size="sm" pendingLabel="Sending…">Resend confirmation</SubmitButton>
-        </form>
+        </FormPendingContext>
+      </form>
       ) : null}
       <div className="flex justify-between text-sm">
         <Link href="/forgot-password" className="text-muted hover:text-text">Forgot password?</Link>
@@ -47,7 +51,7 @@ export function SignInForm({ next }: { next?: string }) {
 }
 
 export function SignUpForm() {
-  const [state, action] = useActionState(signUpAction, initial);
+  const [state, action, pending] = useActionState(signUpAction, initial);
   if (state.ok) {
     return (
       <div className="space-y-3">
@@ -58,7 +62,8 @@ export function SignUpForm() {
     );
   }
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form action={action} onSubmit={keepValuesSubmit(action)} className="space-y-4" noValidate>
+      <FormPendingContext value={pending}>
       <Field label="Display name" htmlFor="displayName" hint="Shown on your public creator profile." error={fieldError(state, "displayName")}>
         <Input id="displayName" name="displayName" autoComplete="nickname" maxLength={40} required />
       </Field>
@@ -85,28 +90,32 @@ export function SignUpForm() {
       <p className="text-center text-sm text-muted">
         Already have an account? <Link href="/sign-in" className="font-medium text-accent">Sign in</Link>
       </p>
-    </form>
+    </FormPendingContext>
+      </form>
   );
 }
 
 export function ForgotPasswordForm() {
-  const [state, action] = useActionState(requestPasswordResetAction, initial);
+  const [state, action, pending] = useActionState(requestPasswordResetAction, initial);
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form action={action} onSubmit={keepValuesSubmit(action)} className="space-y-4" noValidate>
+      <FormPendingContext value={pending}>
       <Field label="Email" htmlFor="email" error={fieldError(state, "email")}>
         <Input id="email" name="email" type="email" autoComplete="email" required />
       </Field>
       <FormMessage state={state} />
       <SubmitButton className="w-full" pendingLabel="Sending…">Send reset link</SubmitButton>
       <p className="text-center text-sm"><Link href="/sign-in" className="text-muted hover:text-text">Back to sign in</Link></p>
-    </form>
+    </FormPendingContext>
+      </form>
   );
 }
 
 export function ResetPasswordForm() {
-  const [state, action] = useActionState(updatePasswordAction, initial);
+  const [state, action, pending] = useActionState(updatePasswordAction, initial);
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form action={action} onSubmit={keepValuesSubmit(action)} className="space-y-4" noValidate>
+      <FormPendingContext value={pending}>
       <Field label="New password" htmlFor="password" error={fieldError(state, "password")}>
         <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
       </Field>
@@ -116,6 +125,7 @@ export function ResetPasswordForm() {
       <FormMessage state={state} />
       <SubmitButton className="w-full" pendingLabel="Updating…">Update password</SubmitButton>
       {state.ok && <Link href="/universes" className="block text-center text-sm font-medium text-accent">Continue to your universes</Link>}
-    </form>
+    </FormPendingContext>
+      </form>
   );
 }

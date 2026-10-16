@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import type { ComponentProps, ReactNode } from "react";
+import { createContext, startTransition, useContext, type ComponentProps, type FormEvent, type ReactNode } from "react";
 import { buttonClass } from "./ui";
 
 export interface ActionState {
@@ -13,6 +13,23 @@ export interface ActionState {
   data?: Record<string, unknown>;
 }
 
+/** Pending state for forms submitted through useKeepValuesSubmit (useFormStatus can't see those). */
+export const FormPendingContext = createContext(false);
+
+/**
+ * Submits a form to a useActionState dispatcher without React's automatic
+ * form reset, so a validation error never wipes what the player typed.
+ */
+export function keepValuesSubmit(dispatch: (formData: FormData) => void, before?: (e: FormEvent<HTMLFormElement>) => boolean) {
+  return (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (before && !before(e)) return;
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const formData = new FormData(e.currentTarget, submitter && submitter.form === e.currentTarget ? submitter : undefined);
+    startTransition(() => dispatch(formData));
+  };
+}
+
 export function SubmitButton({
   children,
   pendingLabel,
@@ -21,7 +38,9 @@ export function SubmitButton({
   className,
   ...props
 }: ComponentProps<"button"> & { pendingLabel?: ReactNode; variant?: "primary" | "secondary" | "ghost" | "danger"; size?: "sm" | "md" }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const contextPending = useContext(FormPendingContext);
+  const pending = status.pending || contextPending;
   return (
     <button type="submit" disabled={pending || props.disabled} aria-busy={pending} className={buttonClass(variant, size, className)} {...props}>
       {pending ? (pendingLabel ?? "Saving…") : children}

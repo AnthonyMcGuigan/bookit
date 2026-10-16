@@ -6,7 +6,7 @@ test("every universe screen renders on mobile without errors or sideways scrolli
   const user = await createConfirmedUser();
   await signIn(page, user.email);
   const id = await createStarterUniverse(page, "Pages E2E");
-  const paths = ["", "/roster", "/roster/new", "/teams", "/teams/new", "/booking", "/championships", "/championships/new", "/more", "/promotions", "/venues", "/storylines", "/storylines/new", "/history", "/history?tab=shows", "/finances", "/settings"];
+  const paths = ["", "/roster", "/roster/new", "/teams", "/teams/new", "/booking", "/championships", "/championships/new", "/more", "/promotions", "/venues", "/storylines", "/storylines/new", "/history", "/history?tab=shows", "/finances", "/settings", "/export", "/community", "/analytics"];
   for (const p of paths) {
     const res = await page.goto(`/u/${id}${p}`);
     expect(res?.status(), p).toBeLessThan(400);
@@ -21,9 +21,12 @@ test("every universe screen renders on mobile without errors or sideways scrolli
     await expect(page).toHaveURL(pattern);
     await expectNoHorizontalOverflow(page);
   }
-  await page.goto("/account");
-  await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
-  await expectNoHorizontalOverflow(page);
+  for (const p of ["/account", "/account/moderation", "/community", "/community/mine", "/universes/import", "/policies/content", "/policies/guidelines", "/policies/ip"]) {
+    const res = await page.goto(p);
+    expect(res?.status(), p).toBeLessThan(400);
+    await expect(page.locator("h1").first()).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  }
   expect(errors).toEqual([]);
 });
 

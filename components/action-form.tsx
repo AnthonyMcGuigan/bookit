@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { FormMessage, SubmitButton, type ActionState } from "./forms";
+import { FormMessage, FormPendingContext, SubmitButton, keepValuesSubmit, type ActionState } from "./forms";
 import { toast } from "./toaster";
 import { cx } from "./ui";
 
@@ -41,7 +41,7 @@ export function ActionForm({
   footer?: ReactNode;
   testId?: string;
 }) {
-  const [state, formAction] = useActionState(async (prev: ActionState, formData: FormData) => {
+  const [state, formAction, pending] = useActionState(async (prev: ActionState, formData: FormData) => {
     const result = await action(prev, formData);
     // Toast from the action callback: the form may unmount when the page refreshes.
     if (result?.ok && result.message) toast(result.message);
@@ -60,10 +60,10 @@ export function ActionForm({
       action={formAction}
       className={cx("space-y-4", className)}
       data-testid={testId}
-      onSubmit={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
-      }}
+      onSubmit={keepValuesSubmit(formAction, () => !confirm || window.confirm(confirm))}
+      aria-busy={pending}
     >
+      <FormPendingContext value={pending}>
       {children}
       <FormMessage state={state.ok ? null : state} />
       {errors.length > 0 && (
@@ -85,6 +85,7 @@ export function ActionForm({
           {footer}
         </div>
       )}
+      </FormPendingContext>
     </form>
   );
 }
