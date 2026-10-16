@@ -80,6 +80,23 @@ export function autoBookShow(state: UniverseState, opts: AutoBookOptions): AutoB
   const slots = isMajor ? 8 : opts.showType === "house_show" ? 6 : 6;
 
   const free = (w: Wrestler) => !used.has(w.id);
+
+  // Pairs that met in this promotion recently; fans tire of weekly rematches.
+  const recentStart = (() => {
+    const d = new Date(`${opts.date}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 14);
+    return d.toISOString().slice(0, 10);
+  })();
+  const recentShowIds = new Set(
+    state.shows.filter((s) => s.promotion_id === opts.promotionId && s.status === "completed" && s.show_date >= recentStart && s.show_date <= opts.date).map((s) => s.id),
+  );
+  const recentPairs = new Set<string>();
+  for (const seg of state.segments) {
+    if (!recentShowIds.has(seg.show_id) || seg.kind !== "match") continue;
+    const ps = state.segmentParticipants.filter((p) => p.segment_id === seg.id && p.role === "competitor");
+    for (const a of ps) for (const b of ps) if (a.side !== b.side && a.wrestler_id < b.wrestler_id) recentPairs.add(pairKey(a.wrestler_id, b.wrestler_id));
+  }
+  const fresh = (a: Wrestler, b: Wrestler) => !recentPairs.has(pairKey(a.id, b.id));
   const byPopularity = (list: Wrestler[]) => list.slice().sort((a, b) => b.popularity + b.momentum / 4 - (a.popularity + a.momentum / 4));
 
   const teamsOf = (kind: Team["kind"]) =>
@@ -150,7 +167,7 @@ export function autoBookShow(state: UniverseState, opts: AutoBookOptions): AutoB
       .sort((a, b) => b.intensity - a.intensity)
       .map((r) => (r.wrestler_a === w.id ? r.wrestler_b : r.wrestler_a));
     for (const id of candidates) {
-      const opp = wrestlers.find((x) => x.id === id && free(x));
+      const opp = wrestlers.find((x) => x.id === id && free(x) && fresh(w, x));
       if (opp) return opp;
     }
     return undefined;
@@ -168,7 +185,7 @@ export function autoBookShow(state: UniverseState, opts: AutoBookOptions): AutoB
       const champ = reign ? wrestlers.find((w) => reign.holderIds.includes(w.id) && free(w)) : undefined;
       const pool = byPopularity(wrestlers.filter((w) => free(w) && w.id !== champ?.id && eligible(w, c.division)));
       if (reign && !champ) continue; // champion unavailable
-      const challenger = (champ && rivalOf(champ)) ?? pool[0];
+      const challenger = (champ && rivalOf(champ)) ?? (champ ? pool.find((w) => fresh(champ, w)) : undefined) ?? pool[0];
       const second = champ ?? pool.find((w) => w.id !== challenger?.id);
       if (!challenger || !second || challenger.id === second.id) continue;
       titleSegments.push(
@@ -234,6 +251,8 @@ export function autoBookShow(state: UniverseState, opts: AutoBookOptions): AutoB
     const first = rng.chance(0.6) ? pool[0] : rng.pick(pool.slice(0, Math.min(6, pool.length)));
     const opponent =
       rivalOf(first) ??
+      pool.find((w) => w.id !== first.id && w.division === first.division && w.alignment !== first.alignment && fresh(first, w)) ??
+      pool.find((w) => w.id !== first.id && w.division === first.division && fresh(first, w)) ??
       pool.find((w) => w.id !== first.id && w.division === first.division && w.alignment !== first.alignment) ??
       pool.find((w) => w.id !== first.id && w.division === first.division) ??
       pool.find((w) => w.id !== first.id)!;

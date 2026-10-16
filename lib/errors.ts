@@ -1,3 +1,5 @@
+import { PlanError } from "@/lib/simulation/plan";
+import { ApplyError } from "@/lib/simulation/apply";
 /** Application error types and mapping of database errors to player-facing messages. */
 
 export class AppError extends Error {
@@ -32,6 +34,7 @@ const KNOWN: Array<[RegExp, string]> = [
   [/UNIVERSE_LIMIT_REACHED/, "You have used all of your universe save slots. Archive or delete a universe, or upgrade for more slots."],
   [/RATE_LIMITED/, "You're doing that too often. Please wait a little and try again."],
   [/SHOW_ALREADY_SIMULATED/, "This show has already been simulated. Its results are shown below."],
+  [/UNIVERSE_CHANGED/, "Your universe changed in another tab or the request was sent twice. Reload to see the latest state."],
   [/SHOW_VERSION_CONFLICT/, "This show was changed in another tab. Reload to see the latest card."],
   [/TITLE_ALREADY_HELD|title_reigns_current_unique/, "That championship already has a current champion. End the current reign first."],
   [/ACCOUNT_RESTRICTED/, "Your account is restricted from community activity. See Account → Status for details."],
@@ -50,7 +53,8 @@ const KNOWN: Array<[RegExp, string]> = [
 ];
 
 export function errorMessage(error: unknown): string {
-  if (error instanceof AppError) return error.message;
+  if (error instanceof AppError || error instanceof PlanError) return error.message;
+  if (error instanceof ApplyError) return errorMessage({ message: error.code });
   const raw =
     typeof error === "object" && error !== null && "message" in error
       ? String((error as { message: unknown }).message)

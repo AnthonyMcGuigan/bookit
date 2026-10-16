@@ -44,7 +44,7 @@ export function matchRecap(outcome: SegmentOutcome, ctx: Pick<SimContext, "wrest
   const opening = [
     `${versus} met in a${/^[aeiou]/i.test((stip || typeLabel).trim()) ? "n" : ""}${stip} ${typeLabel.toLowerCase()} match`,
     `${versus} squared off${stip ? ` under ${STIPULATION_LABELS[m.stipulation as Stipulation].toLowerCase()} rules` : ""}`,
-    `The ${typeLabel.toLowerCase()}${stip ? `${stip.toLowerCase()}` : ""} bout between ${versus} lasted ${outcome.durationMin} minutes`,
+    `The ${typeLabel.toLowerCase()}${stip ? `${stip.toLowerCase()}` : ""} bout between ${sides.length === 2 ? sides.join(" and ") : versus} lasted ${outcome.durationMin} minutes`,
   ][v];
   sentences.push(`${opening} and delivered ${qualityDescriptor(outcome.quality)} (${formatStars(outcome.starRating)}).`);
 

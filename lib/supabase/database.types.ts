@@ -1265,6 +1265,9 @@ isOneToOne: false
 "set_user_role":
 { Args: { "p_grant": boolean,"p_reason": string,"p_role": string,"p_user": string }; Returns: undefined
                            },
+"simulate_batch":
+{ Args: { "p_expected_revision": number,"p_rows": Json,"p_steps": Json,"p_universe": string }; Returns: Json
+                           },
 "submit_appeal":
 { Args: { "p_creation": string,"p_message": string }; Returns: string
                            },
