@@ -7,7 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "role": "tsx scripts/grant-role.ts"
+    "role": "tsx scripts/grant-role.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run -c vitest.integration.config.ts",
+    "e2e": "playwright test",
+    "supabase:start": "supabase start && supabase migration up",
+    "supabase:reset": "supabase db reset",
+    "supabase:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
+    "sim:sanity": "tsx --tsconfig tsconfig.json scripts/sim-sanity.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
