@@ -35,3 +35,19 @@ export const getUniverseState = cache(async (universeId: string, scope: "recent"
   }
   return loadUniverseState(supabase, universeId, { historyFrom });
 });
+
+export interface CareerRecord {
+  wins: number;
+  losses: number;
+  draws: number;
+  matches: number;
+}
+
+/** Full-career win/loss records from all history (not just the loaded window). */
+export const getWrestlerRecords = cache(async (universeId: string): Promise<Map<string, CareerRecord>> => {
+  await requireUser(`/u/${universeId}`);
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("wrestler_records", { p_universe: universeId });
+  if (error) throw error;
+  return new Map((data ?? []).map((r) => [r.wrestler_id, { wins: Number(r.wins), losses: Number(r.losses), draws: Number(r.draws), matches: Number(r.matches) }]));
+});

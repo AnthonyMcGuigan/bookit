@@ -125,6 +125,24 @@ export const ATTRIBUTE_KEYS = [
   "big_match",
 ] as const;
 export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
+export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
+  in_ring: "In-ring",
+  technical: "Technical",
+  power: "Power",
+  speed: "Speed",
+  stamina: "Stamina",
+  charisma: "Charisma",
+  mic_skills: "Mic skills",
+  selling: "Selling",
+  psychology: "Psychology",
+  reliability: "Reliability",
+  big_match: "Big-match",
+};
+export const ATTRIBUTE_GROUPS: Array<{ label: string; keys: AttributeKey[] }> = [
+  { label: "In-ring", keys: ["in_ring", "technical", "power", "speed", "stamina", "selling", "psychology"] },
+  { label: "Presentation", keys: ["charisma", "mic_skills"] },
+  { label: "Professional", keys: ["reliability", "big_match"] },
+];
 
 export const wrestlerSchema = z.object({
   ...universeOwned,

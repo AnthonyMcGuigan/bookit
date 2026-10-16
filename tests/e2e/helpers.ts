@@ -61,3 +61,16 @@ export async function latestEmailLink(email: string, pathFragment: string): Prom
   }
   throw new Error(`No email with ${pathFragment} for ${email}`);
 }
+
+/** Fails if the page scrolls horizontally (mobile layout regression). */
+export async function expectNoHorizontalOverflow(page: Page) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow, "page should not scroll horizontally").toBeLessThanOrEqual(1);
+}
+
+/** Collects uncaught page errors so tests can assert none happened. */
+export function trackPageErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  return errors;
+}
