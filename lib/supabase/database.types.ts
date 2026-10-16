@@ -1288,6 +1288,9 @@ isOneToOne: false
 "submit_appeal":
 { Args: { "p_creation": string,"p_message": string }; Returns: string
                            },
+"submit_takedown":
+{ Args: { "p_accuracy": boolean,"p_claimant_email": string,"p_claimant_name": string,"p_claimant_organization": string,"p_creation": string,"p_good_faith": boolean,"p_infringing_url": string,"p_relationship": string,"p_signature": string,"p_work_description": string }; Returns: string
+                           },
 "wrestler_records":
 { Args: { "p_universe": string }; Returns: {
               "draws": number,"losses": number,"matches": number,"wins": number,"wrestler_id": string
