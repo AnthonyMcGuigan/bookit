@@ -13,6 +13,7 @@ export default async function MorePage({ params }: { params: Promise<{ universeI
     ["teams", "Teams & factions", "Tag teams, trios, factions and their history"],
     ["venues", "Venues", "Buildings you can run shows in"],
     ["finances", "Finances", "Cash, revenue and expenses"],
+    ["analytics", "Analytics", "Rating trends and roster usage (Premium)"],
     ["export", "Export & share", "Download a backup or publish to the community"],
     ["settings", "Universe settings", "Realism, randomness, injuries, booking rules"],
   ] as const;
