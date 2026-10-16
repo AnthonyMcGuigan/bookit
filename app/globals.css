@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Neutral surfaces with restrained accents; promotions can
+ * override --accent via inline style on the universe shell.
+ */
+:root {
+  --bg: #f5f5f4;
+  --surface: #ffffff;
+  --surface-2: #f0efed;
+  --border: #e2e0dc;
+  --text: #1c1917;
+  --muted: #6b6560;
+  --accent: #c2410c;
+  --accent-contrast: #ffffff;
+  --gold: #a16207;
+  --gold-soft: #fef3c7;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --rivalry: #c2410c;
+  --rivalry-soft: #ffedd5;
+  --upcoming: #1d4ed8;
+  --upcoming-soft: #dbeafe;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --focus: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0e0d;
+    --surface: #1a1918;
+    --surface-2: #242220;
+    --border: #34312e;
+    --text: #f2f0ed;
+    --muted: #a39d96;
+    --accent: #f97316;
+    --accent-contrast: #1a1918;
+    --gold: #facc15;
+    --gold-soft: #3a2f0a;
+    --danger: #f87171;
+    --danger-soft: #3b1414;
+    --rivalry: #fb923c;
+    --rivalry-soft: #3a210d;
+    --upcoming: #60a5fa;
+    --upcoming-soft: #12233f;
+    --success: #4ade80;
+    --success-soft: #0f2e1a;
+    --focus: #60a5fa;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-rivalry: var(--rivalry);
+  --color-rivalry-soft: var(--rivalry-soft);
+  --color-upcoming: var(--upcoming);
+  --color-upcoming-soft: var(--upcoming-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Bottom-nav safe area on phones. */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 4.5rem);
+}
+
+@media (min-width: 1024px) {
+  .pb-safe {
+    padding-bottom: 2rem;
+  }
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
