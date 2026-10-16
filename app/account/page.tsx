@@ -72,7 +72,7 @@ export default async function AccountPage() {
                   ))}
                 </ul>
               )}
-              <p className="text-xs text-muted">Purchases aren't available yet. No payment provider is connected, and nothing is ever charged.</p>
+              <p className="text-xs text-muted">Purchases aren&apos;t available yet. No payment provider is connected, and nothing is ever charged.</p>
             </div>
           ) : (
             <div className="p-4"><Alert tone="danger">Plan information is temporarily unavailable.</Alert></div>

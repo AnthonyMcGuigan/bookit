@@ -271,7 +271,7 @@ export default async function ShowPage({ params, searchParams }: { params: Promi
                 {problems.length > 0 ? (
                   <p className="text-danger">{problems[0]}</p>
                 ) : pendingEarlier ? (
-                  <p className="text-danger">Simulate <Link href={`${base}/booking/${pendingEarlier.id}`} className="underline">{pendingEarlier.name}</Link> first; it's earlier on the calendar.</p>
+                  <p className="text-danger">Simulate <Link href={`${base}/booking/${pendingEarlier.id}`} className="underline">{pendingEarlier.name}</Link> first; it&apos;s earlier on the calendar.</p>
                 ) : (
                   <p className="text-muted">Simulating moves the calendar to {formatGameDate(show.show_date)}, runs any rival shows before it, and saves the results permanently.</p>
                 )}

@@ -46,7 +46,7 @@ export default async function FinancesPage({ params }: { params: Promise<{ unive
               <Stat label="Expenses" value={<span className="text-danger">{formatMoney(expenses, currency)}</span>} />
               <Stat label="Net" value={<span className={revenue + expenses < 0 ? "text-danger" : "text-success"}>{formatMoney(revenue + expenses, currency)}</span>} />
             </div>
-            {p.cash_balance < 0 && <div className="mb-4"><Alert tone="danger">You're in debt. Cut payroll, run cheaper shows or book bigger draws.</Alert></div>}
+            {p.cash_balance < 0 && <div className="mb-4"><Alert tone="danger">You&apos;re in debt. Cut payroll, run cheaper shows or book bigger draws.</Alert></div>}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <Card>
                 <CardHeader title="By category" />

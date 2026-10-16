@@ -12,6 +12,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const supabase = await createSupabaseServerClient();
   const { data: asset } = await supabase.from("media_assets").select("bucket, storage_path, thumb_path, mime_type, status").eq("id", assetId).eq("status", "active").maybeSingle();
   if (!asset) return new NextResponse("Not found", { status: 404 });
+  if (asset.bucket === "media-public") {
+    const { data: visible } = await supabase.rpc("public_asset_visible", { p_asset: assetId });
+    if (!visible) return new NextResponse("Not found", { status: 404 });
+  }
   const variant = request.nextUrl.searchParams.get("v") === "full" ? "full" : "thumb";
   const path = variant === "thumb" && asset.thumb_path ? asset.thumb_path : asset.storage_path;
   let admin;
@@ -25,7 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   return new NextResponse(data.stream(), {
     headers: {
       "Content-Type": asset.mime_type,
-      "Cache-Control": asset.bucket === "media-public" ? "public, max-age=86400, immutable" : "private, max-age=3600",
+      "Cache-Control": asset.bucket === "media-public" ? "public, max-age=300" : "private, max-age=3600",
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy": "default-src 'none'; sandbox",
     },

@@ -22,7 +22,9 @@ const OUTPUT_SIZE: Record<MediaKind, { full: number; thumb: number; square: bool
   creation_thumbnail: { full: 1200, thumb: 400, square: false },
 };
 
-export class MediaValidationError extends Error {}
+export class MediaValidationError extends Error {
+  override name = "MediaValidationError";
+}
 
 export interface ProcessedImage {
   full: Buffer;

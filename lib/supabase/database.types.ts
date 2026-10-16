@@ -1185,7 +1185,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "apply_world_changes":
+            "active_creation_count":
+{ Args: { "p_user": string }; Returns: number
+                           },
+"apply_world_changes":
 { Args: { "p_changes": Json,"p_universe": string }; Returns: Json
                            },
 "can_view_creation":
@@ -1197,8 +1200,14 @@ isOneToOne: false
 "creation_is_public":
 { Args: { "p_creation": string }; Returns: boolean
                            },
+"creation_needs_review":
+{ Args: { "p_description": string,"p_has_media": boolean,"p_summary": string,"p_tags": (string)[],"p_title": string }; Returns: string
+                           },
 "decide_appeal":
 { Args: { "p_appeal": string,"p_note": string,"p_uphold": boolean }; Returns: undefined
+                           },
+"delete_creation":
+{ Args: { "p_creation": string }; Returns: (string)[]
                            },
 "dev_set_entitlement_state":
 { Args: { "p_state": string }; Returns: string
@@ -1241,6 +1250,14 @@ isOneToOne: false
                            },
 "owns_universe":
 { Args: { "p_universe": string }; Returns: boolean
+                           },
+"public_asset_visible":
+{ Args: { "p_asset": string }; Returns: boolean
+                           },
+"publish_creation":
+{ Args: { "p_allow_derivatives": boolean,"p_category": string,"p_changelog": string,"p_creation": string,"p_description": string,"p_entity_counts": Json,"p_is_fan_content": boolean,"p_lineage": Json,"p_media": (string)[],"p_package": Json,"p_package_bytes": number,"p_schema_version": number,"p_source_creation": string,"p_source_version": number,"p_summary": string,"p_tags": (string)[],"p_thumbnail": string,"p_title": string,"p_visibility": string }; Returns: {
+              "creation_id": string,"moderation_state": string,"review_reason": string,"version": number
+            }[]
                            },
 "rate_creation":
 { Args: { "p_creation": string,"p_stars": number }; Returns: {

@@ -9,8 +9,10 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       // Image uploads and package imports go through server actions.
-      bodySizeLimit: "12mb",
+      bodySizeLimit: "26mb",
     },
+    // The session proxy buffers request bodies; allow package uploads (25 MB) through.
+    proxyClientMaxBodySize: "26mb",
   },
   turbopack: {
     rules: {

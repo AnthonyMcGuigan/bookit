@@ -1,5 +1,6 @@
 import { PlanError } from "@/lib/simulation/plan";
 import { ApplyError } from "@/lib/simulation/apply";
+import { PackageError } from "@/lib/packages/schema";
 /** Application error types and mapping of database errors to player-facing messages. */
 
 export class AppError extends Error {
@@ -44,6 +45,13 @@ const KNOWN: Array<[RegExp, string]> = [
   [/APPEAL_ALREADY_OPEN/, "An appeal for this creation is already under review."],
   [/CREATION_NOT_FOUND/, "That creation is not available."],
   [/CREATION_REMOVED/, "This creation was removed by moderators and can't be republished. You can submit an appeal."],
+  [/PUBLISH_LIMIT_REACHED/, "You've reached your limit of active community creations. Unpublish one (it stays saved as a draft) or upgrade for more."],
+  [/REMIX_NOT_ALLOWED/, "The original creator doesn't allow remixes of this creation, so it can't be published. You can still play it privately."],
+  [/CATEGORY_MISMATCH/, "A new version must be the same kind of creation as the original."],
+  [/NOTHING_TO_APPEAL/, "There's no moderation decision on this creation to appeal."],
+  [/CANNOT_REPORT_SELF/, "You can't report yourself."],
+  [/REASON_REQUIRED/, "Please give a reason (at least 3 characters)."],
+  [/CANNOT_RESTRICT_SELF/, "You can't restrict your own account."],
   [/DEV_ENTITLEMENTS_DISABLED/, "Development entitlements are disabled on this server."],
   [/FORBIDDEN|42501|row-level security/, "You do not have permission to do that."],
   [/UNIVERSE_NOT_FOUND/, "Universe not found."],
@@ -53,7 +61,8 @@ const KNOWN: Array<[RegExp, string]> = [
 ];
 
 export function errorMessage(error: unknown): string {
-  if (error instanceof AppError || error instanceof PlanError) return error.message;
+  if (error instanceof AppError || error instanceof PlanError || error instanceof PackageError) return error.message;
+  if (error instanceof Error && error.name === "MediaValidationError") return error.message;
   if (error instanceof ApplyError) return errorMessage({ message: error.code });
   const raw =
     typeof error === "object" && error !== null && "message" in error

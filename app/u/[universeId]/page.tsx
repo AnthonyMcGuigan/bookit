@@ -12,14 +12,15 @@ import {
 } from "@/lib/domain/selectors";
 import { formatGameDate, daysBetween } from "@/lib/domain/dates";
 import { SHOW_TYPE_LABELS, STORYLINE_STATUS_LABELS } from "@/lib/domain/enums";
-import { Badge, Card, CardHeader, EmptyState, LinkButton, PageHeader, Stars, formatMoney } from "@/components/ui";
+import { Alert, Badge, Card, CardHeader, EmptyState, LinkButton, PageHeader, Stars, formatMoney } from "@/components/ui";
 import { ChampionshipArt, WrestlerAvatar } from "@/components/artwork";
 import { starRatingFor } from "@/lib/simulation/scoring";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-export default async function DashboardPage({ params }: { params: Promise<{ universeId: string }> }) {
+export default async function DashboardPage({ params, searchParams }: { params: Promise<{ universeId: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const { universeId } = await params;
+  const query = await searchParams;
   const state = await getUniverseState(universeId);
   const base = `/u/${universeId}`;
   const wrestlers = indexById(state.wrestlers);
@@ -47,6 +48,13 @@ export default async function DashboardPage({ params }: { params: Promise<{ univ
         actions={<LinkButton href={`${base}/booking`} size="sm">Open booking</LinkButton>}
       />
 
+      {query.imported && (
+        <div className="mb-4" data-testid="import-complete">
+          <Alert tone="success" title="Import complete">
+            {Number(query.imported).toLocaleString("en-US")} record(s) imported.{query.warnings ? ` ${query.warnings}` : ""}
+          </Alert>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader title="Next show" subtitle={nextPlayerShow ? `${daysBetween(state.universe.game_date, nextPlayerShow.show_date)} day(s) away` : undefined} />
