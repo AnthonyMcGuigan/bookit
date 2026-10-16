@@ -117,7 +117,7 @@ export function simulateSegment(
     title_outcome: null,
     storyline:
       storyline && storyline.status !== "resolved" && storyline.status !== "abandoned"
-        ? { storylineId: storyline.id, intensityDelta: storyline.auto_progress ? Math.round(4 + quality / 20) : 0, summary: "" }
+        ? { storylineId: storyline.id, intensityDelta: storyline.auto_progress ? Math.round(2 + quality / 25) : 0, summary: "" }
         : null,
     injuries,
     recap: "",

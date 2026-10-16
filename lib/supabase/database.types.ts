@@ -1212,6 +1212,9 @@ isOneToOne: false
 "file_report":
 { Args: { "p_category": string,"p_creation": string,"p_details": string,"p_target_type": string,"p_user": string }; Returns: string
                            },
+"get_universe_snapshot":
+{ Args: { "p_collections"?: (string)[],"p_history_from"?: string,"p_universe": string }; Returns: Json
+                           },
 "has_role":
 { Args: { "p_role": string }; Returns: boolean
                            },
@@ -1232,6 +1235,9 @@ isOneToOne: false
                            },
 "moderate_creation":
 { Args: { "p_action": string,"p_creation": string,"p_reason": string,"p_report"?: string }; Returns: string
+                           },
+"my_entitlements":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "owns_universe":
 { Args: { "p_universe": string }; Returns: boolean
@@ -1261,6 +1267,11 @@ isOneToOne: false
                            },
 "submit_appeal":
 { Args: { "p_creation": string,"p_message": string }; Returns: string
+                           },
+"wrestler_records":
+{ Args: { "p_universe": string }; Returns: {
+              "draws": number,"losses": number,"matches": number,"wins": number,"wrestler_id": string
+            }[]
                            }
           }
           Enums: {

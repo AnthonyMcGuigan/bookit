@@ -475,7 +475,7 @@ export function simulateMatch(
 
       if (autoProgress) {
         if (outcome === "win") {
-          delta.momentum = Math.round(6 + quality / 25 + (upset ? 6 : 0) + (titleChanged ? 6 : 0));
+          delta.momentum = Math.round(4 + quality / 30 + (upset ? 5 : 0) + (titleChanged ? 5 : 0));
           delta.popularity = Math.round(clamp((quality - 50) / 18 + Math.max(0, loserPop - w.popularity) / 12 + (titleChanged ? 3 : 0) + 1, -2, 8));
         } else if (outcome === "loss") {
           delta.momentum = Math.round(quality >= 75 ? -2 : -5 - (finish === "roll_up" ? -2 : 0));
@@ -530,7 +530,7 @@ export function simulateMatch(
     storyline && storyline.status !== "resolved" && storyline.status !== "abandoned"
       ? {
           storylineId: storyline.id,
-          intensityDelta: storyline.auto_progress ? Math.round(3 + quality / 25 + (titleChanged ? 4 : 0)) : 0,
+          intensityDelta: storyline.auto_progress ? Math.round(2 + quality / 30 + (titleChanged ? 4 : 0)) : 0,
           summary: "",
         }
       : null;

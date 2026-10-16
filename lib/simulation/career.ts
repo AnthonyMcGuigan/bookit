@@ -55,7 +55,7 @@ export function advanceWorld(state: UniverseState, toDate: string, seed: string,
     const delta = { wrestler_id: w.id, popularity: 0, momentum: 0, morale: 0, fatigue: 0, reputation: 0, attributes: {} as Record<string, number> };
     delta.fatigue = -Math.min(w.fatigue, Math.round(days * recoveryPerDay));
     if (settings.autoProgression && w.momentum !== 0) {
-      const decay = Math.min(Math.abs(w.momentum), Math.round(days * 0.5));
+      const decay = Math.min(Math.abs(w.momentum), Math.round(days * 0.8));
       delta.momentum = w.momentum > 0 ? -decay : decay;
     }
     if (settings.moraleEnabled) {
@@ -68,6 +68,15 @@ export function advanceWorld(state: UniverseState, toDate: string, seed: string,
     }
     if (months > 0) applyAbilityProgression(w, months, toDate, rng.fork(w.id), delta);
     if (delta.fatigue || delta.momentum || delta.morale || Object.keys(delta.attributes).length) addWrestlerDelta(changes, delta);
+  }
+
+  // Storylines cool off slowly when the calendar moves.
+  const weeksPassed = Math.floor(days / 7);
+  if (settings.autoProgression && weeksPassed > 0) {
+    for (const s of state.storylines) {
+      if (!s.auto_progress || s.status === "resolved" || s.status === "abandoned" || s.intensity === 0) continue;
+      changes.storylineUpdates.push({ id: s.id, intensity_delta: -Math.min(s.intensity, weeksPassed * 2), status: null, resolved_on: null });
+    }
   }
 
   // Injury recovery.
