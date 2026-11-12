@@ -4847,6 +4847,7 @@ const CREATOR_ACTIONS = {
   cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const i = COMM.items.find(x => x.author + '|' + x.id === key); const p = i && cleanPack(i.pack); if (!p) return toast('This creation is damaged.'); markUsed(key); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
   async cPublish() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
+    m.what = m.what || 'roster'; // the Share tab shows Whole roster selected before anything is tapped
     if (isRude(m.title) || isRude(m.desc) || (m.what === 'roster' ? signed() : (m.sel || []).map(W).filter(Boolean)).some(w => isRude(w.name) || isRude(w.nick) || isRude(w.bio))) return toast('Please remove the rude words first. Check the title, description and wrestler names.');
     const ws = m.what === 'roster' ? signed() : (m.sel || []).map(W).filter(Boolean);
     if (!ws.length) return toast('Pick at least one wrestler.');
