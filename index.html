@@ -2957,7 +2957,7 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound effects</span></label>
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
-    <label class="f"><span>Theme</span><select data-in="theme"><option value="">Match my device</option><option value="dark" ${meta.theme === 'dark' ? 'selected' : ''}>Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option></select></label>
+    <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
     <div class="sec">Game</div>
     <div class="list"><button class="btn block" data-act="rosterTools">⇅ Roster tools (import / export)</button><button class="btn block" data-act="community">🌐 Community creations</button><button class="btn block" data-act="trophies">🏅 Trophies &amp; rank</button><button class="btn block" data-act="records" data-id="titles">🏆 History, awards &amp; legends</button><button class="btn block" data-act="rankings">📈 Rankings</button><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button><button class="btn block" data-act="quit">🏠 Main menu / new game</button><button class="btn block bad" data-act="deleteSlot">🗑 Delete this save slot</button></div>
   `);
@@ -5251,7 +5251,7 @@ document.addEventListener('change', e => {
       if (el.checked) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40);
       commit();
     }
-    else if (k === 'theme') { meta.theme = el.value; applyTheme(); ls.set(META, JSON.stringify(meta)); }
+    else if (k === 'theme') { meta.theme = ['light', 'auto'].includes(el.value) ? el.value : 'dark'; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'motion') { meta.motion = ['reduce', 'full'].includes(el.value) ? el.value : ''; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'soundOn') { meta.sound = el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) SFX.tap(); }
     else if (['promoName', 'showName', 'bigEvents', 'notebook', 'wNotes', 'sNotes'].includes(k)) { save(); render(); }
@@ -5286,7 +5286,9 @@ window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 
 function applyTheme() {
-  if (meta.theme) document.documentElement.dataset.theme = meta.theme; else delete document.documentElement.dataset.theme;
+  // dark is the default; 'auto' follows the device, 'light' is an explicit pick
+  const th = meta.theme === 'light' || meta.theme === 'auto' ? meta.theme : 'dark';
+  if (th === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
   const z = { s: .9, m: 1, l: 1.15, xl: 1.3 }[meta.text] || 1; document.documentElement.style.setProperty('--zoom', z); document.body.style.zoom = z === 1 ? '' : z;
   const ew = innerWidth / z; if (z > 1 && ew <= 300) document.documentElement.dataset.nw = '2'; else if (z > 1 && ew <= 380) document.documentElement.dataset.nw = '1'; else delete document.documentElement.dataset.nw;
   if (meta.motion) document.documentElement.dataset.motion = meta.motion; else delete document.documentElement.dataset.motion;
