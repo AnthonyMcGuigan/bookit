@@ -160,6 +160,15 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 - **Managers:** set one from a wrestler's profile. Managers talk for weak speakers in promos and add a little at ringside. Managers aren't included in shared Community packs.
 - **Auto-fill** now mixes finishes: clean payoffs at big shows, dirtier finishes in hot weekly feuds, and heel champions sometimes keeping the belt by DQ.
 
+## Version 1.3: several companies in one world
+
+- Menu → Your companies → Start another company in this world (up to 4).
+- All companies share the free agents, rival promotions, titles calendar and week.
+- Each company books one show a week. The week moves on after the last company runs. Auto-book the rest if you only care about one.
+- Switch with the ⇅ button in the header or the company chips on the Shows tab.
+- Shows on the same night split viewers. Stars whose deals end within 12 weeks can be lured from one of your companies to another.
+- Shared save codes only carry the active company.
+
 ## Public beta outside Claude (v1.2 beta)
 
 The self-hosted copy (`ringside-booker-web.zip`) is the public beta. It works on any HTTPS static host, installs to the home screen and plays offline.
