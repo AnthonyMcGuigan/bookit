@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* iOS only: block the zoom-on-focus. iOS Safari still lets people pinch-zoom with this set. */
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) document.querySelector('meta[name=viewport]').content = 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover';</script>
 <title>Book It: Wrestling Booking Sim</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,6 +127,10 @@ input[type=text], input[type=number], input[type=search], select, textarea {
   width: 100%; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 44px; outline: none; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+/* iOS zooms the page when a field under 16px gets focus; keep every typing field at 16px or more,
+   even when the Text size setting shrinks the page (body zoom) and over any inline font-size */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: max(16px, calc(16px / var(--zoom, 1))) !important; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 label.f { display: block; margin-bottom: 12px; }
 label.f > span { display: block; font-size: 12px; font-weight: 700; color: var(--dim); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
 .seg-ctl { display: flex; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 3px; flex-wrap: wrap; }
@@ -5180,15 +5186,18 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.wz === 'name' || el.dataset.wz === 'show') {
-    UI.wiz[el.dataset.wz] = el.value; const pos = el.selectionStart, k = el.dataset.wz;
-    render(); const n = document.querySelector(`[data-wz="${k}"]`); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) {} }
+    const z = UI.wiz; z[el.dataset.wz] = el.value;
+    const pv = document.querySelector('.wz-preview');
+    if (pv) { const b = pv.querySelector('b'), sub = pv.querySelector('.small'), lg = pv.querySelector('.wz-logo');
+      if (b) b.textContent = z.name || 'My Promotion'; if (sub) sub.textContent = (z.show || 'Weekly show') + ' · ' + DAYS[z.day] + ' nights'; if (lg) lg.textContent = abbr(z.name || 'My Promotion'); }
+    const nx = document.querySelector('.wz-nav [data-id="budget"]'); if (nx) nx.disabled = !z.name.trim();
     return;
   }
   if (el.dataset.in) {
     const k = el.dataset.in, v = el.value;
-    if (k === 'rosterQ') { UI.rosterQ = v; reRender(el); }
-    else if (k === 'pickQ') { UI.picker.q = v; reRender(el); }
-    else if (k === 'cQ') { UI.modal.q = v; reRender(el); }
+    if (k === 'rosterQ') { UI.rosterQ = v; debRender(el, e); }
+    else if (k === 'pickQ') { UI.picker.q = v; debRender(el, e); }
+    else if (k === 'cQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'cTitle') UI.modal.title = v;
     else if (k === 'cDesc') UI.modal.desc = v;
     else if (k === 'sbEmail') UI.modal.email = v;
@@ -5259,13 +5268,20 @@ document.addEventListener('keydown', e => {
 });
 // re-render while keeping the focused field and caret in place
 function reRender(el) {
-  const sel = el.dataset.in, pos = el.selectionStart;
+  const sel = el.dataset.in, pos = el.selectionStart, end = el.selectionEnd, had = document.activeElement === el;
   const scrollEl = el.closest('.mb'); const sc = scrollEl?.scrollTop;
   render();
   const n = document.querySelector(`[data-in="${sel}"]`);
-  if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} const s2 = n.closest('.mb'); if (s2 && sc != null) s2.scrollTop = sc; }
+  if (!n) return;
+  // put the original field back in place of the fresh copy, so the keyboard, caret and autocorrect carry on untouched
+  if (n !== el) n.replaceWith(el);
+  if (had && document.activeElement !== el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(pos, end); } catch (e) {} }
+  const s2 = el.closest('.mb'); if (s2 && sc != null) s2.scrollTop = sc;
 }
-let saveT; function debSave() { clearTimeout(saveT); saveT = setTimeout(save, 400); }
+// filter lists after a short typing pause; never mid-composition (predictive text / IME)
+let renT; function debRender(el, e) { clearTimeout(renT); if (e && e.isComposing) return; renT = setTimeout(() => { if (el.isConnected) reRender(el); }, 180); }
+document.addEventListener('compositionend', e => { if (e.target.dataset?.in && /^(rosterQ|pickQ|cQ)$/.test(e.target.dataset.in)) debRender(e.target); });
+let saveT; function debSave() { clearTimeout(saveT); saveT = setTimeout(save, 900); }
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 
