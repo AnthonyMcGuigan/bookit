@@ -169,6 +169,15 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 - Shows on the same night split viewers. Stars whose deals end within 12 weeks can be lured from one of your companies to another.
 - Shared save codes only carry the active company.
 
+## Community on the live beta (Supabase)
+
+The GitHub Pages copy keeps Community, likes, follows, reports and feedback in Supabase. The claude.ai copy still uses Claude's own storage.
+
+- `SUPABASE_URL` and `SUPABASE_KEY` (the public publishable/anon key) sit next to `FEEDBACK_URL` in index.html. Leave them empty to turn Community off.
+- Database: run `supabase/setup.sql` in the SQL Editor. One row per player per collection; row rules let players write only their own rows; moderators (table `admins`) can write any row and read reports and feedback.
+- Supabase settings: allow anonymous sign-ins (players get a guest account), Site URL and Redirect URL = the game's address (for email sign-in links).
+- Become the moderator: sign in with your email in Community → My profile, then run `insert into public.admins (uid) select id from auth.users where email = 'YOUR EMAIL';`.
+
 ## Public beta outside Claude (v1.2 beta)
 
 The self-hosted copy (`ringside-booker-web.zip`) is the public beta. It works on any HTTPS static host, installs to the home screen and plays offline.

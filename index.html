@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Book It: Wrestling Booking Sim</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap">
@@ -2962,7 +2962,12 @@ function privacyHTML() {
   <p><b>The short version:</b> your game stays on your device. Only what you post to Community is shared.</p>
   <h3>On your device</h3>
   <p>Your saves, notes, settings and private photos are kept in this browser only. Nobody else can see them, including us. Clearing your browser data deletes them, so back up from the Menu.</p>
-  ${hosted() ? `  <h3>When you use Community</h3>
+  ${sbOn() ? `  <h3>When you use Community</h3>
+  <p>Community and feedback are stored online with Supabase, a database service. When you open Community you get a guest account with a random id. We don't ask for your name. What you post, your profile (name, bio, color), what you like, what you play or add, and who you follow can be seen by anyone who plays.</p>
+  <p>If you add your email to keep your account, Supabase stores it to send you sign-in links. Other players never see it. Remove your posts and profile any time from Community → My profile.</p>
+  <h3>Reports and feedback</h3>
+  <p>Reports and feedback are private: only the game's owner can read them. Feedback includes the game version, your week number and your browser type, so bugs can be fixed. Crash reports include the error message.</p>
+` : hosted() ? `  <h3>When you use Community</h3>
   <p>Community runs on claude.ai. Your account is your claude.ai sign-in, and we never see your password or email. What you post, your profile (name, bio, color), what you like, what you play or add, and who you follow are stored with an anonymous player id and can be seen by anyone who can open the game.</p>
   <h3>Reports and feedback</h3>
   <p>Reports and feedback are private: only the game's owner can read them. Feedback includes the game version, your week number and your browser type, so bugs can be fixed. Crash reports include the error message.</p>
@@ -4164,7 +4169,102 @@ const SUPPORT_URL = '';
 const BETA = true;
 const FEEDBACK_URL = '';
 const feedbackLink = () => { try { const u = new URL(FEEDBACK_URL); return u.protocol === 'https:' && !u.username && !u.password ? u.href : ''; } catch (e) { return ''; } };
-const hosted = () => !!(window.claude && typeof window.claude.use === 'function');
+const onClaude = () => !!(window.claude && typeof window.claude.use === 'function');
+const hosted = () => onClaude() || sbOn();
+// ---- Supabase: Community and feedback for the self-hosted copy (GitHub Pages). Fill both in to turn it on. ----
+const SUPABASE_URL = 'https://svqfswhnesaglciviprw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_8OGPQu0ITuIymyWMCx4Daw_fT1BV3w2'; // the project's public "anon" key; the database rules keep players to their own rows
+const sbOn = () => { try { return !!SUPABASE_KEY && new URL(SUPABASE_URL).protocol === 'https:' && !onClaude(); } catch (e) { return false; } };
+const SB_STORE = 'bookit.sb';
+let sbSess = null, sbRefreshing = null;
+const sbLoad = () => { try { const x = JSON.parse(localStorage.getItem(SB_STORE) || 'null'); return x && typeof x.access_token === 'string' && typeof x.refresh_token === 'string' ? x : null; } catch (e) { return null; } };
+function sbStore(x) {
+  if (x && (typeof x.access_token !== 'string' || typeof x.refresh_token !== 'string')) return;
+  sbSess = x ? { access_token: x.access_token, refresh_token: x.refresh_token, expires_at: +x.expires_at || Math.floor(Date.now() / 1000) + (+x.expires_in || 3600), user: x.user ? { id: String(x.user.id || ''), email: typeof x.user.email === 'string' ? x.user.email.slice(0, 120) : '' } : sbSess?.user || null } : null;
+  try { sbSess ? localStorage.setItem(SB_STORE, JSON.stringify(sbSess)) : localStorage.removeItem(SB_STORE); } catch (e) {}
+}
+async function sbFetch(path, opt = {}, auth = true) {
+  const h = { apikey: SUPABASE_KEY, 'Content-Type': 'application/json', ...(opt.headers || {}) };
+  if (auth) { const t = await sbToken(); if (t) h.Authorization = 'Bearer ' + t; } // with no session, the public key alone is enough
+  const r = await fetch(SUPABASE_URL.replace(/\/+$/, '') + path, { ...opt, headers: h });
+  const txt = await r.text(); let j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
+  if (!r.ok) throw { code: r.status === 401 || r.status === 403 ? 'permission-denied' : r.status === 429 ? 'rate_limited' : 'unavailable', status: r.status, err: String(j?.error_code || j?.code || '') };
+  return j;
+}
+async function sbToken() {
+  sbSess ||= sbLoad(); if (!sbSess) return null;
+  if (sbSess.expires_at - 60 > Date.now() / 1000) return sbSess.access_token;
+  sbRefreshing ||= sbFetch('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: JSON.stringify({ refresh_token: sbSess.refresh_token }) }, false)
+    .then(x => { sbStore(x); return sbSess.access_token; }, e => { if (e.status === 400 || e.status === 401) sbStore(null); return null; }).finally(() => { sbRefreshing = null; });
+  return sbRefreshing;
+}
+// a guest account for this device, so players can post without typing anything
+let sbLinkP = null;
+async function sbGuest() { await sbLinkP; if (await sbToken()) return; sbStore(await sbFetch('/auth/v1/signup', { method: 'POST', body: '{}' }, false)); }
+const sbBack = () => location.origin + location.pathname;
+const sbQ = v => encodeURIComponent(String(v));
+const sbListeners = new Set();
+let sbPokeT = 0;
+const sbPoke = () => { clearTimeout(sbPokeT); sbPokeT = setTimeout(() => sbListeners.forEach(f => f()), 400); };
+setInterval(() => { if (sbListeners.size && !document.hidden && ['community', 'cview', 'creator', 'inbox', 'support'].includes(UI.modal?.type)) sbListeners.forEach(f => f()); }, 60000);
+const sbDb = () => ({
+  doc(path) {
+    const [col, id] = String(path).split('/'), where = `col=eq.${sbQ(col)}&id=eq.${sbQ(id)}`;
+    return {
+      get: async () => { const r = await sbFetch('/rest/v1/docs?select=data&' + where); const d = Array.isArray(r) && r[0] ? r[0].data : null; return { exists: d != null, data: () => d }; },
+      set: async data => { await sbFetch('/rest/v1/docs?on_conflict=col,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ col, id, data, updated: new Date().toISOString() }) }); sbPoke(); },
+      delete: async () => { await sbFetch('/rest/v1/docs?' + where, { method: 'DELETE' }); sbPoke(); },
+    };
+  },
+  collection(col) {
+    return { limit: n => ({ onSnapshot(cb, onErr) {
+      let busy = false, ok = false;
+      const run = async () => {
+        if (busy) return; busy = true;
+        try { const rows = await sbFetch(`/rest/v1/docs?select=id,data&col=eq.${sbQ(col)}&order=updated.desc&limit=${+n || 100}`); ok = true; cb({ docs: (Array.isArray(rows) ? rows : []).map(r => ({ id: String(r.id), data: () => r.data })), metadata: { fromCache: false } }); }
+        catch (e) { if (!ok && onErr) onErr(e); }
+        busy = false;
+      };
+      sbListeners.add(run); run(); return () => sbListeners.delete(run);
+    } }) };
+  },
+});
+const sbUser = {
+  id: async () => sbSess?.user?.id || null,
+  isOwner: async () => { if (!sbSess) return false; try { return (await sbFetch('/rest/v1/rpc/is_admin', { method: 'POST', body: '{}' })) === true; } catch (e) { return false; } },
+  can: async () => !!sbSess,
+  profiles: async () => ({}),
+};
+// back from an email link: keep the session it carries, then tidy the address bar
+function sbFromLink() { if (sbOn() && /access_token=|error_description=/.test(location.hash)) sbLinkP = sbTakeLink(); }
+async function sbTakeLink() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  if (h.get('error_description')) return setTimeout(() => toast('That sign-in link didn\'t work. It may have expired, so ask for a new one.'), 600);
+  const at = h.get('access_token'), rt = h.get('refresh_token');
+  if (!at || !rt) return;
+  try {
+    const u = await fetch(SUPABASE_URL.replace(/\/+$/, '') + '/auth/v1/user', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + at } }).then(r => r.ok ? r.json() : null);
+    if (!u?.id) throw 0;
+    sbStore({ access_token: at, refresh_token: rt, expires_in: +h.get('expires_in') || 3600, user: u });
+    if (COMM.status !== 'idle') commReset();
+    setTimeout(() => toast(u.email ? 'Signed in as ' + u.email + '.' : 'Signed in.'), 600);
+  } catch (e) { setTimeout(() => toast('Could not finish signing in. Try the link again.'), 600); }
+}
+function commReset() {
+  sbListeners.clear(); cdb = null; cuser = null;
+  Object.assign(COMM, { status: 'idle', me: null, owner: false, canWrite: null, items: [], mine: [], body: {}, reports: [], feedback: [] });
+  commInit(); render();
+}
+function sbAccountCard() {
+  if (!sbOn()) return '';
+  const u = sbSess?.user, m = UI.modal || {};
+  const form = `<label class="f" style="margin-top:8px"><span>Email</span><input type="email" data-in="sbEmail" value="${esc(m.email || '')}" maxlength="120" autocomplete="email" placeholder="you@example.com"></label>
+    <button class="btn pri block" data-act="sbLink">Email me a link</button><div class="tiny muted" style="margin-top:6px">Open the link on this device. Your email is never shown to other players.</div>`;
+  return `<div class="sec">Account</div><div class="card">${u?.email ? `<div class="small">Signed in as <b>${esc(u.email)}</b>. You can sign in with this email on any device.</div><button class="btn block" style="margin-top:8px" data-act="sbOut">Sign out</button>`
+    : `<div class="small">${u ? 'You are a guest on this device. Add your email to keep your account if you change phones or clear your browser. Already have an account? Use its email here.' : 'Sign in with your email to share, like and follow.'}</div>${form}`}
+    ${u ? '<button class="btn block bad" style="margin-top:8px" data-act="sbWipe">Remove my Community posts and profile</button>' : ''}</div>`;
+}
 const verLabel = () => 'v' + VERSION + (BETA ? ' beta' : '');
 // copy a report and open the feedback page (used when Community isn't available)
 function fbFallback(text, okMsg) { const u = feedbackLink(); copyText(text, u ? okMsg || 'Copied. Paste it into the feedback page that just opened.' : 'Copied. Send it to the game maker any way you like.'); if (u) try { window.open(u, '_blank', 'noopener'); } catch (e) {} }
@@ -4181,8 +4281,9 @@ let cdb = null, cuser = null;
 async function commInit() {
   if (COMM.status !== 'idle') return;
   COMM.status = 'loading';
-  if (!window.claude || typeof window.claude.use !== 'function') { COMM.status = 'off'; return rerenderComm(); }
-  try { cdb = await window.claude.use('db'); cuser = await window.claude.use('user'); } catch (e) { cdb = null; }
+  if (sbOn()) { cdb = sbDb(); cuser = sbUser; try { await sbGuest(); } catch (e) {} }
+  else if (!onClaude()) { COMM.status = 'off'; return rerenderComm(); }
+  else try { cdb = await window.claude.use('db'); cuser = await window.claude.use('user'); } catch (e) { cdb = null; }
   if (!cdb) { COMM.status = 'off'; return rerenderComm(); }
   try { COMM.me = cuser ? await cuser.id() : null; COMM.owner = cuser ? await cuser.isOwner() : false; COMM.canWrite = cuser ? await cuser.can('data.write') : null; } catch (e) {}
   const timer = setTimeout(() => { if (COMM.status === 'loading') { COMM.status = 'slow'; rerenderComm(); } }, 10000);
@@ -4464,13 +4565,14 @@ function modalCommunity(m) {
   } else {
     const mine = COMM.items.filter(i => i.author === COMM.me), pr = COMM.profiles[COMM.me], liked = COMM.items.filter(i => iLike(i.author + '|' + i.id));
     const fans = COMM.followers[COMM.me]?.size || 0, likesGot = sum(mine.map(i => i.nLikes || 0)), usesGot = sum(mine.map(i => i.nUses || 0));
-    body += !COMM.me ? '<div class="empty">Open the online version while signed in to have a profile.</div>' : `<div class="card prof"><div class="row" style="gap:12px">${creatorAv(COMM.me, 56)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(pr?.name || COMM.names[COMM.me] || 'Your profile')}</div><div class="small muted">${pr?.bio ? esc(pr.bio) : 'Add a name and a short bio so players know who made your uploads.'}</div></div></div>
+    body += !COMM.me ? (sbOn() ? '' : '<div class="empty">Open the online version while signed in to have a profile.</div>') : `<div class="card prof"><div class="row" style="gap:12px">${creatorAv(COMM.me, 56)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(pr?.name || COMM.names[COMM.me] || 'Your profile')}</div><div class="small muted">${pr?.bio ? esc(pr.bio) : 'Add a name and a short bio so players know who made your uploads.'}</div></div></div>
       <div class="grid3 cstats" style="margin-top:10px"><div><b>${mine.length}</b><span>uploads</span></div><div><b>${likesGot}</b><span>likes</span></div><div><b>${fans}</b><span>followers</span></div></div>
       ${usesGot ? `<div class="tiny muted" style="margin-top:6px">Your uploads have been added or played ${usesGot} time${usesGot > 1 ? 's' : ''}.</div>` : ''}
       <button class="btn block" style="margin-top:10px" data-act="cEditProfile">✏️ ${pr ? 'Edit profile' : 'Set up your profile'}</button></div>
       <div class="sec">Your uploads</div>`;
     body += `<div class="list">${mine.map(i => `<div class="item"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? '💾 Save · week ' + (+i.sum?.week || 1) : kindLbl(i)} · ${new Date(i.created).toLocaleDateString()}</div></div><button class="btn sm bad" data-act="cDel" data-id="${esc(i.author + '|' + i.id)}">Delete</button></div>`).join('') || '<div class="empty">You haven\'t shared anything yet.</div>'}</div>`;
     if (liked.length) body += `<div class="sec">Liked (${liked.length})</div><div class="list">${liked.map(i => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">by ${esc(authorName(i.author))} · ❤️ ${i.nLikes}</div></div></button>`).join('')}</div>`;
+    body += sbAccountCard();
   }
   return modal('🌐 Community', body);
 }
@@ -4678,6 +4780,33 @@ const CREATOR_ACTIONS = {
   },
   cClearProfile(id) { confirmBox('Clear this profile?', 'Their name and bio go back to the default. Their uploads stay.', 'Clear', async () => { try { const cur = knownFields((await cdb.doc('creations/' + id).get()).data()); delete cur.profile; await cdb.doc('creations/' + id).set({ ...cur, updated: Date.now() }); toast('Cleared.'); } catch (e) { toast('Could not clear it.'); } }, true); },
   cWipe(id) { if (!COMM.owner || !AUTHOR_ID.test(id) || id === 'featured') return; confirmBox('Remove everything from this creator?', 'Their uploads, profile, likes and follows are removed for everyone.', 'Remove all', async () => { try { await cdb.doc('creations/' + id).set({ items: [], updated: Date.now() }); UI.modal = { type: 'community', tab: 'browse' }; render(); toast('Removed.'); } catch (e) { toast('Could not remove it.'); } }, true); },
+  async sbLink() {
+    if (!sbOn()) return;
+    const email = (document.querySelector('[data-in=sbEmail]')?.value || UI.modal?.email || '').trim();
+    if (!/^[^\s@<>]{1,64}@[^\s@<>]{1,100}\.[a-z]{2,}$/i.test(email)) return toast('Type your email address.');
+    const back = '?redirect_to=' + sbQ(sbBack());
+    try {
+      if (sbSess?.user && !sbSess.user.email) {
+        try { await sbFetch('/auth/v1/user' + back, { method: 'PUT', body: JSON.stringify({ email }) }); return toast('Check your email and tap the link to keep this account.'); }
+        catch (e) { if (e.status !== 422 && e.status !== 400) throw e; }
+      }
+      await sbFetch('/auth/v1/otp' + back, { method: 'POST', body: JSON.stringify({ email, create_user: true }) }, false);
+      toast('Check your email for a sign-in link.');
+    } catch (e) { toast(e?.code === 'rate_limited' ? 'Too many emails. Wait a few minutes and try again.' : 'Could not send the email. Try again.'); }
+  },
+  sbOut() {
+    confirmBox('Sign out?', 'Your posts stay. Sign back in with the same email to manage them.', 'Sign out', async () => {
+      try { await sbFetch('/auth/v1/logout', { method: 'POST', body: '{}' }); } catch (e) {}
+      sbStore(null); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Signed out.');
+    });
+  },
+  sbWipe() {
+    if (!COMM.me) return;
+    confirmBox('Remove your Community posts?', 'Your uploads, profile, likes, follows, reports and feedback are deleted for everyone. This can\'t be undone.', 'Remove', async () => {
+      try { for (const col of ['creations', 'reports', 'feedback']) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
+      catch (e) { toast('Could not remove it. Try again.'); }
+    }, true);
+  },
   cF(f) { UI.modal.f = f; render(); },
   cWhat(w) { UI.modal.what = w; render(); },
   cOpen(key) { UI.modal = { type: 'cview', key, back: UI.modal }; render(); },
@@ -5061,6 +5190,7 @@ document.addEventListener('input', e => {
     else if (k === 'cQ') { UI.modal.q = v; reRender(el); }
     else if (k === 'cTitle') UI.modal.title = v;
     else if (k === 'cDesc') UI.modal.desc = v;
+    else if (k === 'sbEmail') UI.modal.email = v;
     else if (k === 'notebook') { G.notebook = v; debSave(); }
     else if (k === 'wNotes') { W(el.dataset.id).notes = v; debSave(); }
     else if (k === 'sNotes') { G.stories.find(s => s.id === el.dataset.id).notes = v; debSave(); }
@@ -5207,6 +5337,7 @@ if (cur) G = cur;
 // returning players see what changed once per version
 try { const hadGame = [1, 2, 3].some(n => slotInfo(n)); if (meta.seen !== VERSION) { if (hadGame && G && !UI.modal) UI.modal = { type: 'whatsnew' }; meta.seen = VERSION; ls.set(META, JSON.stringify(meta)); } } catch (e) {}
 try { render(); } catch (e) { crash(e && e.message); }
+sbFromLink(); addEventListener('hashchange', sbFromLink);
 // animated splash: once per app launch, tap to skip, skipped under automated tests (?splash forces it)
 try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   const sp = document.createElement('div'); sp.id = 'splash'; sp.setAttribute('role', 'presentation');
@@ -5216,7 +5347,7 @@ try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   setTimeout(done, 4000); document.body.appendChild(sp);
 } } catch (e) {}
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
-if (navigator.webdriver || /[?&]debug\b/.test(location.search)) window.__rb = { get G() { return G; }, A, UI, gz, ungz, shareableSave, saveSummary, sanitizeGame };
+if (navigator.webdriver || /[?&]debug\b/.test(location.search)) window.__rb = { get G() { return G; }, A, UI, render, COMM, gz, ungz, shareableSave, saveSummary, sanitizeGame };
 })();
 </script>
 </body>
