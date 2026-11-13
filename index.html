@@ -5168,9 +5168,9 @@ function applyBrand(color) {
 }
 const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w) && !/^(of|the|and|&)$/i.test(w)).map(w => w[0].toUpperCase()).join('').slice(0, 4) || 'PRO';
 
-function wizStart(add) {
+function wizStart(add, chain) {
   add = add === true && !!G;
-  UI.wiz = { step: add ? 'company' : 'welcome', add, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
+  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
   render(); window.scrollTo(0, 0);
 }
 function wizPool() {
@@ -5286,6 +5286,9 @@ function wizFinish() {
   UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : 'book'; UI.selWeek = G.week; UI.calMonth = null;
   UI.modal = z.source === 'import' ? { type: 'rtools', tab: 'import', mode: 'replace' } : null;
   applyBrand(G.promo.color); save(); render(); window.scrollTo(0, 0);
+  // several companies chosen at the start: go straight on to setting up the next one
+  if ((z.count || 1) > (z.nth || 1) && (G.cos || []).length + 1 < MAX_COS) { wizStart(true, { n: (z.nth || 1) + 1, of: Math.min(MAX_COS, z.count) }); toast(`${G.promo.name} is ready. Now company ${(z.nth || 1) + 1} of ${z.count}.`); }
+  else if ((z.count || 1) > 1) { const u = nextUp(); if (u && !u.on) { goUnit(u); save(); render(); } }
 }
 
 // fold a freshly made company into the world it was started from, then switch to it
@@ -5306,7 +5309,7 @@ function wizSteps(cur) {
   const z = UI.wiz;
   const steps = z.source === 'draft' ? ['company', 'budget', 'roster', 'draft', 'champs'] : ['company', 'budget', 'roster'];
   const i = steps.indexOf(cur);
-  return `<div class="wz-steps">${steps.map((s, j) => `<span class="${j < i ? 'done' : j === i ? 'on' : ''}"></span>`).join('')}</div>`;
+  return `<div class="wz-steps">${steps.map((s, j) => `<span class="${j < i ? 'done' : j === i ? 'on' : ''}"></span>`).join('')}</div>${(z.count || 1) > 1 ? `<div class="tiny muted" style="margin:-6px 0 8px;font-weight:700;letter-spacing:.04em">COMPANY ${z.nth || 1} OF ${z.count}</div>` : ''}`;
 }
 function viewWizard() {
   const z = UI.wiz;
@@ -5316,7 +5319,9 @@ function viewWizard() {
     return `<div class="app wz"><div class="hero">${logoSVG('logo-art sm')}<h1>Book <em>It</em></h1>
       <p class="wz-lead">You just bought a wrestling company. Name it, draft a roster and book your first show.</p>
       <p class="muted small">About 3 minutes. Change anything later.</p></div>
-      <button class="btn pri block wz-cta" data-act="wzGo" data-id="company">Start my company</button>
+      <label class="f" style="margin-top:14px"><span>How many companies will you run?</span><div class="seg-ctl">${[1, 2, 3, 4].map(n => `<button class="${(z.count || 1) === n ? 'on' : ''}" data-act="wzSet" data-f="count" data-id="${n}">${n}</button>`).join('')}</div>
+        <div class="tiny muted" style="margin-top:4px">${(z.count || 1) > 1 ? `They share one world and take turns on the calendar. You set them up one after another.` : 'You can start more companies in the same world later, from Menu.'}</div></label>
+      <button class="btn pri block wz-cta" data-act="wzGo" data-id="company">${(z.count || 1) > 1 ? `Start company 1 of ${z.count}` : 'Start my company'}</button>
       ${slots.some(s => s.info) ? `<label class="f" style="margin-top:14px"><span>Save to</span><select data-wz="slot">${slots.map(s => `<option value="${s.n}" ${z.slot === s.n ? 'selected' : ''}>Slot ${s.n}${s.info ? ' (replaces ' + esc(s.info.name) + ')' : ' (empty)'}</option>`).join('')}</select></label>` : ''}
       <div class="row" style="justify-content:center;gap:8px;margin-top:16px"><button class="btn sm" data-act="wzQuick">Skip setup, use the starter roster</button><button class="btn sm" data-act="wzBack">Back</button></div></div>`;
   }
@@ -5337,7 +5342,7 @@ function viewWizard() {
       ${z.add ? `<p class="small muted" style="margin-top:0">This world has a big event every ${G.settings.bigEvery} weeks.</p>` : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}
       <label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
       <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order and repeat each year. Leave it empty for Big Event 1, 2, 3. You can change them later in Menu.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>
-      <div class="wz-nav">${z.add ? '<button class="btn" data-act="wzCancel">Cancel</button>' : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
+      <div class="wz-nav">${z.add ? `<button class="btn" data-act="wzCancel">${(z.nth || 1) > 1 ? 'Skip the rest' : 'Cancel'}</button>` : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
   }
   if (z.step === 'budget') {
     return `<div class="app wz">${wizSteps('budget')}
@@ -5420,7 +5425,7 @@ const WIZ_ACTIONS = {
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
   wzPpvIdeas() { UI.wiz.ppv = shuffle(BIG_EVENTS).slice(0, 12).join('\n'); render(); },
-  wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' ? +v : v; if (f === 'color') applyBrand(v); render(); },
+  wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
   wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false }); G.tips = 0; UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = { type: 'help' }; save(); render(); },
   wzDraft() { if (!UI.wiz.show.trim()) UI.wiz.show = DAYS[UI.wiz.day] + ' Mayhem'; wizBeginDraft(); },

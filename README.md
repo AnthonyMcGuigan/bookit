@@ -175,6 +175,7 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 
 ## Version 1.3: several companies in one world
 
+- New game: the welcome screen asks how many companies you'll run (1 to 4). Setup then runs once per company, back to back ("Company 2 of 3"). "Skip the rest" stops early.
 - Menu → Your companies → Start another company in this world (up to 4).
 - All companies share the free agents, rival promotions, titles calendar and week.
 - Each company books one show a week. The week moves on after the last company runs. Auto-book the rest if you only care about one.
