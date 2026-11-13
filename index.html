@@ -36,13 +36,13 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
   :root:not([data-theme="dark"]) {
     --bg: #f4f1f8; --bg2: #ebe6f2; --card: #ffffff; --card2: #f5f2fa; --line: #ddd5ea;
     --ink: #1c1726; --dim: #5f5674; --faint: #776e8c; --accent: var(--brand-l, #e08a00); --accent-ink: var(--brand-l-ink, #1a1306); --accent-t: color-mix(in srgb, var(--accent) 62%, #000);
-    --good: #0e7f44; --bad: #d33447; --warn: #8f6300; --info: #1f6fc8; --face: #1f78c8; --heel: #d33447; color-scheme: light;
+    --good: #0e7f44; --bad: #b3263a; --warn: #7a5300; --info: #1a66b3; --face: #1a66b3; --heel: #b3263a; color-scheme: light;
   }
 }
 :root[data-theme="light"] {
   --bg: #f4f1f8; --bg2: #ebe6f2; --card: #ffffff; --card2: #f5f2fa; --line: #ddd5ea;
   --ink: #1c1726; --dim: #5f5674; --faint: #776e8c; --accent: var(--brand-l, #e08a00); --accent-ink: var(--brand-l-ink, #1a1306); --accent-t: color-mix(in srgb, var(--accent) 62%, #000);
-  --good: #0e7f44; --bad: #d33447; --warn: #8f6300; --info: #1f6fc8; --face: #1f78c8; --heel: #d33447; color-scheme: light;
+  --good: #0e7f44; --bad: #b3263a; --warn: #7a5300; --info: #1a66b3; --face: #1a66b3; --heel: #b3263a; color-scheme: light;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -316,12 +316,12 @@ img.av { display: block; }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --bg: #f2eee6; --bg2: #e9e3d8; --card: #fffdf9; --card2: #f6f1e8; --line: #ddd3c3;
-    --gold: #a8740a; --rope-w: #c3c6d2; --spot1: rgba(255, 200, 90, .16); --spot2: rgba(90, 140, 255, .08);
+    --gold: #8a5c05; --rope-w: #c3c6d2; --spot1: rgba(255, 200, 90, .16); --spot2: rgba(90, 140, 255, .08);
   }
 }
 :root[data-theme="light"] {
   --bg: #f2eee6; --bg2: #e9e3d8; --card: #fffdf9; --card2: #f6f1e8; --line: #ddd3c3;
-  --gold: #a8740a; --rope-w: #c3c6d2; --spot1: rgba(255, 200, 90, .16); --spot2: rgba(90, 140, 255, .08);
+  --gold: #8a5c05; --rope-w: #c3c6d2; --spot1: rgba(255, 200, 90, .16); --spot2: rgba(90, 140, 255, .08);
 }
 body { background: var(--bg); }
 body::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -425,7 +425,9 @@ nav.tabs .dot { background: var(--rope-r); font-family: system-ui, sans-serif; l
 .mside { gap: 7px; }
 .vsb { font-family: var(--f-display); font-weight: 400; font-size: 17px; letter-spacing: .02em; padding: 2px 8px; border: 0; border-radius: 6px; transform: skewX(-10deg);
   color: #fff; background: linear-gradient(135deg, var(--rope-r), color-mix(in srgb, var(--rope-r) 50%, var(--rope-b)) 50%, var(--rope-b)); box-shadow: 0 2px 8px rgba(0,0,0,.3); }
-.vs { font-family: var(--f-display); font-weight: 400; color: var(--rope-r); font-size: 14px; }
+.vs { font-family: var(--f-display); font-weight: 400; color: #ff5c68; font-size: 14px; }
+:root[data-theme="light"] .vs { color: #c4202f; }
+@media (prefers-color-scheme: light) { :root:not([data-theme]) .vs { color: #c4202f; } }
 .mrow.me { padding: 14px 12px 12px; background:
   radial-gradient(80% 120% at 50% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 70%), linear-gradient(180deg, color-mix(in srgb, var(--gold) 6%, transparent), transparent); }
 .mrow.me .mpos { color: var(--gold-ink); background: linear-gradient(180deg, #ffe99a, #f2c443 50%, #c48e14); padding: 2px 10px; border-radius: 4px; font-family: var(--f-display); font-weight: 400; font-size: 13px; letter-spacing: .08em; }
@@ -704,15 +706,17 @@ body { --ic: var(--gold); }
 .bk-bar { margin: 0 0 10px; align-items: center; flex-wrap: wrap; gap: 8px; }
 .bk-bar .sp { flex: 1 1 160px; }
 /* ----- accessibility: less motion, visible focus ----- */
-html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-motion="reduce"] *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; scroll-behavior: auto !important; }
-@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) *, html:not([data-motion="full"]) *::before, html:not([data-motion="full"]) *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; } }
+html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-motion="reduce"] *::after { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01s !important; scroll-behavior: auto !important; }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) *, html:not([data-motion="full"]) *::before, html:not([data-motion="full"]) *::after { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01s !important; } }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.modal:focus, .live:focus, main:focus, .mb:focus:not(:focus-visible) { outline: none; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 @media (max-width: 380px) { .seg-ctl button { font-size: 12.5px; letter-spacing: .01em; padding: 8px 3px; } .seg-ctl { gap: 2px; } }
 /* the same squeeze when big text makes the screen effectively narrow */
 html[data-nw] .seg-ctl button { font-size: 12.5px; letter-spacing: .01em; padding: 8px 3px; } html[data-nw] .seg-ctl { gap: 2px; }
 html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw="2"] .stat { padding: 8px 8px; } html[data-nw="2"] .stat .v { font-size: 18px; } html[data-nw="2"] .seg-ctl button { font-size: 11.5px; letter-spacing: 0; padding: 7px 2px; } html[data-nw="2"] .cal-t { font-size: 10px; letter-spacing: 0; }
 @media (max-width: 300px) { .cal-now { font-size: 8.5px; letter-spacing: 0; } .stat { padding: 8px 8px; } .stat .v { font-size: 18px; } .seg-ctl button { font-size: 11.5px; letter-spacing: 0; padding: 7px 2px; } .cal-t { font-size: 10px; letter-spacing: 0; } }
-.seg-ctl .cnt, .filters .cnt { display: inline-block; min-width: 1.6em; padding: 0 .35em; border-radius: 99px; background: color-mix(in srgb, currentColor 16%, transparent); font-size: .85em; line-height: 1.4; letter-spacing: 0; }
+.seg-ctl .cnt, .filters .cnt { display: inline-block; min-width: 1.6em; padding: 0 .35em; border-radius: 99px; background: color-mix(in srgb, currentColor 10%, transparent); font-size: .85em; line-height: 1.4; letter-spacing: 0; }
 .item .main, .row > *, .sp { min-width: 0; }
 .t, .d, .small, .tiny, h1, h2, h3, p, li, label, td, th, b, .news { overflow-wrap: anywhere; }
 img, svg, video, canvas, input, select, textarea { max-width: 100%; }
@@ -797,6 +801,9 @@ const sum = a => a.reduce((s, x) => s + x, 0);
 const starStr = r => { const s = Math.round(clamp(r, 0, 100) / 20 * 4) / 4; const f = Math.floor(s), q = s - f; return '★'.repeat(f) + (q >= .75 ? '¾' : q >= .5 ? '½' : q >= .25 ? '¼' : '') || 'DUD'; };
 const grade = r => r >= 90 ? 'Classic' : r >= 80 ? 'Excellent' : r >= 70 ? 'Great' : r >= 60 ? 'Good' : r >= 50 ? 'Okay' : r >= 40 ? 'Weak' : 'Bad';
 const initials = n => n.replace(/["'“”]/g, '').split(/\s+/).filter(w => /^[A-Za-z]/.test(w) && !/^(the|el|la|of)$/i.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+// text colour (white or near-black) with the most contrast on a #rrggbb background
+const relLum = c => { const v = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16) / 255).map(x => x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; };
+const inkOn = c => { if (!/^#[0-9a-f]{6}$/i.test(c || '')) return '#ffffff'; const l = relLum(c); return 1.05 / (l + .05) >= (l + .05) / (relLum('#1a1306') + .05) ? '#ffffff' : '#1a1306'; };
 const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 360; };
 
 // ---------- static data ----------
@@ -2669,7 +2676,7 @@ function liveScreen(m) {
     <div class="grid2" style="margin-top:14px"><button class="btn" data-act="liveRecap">Full results</button><button class="btn pri" data-act="afterShow">${esc(nextLabel(h))}</button></div>
     <div class="lv-more"><button class="link" data-act="copyResults" data-id="${h.wk}">Copy results</button>${canUndo(h.wk) ? '<button class="link" data-act="undoShow">↶ Undo this show</button>' : ''}</div>
   </div>`;
-  return `<div class="live ${h.big ? 'big' : ''} ${reduceMotion() ? 'skip' : ''}" role="dialog" aria-label="${esc(h.name)} live">
+  return `<div class="live ${h.big ? 'big' : ''} ${reduceMotion() ? 'skip' : ''}" role="dialog" aria-modal="true" tabindex="-1" aria-label="${esc(h.name)} live">
     <div class="lv-h"><span class="lv-dot">● LIVE</span><div class="sp"><div class="lv-name">${esc(h.name)}</div><div class="tiny muted">${dayLabel(h.wk)} · Week ${h.wk}${h.big ? ' · BIG EVENT' : ''}</div></div><button class="btn sm iconbtn" data-act="sound" aria-label="${meta.sound === false ? 'Turn sound on' : 'Mute sound'}">${meta.sound === false ? '🔇' : '🔊'}</button><button class="btn sm" data-act="liveSkip">Skip ⏭</button></div>
     <div class="lv-body">${segs}${fin}</div></div>`;
 }
@@ -2996,7 +3003,7 @@ function av(w, size) {
   const ac = w.align === 'face' || w.align === 'heel' ? ' av-' + w.align : '';
   // PNG photos are pixel art (real photos are saved as JPEG), so keep their pixels crisp
   if (ph) return `<img class="av${ac}${ph.startsWith('data:image/png') ? ' px' : ''}" alt="" src="${esc(ph)}" style="width:${s}px;height:${s}px;object-fit:cover">`;
-  return `<div class="av${ac}" style="width:${s}px;height:${s}px;font-size:${Math.round(s * .37)}px;background:${safeColor(w.color) || `hsl(${hue(w.name || '?')} 45% 42%)`}">${esc(initials(w.name || '?'))}</div>`;
+  return `<div class="av${ac}" style="width:${s}px;height:${s}px;font-size:${Math.round(s * .37)}px;background:${safeColor(w.color) || `hsl(${hue(w.name || '?')} 45% 32%)`}${safeColor(w.color) ? ';color:' + inkOn(safeColor(w.color)) : ''}">${esc(initials(w.name || '?'))}</div>`;
 }
 function wTags(w) {
   const t = [`<span class="tag ${w.align}">${w.align === 'face' ? 'Face' : 'Heel'}</span>`];
@@ -3021,7 +3028,8 @@ function heatBar(h) { return `<div class="heat">🔥<div class="bar"><i style="w
 function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><span class="${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${v > 0 && !/^Base/.test(t) ? '+' : ''}${v}</span> ${esc(t)}</div>`).join('')}</div>`; }
 
 function render() {
-  if (!G || UI.wiz) { root.innerHTML = iconize(UI.wiz ? viewWizard() : viewStart()); modals.innerHTML = iconize(renderModal()); return; }
+  const fk = focusKey(document.activeElement);
+  if (!G || UI.wiz) { root.innerHTML = iconize('<main tabindex="-1">' + (UI.wiz ? viewWizard() : viewStart()) + '</main>'); modals.innerHTML = iconize(renderModal()); a11yAfter(fk); return; }
   if (UI.pendingGet && !UI.modal && !UI.wiz) { const k = UI.pendingGet; UI.pendingGet = null; if (cItem(k).i) { setTimeout(() => A.cGet(k)); } }
   if (G.promo.color !== render.brand) { render.brand = G.promo.color; applyBrand(G.promo.color); }
   if (!UI.selWeek || UI.selWeek < 1) UI.selWeek = G.week;
@@ -3031,16 +3039,16 @@ function render() {
   root.innerHTML = iconize(`<div class="app">
     <header class="top">
       <div class="top-logo">${esc(abbr(G.promo.name))}</div>
-      <div class="brand"><b>${esc(G.promo.name)}</b><span>Week ${G.week} · ${big ? '🎆 ' : ''}${esc(showName(G.week))}</span></div>
+      <div class="brand"><b role="heading" aria-level="1">${esc(G.promo.name)}</b><span>Week ${G.week} · ${big ? '🎆 ' : ''}${esc(showName(G.week))}</span></div>
       ${G.settings.finances ? `<div class="money" style="color:${G.money < 0 ? 'var(--bad)' : 'inherit'}">${money(G.money)}</div>` : ''}
       ${multi() ? '<button class="iconbtn" data-act="cos" aria-label="Switch company">⇅</button>' : ''}
       <button class="iconbtn" data-act="menu" aria-label="Menu">☰</button>
     </header>
-    ${({ book: viewBook, roster: viewRoster, stories: viewStories, office: viewOffice, notes: viewNotes })[UI.tab]()}
+    <main tabindex="-1">${({ book: viewBook, roster: viewRoster, stories: viewStories, office: viewOffice, notes: viewNotes })[UI.tab]()}</main>
   </div>
-  <nav class="tabs"><div class="in">
+  <nav class="tabs" aria-label="Main"><div class="in">
     ${[['book', '📅', 'Shows', 0], ['roster', '🤼', 'Roster', 0], ['stories', '🔥', 'Stories', 0], ['office', '💼', 'Office', CON() ? signed().filter(w => w.contract.weeks <= 4).length : 0], ['notes', '📓', 'Notes', 0]]
-      .map(([k, i, l, n]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}" ${UI.tab === k ? 'aria-current="page"' : ''}><span class="ic">${i}</span>${l}${n ? `<span class="dot">${n}</span>` : ''}</button>`).join('')}
+      .map(([k, i, l, n]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}" ${UI.tab === k ? 'aria-current="page"' : ''}><span class="ic">${i}</span>${l}${n ? `<span class="dot" aria-hidden="true">${n}</span><span class="sr-only">, ${n} contract${n === 1 ? '' : 's'} ending soon</span>` : ''}</button>`).join('')}
   </div></nav>`);
   // keep the open sheet's scroll position when it re-renders (e.g. tapping options in the builder)
   const mbOld = modals.querySelector('.modal-bg:not(.picker-bg) .mb'), keyOld = lastModalKey, scOld = mbOld ? mbOld.scrollTop : 0;
@@ -3050,6 +3058,45 @@ function render() {
   // the week strip: keep the show being booked in view
   const chip = root.querySelector('.wk-chip.on'), strip = chip?.parentElement;
   if (chip && strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, chip.offsetLeft - strip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2);
+  a11yAfter(fk);
+}
+// ---------- accessibility: keep keyboard focus through re-renders, and inside open sheets ----------
+// Every tap rebuilds the screen, which would drop focus back to the top of the page. Remember what had focus,
+// put it back on the matching new element, move focus into a sheet when one opens, and return it when it closes.
+const focusStack = [];
+function focusKey(el) {
+  if (!el || el === document.body || !el.closest || !el.closest('#root, #modals')) return null;
+  const d = el.dataset || {};
+  return { tag: el.tagName, act: d.act, id: d.id, inn: d.in, ew: d.ew, txt: (el.textContent || '').trim().slice(0, 40), layer: layers().indexOf(el.closest('.modal-bg, .live')) };
+}
+function findByKey(k, scope) {
+  if (!k || !scope || !(k.act || k.inn || k.ew)) return null;
+  const q = v => '"' + String(v).replace(/["\\]/g, '\\$&') + '"';
+  let sel = k.tag.toLowerCase();
+  if (k.act) sel += `[data-act=${q(k.act)}]`; if (k.id != null) sel += `[data-id=${q(k.id)}]`; if (k.inn) sel += `[data-in=${q(k.inn)}]`; if (k.ew) sel += `[data-ew=${q(k.ew)}]`;
+  const c = [...scope.querySelectorAll(sel)].filter(e => !e.disabled);
+  return c.find(e => (e.textContent || '').trim().slice(0, 40) === k.txt) || c[0] || null;
+}
+const layers = () => [...modals.querySelectorAll(':scope > .modal-bg, :scope > .live')];
+function a11yAfter(fk) {
+  // selected states for screen readers (the look comes from the .on / .sel classes)
+  for (const b of document.querySelectorAll('.seg-ctl > button, .filters > button')) b.setAttribute('aria-pressed', b.classList.contains('on'));
+  for (const b of document.querySelectorAll('button.pick')) b.setAttribute('aria-pressed', b.classList.contains('sel'));
+  const ls = layers(), top = ls[ls.length - 1] || null, depth = ls.length, keyNow = depth ? lastModalKey + '|' + depth : '';
+  // only the top sheet can be reached; everything under it is inert
+  root.inert = depth > 0; ls.forEach((l, i) => { l.inert = i < depth - 1; });
+  const prevDepth = a11yAfter.depth || 0, prevKey = a11yAfter.key || '';
+  a11yAfter.depth = depth; a11yAfter.key = keyNow;
+  const scope = top || root;
+  const go = el => { if (el && el.isConnected) { try { el.focus({ preventScroll: true }); } catch (e) {} return true; } return false; };
+  if (depth > prevDepth) { for (let i = prevDepth; i < depth; i++) focusStack.push(i === prevDepth ? fk : null); go(top.querySelector('.modal, .live') || top); return; }
+  if (depth < prevDepth) { let back = null; while (focusStack.length > depth) back = focusStack.pop() || back; if (!go(findByKey(back, scope))) go(top ? top.querySelector('.modal') || top : root.querySelector('main')); return; }
+  if (depth && keyNow !== prevKey) { go(top.querySelector('.modal, .live') || top); return; }
+  // same screen: put focus back where it was, unless it's a text field (reRender handles those) or focus already moved
+  const a = document.activeElement;
+  if (!fk || (a && a !== document.body) || fk.tag === 'TEXTAREA') return;
+  const el = findByKey(fk, scope);
+  if (el && !(el.tagName === 'INPUT' && /^(text|search|email|number|password|url|tel)$/.test(el.type))) go(el);
 }
 
 // ---------- start screen ----------
@@ -3149,7 +3196,9 @@ function viewBookCard() {
     const cnt = w === G.week ? G.card.length : (G.future[w] || []).length;
     const cls = ['cal-t', w === wk ? 'sel' : '', w === G.week ? 'now' : '', w < G.week ? 'past' : '', isBig(w) ? 'big' : ''].join(' ');
     const status = w < 1 ? '' : h ? `<span class="cal-r">${h.rating}</span>` : w === G.week ? '<span class="cal-now">TONIGHT</span>' : w < G.week ? '<span class="muted">—</span>' : cnt ? `<span class="cal-c">${cnt} booked</span>` : '<span class="cal-e">open</span>';
-    return `<button class="${cls}" data-act="selWeek" data-id="${w}" ${w < 1 || w > G.week + 16 ? 'disabled' : ''}>
+    const say = w < 1 ? '' : h ? 'rated ' + h.rating : w === G.week ? 'tonight' : w < G.week ? 'no show' : cnt ? cnt + ' booked' : 'open';
+    const lab = `${dateOf(w).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}${isBig(w) ? ', big event' : ''}${say ? ', ' + say : ''}`;
+    return `<button class="${cls}" data-act="selWeek" data-id="${w}" aria-label="${esc(lab)}" aria-pressed="${w === wk}" ${w < 1 || w > G.week + 16 ? 'disabled' : ''}>
       <span class="cal-n">${dateOf(w).getUTCDate()}</span>
       ${isBig(w) ? '<span class="cal-s">PPV</span>' : ''}${status}</button>`;
   }).join('');
@@ -3291,8 +3340,8 @@ function viewRoster() {
     <div class="list">${(G.factions || []).map(f => { const ts = f.tms.map(TM).filter(Boolean), solo = f.members.filter(id => !ts.some(t => t.members.includes(id))); return `<button class="item" data-act="editFaction" data-id="${f.id}"><div class="av" style="width:40px;height:40px;font-size:12px;background:var(--card2);color:var(--accent-t)">👑</div><div class="main"><div class="t">${esc(f.name)} <span class="tiny muted">${f.members.length} members</span></div><div class="d">${[...ts.map(t => '<b>' + esc(t.name) + '</b>'), ...solo.map(id => esc(nameOf(id)) + (id === f.leader ? ' (leader)' : ''))].join(' · ') || 'No members'} · ${teamRec(f)}</div></div></button>`; }).join('') || '<div class="empty">No factions yet.</div>'}</div>`;
   return `
   <div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>
-  <div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search roster" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1">
-    <select data-in="rosterSort" style="width:auto">${[['pop', 'Popularity'], ['ring', 'In-ring'], ['mic', 'Mic'], ['morale', 'Morale (low first)'], ['fatigue', 'Fatigue'], ...(CON() ? [['contract', 'Contract (ending first)']] : []), ['wins', 'Wins'], ['winpct', 'Win %'], ['streak', 'Win streak'], ['name', 'Name']].map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+  <div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search roster" aria-label="Search roster" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1">
+    <select data-in="rosterSort" style="width:auto" aria-label="Sort roster by">${[['pop', 'Popularity'], ['ring', 'In-ring'], ['mic', 'Mic'], ['morale', 'Morale (low first)'], ['fatigue', 'Fatigue'], ...(CON() ? [['contract', 'Contract (ending first)']] : []), ['wins', 'Wins'], ['winpct', 'Win %'], ['streak', 'Win streak'], ['name', 'Name']].map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
   ${filt}
   <div class="small muted" style="margin-bottom:8px">${list.length} of ${signed().length} signed${CON() && MON() ? ` · payroll ${money(sum(signed().map(w => w.contract.salary)))}/wk` : ''}</div>
   <div class="list">${list.map(w => wItem(w)).join('') || (signed().length ? '<div class="empty">Nobody matches.</div>' : '<div class="empty">Your roster is empty. Build, import or grab one from Community.</div>')}</div>`;
@@ -3415,9 +3464,9 @@ function viewNotes() {
 let modalAnim = false;
 function modal(title, body, foot, opts) {
   opts = { ...(opts || {}), anim: opts?.anim ?? modalAnim };
-  return `<div class="modal-bg ${opts?.cls || ''}" data-act="${opts?.closeAct || 'closeModal'}" data-bg="1"><div class="modal ${opts?.anim ? 'anim' : ''}" role="dialog" aria-modal="true" aria-label="${esc(String(title).replace(/<[^>]*>/g, ''))}">
+  return `<div class="modal-bg ${opts?.cls || ''}" data-act="${opts?.closeAct || 'closeModal'}" data-bg="1"><div class="modal ${opts?.anim ? 'anim' : ''}" role="dialog" aria-modal="true" tabindex="-1" aria-label="${esc(String(title).replace(/<[^>]*>/g, ''))}">
     <div class="mh"><h2>${title}</h2><button class="iconbtn" data-act="${opts?.closeAct || 'closeModal'}" aria-label="Close">✕</button></div>
-    <div class="mb">${body}</div>${foot ? `<div class="mf">${foot}</div>` : ''}</div></div>`;
+    <div class="mb" tabindex="0">${body}</div>${foot ? `<div class="mf">${foot}</div>` : ''}</div></div>`;
 }
 let lastModalKey = '', lastPickerOpen = false;
 function renderModal() {
@@ -3763,7 +3812,7 @@ function renderPicker() {
   const oppAlign = opp.length && opp.every(o => o.align === opp[0].align) ? (opp[0].align === 'face' ? 'heel' : 'face') : '';
   const score = w => (rival.has(w.id) ? 3 : 0) + (opp.length && opp.every(o => sameDiv(o, w)) ? 2 : 0) + (oppAlign && w.align === oppAlign ? 1 : 0);
   list.sort((a, b) => (a.injury > 0) - (b.injury > 0) || (onCard.has(a.id)) - (onCard.has(b.id)) || score(b) - score(a) || b.pop - a.pop);
-  const body = `<input type="search" placeholder="Search" value="${esc(p.q || '')}" data-in="pickQ" style="margin-bottom:8px">
+  const body = `<input type="search" placeholder="Search" aria-label="Search wrestlers" value="${esc(p.q || '')}" data-in="pickQ" style="margin-bottom:8px">
    <div class="filters">${[['', 'All'], ['face', 'Faces'], ['heel', 'Heels']].map(([k, l]) => `<button class="${(p.align || '') === k ? 'on' : ''}" data-act="pickAlign" data-id="${k}">${l}</button>`).join('')}${brandF ? `<button class="${p.allB ? 'on' : ''}" data-act="pickAllB">Other brands</button>` : ''}</div>
    ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
    <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.</div>
@@ -5332,7 +5381,7 @@ function modalCommunity(m) {
     const counts = i => `${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} ${i.kind === 'save' ? 'playing' : 'added'}` : ''}`;
     body += `<div class="seg-ctl sm" style="margin-bottom:8px">${[['popular', 'Popular'], ['new', 'New'], ['following', 'Following']].map(([k, l]) => `<button class="${sort === k ? 'on' : ''}" data-act="cSort" data-id="${k}">${l}</button>`).join('')}</div>`;
     if (sort === 'following' && !myList('follows').length) body += '<div class="tiny muted" style="margin-bottom:8px">Follow creators from their page to see their new uploads here.</div>';
-    body += `<input type="search" data-in="cQ" value="${esc(m.q || '')}" placeholder="Search creations" style="margin-bottom:8px">
+    body += `<input type="search" data-in="cQ" aria-label="Search creations" value="${esc(m.q || '')}" placeholder="Search creations" style="margin-bottom:8px">
       <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['save', '💾 Saves']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
       <div class="list">${(list.map(i => i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent-t)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
   } else if (t === 'share' && !G) {
@@ -5723,11 +5772,11 @@ function applyBrand(color) {
   if (!c) return;
   let rgb = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
   const lumOf = v => (0.299 * v[0] + 0.587 * v[1] + 0.114 * v[2]) / 255, hex = v => '#' + v.map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
-  r.setProperty('--brand', c); r.setProperty('--brand-ink', lumOf(rgb) > 0.6 ? '#1a1306' : '#ffffff');
+  r.setProperty('--brand', c); r.setProperty('--brand-ink', inkOn(c));
   // light theme: grey brands become charcoal, pale brands get darkened until they read on a light page
   const sat = (Math.max(...rgb) - Math.min(...rgb)) / 255;
   if (sat < 0.12) rgb = [43, 37, 51]; else while (lumOf(rgb) > 0.45) rgb = rgb.map(x => x * 0.9);
-  r.setProperty('--brand-l', hex(rgb)); r.setProperty('--brand-l-ink', '#ffffff');
+  r.setProperty('--brand-l', hex(rgb)); r.setProperty('--brand-l-ink', inkOn(hex(rgb)));
 }
 const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w) && !/^(of|the|and|&)$/i.test(w)).map(w => w[0].toUpperCase()).join('').slice(0, 4) || 'PRO';
 
@@ -5876,7 +5925,7 @@ function wizSteps(cur) {
 }
 function viewWizard() {
   const z = UI.wiz;
-  const logo = `<div class="wz-logo" style="background:${esc(z.color)}">${esc(abbr(z.name || 'My Promotion'))}</div>`;
+  const logo = `<div class="wz-logo" style="background:${esc(z.color)};color:${inkOn(z.color)};text-shadow:none">${esc(abbr(z.name || 'My Promotion'))}</div>`;
   if (z.step === 'welcome') {
     const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
     return `<div class="app wz"><div class="hero">${logoSVG('logo-art sm')}<h1>Book <em>It</em></h1>
@@ -6122,6 +6171,13 @@ document.addEventListener('focusout', () => setTimeout(() => { if (COMM.pending 
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.id === 'todo-in') A.addTodo();
   if (e.key === 'Escape') { if (UI.picker) A.pickDone(); else if (UI.modal) closeModal(); }
+  if (e.key === 'Tab') { // keep Tab inside the open sheet
+    const ls = layers(), top = ls[ls.length - 1]; if (!top) return;
+    const f = [...top.querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.getClientRects().length);
+    if (!f.length) return; const first = f[0], last = f[f.length - 1], a = document.activeElement;
+    if (e.shiftKey && (a === first || !top.contains(a) || a.matches('.modal, .live'))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (a === last || !top.contains(a))) { e.preventDefault(); first.focus(); }
+  }
 });
 // re-render while keeping the focused field and caret in place
 function reRender(el) {
