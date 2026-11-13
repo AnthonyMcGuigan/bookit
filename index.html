@@ -787,19 +787,47 @@ const STYLE_CHEM = { // pairs that tend to click in the ring
   'Technician|High Flyer': 5, 'Brawler|Powerhouse': 5, 'Technician|Technician': 4, 'High Flyer|High Flyer': 3,
   'Powerhouse|High Flyer': 4, 'Showman|Brawler': 2, 'Powerhouse|Powerhouse': -2, 'Showman|Showman': 1
 };
+// A match is a participant type (who and how many) plus a gimmick on top (the rules). Players can add their own of both.
 const MATCH_TYPES = {
   'Singles': { sides: 2, size: 1 }, 'Tag Team': { sides: 2, size: 2 }, 'Triple Threat': { sides: 3, size: 1 },
-  'Fatal 4-Way': { sides: 4, size: 1 }, 'Six-Person Tag': { sides: 2, size: 3 }
+  'Fatal 4-Way': { sides: 4, size: 1 }, 'Five-Way': { sides: 5, size: 1 }, 'Six-Way': { sides: 6, size: 1 },
+  'Six-Person Tag': { sides: 2, size: 3 }, 'Eight-Person Tag': { sides: 2, size: 4 },
+  'Handicap 2-on-1': { sides: 2, sizes: [1, 2] }, 'Handicap 3-on-1': { sides: 2, sizes: [1, 3] },
+  'Battle Royal': { ffa: true, wide: true, min: 6, max: 40, def: 20, desc: 'Over the top rope. Anyone from any show can enter, even if they already wrestled tonight.' },
+  'Rumble': { ffa: true, wide: true, rumble: true, min: 10, max: 40, def: 30, desc: 'Timed entries from the whole roster, every brand. Wrestling earlier tonight is fine.' }
 };
 const STIPS = {
   'Standard': { desc: 'Regular rules.' },
   'No DQ': { noDQ: true, style: 'Brawler', bonus: 4, fat: 5, inj: .01, heat: 3, desc: 'Anything goes. Brawlers shine.' },
-  'Submission': { style: 'Technician', bonus: 5, fat: 3, desc: 'Win by tap-out only. Technicians shine.' },
+  'Submission': { rule: 'sub', style: 'Technician', bonus: 5, fat: 3, desc: 'Win by tap-out only. Technicians shine.' },
+  'I Quit': { rule: 'sub', noDQ: true, style: 'Brawler', bonus: 6, fat: 10, inj: .02, heat: 7, desc: 'Make them say it. Personal and nasty.' },
+  'Falls Count Anywhere': { noDQ: true, style: 'Brawler', bonus: 5, fat: 8, inj: .02, heat: 5, desc: 'Pins count all over the building.' },
+  'Tables': { noDQ: true, style: 'Powerhouse', bonus: 5, fat: 8, inj: .02, heat: 4, desc: 'Put them through a table to win.' },
+  'Last Man Standing': { rule: 'ko', noDQ: true, style: 'Brawler', bonus: 6, fat: 14, inj: .03, heat: 6, desc: 'No pins. Keep them down for ten.' },
   'Ladder': { noDQ: true, style: 'High Flyer', bonus: 6, fat: 14, inj: .04, heat: 4, desc: 'Big spots, big risk. High flyers shine.' },
   'Steel Cage': { noDQ: true, style: 'Powerhouse', bonus: 5, fat: 10, inj: .02, heat: 7, desc: 'Ends feuds. Powerhouses shine.' },
   'Street Fight': { noDQ: true, style: 'Brawler', bonus: 6, fat: 10, inj: .03, heat: 6, desc: 'Brutal and personal. Adds heat.' },
+  'The Cell': { noDQ: true, style: 'Brawler', bonus: 8, fat: 18, inj: .05, heat: 10, feud: true, desc: 'A roofed cage around the ring. The final chapter of a feud.' },
+  'The Chamber': { noDQ: true, style: 'High Flyer', bonus: 7, fat: 16, inj: .04, heat: 5, multi: true, desc: 'Pods and steel. Best with four to six people.' },
   'Iron Endurance': { style: 'Technician', bonus: 7, fat: 18, inj: .02, desc: 'Long match. Needs stamina.', stam: true }
 };
+const GM_RULES = { any: 'Normal rules', nodq: 'No DQ', sub: 'Give up only (no pins)', ko: 'Knockout only (no pins)' };
+const GM_RISK = [{ fat: 4, inj: .005, l: 'Low' }, { fat: 10, inj: .02, l: 'Medium' }, { fat: 16, inj: .04, l: 'High' }];
+const GM_HEAT = [1, 5, 9];
+const CM = () => (G && G.customMatch) || { types: [], gims: [] };
+// a player-made participant type or gimmick, as a definition the sim understands
+function customMT(c) { return c.ffa ? { ffa: true, wide: !!c.wide, rumble: !!c.wide, min: 3, max: 40, def: clamp(+c.count || 10, 3, 40), custom: true, desc: c.desc || mtDesc(c) } : { sides: clamp(+c.teams || 2, 2, 6), size: clamp(+c.per || 1, 1, 5), custom: true, desc: c.desc || mtDesc(c) }; }
+function customGM(c) { const rk = GM_RISK[clamp(+c.risk || 0, 0, 2)]; return { custom: true, desc: c.desc || mtDesc(c, true), noDQ: c.rule === 'nodq' || c.rule === 'sub' || c.rule === 'ko', rule: c.rule === 'sub' || c.rule === 'ko' ? c.rule : undefined, style: STYLES.includes(c.style) ? c.style : undefined, bonus: 5, fat: rk.fat, inj: rk.inj, heat: GM_HEAT[clamp(+c.heat || 0, 0, 2)], stam: !!c.long }; }
+const MT = k => Object.hasOwn(MATCH_TYPES, k) ? MATCH_TYPES[k] : (() => { const c = CM().types.find(x => x.name === k); return c ? customMT(c) : MATCH_TYPES.Singles; })();
+const GM = k => Object.hasOwn(STIPS, k) ? STIPS[k] : (() => { const c = CM().gims.find(x => x.name === k); return c ? customGM(c) : STIPS.Standard; })();
+const mtNames = () => [...Object.keys(MATCH_TYPES), ...CM().types.map(x => x.name)];
+const gmNames = () => [...Object.keys(STIPS), ...CM().gims.map(x => x.name)];
+const sideSize = (mt, i) => mt.ffa ? 1 : mt.sizes ? mt.sizes[i] || 1 : mt.size;
+const tagMT = mt => !mt.ffa && !mt.sizes && mt.sides === 2 && mt.size === 2;
+const isFFA = s => s && s.kind === 'match' && !!MT(s.mtype).ffa;
+// roster-wide matches (rumbles, battle royals) can use anyone from any show, even someone who already wrestled tonight
+const wideSeg = s => s && s.kind === 'match' && !!MT(s.mtype).wide;
+const entrants = s => s.sides.flat();
 const FINISHES = {
   'Clean': { r: 0, heat: 0, win: [8, 1.2], lose: [-6, -0.6], desc: 'A clean pin. The winner gets the biggest boost.' },
   'Submission': { r: 1, heat: 1, win: [8, 1.2], lose: [-5, -0.5], desc: 'The loser taps out. Best for technicians.' },
@@ -814,8 +842,10 @@ const FINISHES = {
 const OLD_FIN = { 'DQ / Count-out': 'DQ' };
 const SUB_FIN = ['Submission', 'Cheating', 'Run-in', 'Screwjob', 'No Contest'];
 // some finishes make no sense with some rules (no DQ in a cage, no pin in a submission match)
-const finOK = (stip, f) => Object.hasOwn(FINISHES, f) && !(FINISHES[f].dq && STIPS[stip]?.noDQ) && (stip !== 'Submission' || SUB_FIN.includes(f));
-function finOf(seg) { let k = OLD_FIN[seg.finish] || seg.finish; if (!Object.hasOwn(FINISHES, k)) k = 'Clean'; if (!finOK(seg.stip, k)) k = seg.stip === 'Submission' ? 'Submission' : 'Clean'; return k; }
+const KO_FIN = ['Clean', 'Cheating', 'Run-in', 'Screwjob', 'No Contest'];
+const finOK = (stip, f) => { const g = GM(stip); return Object.hasOwn(FINISHES, f) && !(FINISHES[f].dq && g.noDQ) && (g.rule !== 'sub' || SUB_FIN.includes(f)) && (g.rule !== 'ko' || KO_FIN.includes(f)); };
+const finFallback = stip => GM(stip).rule === 'sub' ? 'Submission' : 'Clean';
+function finOf(seg) { let k = OLD_FIN[seg.finish] || seg.finish; if (!Object.hasOwn(FINISHES, k)) k = 'Clean'; if (!finOK(seg.stip, k)) k = finFallback(seg.stip); return k; }
 // a manager only helps while they are on the roster and healthy
 function mgrOf(w) { const m = w && w.manager && W(w.manager); return m && m.id !== w.id && m.contract && !m.retired && !(m.injury > 0) ? m : null; }
 const managing = id => G.wrestlers.filter(w => w.manager === id && w.contract && !w.retired);
@@ -894,6 +924,7 @@ function migrate(g) {
   g.settings.injuries ??= true; g.settings.finances ??= true; g.settings.contracts ??= true; g.settings.organic ??= true; g.settings.bigEvery = [3, 4, 5, 6, 8].includes(+g.settings.bigEvery) ? +g.settings.bigEvery : 4;
   // an empty list is allowed: a company whose booker named no big events gets plain numbered ones
   if (!Array.isArray(g.bigEvents)) g.bigEvents = BIG_EVENTS.slice();
+  g.customMatch = fixCustomMatch(g.customMatch); if (!Array.isArray(g.ppvSig)) g.ppvSig = [];
   g.booker ||= { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0 }; g.event ??= null;
   for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; }
   for (const s of g.stories) { s.notes ??= ''; s.log ||= []; }
@@ -1025,6 +1056,42 @@ const bigWk = wk => wk % G.settings.bigEvery === 0;
 const isBig = wk => bigWk(wk) && onMain();
 const bigName = wk => { const i = Math.max(0, Math.floor(wk / G.settings.bigEvery) - 1), l = G.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`; };
 const showName = wk => isBig(wk) ? bigName(wk) : G.promo.show;
+// ---------- big event signature matches ----------
+// Each big event can have a signature match (a participant type, a gimmick, or both), like a yearly Rumble.
+// It is put on that event's card for the player, fans expect it, and skipping it costs a little.
+const sigName = sg => sg ? (sg.gm && sg.mt ? `${sg.gm} ${sg.mt}` : sg.gm || sg.mt || '') : '';
+const sigFor = name => (G.ppvSig || []).find(x => x && x.name === name && (x.mt || x.gm)) || null;
+const sigOf = wk => isBig(wk) ? sigFor(bigName(wk)) : null;
+const isSig = (s, sg) => !!sg && s.kind === 'match' && (!sg.mt || s.mtype === sg.mt) && (!sg.gm || s.stip === sg.gm);
+const sigBooked = (card, sg) => card.some(s => isSig(s, sg) && s.sides.filter(sd => sd.length).length >= 2);
+function sigSeg(sg, wk) {
+  const s = blankSeg('match'); s.mtype = sg.mt && mtNames().includes(sg.mt) ? sg.mt : 'Singles'; s.stip = sg.gm && gmNames().includes(sg.gm) ? sg.gm : 'Standard';
+  const mt = MT(s.mtype); s.sig = true; s.finish = finOf(s);
+  if (mt.ffa) { s.n = mt.def; s.sides = []; fillEntrants(s, wk); } else s.sides = Array.from({ length: mt.sides }, () => []);
+  if (wk > G.week) s.hype = 0;
+  return s;
+}
+// put the signature match on a big event's card once; if the player removes it, it stays removed
+function seedSig(wk) {
+  const sg = sigOf(wk); if (!sg || wk < G.week) return;
+  G.sigSeeded = Array.isArray(G.sigSeeded) ? G.sigSeeded : [];
+  if (G.sigSeeded.includes(wk)) return;
+  const card = wk === G.week ? G.card : (G.future[wk] ||= []);
+  if (!card.some(s => isSig(s, sg)) && card.length < maxSegs(wk)) card.push(sigSeg(sg, wk));
+  G.sigSeeded.push(wk); if (G.sigSeeded.length > 40) G.sigSeeded = G.sigSeeded.slice(-40);
+}
+// fill a rumble or battle royal: the biggest stars first, with a little luck, from one division
+function fillEntrants(d, wk = UI.selWeek ?? G.week) {
+  const mt = MT(d.mtype), n = clamp(Math.round(+d.n || mt.def || 10), mt.min || 3, mt.max || 40);
+  const have = entrants(d).filter(id => W(id)).slice(0, n);
+  let pool = (mt.wide ? signed() : bookable(wk)).filter(w => !have.includes(w.id) && !(w.injury > 0) && w.fatigue < 85);
+  let ref = have.length ? W(have[0]) : null;
+  if (!ref) { const by = {}; for (const w of pool) by[w.division || 'Open'] = (by[w.division || 'Open'] || 0) + 1; const top = Object.keys(by).sort((a, b) => by[b] - by[a])[0]; ref = pool.find(w => (w.division || 'Open') === top) || null; }
+  pool = pool.filter(w => sameDiv(ref, w)).map(w => [w, w.pop + rnd(0, 25)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  const ids = [...have, ...pool.slice(0, n - have.length).map(w => w.id)];
+  d.n = n; d.sides = ids.map(id => [id]); if (d.winner >= ids.length) d.winner = -1;
+  return ids.length - have.length;
+}
 const nextBig = () => { let w = G.week; while (!bigWk(w)) w++; return w; };
 const titlesOf = id => G.titles.filter(t => t.holder.includes(id));
 const storiesOf = id => G.stories.filter(s => s.status === 'active' && (s.a.includes(id) || s.b.includes(id)));
@@ -1047,6 +1114,8 @@ function storyBetween(groupA, groupB) {
     (s.a.some(x => groupA.includes(x)) && s.b.some(x => groupB.includes(x))) ||
     (s.b.some(x => groupA.includes(x)) && s.a.some(x => groupB.includes(x)))));
 }
+// the hottest story with people from both sides inside one big free-for-all
+const storyAmong = ids => G.stories.filter(s => s.status === 'active' && s.a.some(x => ids.includes(x)) && s.b.some(x => ids.includes(x))).sort((a, b) => b.heat - a.heat)[0];
 // ---------- storylines that grow out of the booking ----------
 // After each show, look for a moment the crowd would latch onto and start (at most) one story from it.
 function organicStories(results, before) {
@@ -1074,7 +1143,7 @@ function organicStories(results, before) {
       if (teamed) ideas.push({ p: 5, a: b, b: a, heat: 40, title: `Betrayal: ${ln(a)} turns on ${ln(b)}`, why: `${ln(a)} attacked their own tag partner ${ln(b)}.` });
     }
     // 4. a draw or a great match leaves unfinished business
-    if (sg.kind === 'match' && sides.every(sd => sd.length === 1) && (wi < 0 && sg.winner === -2 || r.rating >= 82)) ideas.push({ p: 2, a: sides[0], b: sides[1], heat: 25, title: `${ln(sides[0])} vs ${ln(sides[1])}: Unfinished business`, why: wi < 0 ? 'Their match ended in a draw. Nobody is satisfied.' : `Their ${r.rating}-rated match left fans wanting more.` });
+    if (sg.kind === 'match' && sides.length === 2 && sides.every(sd => sd.length === 1) && (wi < 0 && sg.winner === -2 || r.rating >= 82)) ideas.push({ p: 2, a: sides[0], b: sides[1], heat: 25, title: `${ln(sides[0])} vs ${ln(sides[1])}: Unfinished business`, why: wi < 0 ? 'Their match ended in a draw. Nobody is satisfied.' : `Their ${r.rating}-rated match left fans wanting more.` });
   }
   // 5. the same two keep crossing paths: three times in the last four shows becomes a feud
   const pairOf = sg => { const sd = sg.kind === 'match' ? sg.sides.filter(x => x.length) : [sg.who || [], sg.target || []]; return sd.length === 2 && sd[0].length === 1 && sd[1].length === 1 ? [sd[0][0], sd[1][0]].sort().join('|') : null; };
@@ -1108,6 +1177,7 @@ const hypeOf = m => Math.round(m.hype || 0);
 function buildsFor(seg, m) {
   const ppl = new Set(segPeople(seg)), sides = m.sides.filter(sd => sd.length);
   const hit = sides.filter(sd => sd.some(id => ppl.has(id))).length;
+  if (isFFA(m)) return hit ? 1 : 0;
   return hit >= 2 ? 2 : hit === 1 ? 1 : 0;
 }
 function buildHype(results, wk) {
@@ -1118,7 +1188,7 @@ function buildHype(results, wk) {
     for (const r of results) { const b = buildsFor(r.seg, m); if (b === 2) gain += 6 + r.rating / 9; else if (b === 1) gain += 1.5 + r.rating / 40; }
     if (!gain) { m.hype = Math.max(0, (m.hype || 0) - 4); continue; }
     m.hype = clamp((m.hype || 0) + gain, 0, 100);
-    const label = m.sides.map(sd => sd.map(id => nameOf(id).split(' ').pop()).join(' & ')).join(' vs ');
+    const label = vsLine(m, sd => sd.map(id => nameOf(id).split(' ').pop()).join(' & '));
     for (const r of results) if (buildsFor(r.seg, m)) { (r.notes ||= []).push(`📈 ${bigName(big)}: ${label} hype +${Math.round(gain)}`); break; }
   }
 }
@@ -1142,7 +1212,7 @@ function hotForPPV(big) {
 function roadCard() {
   const big = nextBig(); if (!big || big === G.week) return '';
   const ms = ppvMatches(big), left = big - G.week, name = bigName(big);
-  const label = m => m.sides.filter(sd => sd.length).map(sd => sd.map(nm).join(' & ')).join(' <span class="vs">VS</span> ');
+  const label = m => isFFA(m) ? `${entrants(m).length}-person ${esc(m.mtype)}` : m.sides.filter(sd => sd.length).map(sd => sd.map(nm).join(' & ')).join(' <span class="vs">VS</span> ');
   const t = m => m.title && G.titles.find(x => x.id === m.title);
   return `<div class="road"><div class="road-h"><span class="road-k">Road to</span><b>🎆 ${esc(name)}</b><span class="sp"></span><span class="road-w">${left === 1 ? 'Next week' : left + ' weeks'}</span></div>
     ${ms.length ? `<div class="road-l">${ms.map(m => `<div class="road-m"><div class="road-n">${t(m) ? belt(t(m).short) + ' ' : ''}${label(m)}</div><div class="road-b"><div class="bar"><i style="width:${hypeOf(m)}%"></i></div><b>${hypeOf(m)}</b><button class="btn sm" data-act="roadFaceoff" data-id="${m.id}" title="Add a face-off to this week's show">+ Face-off</button></div></div>`).join('')}</div>
@@ -1211,6 +1281,8 @@ function factionOf(ids) { return ids.length >= 2 ? (G.factions || []).find(f => 
 const factionsOfW = id => (G.factions || []).filter(f => f.members.includes(id));
 // what a side is called: its team, then its faction, then its names
 function sideLabel(ids) { const tm = teamOf(ids) || factionOf(ids); return tm ? tm.name : ids.map(nameOf).join(' & '); }
+// "A vs B" for a normal match; a rumble or battle royal is just named for its size
+const vsLine = (s, f = sd => sd.map(nameOf).join(' & ')) => isFFA(s) ? `the ${entrants(s).length}-person ${s.mtype}` : s.sides.map(f).join(' vs ');
 const teamRec = t => `${t.w || 0}–${t.l || 0}${t.d ? '–' + t.d : ''}`;
 const liveMembers = t => t.members.map(W).filter(w => w && w.contract);
 
@@ -1283,7 +1355,7 @@ function tSeg(T, r, i) {
 // The company being booked lives in G as always. The player's other companies wait in G.cos as snapshots
 // holding their own roster, titles, stories, money and history. Free agents, retired legends, AI rivals,
 // settings and the calendar are shared. Every company runs one show a week; the week moves on after the last one.
-const SHARED_KEYS = new Set(['v', 'created', 'week', 'settings', 'wrestlers', 'rivalPromos', 'rivals', 'cos', 'savedAt']);
+const SHARED_KEYS = new Set(['v', 'created', 'week', 'settings', 'wrestlers', 'rivalPromos', 'rivals', 'cos', 'savedAt', 'customMatch']);
 const MAX_COS = 4;
 const multi = () => !!(G && Array.isArray(G.cos) && G.cos.length);
 const waitingCos = () => (G.cos || []).filter(c => (c.ranWk || 0) < G.week);
@@ -1526,7 +1598,7 @@ function yearEnd(world = true) {
     const wd = signed().some(w => w.division === "Women's") && top(w => w.division === "Women's");
     if (wd && wd !== woy) list.push({ lbl: "Women's Wrestler of the Year", nm: nameOf(wd), det: `${apps(wd)} appearances`, wid: wd });
     const motm = segs.filter(r => r.seg.kind === 'match').sort((a, b) => b.rating - a.rating)[0];
-    if (motm) list.push({ lbl: 'Match of the Year', nm: motm.seg.sides.map(sd => sd.map(nameOf).join(' & ')).join(' vs '), det: `${starStr(motm.rating)} · week ${motm.wk}` });
+    if (motm) list.push({ lbl: 'Match of the Year', nm: vsLine(motm.seg), det: `${starStr(motm.rating)} · week ${motm.wk}` });
     const sh = shows.slice().sort((a, b) => b.rating - a.rating)[0];
     if (sh) list.push({ lbl: 'Show of the Year', nm: sh.name, det: `${sh.rating} · week ${sh.wk}` });
     const feud = G.stories.map(st => [st, st.log.filter(l => l.wk > from).length]).filter(x => x[1] >= 2).sort((a, b) => (b[1] * 4 + b[0].heat / 5) - (a[1] * 4 + a[0].heat / 5))[0];
@@ -1564,9 +1636,9 @@ function bookRecord(seg, res, rating) {
   if (seg.kind !== 'match') return [];
   const notes = [], ws = segPeople(seg).map(W).filter(Boolean);
   for (const w of ws) { const st = STATS(w); st.m++; st.sum += rating; st.best = Math.max(st.best, rating); }
-  if (!res.winners.length) { for (const w of ws) { formOf(w).unshift('D'); w.streak = 0; } }
+  if (!res.winners.length) { if (!res.ffa) for (const w of ws) { formOf(w).unshift('D'); w.streak = 0; } }
   else {
-    for (const id of res.losers) { const w = W(id); if (!w) continue;
+    for (const id of res.ffa ? [] : res.losers) { const w = W(id); if (!w) continue;
       if ((w.streak || 0) >= 5) { const by = res.winners.map(nameOf).join(' & '); notes.push(`🛑 ${by} snapped ${w.name}'s ${w.streak}-match win streak!`); news(`🛑 ${by} ended ${w.name}'s ${w.streak}-match winning streak.`, 'show'); res.winners.forEach(x => addPop(W(x), Math.min(6, w.streak * .5))); }
       formOf(w).unshift('L'); w.streak = Math.min(0, w.streak || 0) - 1;
       if (w.streak <= -4) { addPop(w, -0.5); if (w.streak === -4) notes.push(`🥶 ${w.name} has lost 4 straight. Fans are losing faith.`); }
@@ -1576,7 +1648,7 @@ function bookRecord(seg, res, rating) {
       if ([5, 10, 15, 20].includes(w.streak)) { notes.push(`🔥 ${w.name} is on a ${w.streak}-match win streak!`); news(`🔥 ${w.name} has won ${w.streak} in a row.`, 'show'); }
     }
   }
-  ws.forEach(w => { if (w.form.length > 10) w.form.length = 10; });
+  ws.forEach(w => { if (w.form && w.form.length > 10) w.form.length = 10; });
   return notes;
 }
 
@@ -1593,12 +1665,22 @@ function simSegment(seg, ctx) {
   if (seg.kind === 'match') {
     const sides = seg.sides.map(s => s.map(W).filter(Boolean)).filter(s => s.length);
     if (sides.length < 2) { out.rating = 25; out.text = 'Not enough wrestlers for a match.'; why.push([-25, 'Match had only one side']); return out; }
-    const stip = STIPS[seg.stip] || STIPS.Standard, fk = finOf(seg), fin = FINISHES[fk];
-    r = avg(people.map(w => w.ring)) * 0.55 + avg(people.map(w => w.pop)) * 0.22 + avg(people.map(w => w.cha)) * 0.08 + 4;
-    why.push([Math.round(r), 'Base: in-ring skill, popularity, charisma']);
-    // chemistry between opponents
-    let ch = []; for (let i = 0; i < sides.length; i++) for (let j = i + 1; j < sides.length; j++) for (const a of sides[i]) for (const b of sides[j]) ch.push(chem(a, b));
-    r += add(avg(ch), avg(ch) >= 0 ? 'Good in-ring chemistry' : 'Styles clashed');
+    const stip = GM(seg.stip), mt = MT(seg.mtype), ffa = !!mt.ffa, fk = finOf(seg), fin = FINISHES[fk];
+    // a big free-for-all is carried by its stars, not dragged down by the opening entrants
+    const core = ffa ? people.slice().sort((a, b) => b.pop - a.pop).slice(0, 8) : people;
+    r = avg(core.map(w => w.ring)) * 0.55 + avg(core.map(w => w.pop)) * 0.22 + avg(core.map(w => w.cha)) * 0.08 + 4;
+    why.push([Math.round(r), ffa ? 'Base: the biggest stars in the match' : 'Base: in-ring skill, popularity, charisma']);
+    if (ffa) {
+      r += add(Math.min(6, people.length / 5) + (mt.rumble ? 2 : 0) + (mt.rumble && ctx.big ? 3 : 0), `${people.length}-person ${seg.mtype}: surprise entrants and big eliminations`);
+      if (people.length < mt.def * 0.6) r += add(-5, `Too few entrants for a ${seg.mtype}`);
+      // a rumble is special: run one every week and the crowd stops caring
+      if (G.history.slice(-6).some(h => h.results.some(x => x.seg.kind === 'match' && x.seg.mtype === seg.mtype && x.seg.sides.length >= 3))) r += add(-7, `Fans saw a ${seg.mtype} just recently`);
+    } else {
+      // chemistry between opponents
+      let ch = []; for (let i = 0; i < sides.length; i++) for (let j = i + 1; j < sides.length; j++) for (const a of sides[i]) for (const b of sides[j]) ch.push(chem(a, b));
+      r += add(avg(ch), avg(ch) >= 0 ? 'Good in-ring chemistry' : 'Styles clashed');
+    }
+    if (mt.sizes) { const big2 = sides.find(sd => sd.length > 1), solo = sides.find(sd => sd.length === 1); if (big2 && solo) r += add(solo[0].align === 'face' && big2[0].align === 'heel' ? 3 : -1, solo[0].align === 'face' ? 'Underdog face against the odds' : 'Heel picks on a lone opponent'); }
     // face vs heel
     const al = sides.map(s => s[0].align);
     if (sides.length === 2) r += al[0] !== al[1] ? add(4, 'Face vs heel') : add(-3, 'Same alignment, crowd unsure who to cheer');
@@ -1608,10 +1690,13 @@ function simSegment(seg, ctx) {
     if (sides.length === 2) { const f0 = sides[0].length && factionsOfW(sides[0][0].id), f1 = sides[1].length && factionsOfW(sides[1][0].id); if (f0 && f1 && f0.length && f1.length && !f0.some(f => f1.includes(f)) && sides.every(sd => sd.length >= 2 && factionOf(sd.map(w => w.id)))) r += add(3, 'Faction war'); }
     const TT = seg.tid && TN(seg.tid);
     if (TT) r += add(TT.rounds[seg.tr]?.length === 1 ? 6 : 3, TT.name + (TT.rounds[seg.tr]?.length === 1 ? ' final' : ' tournament match'));
-    if (stip.style) { const fit = people.filter(w => w.style === stip.style).length / people.length; r += add((stip.bonus || 0) * (0.4 + fit), seg.stip + ' stipulation'); }
-    if (stip.stam) r += add((avg(people.map(w => w.stam)) - 60) / 4, 'Stamina for a long match');
-    const st = storyBetween(sides[0].map(w => w.id), sides.slice(1).flat().map(w => w.id));
-    if (st) r += add(st.heat * 0.2, 'Storyline: ' + st.title);
+    if (stip.style) { const fit = core.filter(w => w.style === stip.style).length / core.length; r += add((stip.bonus || 0) * (0.4 + fit), seg.stip + ' stipulation'); }
+    else if (stip.bonus) r += add(stip.bonus * 0.6, seg.stip + ' stipulation');
+    if (stip.multi) r += sides.length >= 4 ? add(3, seg.stip + ' with a full field') : add(-4, seg.stip + ' needs more people');
+    if (stip.stam) r += add((avg(core.map(w => w.stam)) - 60) / 4, 'Stamina for a long match');
+    const st = ffa ? storyAmong(people.map(w => w.id)) : storyBetween(sides[0].map(w => w.id), sides.slice(1).flat().map(w => w.id));
+    if (st) r += add(st.heat * (ffa ? 0.1 : 0.2), (ffa ? 'Rivals collide: ' : 'Storyline: ') + st.title);
+    if (stip.feud) r += st && st.heat >= 50 ? add(4, seg.stip + ' ends a hot feud') : add(-3, seg.stip + ' without a feud to settle');
     const title = seg.title && G.titles.find(t => t.id === seg.title);
     if (title) r += add(title.prestige * 0.08, title.name + ' on the line');
     r += add(fin.r, fk + ' finish');
@@ -1630,7 +1715,7 @@ function simSegment(seg, ctx) {
       if (sides.some(sd => sd.length > 1 && sd.some(w => w.id === tw.id))) r += add(3, 'Betrayed a partner');
     }
     if (recentlyFaced(people.map(w => w.id))) r += add(-6, 'Same match was booked recently');
-    if (sides.length > 2 || sides[0].length > 1) r += add(2, 'Multi-person chaos');
+    if (!ffa && (sides.length > 2 || sides[0].length > 1)) r += add(2, 'Multi-person chaos');
     if (ctx.big && seg.hype >= 5) r += add(seg.hype * 0.12, 'Built up for weeks: hype ' + Math.round(seg.hype));
     // records matter: streaks draw the crowd in, and title shots have to be earned
     const hot = people.filter(w => (w.streak || 0) >= 3).sort((a, b) => b.streak - a.streak)[0];
@@ -1674,7 +1759,7 @@ function simSegment(seg, ctx) {
       if (fk === 'Submission' && sides[wi].some(w => w.style === 'Technician')) r += add(2, 'Technician wins by submission');
       if (fk === 'Screwjob' && sides.some((sd, i) => i !== wi && sd[0].align === 'face')) r += add(2, 'Fans feel robbed and want a rematch');
     } else if (fin.runin) ri = null;
-    out.story = st; out.title = title; out.stip = stip; out.fin = fin; out.fk = fk; out.sides = sides; out.ri = ri; out.tw = tw;
+    out.story = st; out.title = title; out.stip = stip; out.fin = fin; out.fk = fk; out.sides = sides; out.ri = ri; out.tw = tw; out.ffa = ffa;
     const sideName = sd => sd.length > 1 ? sideLabel(sd.map(w => w.id)) : sd.map(w => w.name).join(' & ');
     const wname = wi >= 0 ? sideName(sides[wi]) : '';
     const lname = wi >= 0 ? sides.filter((_, i) => i !== wi).map(sideName).join(', ') : '';
@@ -1685,7 +1770,7 @@ function simSegment(seg, ctx) {
     if (tw) { const mates = sides.find(sd => sd.some(w => w.id === tw.id))?.filter(w => w.id !== tw.id) || [];
       turnTxt = ` ${tw.name} ${mates.length ? 'turned on ' + mates.map(w => w.name).join(' & ') : 'shocked everyone'} and became a ${tw.align === 'face' ? 'heel' : 'face'}!`; }
     out.text = (draw ? `${sides.map(sideName).join(' and ')} fought to a draw.` : wi < 0 ? 'The match broke down into a wild brawl. No winner.' :
-      `${wname} ${sides.length === 2 ? 'beat ' + lname : 'won'}${how}${tTxt}.`) + turnTxt;
+      `${wname} ${sides.length === 2 ? 'beat ' + lname : ffa ? `won the ${sides.length}-person ${seg.mtype}` : 'won'}${how}${tTxt}.`) + turnTxt;
   } else if (seg.kind === 'promo') {
     const pt = PROMO_TYPES[seg.ptype] || PROMO_TYPES['Hype Promo'];
     const sp = (seg.who || []).map(W).filter(Boolean), tg = (seg.target || []).map(W).filter(Boolean);
@@ -1764,7 +1849,7 @@ function applySegment(seg, res, ctx) {
   if (seg.kind === 'match') {
     const stip = res.stip || {};
     for (const w of ws) {
-      w.fatigue = clamp(w.fatigue + (16 + (stip.fat || 0)) * (1.4 - w.stam / 100), 0, 100);
+      w.fatigue = clamp(w.fatigue + (16 + (stip.fat || 0)) * (1.4 - w.stam / 100) * (res.ffa ? 0.5 : 1), 0, 100);
       if (G.settings.injuries && Math.random() < (0.012 + w.fatigue / 900 + (stip.inj || 0) + (w.injury > 0 ? 0.15 : 0)) * DF().inj) {
         const weeks = rint(1, w.injury > 0 ? 8 : 6); w.injury = Math.max(w.injury, weeks);
         notes.push(`🩹 ${w.name} was injured (${weeks} wk).`); news(`🩹 ${w.name} got hurt and will be out about ${weeks} week${weeks > 1 ? 's' : ''}.`, 'injury');
@@ -1773,8 +1858,9 @@ function applySegment(seg, res, ctx) {
     if (res.winners.length) {
       const F = res.fin || FINISHES.Clean, [wm, wp] = F.win || [8, 1.2], [lm, lp] = F.lose || [-6, -0.6];
       for (const id of res.winners) { const w = W(id); w.record.w++; w.momentum = clamp(w.momentum + wm, -50, 50); addPop(w, wp); w.morale = clamp(w.morale + 2, 0, 100); }
-      for (const id of res.losers) { const w = W(id); w.record.l++; w.momentum = clamp(w.momentum + lm, -50, 50); addPop(w, lp); w.morale = clamp(w.morale - (w.momentum < -20 ? 3 : 1), 0, 100); }
-    } else ws.forEach(w => w.record.d++);
+      // losing a rumble or battle royal to 29 others is no shame: it doesn't count as a loss
+      if (!res.ffa) for (const id of res.losers) { const w = W(id); w.record.l++; w.momentum = clamp(w.momentum + lm, -50, 50); addPop(w, lp); w.morale = clamp(w.morale - (w.momentum < -20 ? 3 : 1), 0, 100); }
+    } else if (!res.ffa) ws.forEach(w => w.record.d++);
     notes.push(...bookRecord(seg, res, res.rating));
     for (const sd of seg.sides || []) { const ids = sd.filter(id => W(id)), fc = factionOf(ids); if (!fc) continue; if (!res.winners.length) fc.d = (fc.d || 0) + 1; else if (ids.some(id => res.winners.includes(id))) fc.w = (fc.w || 0) + 1; else fc.l = (fc.l || 0) + 1; }
     for (const sd of seg.sides || []) { const ids = sd.filter(id => W(id)), tm = teamOf(ids); if (!tm) continue; if (!res.winners.length) tm.d = (tm.d || 0) + 1; else if (ids.some(id => res.winners.includes(id))) tm.w = (tm.w || 0) + 1; else tm.l = (tm.l || 0) + 1; }
@@ -1861,6 +1947,7 @@ function projectShow(card, wk) {
   const ideal = isBig(wk) ? [6, 10] : [4, 8];
   if (rs.length < ideal[0]) o -= 4 * (ideal[0] - rs.length); if (rs.length > ideal[1]) o -= 3 * (rs.length - ideal[1]);
   o += new Set(segs.map(s => s.kind)).size >= 2 ? 2 : -3;
+  const sg = sigOf(wk); if (sg) o += sigBooked(segs, sg) ? 4 : -4;
   return clamp(Math.round(o), 1, 100);
 }
 // the calendar: week 1 is the first Monday of the promotion's first year
@@ -1905,6 +1992,8 @@ function runShow(opts = {}) {
   if (results.length > ideal[1]) { overall -= 3 * (results.length - ideal[1]); why.push([-3 * (results.length - ideal[1]), 'Show ran long']); }
   const kinds = new Set(results.map(r => r.seg.kind));
   if (kinds.size >= 2) { overall += 2; why.push([2, 'Good variety']); } else { overall -= 3; why.push([-3, 'No variety (add promos/angles)']); }
+  const sg = big && sigOf(G.week), sgOn = sg && sigBooked(card, sg);
+  if (sg) { const v = sgOn ? 4 : -4; overall += v; why.push([v, sgOn ? `Signature match: the ${sigName(sg)}` : `Fans missed the ${sigName(sg)}`]); }
   if (results.length > 1 && results[results.length - 1].seg.kind !== 'match' && results.some(r => r.seg.kind === 'match')) { overall -= 2; why.push([-2, 'Show did not close with a match']); }
   else if (results.length > 1 && results[results.length - 1].rating < Math.max(...results.filter(r => r.seg.kind === 'match').map(r => r.rating)) - 5) { overall -= 3; why.push([-3, 'Main event was not the best match']); }
   overall = clamp(Math.round(overall), 1, 100);
@@ -1917,7 +2006,7 @@ function runShow(opts = {}) {
   const bShow = !onMain() && !splitOn();
   const attendance = Math.round(Math.min(big ? 22000 : bShow ? 4000 : 9000, G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype) * rnd(.93, 1.07));
   const fin = {
-    gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (bShow ? 0.5 : 1)), ppv: big ? Math.round(G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150)) : 0,
+    gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (bShow ? 0.5 : 1)), ppv: big ? Math.round(G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
     merch: Math.round(sum(crew.map(w => w.pop * w.pop)) / 9 * share),
     payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary)) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15))
   };
@@ -2439,15 +2528,29 @@ const maxSegs = wk => isBig(wk) ? 10 : 8;
 const roomLeft = (wk, card) => Math.max(0, maxSegs(wk) - card.length);
 const fullMsg = wk => `The card is full (${maxSegs(wk)} segments). Remove one to add another.`;
 // story matches: settle feuds clean at big shows, keep them going with dirty finishes on weekly shows
-function autoFin(big, stip, heat) { const opts = big ? ['Clean', 'Clean', 'Clean', 'Submission'] : heat > 40 ? ['Clean', 'Cheating', 'Run-in', 'Roll-up', 'DQ', 'Count-out', 'Screwjob'] : ['Clean', 'Clean', 'Roll-up', 'Cheating', 'Submission', 'DQ']; const f = pick(opts.filter(k => finOK(stip, k))); return f || (stip === 'Submission' ? 'Submission' : 'Clean'); }
+function autoFin(big, stip, heat) { const opts = big ? ['Clean', 'Clean', 'Clean', 'Submission'] : heat > 40 ? ['Clean', 'Cheating', 'Run-in', 'Roll-up', 'DQ', 'Count-out', 'Screwjob'] : ['Clean', 'Clean', 'Roll-up', 'Cheating', 'Submission', 'DQ']; const f = pick(opts.filter(k => finOK(stip, k))); return f || finFallback(stip); }
 function autoFill(quiet) {
-  const wk = UI.selWeek, card = BK();
+  const wk = UI.selWeek; if (isBig(wk)) seedSig(wk);
+  const card = BK();
   const big = isBig(wk);
   const target = Math.max(0, (big ? 8 : 6) - card.length);
   if (!target) return quiet ? undefined : toast(card.length >= maxSegs(wk) ? fullMsg(wk) : 'This show already has a full card. Clear it to auto-fill from scratch.');
-  const used = new Set(card.flatMap(segPeople));
+  const used = new Set(card.filter(s => !wideSeg(s)).flatMap(segPeople));
   const avail = () => bookable(wk).filter(w => w.injury === 0 && !used.has(w.id) && w.fatigue < 70);
   const take = ids => ids.forEach(id => used.add(id));
+  // the big event's signature match: fill in anyone missing
+  let filled = 0;
+  for (const s of card.filter(x => x.sig && x.kind === 'match')) {
+    const mt = MT(s.mtype);
+    if (mt.ffa) { if (entrants(s).length < (s.n || mt.def)) filled += fillEntrants(s, wk) ? 1 : 0; if (!mt.wide) take(entrants(s)); continue; }
+    if (s.sides.length < mt.sides) s.sides = Array.from({ length: mt.sides }, (_, i) => s.sides[i] || []);
+    let any = false;
+    s.sides.forEach((sd, i) => { const need = sideSize(mt, i) - sd.length; if (need <= 0) return;
+      const ref = W(s.sides.flat()[0]), al = s.sides.flat().length && W(s.sides.flat()[0])?.align === 'face' && i > 0 ? 'heel' : 'face';
+      const pool = avail().filter(w => sameDiv(ref, w)).sort((a, b) => (b.align === al) - (a.align === al) || b.pop - a.pop).slice(0, need);
+      pool.forEach(w => sd.push(w.id)); take(pool.map(w => w.id)); if (pool.length) any = true; });
+    if (any) filled++; take(s.sides.flat());
+  }
   // teams with two members free tonight, best first
   const availTeams = () => rankedTeams().map(t => t.members.filter(id => avail().some(w => w.id === id)).slice(0, 2)).filter(x => x.length === 2);
   const segs = [];
@@ -2503,7 +2606,7 @@ function autoFill(quiet) {
   // make sure the best projected segment closes the show
   for (let k = 0; k < 2 && card.length > 2; k++) { const r = card.map((x, i) => x.kind === 'match' && segPeople(x).length ? projectFull(x, card.length - 1, card, wk).rating : -1), b = r.indexOf(Math.max(...r)); if (b < 0 || r[b] < 0 || b === card.length - 1) break; card.push(...card.splice(b, 1)); }
   if (quiet) return;
-  save(); render(); toast(segs.length ? `Added ${segs.length} segments.` : 'Nobody is available to add.');
+  save(); render(); toast(segs.length ? `Added ${segs.length} segments.` : filled ? 'Filled in the signature match.' : 'Nobody is available to add.');
 }
 
 // ---------- needs-attention list (the "keep up" helper) ----------
@@ -2760,11 +2863,12 @@ function viewHome() {
 // ---------- book ----------
 function segTitle(s) {
   const T = s.tid && TN(s.tid); if (T && s.kind === 'match') return `🏆 ${esc(T.name)} · ${roundName(T, s.tr)}`;
-  if (s.kind === 'match') { const t = s.title && G.titles.find(x => x.id === s.title); return `${t ? '🏆 ' + esc(t.short) + ' title · ' : ''}${esc(s.mtype)}${s.stip !== 'Standard' ? ' · ' + esc(s.stip) : ''}`; }
+  if (s.kind === 'match') { const t = s.title && G.titles.find(x => x.id === s.title); return `${t ? '🏆 ' + esc(t.short) + ' title · ' : ''}${isFFA(s) ? entrants(s).length + '-person ' : ''}${esc(s.mtype)}${s.stip !== 'Standard' ? ' · ' + esc(s.stip) : ''}`; }
   if (s.kind === 'promo') return '🎤 ' + esc(s.ptype);
   return '🎬 ' + esc(s.atype);
 }
 function segWho(s) {
+  if (isFFA(s)) return nmList(entrants(s).slice(0, 6)) + (entrants(s).length > 6 ? ` <span class="muted">+${entrants(s).length - 6} more</span>` : '');
   if (s.kind === 'match') return s.sides.map(side => nmList(side)).join('<span class="vs">VS</span>');
   return nmList(s.who || []) + ((s.target || []).length ? '<span class="vs">→</span>' + nmList(s.target) : '');
 }
@@ -2816,17 +2920,21 @@ function viewBookCard() {
   if (wk < G.week) return `${statusBar}${cal}<div class="empty card">No show record for this week.</div>`;
 
   // ----- this week or a future week: the booking card -----
+  if (big) seedSig(wk);
   const card = BK();
   const ppl = card.flatMap(segPeople);
   const warn = [];
   const inj = [...new Set(ppl.filter(id => W(id)?.injury > 0))];
   if (inj.length) warn.push(`🩹 Injured: ${inj.map(nameOf).join(', ')}`);
-  const dup = [...new Set(ppl.filter((id, i) => ppl.indexOf(id) !== i))];
+  // rumbles and battle royals are roster-wide: wrestling twice or coming from another show is fine there
+  const ppl1 = card.filter(s => !wideSeg(s)).flatMap(segPeople);
+  const dup = [...new Set(ppl1.filter((id, i) => ppl1.indexOf(id) !== i))];
   if (dup.length) warn.push(`↔️ Booked twice: ${dup.map(nameOf).join(', ')}`);
   const tired = [...new Set(ppl.filter(id => W(id)?.fatigue >= 60))];
   if (tired.length) warn.push(`😮‍💨 Tired: ${tired.map(nameOf).join(', ')}`);
-  const offB = splitOn() && !big ? [...new Set(ppl.filter(id => W(id)?.contract && !onBrand(W(id), wk)))] : [];
+  const offB = splitOn() && !big ? [...new Set(ppl1.filter(id => W(id)?.contract && !onBrand(W(id), wk)))] : [];
   if (offB.length) warn.push(`↔️ From another show: ${offB.map(nameOf).join(', ')}`);
+  const sg = big && sigOf(wk), sgMiss = sg && !sigBooked(card, sg);
   const ideal = big ? [6, 10] : [4, 8];
   const proj = projectShow(card, wk);
   const prs = card.map((s, i) => projectFull(s, i, card, wk));
@@ -2838,6 +2946,7 @@ function viewBookCard() {
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
   ${warn.length ? `<div class="warnline">${warn.map(esc).join('<br>')}</div>` : ''}
+  ${sg ? `<div class="warnline row"><span class="sp">⭐ Signature match: <b>${esc(sigName(sg))}</b>. ${sgMiss ? (card.some(s => isSig(s, sg)) ? 'Fans expect it. Put wrestlers in it.' : 'Fans expect it. Leaving it off costs a little.') : 'Fans will love it.'}</span>${sgMiss && !card.some(s => isSig(s, sg)) && card.length < maxSegs(wk) ? '<button class="btn sm" data-act="addSig">Add it</button>' : ''}</div>` : ''}
   ${bestIx >= 0 ? `<div class="warnline row"><span class="sp">⭐ Close the show with your best match.</span><button class="btn sm" data-act="segMain" data-id="${card[bestIx].id}">Make it the main event</button></div>` : ''}
   <div class="mcard">
     ${card.length ? `<div class="mcard-h"><span>Match card</span><span class="sp"></span><button class="link" data-act="reorder">${UI.reorder ? 'Done' : 'Reorder'}</button></div>` : ''}
@@ -2871,7 +2980,8 @@ function matchRow(s, i, n, o) {
   const t = s.kind === 'match' && s.title && G.titles.find(x => x.id === s.title);
   const chips = [];
   if (s.kind === 'match') {
-    chips.push(esc(s.mtype)); if (s.stip !== 'Standard') chips.push(esc(s.stip)); if (t) chips.push(belt(t.short));
+    chips.push((isFFA(s) ? entrants(s).length + '-person ' : '') + esc(s.mtype)); if (s.stip !== 'Standard') chips.push(esc(s.stip)); if (t) chips.push(belt(t.short));
+    if (s.sig) chips.push('⭐ Signature match');
     if (!o.past && finOf(s) !== 'Clean') chips.push(esc(finOf(s)));
     if (!o.past && s.turn && W(s.turn)) chips.push('🔄 turn');
     const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat()); if (st) chips.push(`🔥 ${esc(st.title)}`);
@@ -2886,7 +2996,9 @@ function matchRow(s, i, n, o) {
   const won = id => o.past && (o.winners || []).includes(id);
   const sideHTML = (ids, right) => `<div class="mside ${right ? 'r' : ''}">${ids.map(id => { const w = W(id); if (!w) return '<span class="muted">?</span>'; return `<div class="mw ${won(id) ? 'won' : ''}">${right ? '' : av(w, 26)}<span class="n-${w.align}">${esc(w.name)}</span>${won(id) ? ' 👑' : ''}${right ? av(w, 26) : ''}</div>`; }).join('') || '<span class="muted small">empty</span>'}</div>`;
   let body;
-  if (s.kind === 'match' && s.sides.length === 2) body = `<div class="mvs">${sideHTML(s.sides[0])}<span class="vsb">VS</span>${sideHTML(s.sides[1], true)}</div>`;
+  if (isFFA(s)) { const all = entrants(s), win = o.past ? (o.winners || []).filter(id => all.includes(id)) : s.winner >= 0 ? s.sides[s.winner] || [] : [], rest = all.filter(id => !win.includes(id));
+    body = `<div class="mmulti">${win.length ? `<b>${win.map(nm).join(' & ')}</b>${o.past ? ' 👑' : ''} · ` : ''}${rest.slice(0, 8).map(nm).join(', ')}${rest.length > 8 ? ` <span class="muted">+${rest.length - 8} more</span>` : ''}${all.length ? '' : '<span class="muted small">No entrants yet</span>'}</div>`; }
+  else if (s.kind === 'match' && s.sides.length === 2) body = `<div class="mvs">${sideHTML(s.sides[0])}<span class="vsb">VS</span>${sideHTML(s.sides[1], true)}</div>`;
   else if (s.kind === 'match') body = `<div class="mmulti">${s.sides.map(sd => sd.map(nm).join(' & ')).join('<span class="vs">VS</span>')}</div>`;
   else body = `<div class="mmulti">${nmList(s.who || [])}${(s.target || []).length ? '<span class="vs">→</span>' + nmList(s.target) : ''}</div>`;
   const tag = o.past ? 'button data-act="recap" data-id="' + (UI.selWeek) + '"' : UI.reorder ? 'div' : `button data-act="editSeg" data-id="${s.id}"`;
@@ -3054,6 +3166,7 @@ function renderModal() {
     case 'help': return modal('How to play', helpHTML());
     case 'brief': return modal('Briefing', viewHome());
     case 'seg': return modalSeg(m);
+    case 'mtypes': return modalMatchTypes(m);
     case 'wrestler': return modalWrestler(m);
     case 'editW': return modalBuilder(m);
     case 'rtools': return modalRoster(m);
@@ -3122,6 +3235,7 @@ function modalMenu() {
     <label class="f"><span>${manyShows() ? 'Name of the show you are booking' : 'Weekly show name'}</span><input type="text" data-in="showName" value="${esc(G.promo.show)}" maxlength="40"></label>
     <label class="f"><span>Big event every</span><select data-in="bigEvery">${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigEvery === n ? 'selected' : ''}>${n} weeks</option>`).join('')}</select></label>
     <label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>
+    <button class="btn block" style="margin-bottom:10px" data-act="matchTypes">🤼 Match types and signature matches</button>
     <div class="sec">Sandbox options</div>
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
@@ -3199,7 +3313,69 @@ function helpHTML() {
   <p>The game saves itself in this browser. You have 3 slots. Export a save to move it to another device.</p></div>`;
 }
 
+// ----- match types: the player's own participant types and gimmicks, and big event signature matches -----
+function mtDesc(c, gim) {
+  if (!gim) return c.ffa ? `${c.count} entrants, everyone for themselves${c.wide ? ', roster-wide' : ''}` : `${c.teams} sides of ${c.per}`;
+  return [GM_RULES[c.rule] || 'Normal rules', c.style ? c.style + 's shine' : '', GM_RISK[c.risk]?.l + ' risk', ['Low', 'Medium', 'High'][c.heat] + ' heat', c.long ? 'long match' : ''].filter(Boolean).join(' · ');
+}
+// keep booked matches and signature matches pointing at a renamed (or deleted) type or gimmick
+function renameMatchKind(kind, from, to) {
+  const key = kind === 'gim' ? 'stip' : 'mtype', sk = kind === 'gim' ? 'gm' : 'mt', plain = to === 'Singles' || to === 'Standard';
+  for (const c of [G, ...(G.cos || [])]) {
+    const cards = [c.card, ...Object.values(c.future || {}), ...(c.shows || []).flatMap(x => [x.card, ...Object.values(x.future || {})])];
+    for (const card of cards) if (Array.isArray(card)) for (const s of card) if (s && s.kind === 'match' && s[key] === from) {
+      s[key] = to;
+      if (key === 'mtype' && plain) { s.sides = s.sides.filter(x => x.length).slice(0, 2).map(x => x.slice(0, 1)); while (s.sides.length < 2) s.sides.push([]); delete s.n; s.winner = -1; }
+      if (key === 'stip') s.finish = finOf(s);
+    }
+    if (Array.isArray(c.ppvSig)) { for (const sg of c.ppvSig) if (sg && sg[sk] === from) sg[sk] = plain ? '' : to; c.ppvSig = c.ppvSig.filter(x => x && (x.mt || x.gm)); }
+  }
+}
+function modalMatchTypes(m) {
+  const cm = CM(), e = m.edit, back = m.back || m.fromMenu;
+  const foot = e ? `<button class="btn" data-act="mtCancel">Cancel</button><button class="btn pri" data-act="mtSave">Save</button>` : `<button class="btn pri" data-act="mtBack">${back ? 'Back' : 'Done'}</button>`;
+  const ctl = (f, opts, cur) => `<div class="seg-ctl">${opts.map(([v, l]) => `<button class="${String(cur) === String(v) ? 'on' : ''}" data-act="mtSet" data-f="${f}" data-id="${v}">${l}</button>`).join('')}</div>`;
+  if (e) {
+    const d = e.d; let body = `<label class="f"><span>Name</span><input type="text" data-mt="name" value="${esc(d.name || '')}" maxlength="30" placeholder="${e.kind === 'gim' ? 'e.g. Barbed Wire Massacre' : 'e.g. Ten-Person Tag'}"></label>`;
+    if (e.kind === 'type') {
+      body += `<label class="f"><span>Format</span>${ctl('ffa', [[0, 'Sides or teams'], [1, 'Everyone for themselves']], d.ffa ? 1 : 0)}</label>`;
+      if (d.ffa) body += `<label class="f"><span>Entrants</span><input type="number" data-mt="count" min="3" max="40" value="${d.count}" inputmode="numeric"></label>
+        <label class="todo"><input type="checkbox" data-mt="wide" ${d.wide ? 'checked' : ''}><span>Roster-wide: anyone from any show, and wrestling twice tonight is fine</span></label>`;
+      else body += `<label class="f"><span>Sides</span>${ctl('teams', [2, 3, 4, 5, 6].map(n => [n, n]), d.teams)}</label><label class="f"><span>People per side</span>${ctl('per', [1, 2, 3, 4, 5].map(n => [n, n]), d.per)}</label>`;
+    } else {
+      body += `<label class="f"><span>Rules</span><select data-mt="rule">${Object.entries(GM_RULES).map(([k, l]) => `<option value="${k}" ${d.rule === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label class="f"><span>Who shines</span><select data-mt="style"><option value="">Nobody in particular</option>${STYLES.map(x => `<option ${d.style === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label class="f"><span>Risk of injury and fatigue</span>${ctl('risk', [[0, 'Low'], [1, 'Medium'], [2, 'High']], d.risk)}</label>
+        <label class="f"><span>Heat it adds to a feud</span>${ctl('heat', [[0, 'Low'], [1, 'Medium'], [2, 'High']], d.heat)}</label>
+        <label class="todo"><input type="checkbox" data-mt="long" ${d.long ? 'checked' : ''}><span>Long match: stamina counts</span></label>`;
+    }
+    body += `<label class="f" style="margin-top:10px"><span>Short description <span class="muted">(optional)</span></span><input type="text" data-mt="desc" value="${esc(d.desc || '')}" maxlength="120"></label>`;
+    return modal(e.i >= 0 ? 'Edit ' + esc(d.name) : e.kind === 'gim' ? 'New gimmick' : 'New match type', body, foot, { closeAct: 'mtCancel' });
+  }
+  const mine = (list, kind) => list.length ? `<div class="list" style="margin-bottom:8px">${list.map((c, i) => `<div class="item"><div class="main"><div class="t">${esc(c.name)}</div><div class="d">${esc(c.desc || mtDesc(c, kind === 'gim'))}</div></div><button class="btn sm" data-act="mtEdit" data-id="${kind}:${i}">Edit</button><button class="btn sm bad" data-act="mtDel" data-id="${kind}:${i}" aria-label="Delete ${esc(c.name)}">✕</button></div>`).join('')}</div>` : '';
+  const tags = ks => `<div class="row wrap" style="gap:4px;margin-bottom:8px">${ks.map(k => `<span class="tag">${esc(k)}</span>`).join('')}</div>`;
+  const evs = G.bigEvents.length ? G.bigEvents : [];
+  const so = (v, cur, l) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
+  const body = `<p class="small muted" style="margin-top:0">Every match is a participant type plus a gimmick on top. Mix any of them, or make your own.</p>
+    <div class="sec">Participant types</div>${tags(Object.keys(MATCH_TYPES))}${mine(cm.types, 'type')}<button class="btn block" data-act="mtNew" data-id="type" style="margin-bottom:6px">＋ New match type</button>
+    <div class="sec">Gimmicks</div>${tags(Object.keys(STIPS).filter(k => k !== 'Standard'))}${mine(cm.gims, 'gim')}<button class="btn block" data-act="mtNew" data-id="gim" style="margin-bottom:6px">＋ New gimmick</button>
+    <div class="sec">Big event signature matches</div>
+    <p class="small muted" style="margin-top:0">Fans expect it every time that event comes around. It goes on the card for you, booking it boosts the show and buys, and skipping it costs a little.</p>
+    ${evs.length ? evs.map((n, i) => { const sg = sigFor(n) || {}; return `<div class="card" style="padding:10px 12px;margin-bottom:8px"><b class="small">${esc(n)}</b><div class="row" style="gap:8px;margin-top:6px">
+      <select data-sig="mt" data-i="${i}" aria-label="Participants for ${esc(n)}">${so('', sg.mt || '', 'Participants: none')}${mtNames().map(k => so(k, sg.mt || '', k)).join('')}</select>
+      <select data-sig="gm" data-i="${i}" aria-label="Gimmick for ${esc(n)}">${so('', sg.gm || '', 'Gimmick: none')}${gmNames().filter(k => k !== 'Standard').map(k => so(k, sg.gm || '', k)).join('')}</select></div></div>`; }).join('')
+      : '<div class="small muted">Name your big events in Menu first.</div>'}`;
+  return modal('Match types', body, foot, { closeAct: 'mtBack' });
+}
+
 // ----- segment editor -----
+// one select for a signature match at company setup: a participant type or a gimmick
+function sigOptions(cur) {
+  const o = (v, l) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
+  return o('', 'None') + `<optgroup label="Participants">${mtNames().filter(k => k !== 'Singles').map(k => o('mt:' + k, k)).join('')}</optgroup><optgroup label="Gimmick">${gmNames().filter(k => k !== 'Standard').map(k => o('gm:' + k, k)).join('')}</optgroup>`;
+}
+const sigFromVal = (name, v) => { v = String(v || ''); const x = v.slice(3); return v.startsWith('mt:') && mtNames().includes(x) ? { name, mt: x, gm: '' } : v.startsWith('gm:') && gmNames().includes(x) ? { name, mt: '', gm: x } : null; };
+const sigsFromWiz = z => ppvList(z.ppv).map(n => sigFromVal(n, z.sig?.[n])).filter(Boolean);
 function blankSeg(kind) {
   if (kind === 'match') return { id: uid(), kind, mtype: 'Singles', stip: 'Standard', sides: [[], []], winner: -1, finish: 'Clean', title: null };
   if (kind === 'promo') return { id: uid(), kind, ptype: 'Call-out', who: [], target: [] };
@@ -3212,14 +3388,25 @@ function modalSeg(m) {
   const s = m.draft;
   let body = '';
   if (s.kind === 'match') {
-    const mt = MATCH_TYPES[s.mtype];
-    const titleOpts = G.titles.filter(t => t.tag === (mt.size === 2) && (titleOn(t) || s.title === t.id));
-    body += `<label class="f"><span>Match type</span><select data-seg="mtype">${Object.keys(MATCH_TYPES).map(k => `<option ${k === s.mtype ? 'selected' : ''}>${k}</option>`).join('')}</select></label>`;
-    body += s.sides.map((side, i) => `<div class="side"><div class="lbl">${mt.sides === 2 && mt.size > 1 ? 'Team ' + (i + 1) : 'Side ' + (i + 1)}${s.winner === i ? '<span class="tag good">Winner</span>' : ''}</div>${chipsFor(side, 'side' + i, mt.size)}</div>`).join('');
-    const st = storyBetween(s.sides[0], s.sides.slice(1).flat());
-    if (st) body += `<div class="alert good" style="margin-bottom:12px"><span class="ic">🔥</span><div class="small">Part of <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}). ${isBig(G.week) ? 'This match will pay off the storyline tonight.' : 'This will build heat.'}</div></div>`;
-    body += `<label class="f"><span>Winner</span><div class="seg-ctl"><button class="${s.winner === -1 || s.winner == null ? 'on' : ''}" data-act="segWin" data-id="-1">🎲 Sim</button>${s.sides.map((side, i) => `<button class="${s.winner === i ? 'on' : ''}" data-act="segWin" data-id="${i}">${side.length ? esc(side.map(id => W(id)?.name.split(' ')[0]).join(' & ')) : 'Side ' + (i + 1)}</button>`).join('')}<button class="${s.winner === -2 ? 'on' : ''}" data-act="segWin" data-id="-2">🤝 Draw</button></div>${s.sides.flat().length ? `<div class="tiny muted" style="margin-top:4px">${s.sides.map(side => side.map(W).filter(Boolean).map(w => `${esc(w.name.split(' ')[0])} ${recStr(w)}${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''}`).join(' & ')).filter(Boolean).join(' · ')}</div>` : ''}</label>`;
-    body += `<label class="f"><span>Stipulation</span><select data-seg="stip">${Object.keys(STIPS).map(k => `<option ${k === s.stip ? 'selected' : ''}>${k}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(STIPS[s.stip].desc)}</div></label>`;
+    const mt = MT(s.mtype), gm = GM(s.stip);
+    const titleOpts = G.titles.filter(t => t.tag === tagMT(mt) && (titleOn(t) || s.title === t.id));
+    const opt = (k, cur) => `<option value="${esc(k)}" ${k === cur ? 'selected' : ''}>${esc(k)}</option>`;
+    const grp = (l, ks, cur) => ks.length ? `<optgroup label="${l}">${ks.map(k => opt(k, cur)).join('')}</optgroup>` : '';
+    const bt = Object.keys(MATCH_TYPES), mine = CM().types.map(x => x.name), gmine = CM().gims.map(x => x.name);
+    body += `<label class="f"><span>Participants</span><select data-seg="mtype">${grp('Sides and teams', bt.filter(k => !MATCH_TYPES[k].ffa), s.mtype)}${grp('Everyone for themselves', bt.filter(k => MATCH_TYPES[k].ffa), s.mtype)}${grp('Your match types', mine, s.mtype)}</select>${mt.desc ? `<div class="tiny muted" style="margin-top:4px">${esc(mt.desc)}</div>` : ''}</label>`;
+    if (mt.ffa) {
+      const ids = entrants(s), n = s.n || mt.def;
+      body += `<label class="f"><span>How many entrants</span><input type="number" data-seg="n" min="${mt.min}" max="${mt.max}" value="${n}" inputmode="numeric"></label>`;
+      body += `<div class="side"><div class="lbl">Entrants: ${ids.length} of ${n}${mt.wide ? ' · from every show' : ''}</div>${chipsFor(ids, 'ents', n)}<div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" data-act="segFill">${ids.length ? 'Fill the rest' : 'Fill entrants'}</button>${ids.length ? '<button class="btn sm" data-act="segClearEnts">Clear</button>' : ''}</div>${mt.wide ? '<div class="tiny muted" style="margin-top:6px">Roster-wide: anyone can enter, even if they wrestle elsewhere tonight.</div>' : ''}</div>`;
+      body += `<label class="f"><span>Winner</span><select data-seg="winner"><option value="-1" ${s.winner < 0 ? 'selected' : ''}>🎲 Let the sim decide</option>${ids.map((id, i) => `<option value="${i}" ${s.winner === i ? 'selected' : ''}>${esc(nameOf(id))} ${recStr(W(id) || { record: { w: 0, l: 0 } })}</option>`).join('')}</select></label>`;
+    } else {
+      body += s.sides.map((side, i) => `<div class="side"><div class="lbl">${mt.sides === 2 && (mt.size > 1 || mt.sizes) ? (mt.sizes ? (sideSize(mt, i) > 1 ? 'Team of ' + sideSize(mt, i) : 'On their own') : 'Team ' + (i + 1)) : 'Side ' + (i + 1)}${s.winner === i ? '<span class="tag good">Winner</span>' : ''}</div>${chipsFor(side, 'side' + i, sideSize(mt, i))}</div>`).join('');
+    }
+    const st = mt.ffa ? storyAmong(entrants(s)) : storyBetween(s.sides[0] || [], s.sides.slice(1).flat());
+    if (st) body += `<div class="alert good" style="margin-bottom:12px"><span class="ic">🔥</span><div class="small">${mt.ffa ? 'Rivals inside' : 'Part of'} <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}). ${isBig(G.week) && !mt.ffa ? 'This match will pay off the storyline tonight.' : 'This will build heat.'}</div></div>`;
+    if (!mt.ffa) body += `<label class="f"><span>Winner</span><div class="seg-ctl"><button class="${s.winner === -1 || s.winner == null ? 'on' : ''}" data-act="segWin" data-id="-1">🎲 Sim</button>${s.sides.map((side, i) => `<button class="${s.winner === i ? 'on' : ''}" data-act="segWin" data-id="${i}">${side.length ? esc(side.map(id => W(id)?.name.split(' ')[0]).join(' & ')) : 'Side ' + (i + 1)}</button>`).join('')}<button class="${s.winner === -2 ? 'on' : ''}" data-act="segWin" data-id="-2">🤝 Draw</button></div>${s.sides.flat().length ? `<div class="tiny muted" style="margin-top:4px">${s.sides.map(side => side.map(W).filter(Boolean).map(w => `${esc(w.name.split(' ')[0])} ${recStr(w)}${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''}`).join(' & ')).filter(Boolean).join(' · ')}</div>` : ''}</label>`;
+    body += `<label class="f"><span>Gimmick</span><select data-seg="stip">${grp('Gimmicks', Object.keys(STIPS), s.stip)}${grp('Your gimmicks', gmine, s.stip)}</select><div class="tiny muted" style="margin-top:4px">${esc(gm.desc || '')}</div></label>`;
+    body += `<button class="link" data-act="matchTypes" style="margin:-4px 0 12px">＋ Make your own match type or gimmick</button>`;
     const fcur = finOf(s), F = FINISHES[fcur];
     body += `<label class="f"><span>Finish</span><select data-seg="finish">${Object.keys(FINISHES).filter(k => finOK(s.stip, k)).map(k => `<option ${k === fcur ? 'selected' : ''}>${k}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(F.desc)}${F.cheap && isBig(G.week) ? ' Fans hate cheap finishes in a big main event.' : ''}</div></label>`;
     if (F.runin) body += `<div class="side"><div class="lbl">Who runs in</div>${chipsFor(s.runin || [], 'runin', 1)}<div class="tiny muted" style="margin-top:4px">${(s.runin || []).length ? 'They help whoever wins.' : 'Leave empty and the winner\'s manager runs in, or a mystery helper.'}</div></div>`;
@@ -3263,7 +3450,7 @@ function renderPicker() {
   list.sort((a, b) => (a.injury > 0) - (b.injury > 0) || (onCard.has(a.id)) - (onCard.has(b.id)) || score(b) - score(a) || b.pop - a.pop);
   const body = `<input type="search" placeholder="Search" value="${esc(p.q || '')}" data-in="pickQ" style="margin-bottom:8px">
    <div class="filters">${[['', 'All'], ['face', 'Faces'], ['heel', 'Heels']].map(([k, l]) => `<button class="${(p.align || '') === k ? 'on' : ''}" data-act="pickAlign" data-id="${k}">${l}</button>`).join('')}${brandF ? `<button class="${p.allB ? 'on' : ''}" data-act="pickAllB">Other brands</button>` : ''}</div>
-   ${UI.modal?.type === 'seg' && p.max >= 2 && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
+   ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
    <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.</div>
    ${list.map(w => { const sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
      return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b> · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}</div></div></button>`; }).join('') || '<div class="empty">Nobody matches.</div>'}`;
@@ -3366,6 +3553,7 @@ function modalEditStory(m) {
   return modal(m.isNew ? 'New storyline' : 'Edit storyline', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="saveStory">${m.isNew ? 'Create' : 'Save'}</button>`);
 }
 function segWho(seg) {
+  if (isFFA(seg)) { const e = entrants(seg); return `${e.length}-person ${esc(seg.mtype)}: ` + e.slice(0, 5).map(nm).join(', ') + (e.length > 5 ? ` +${e.length - 5} more` : ''); }
   if (seg.kind === 'match') return (seg.sides || []).map(sd => sd.map(nm).join(' & ') || '?').join(' <span class="vs">VS</span> ');
   return nmList(seg.who || []) + ((seg.target || []).length ? ' <span class="vs">→</span> ' + nmList(seg.target) : '');
 }
@@ -3470,7 +3658,7 @@ function modalTourney(m) {
 }
 function plainText(h) { return new DOMParser().parseFromString(String(h), 'text/html').body.textContent; }
 function copyText(t, okMsg) { try { navigator.clipboard.writeText(t).then(() => toast(okMsg || 'Copied.'), () => toast('Copy was blocked by the browser.')); } catch (e) { toast('Copy was blocked by the browser.'); } }
-const segLine = s => { const who = s.kind === 'match' ? s.sides.map(sideLabel).join(' vs ') : (s.who || []).map(nameOf).join(' & ') + ((s.target || []).length ? ' → ' + s.target.map(nameOf).join(' & ') : ''); return `${plainText(segTitle(s)).replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]\uFE0F?\s*/gu, '')}: ${who}`; };
+const segLine = s => { const who = s.kind === 'match' ? vsLine(s, sideLabel) : (s.who || []).map(nameOf).join(' & ') + ((s.target || []).length ? ' → ' + s.target.map(nameOf).join(' & ') : ''); return `${plainText(segTitle(s)).replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]\uFE0F?\s*/gu, '')}: ${who}`; };
 const canUndo = wk => !!UNDO && UNDO.created === G.created && UNDO.wk === wk && UNDO.bid === G.showId && UNDO.co === G.coId && G.history.at(-1)?.wk === wk && G.history.at(-1)?.bid === G.showId;
 function modalTitle(m) {
   const d = m.draft;
@@ -3596,6 +3784,27 @@ const A = {
   setMoney() { const v = +document.getElementById('setMoney').value; if (isFinite(v)) { G.money = v; commit('Bank balance set.'); } },
 
   // booking
+  addSig() { const wk = UI.selWeek, sg = sigOf(wk); if (!sg) return; const card = BK(); if (!roomLeft(wk, card)) return toast(fullMsg(wk)); card.push(sigSeg(sg, wk)); commit(`The ${sigName(sg)} is on the card.`); },
+  matchTypes() { openModal({ type: 'mtypes', back: UI.modal && UI.modal.type !== 'menu' ? UI.modal : null, fromMenu: UI.modal?.type === 'menu' }); },
+  mtNew(kind) { UI.modal.edit = { kind, i: -1, d: kind === 'gim' ? { name: '', rule: 'any', style: '', risk: 1, heat: 1, long: false, desc: '' } : { name: '', ffa: false, teams: 2, per: 2, count: 10, wide: false, desc: '' } }; render(); },
+  mtEdit(key) { const [kind, i] = String(key).split(':'), c = CM()[kind === 'gim' ? 'gims' : 'types'][+i]; if (!c) return; UI.modal.edit = { kind, i: +i, d: { ...c } }; render(); },
+  mtCancel() { UI.modal.edit = null; render(); },
+  mtSet(id, el) { const d = UI.modal.edit?.d, f = el.dataset.f; if (!d || !f) return; const v = +id; d[f] = f === 'ffa' ? !!v : v; render(); },
+  mtSave() {
+    const e = UI.modal.edit; if (!e) return; const d = e.d, name = cmName(d.name);
+    if (!name) return toast('Give it a name.');
+    const list = e.kind === 'gim' ? 'gims' : 'types', cm = (G.customMatch = fixCustomMatch(G.customMatch)), old = e.i >= 0 ? cm[list][e.i] : null;
+    const clash = [...mtNames(), ...gmNames()].some(k => k.toLowerCase() === name.toLowerCase() && k !== old?.name);
+    if (clash) return toast('That name is already used.');
+    if (e.i < 0 && cm[list].length >= 30) return toast('You can have up to 30 of each.');
+    const fixed = fixCustomMatch({ [list]: [{ ...d, name }] })[list][0]; if (!fixed) return toast('That name is already used.');
+    if (old && old.name !== name) renameMatchKind(e.kind, old.name, name);
+    if (e.i >= 0) cm[list][e.i] = fixed; else cm[list].push(fixed);
+    UI.modal.edit = null; commit(`${name} saved. Pick it in any match.`);
+  },
+  mtDel(key) { const [kind, i] = String(key).split(':'), list = kind === 'gim' ? 'gims' : 'types', c = CM()[list][+i]; if (!c) return; const prev = UI.modal;
+    confirmBox(`Delete ${c.name}?`, `Matches already booked with it switch to ${kind === 'gim' ? 'Standard rules' : 'Singles'}. Results already shown stay in your history.`, 'Delete', () => { G.customMatch[list].splice(+i, 1); renameMatchKind(kind, c.name, kind === 'gim' ? 'Standard' : 'Singles'); UI.modal = prev; commit(); }, true); },
+  mtBack() { const m = UI.modal; UI.modal = m?.back || (m?.fromMenu ? { type: 'menu' } : null); render(); },
   addSeg(kind) { if (!roomLeft(UI.selWeek, BK())) return toast(fullMsg(UI.selWeek)); openModal({ type: 'seg', isNew: true, draft: blankSeg(kind) }); },
   editSeg(id) { const s = BK().find(x => x.id === id); if (s) openModal({ type: 'seg', draft: JSON.parse(JSON.stringify(s)) }); },
   segSave() {
@@ -3617,6 +3826,8 @@ const A = {
   segMain(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0) { c.push(...c.splice(i, 1)); commit('Moved to the main event.'); } },
   segDown(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0 && i < c.length - 1) { [c[i + 1], c[i]] = [c[i], c[i + 1]]; commit(); } },
   segWin(i) { UI.modal.draft.winner = +i; render(); },
+  segFill() { const d = UI.modal.draft, n = fillEntrants(d); render(); toast(n ? `Added ${n} entrant${n > 1 ? 's' : ''}.` : 'Nobody else is free to enter.'); },
+  segClearEnts() { const d = UI.modal.draft; d.sides = []; d.winner = -1; render(); },
   segEdge(i) { UI.modal.draft.edge = +i; render(); },
   autoFill,
   clearCard() { confirmBox('Clear the card?', 'Remove every segment booked for ' + showName(UI.selWeek) + '.', 'Clear', () => { setBK([]); commit(); }, true); },
@@ -3658,7 +3869,8 @@ const A = {
     const m = UI.modal; const d = m.draft;
     let cur, max, others = new Set(), free = false;
     if (m.type === 'seg') {
-      if (f.startsWith('side')) { const i = +f.slice(4); cur = d.sides[i]; max = MATCH_TYPES[d.mtype].size; d.sides.forEach((s, j) => j !== i && s.forEach(x => others.add(x))); }
+      if (f.startsWith('side')) { const i = +f.slice(4); cur = d.sides[i]; max = sideSize(MT(d.mtype), i); d.sides.forEach((s, j) => j !== i && s.forEach(x => others.add(x))); }
+      else if (f === 'ents') { cur = entrants(d); max = d.n || MT(d.mtype).def; }
       else if (f === 'runin') { cur = d.runin || []; max = 1; d.sides.flat().forEach(x => others.add(x)); }
       else { cur = d[f]; max = 3; (f === 'who' ? d.target : d.who).forEach(x => others.add(x)); }
     } else if (m.type === 'wrestler') { const w = W(m.id); cur = w && w.manager && W(w.manager) ? [w.manager] : []; max = 1; others.add(m.id); }
@@ -3668,7 +3880,7 @@ const A = {
     else if (m.type === 'editTeam') { cur = d.members; max = 4; }
     else if (m.type === 'editFaction') { if (f === 'leader') { cur = d.leader ? [d.leader] : []; max = 1; } else { cur = d.members; max = 8; } }
     else if (m.type === 'editTourney') { cur = d.ents; max = +d.size; }
-    UI.picker = { f, sel: cur.slice(), max, others, free, q: '' };
+    UI.picker = { f, sel: cur.slice(), max, others, free, q: '', allB: m.type === 'seg' && f === 'ents' && !!MT(m.draft.mtype).wide };
     render();
   },
   pickTog(id) {
@@ -3744,7 +3956,8 @@ const A = {
         // filled this side? jump straight to the next empty one
         const next = d.sides.findIndex((sd, j) => j > i && !sd.length);
         if (p.sel.length && next > 0) { UI.picker = null; return A.pickFor('side' + next); }
-      } else d[p.f] = p.sel;
+      } else if (p.f === 'ents') { d.sides = p.sel.map(id => [id]); if (d.winner >= d.sides.length) d.winner = -1; }
+      else d[p.f] = p.sel;
     }
     else if (m.type === 'wrestler') { const w = W(m.id); UI.picker = null; if (!w) return render(); w.manager = p.sel[0] || null; return commit(w.manager ? `${nameOf(w.manager)} now manages ${w.name}.` : `${w.name} has no manager now.`); }
     else if (m.type === 'editStory') d[p.f] = p.sel;
@@ -3757,7 +3970,7 @@ const A = {
   chipDel(id, el) {
     const f = el.dataset.f, d = UI.modal.draft;
     if (UI.modal.type === 'community') { UI.modal.sel = (UI.modal.sel || []).filter(x => x !== id); return render(); }
-    if (UI.modal.type === 'seg') { if (f.startsWith('side')) d.sides[+f.slice(4)] = d.sides[+f.slice(4)].filter(x => x !== id); else d[f] = d[f].filter(x => x !== id); }
+    if (UI.modal.type === 'seg') { if (f === 'ents') { d.sides = d.sides.filter(sd => !sd.includes(id)); if (d.winner >= d.sides.length) d.winner = -1; } else if (f.startsWith('side')) d.sides[+f.slice(4)] = d.sides[+f.slice(4)].filter(x => x !== id); else d[f] = d[f].filter(x => x !== id); }
     else if (UI.modal.type === 'title') { const k = f === 'contenders' ? 'contenders' : 'holder'; d[k] = (d[k] || []).filter(x => x !== id); }
     else if (UI.modal.type === 'editFaction') { if (f === 'leader') d.leader = null; else { d.members = d.members.filter(x => x !== id); if (d.leader === id) d.leader = null; d.tms = d.tms.filter(t => TM(t)?.members.every(x => d.members.includes(x))); } }
     else d[f] = d[f].filter(x => x !== id);
@@ -3837,7 +4050,7 @@ const A = {
     seg.hype = Math.round(st.heat * 0.4);
     if (!roomLeft(big, G.future[big] || [])) return toast(`The ${bigName(big)} card is full. Drop a match from it first.`);
     (G.future[big] ||= []).push(seg);
-    news(`📣 ${bigName(big)}: ${seg.sides.map(sd => sd.map(nameOf).join(' & ')).join(' vs ')} was added to the card.`, 'story');
+    news(`📣 ${bigName(big)}: ${vsLine(seg)} was added to the card.`, 'story');
     commit(`Added to ${bigName(big)}. The story's heat gave it a head start on hype.`);
   },
   rankTab(t) { UI.modal.tab = t; render(); },
@@ -4649,8 +4862,20 @@ function saveSummary(g) {
 // and only allows known values in fixed-choice fields, so a crafted save can't inject markup or crash the game.
 const SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const NUM_KEYS = new Set(['turnWk', 'ranWk', 'curWk', 'raidWk', 'rating', 'wk', 'week', 'heat', 'hype', 'prestige', 'salary', 'weeks', 'attendance', 'net', 'fanDelta', 'defenses', 'since', 'lastDefense', 'start', 'xp', 'pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue', 'age', 'injury', 'momentum', 'money', 'fans', 'winner', 'streak', 'joined', 'lastBooked', 'day', 'tips', 'goalsWk', 'done', 'events', 'T', 'savedAt', 'bigEvery', 'calMonth', '_touched', 'backstage', 'champ', 'classic', 'first', 'four', 'sellout', 'stories', 'fans50', 'fans100', 'goals10', 'year', 'hof', 'best', 'created', 'd', 'def', 'ended', 'gate', 'l', 'm', 'merch', 'motn', 'n', 'payroll', 'ppv', 'production', 'showXp', 'sum', 'tv', 'tvWeeks', 'tw', 'v', 'w', 'amt', 'rWeeks', 'poachWk', 'last', 'tr', 'ti', 'from', 'to', 'retired', 'yr']);
+// player-made participant types and gimmicks: plain fields only, safe names, sane limits
+const cmName = v => String(v || '').replace(/[\u0000-\u001f<>`"&]/g, '').trim().slice(0, 30);
+function fixCustomMatch(c) {
+  const o = { types: [], gims: [] }; if (!c || typeof c !== 'object') return o;
+  const taken = new Set([...Object.keys(MATCH_TYPES), ...Object.keys(STIPS)].map(x => x.toLowerCase()));
+  const ok = n => { if (!n || taken.has(n.toLowerCase())) return false; taken.add(n.toLowerCase()); return true; };
+  for (const x of (Array.isArray(c.types) ? c.types : []).slice(0, 30)) { if (!x || typeof x !== 'object') continue; const name = cmName(x.name); if (!ok(name)) continue;
+    o.types.push({ name, ffa: !!x.ffa, teams: clamp(Math.round(+x.teams) || 2, 2, 6), per: clamp(Math.round(+x.per) || 1, 1, 5), count: clamp(Math.round(+x.count) || 10, 3, 40), wide: !!x.wide, desc: String(x.desc || '').replace(/[<>`"]/g, '').slice(0, 120) }); }
+  for (const x of (Array.isArray(c.gims) ? c.gims : []).slice(0, 30)) { if (!x || typeof x !== 'object') continue; const name = cmName(x.name); if (!ok(name)) continue;
+    o.gims.push({ name, rule: Object.hasOwn(GM_RULES, x.rule) ? x.rule : 'any', style: STYLES.includes(x.style) ? x.style : '', risk: clamp(Math.round(+x.risk) || 0, 0, 2), heat: clamp(Math.round(+x.heat) || 0, 0, 2), long: !!x.long, desc: String(x.desc || '').replace(/[<>`"]/g, '').slice(0, 120) }); }
+  return o;
+}
 function scrubGame(raw) {
-  const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle'], mtype: Object.keys(MATCH_TYPES), stip: Object.keys(STIPS), finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES) };
+  const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES) };
   const idMap = new Map(), fixId = v => { v = String(v); if (SAFE_ID.test(v)) return v; if (!idMap.has(v)) idMap.set(v, uid()); return idMap.get(v); };
   const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|coId|brand|bid|showId)$/;
   let budget = 400000;
@@ -4681,10 +4906,12 @@ function scrubGame(raw) {
   };
   const g = clean(raw, '', 0, false);
   if (!g || typeof g !== 'object' || Array.isArray(g)) throw 0;
+  g.customMatch = fixCustomMatch(g.customMatch);
+  const okMT = new Set([...Object.keys(MATCH_TYPES), ...g.customMatch.types.map(x => x.name)]), okGM = new Set([...Object.keys(STIPS), ...g.customMatch.gims.map(x => x.name)]);
   // segments must still make sense after cleaning
   const fixSeg = x => {
     if (!x || !x.kind) return null;
-    if (x.kind === 'match') { x.mtype ||= 'Singles'; x.stip ||= 'Standard'; x.finish = finOf(x); if (x.runin !== undefined && !Array.isArray(x.runin)) delete x.runin; if (x.turn !== undefined && typeof x.turn !== 'string') delete x.turn; if (!Array.isArray(x.sides) || x.sides.length < 2) x.sides = [[], []]; x.sides = x.sides.map(sd => Array.isArray(sd) ? sd : []); }
+    if (x.kind === 'match') { if (!okMT.has(x.mtype)) x.mtype = 'Singles'; if (!okGM.has(x.stip)) x.stip = 'Standard'; if (x.n != null) x.n = clamp(Math.round(+x.n) || 10, 3, 40); x.finish = finOf(x); if (x.runin !== undefined && !Array.isArray(x.runin)) delete x.runin; if (x.turn !== undefined && typeof x.turn !== 'string') delete x.turn; if (!Array.isArray(x.sides) || x.sides.length < 2) x.sides = [[], []]; x.sides = x.sides.map(sd => Array.isArray(sd) ? sd : []); }
     else { if (x.kind === 'promo') x.ptype ||= Object.keys(PROMO_TYPES)[0]; else x.atype ||= Object.keys(ANGLE_TYPES)[0]; x.who = Array.isArray(x.who) ? x.who : []; x.target = Array.isArray(x.target) ? x.target : []; }
     x.id ||= uid(); return x;
   };
@@ -4707,6 +4934,9 @@ function scrubGame(raw) {
       .map(x => ({ id: x.id, name: String(x.name || 'Weekly Show').slice(0, 40), day: clamp(Math.floor(+x.day) || 0, 0, 6), ran: +x.ran || 0, auto: !!x.auto, ...(x.card ? { card: fixCard(x.card) } : {}), ...(x.future ? { future: fixFut(x.future) } : {}), ...(x.wk != null ? { wk: +x.wk || 0 } : {}) }));
     if (!g.shows.length) delete g.shows;
     g.split = !!g.split; if (g.ord != null) g.ord = +g.ord || 0;
+    g.ppvSig = (Array.isArray(g.ppvSig) ? g.ppvSig : []).filter(x => x && typeof x === 'object' && typeof x.name === 'string').slice(0, 24)
+      .map(x => ({ name: x.name.slice(0, 40), mt: okMT.has(x.mt) ? x.mt : '', gm: okGM.has(x.gm) ? x.gm : '' })).filter(x => x.mt || x.gm);
+    g.sigSeeded = (Array.isArray(g.sigSeeded) ? g.sigSeeded : []).map(x => Math.floor(+x) || 0).slice(-40);
   };
   fixCo(g);
   g.cos = (Array.isArray(g.cos) ? g.cos : []).filter(c => c && typeof c === 'object' && !Array.isArray(c) && c.promo && typeof c.promo === 'object').slice(0, MAX_COS - 1)
@@ -5247,7 +5477,7 @@ function wizFinish() {
   if (host) { G.week = host.week; G.settings = host.settings; G.titles.forEach(t => { t.since = t.lastDefense = host.week; }); G.stories.forEach(s => s.start = host.week); }
   G.promo.day = z.day; G.promo.color = z.color; G.rivals = z.rivals || shuffle(RIVALS).slice(0, 2);
   // only the big events this booker named: nothing pre-filled shows up on a company they built
-  G.bigEvents = ppvList(z.ppv); if (!host && [3, 4, 5, 6, 8].includes(+z.every)) G.settings.bigEvery = +z.every;
+  G.bigEvents = ppvList(z.ppv); G.ppvSig = sigsFromWiz(z); G.sigSeeded = []; if (!host && [3, 4, 5, 6, 8].includes(+z.every)) G.settings.bigEvery = +z.every;
   delete G.shows; delete G.showId; migrateShows(G);
   G.news = []; G.todos = [];
   if (z.source === 'draft') {
@@ -5346,6 +5576,8 @@ function viewWizard() {
       ${z.add ? `<p class="small muted" style="margin-top:0">This world has a big event every ${G.settings.bigEvery} weeks.</p>` : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}
       <label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
       <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order and repeat each year. Leave it empty for Big Event 1, 2, 3. You can change them later in Menu.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>
+      ${ppvList(z.ppv).length ? `<div class="f"><span>Signature matches <span class="muted">(optional)</span></span><div class="tiny muted" style="margin:2px 0 8px">A match fans expect every year at that event, like a 30-person Rumble. It goes on the card for you.</div>
+        ${ppvList(z.ppv).map((n, i) => `<div class="row" style="gap:8px;margin-bottom:6px"><span class="sp small clip">${esc(n)}</span><select data-wz="sig" data-i="${i}" style="width:auto;max-width:55%" aria-label="Signature match for ${esc(n)}">${sigOptions(z.sig?.[n] || '')}</select></div>`).join('')}</div>` : ''}
       <div class="wz-nav">${z.add ? `<button class="btn" data-act="wzCancel">${(z.nth || 1) > 1 ? 'Skip the rest' : 'Cancel'}</button>` : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
   }
   if (z.step === 'budget') {
@@ -5429,7 +5661,7 @@ const WIZ_ACTIONS = {
   wzXDay(v) { const [i, k] = String(v).split(':').map(Number), x = UI.wiz.extra?.[i]; if (x) { x.day = clamp(k || 0, 0, 6); render(); } },
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
-  wzPpvIdeas() { UI.wiz.ppv = shuffle(BIG_EVENTS).slice(0, 12).join('\n'); render(); },
+  wzPpvIdeas() { const l = shuffle(BIG_EVENTS).slice(0, 12); UI.wiz.ppv = l.join('\n'); if (!Object.values(UI.wiz.sig || {}).some(Boolean)) UI.wiz.sig = { [l[0]]: 'mt:Rumble' }; render(); },
   wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
   wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false }); G.tips = 0; UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = { type: 'help' }; save(); render(); },
@@ -5470,6 +5702,7 @@ document.addEventListener('input', e => {
     const nx = document.querySelector('.wz-nav [data-id="budget"]'); if (nx) nx.disabled = !z.name.trim();
     return;
   }
+  if (el.dataset.mt) { const d = UI.modal?.edit?.d; if (d) d[el.dataset.mt] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value; return; }
   if (el.dataset.in) {
     const k = el.dataset.in, v = el.value;
     if (k === 'rosterQ') { UI.rosterQ = v; debRender(el, e); }
@@ -5506,10 +5739,19 @@ document.addEventListener('change', e => {
     else if (k === 'storyOn') z.story.on = el.checked;
     else if (k === 'xDay') { const x = z.extra?.[+el.dataset.i]; if (x) x.day = clamp(+el.value || 0, 0, 6); }
     else if (k === 'xSplit') { z.split = el.checked; render(); }
+    else if (k === 'ppv') render();
+    else if (k === 'sig') { const n = ppvList(z.ppv)[+el.dataset.i]; if (n) (z.sig ||= {})[n] = el.value; }
     return;
   }
+  if (el.dataset.mt) { const d = UI.modal?.edit?.d; if (d) d[el.dataset.mt] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value; return; }
+  if (el.dataset.sig) { const n = G.bigEvents[+el.dataset.i]; if (!n) return; const cur = { mt: '', gm: '', ...(sigFor(n) || {}) }; cur[el.dataset.sig] = el.value;
+    G.ppvSig = (G.ppvSig || []).filter(x => x.name !== n); if (cur.mt || cur.gm) G.ppvSig.push({ name: n, mt: cur.mt, gm: cur.gm }); commit(cur.mt || cur.gm ? `${n}: the ${sigName(cur)} is its signature match.` : `${n} has no signature match.`); return; }
   if (el.dataset.seg) { const d = UI.modal.draft, k = el.dataset.seg;
-    if (k === 'mtype') { d.mtype = el.value; const mt = MATCH_TYPES[d.mtype]; const flat = d.sides.flat(); d.sides = Array.from({ length: mt.sides }, (_, i) => (d.sides[i] || []).slice(0, mt.size)); d.winner = -1; const t = d.title && G.titles.find(x => x.id === d.title); if (t && t.tag !== (mt.size === 2)) d.title = null; }
+    if (k === 'mtype') { d.mtype = el.value; const mt = MT(d.mtype), flat = [...new Set(d.sides.flat())];
+      if (mt.ffa) { d.n = mt.def; d.sides = flat.slice(0, d.n).map(id => [id]); } else { delete d.n; d.sides = Array.from({ length: mt.sides }, (_, i) => (d.sides[i] || []).slice(0, sideSize(mt, i))); }
+      d.winner = -1; const t = d.title && G.titles.find(x => x.id === d.title); if (t && t.tag !== tagMT(mt)) d.title = null; }
+    else if (k === 'n') { const mt = MT(d.mtype); d.n = clamp(Math.round(+el.value || mt.def), mt.min || 3, mt.max || 40); d.sides = d.sides.slice(0, d.n); if (d.winner >= d.sides.length) d.winner = -1; }
+    else if (k === 'winner') d.winner = +el.value;
     else if (k === 'title') d.title = el.value || null;
     else if (k === 'turn') d.turn = el.value || null;
     else if (k === 'stip') { d.stip = el.value; d.finish = finOf(d); }
@@ -5602,8 +5844,12 @@ const SFX = (() => {
 })();
 
 // ---------- crash safety ----------
-const VERSION = '1.4';
+const VERSION = '1.5';
 const WHATS_NEW = [
+  ['🤼 Participants plus a gimmick', 'Every match is who is in it (singles, tag, handicap, up to six-way, eight-person tag, battle royal, rumble) plus a gimmick on top: ladder, cage, tables, I quit, last man standing, the Cell and more. Mix any of them.'],
+  ['👑 Rumbles and battle royals', 'Up to 40 entrants from every show. One tap fills the field, and wrestling earlier that night is fine.'],
+  ['✏️ Make your own', 'Create match types and gimmicks in Menu → Match types, or from any match.'],
+  ['⭐ Signature matches', 'Give each big event a signature match, like a yearly Rumble. It goes on the card for you, and fans expect it.'],
   ['🏟️ Run several companies', 'Start another company in the same world from Menu → Your companies. Each one books its own show, and the week moves on after the last. Shows on the same night fight for viewers, and you can lure stars between your companies.'],
   ['🔔 Deeper match booking', 'Nine finishes: clean, submission, roll-up, cheating, run-in, screwjob, DQ, count-out and no contest. Champions keep the belt on a DQ or count-out.'],
   ['⚡ Run-ins', 'Pick who runs in to help the winner. A run-in can start a brand new feud.'],
