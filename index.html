@@ -3115,7 +3115,7 @@ function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><sp
 
 function render() {
   const fk = focusKey(document.activeElement);
-  if (!G || UI.wiz) { root.innerHTML = iconize('<main tabindex="-1">' + (UI.wiz ? viewWizard() : viewStart()) + '</main>'); modals.innerHTML = iconize(renderModal()); a11yAfter(fk); return; }
+  if (!G || UI.wiz) { root.innerHTML = iconize('<main tabindex="-1">' + (UI.wiz ? viewWizard() : viewStart()) + '</main>'); modals.innerHTML = iconize(renderModal()); a11yAfter(fk); MUSIC.sync(); return; }
   if (UI.pendingGet && !UI.modal && !UI.wiz) { const k = UI.pendingGet; UI.pendingGet = null; if (cItem(k).i) { setTimeout(() => A.cGet(k)); } }
   if (G.promo.color !== render.brand) { render.brand = G.promo.color; applyBrand(G.promo.color); }
   if (!UI.selWeek || UI.selWeek < 1) UI.selWeek = G.week;
@@ -3147,6 +3147,7 @@ function render() {
   if (chip && strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, chip.offsetLeft - strip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2);
   tutMark();
   a11yAfter(fk);
+  MUSIC.sync();
 }
 // ---------- accessibility: keep keyboard focus through re-renders, and inside open sheets ----------
 // Every tap rebuilds the screen, which would drop focus back to the top of the page. Remember what had focus,
@@ -3574,6 +3575,7 @@ function renderModal() {
       <p class="small muted">A free, fan-made wrestling booking game. Everything built in is fictional.</p>
       <p class="small muted">Player-made rosters are unofficial and not tied to any wrestling company. Names belong to their owners.</p>
       <p class="small muted">Saves stay in this browser. Back them up from the menu.</p>
+      <p class="tiny muted">Music: "Summon the Rawk", "Raw" and "Take the Lead" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 3.0 (creativecommons.org/licenses/by/3.0). Crowd recordings from Wikimedia Commons (public domain and CC0).</p>
       <p><button class="link" data-act="privacy">Privacy &amp; terms</button> · <button class="link" data-act="whatsNew">What's new</button> · <button class="link" data-act="feedback">Send feedback</button></p></div>`, '<button class="btn" data-act="support">❤️ Support</button><button class="btn pri" data-act="closeModal">Close</button>');
     case 'help': return modal('How to play', helpHTML());
     case 'brief': return modal('Briefing', viewHome());
@@ -3653,7 +3655,9 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>Wrestler personalities (texts, demands, memory)</span></label>
     <label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>
     <div class="small muted" style="margin:14px 0 8px">Sound &amp; display</div>
-    <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound effects</span></label>
+    <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound (bell, crowd and music)</span></label>
+    <label class="todo"><input type="checkbox" data-in="musicOn" ${meta.music !== false ? 'checked' : ''} ${meta.sound === false ? 'disabled' : ''}><span>Menu music${meta.sound === false ? ' (turn sound on first)' : ''}</span></label>
+    <label class="f"><span>Music volume</span><input type="range" min="0" max="100" step="5" data-in="musicVol" value="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}" aria-valuetext="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}%" ${meta.sound === false || meta.music === false ? 'disabled' : ''}></label>
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
@@ -4322,7 +4326,7 @@ const A = {
     else go();
   },
   recap(wk) { openModal({ type: 'recap', wk: +wk }); },
-  sound() { meta.sound = meta.sound === false; ls.set(META, JSON.stringify(meta)); if (meta.sound) SFX.tap(); const b = document.querySelector('[data-act=sound]'); if (b) { b.innerHTML = iconize(meta.sound ? '🔊' : '🔇'); b.setAttribute('aria-label', meta.sound ? 'Mute sound' : 'Turn sound on'); } else render(); },
+  sound() { meta.sound = meta.sound === false; ls.set(META, JSON.stringify(meta)); if (meta.sound) SFX.tap(); MUSIC.sync(); const b = document.querySelector('[data-act=sound]'); if (b) { b.innerHTML = iconize(meta.sound ? '🔊' : '🔇'); b.setAttribute('aria-label', meta.sound ? 'Mute sound' : 'Turn sound on'); } else render(); },
   liveSkip() { liveTimers.forEach(clearTimeout); const l = document.querySelector('.live'); if (l) { l.classList.add('skip'); l.querySelector('.lv-fin')?.scrollIntoView({ block: 'start' }); } },
   liveRecap() { liveTimers.forEach(clearTimeout); openModal({ type: 'recap', wk: UI.modal.wk }); },
   trophies() { openModal({ type: 'trophies' }); },
@@ -6443,6 +6447,7 @@ document.addEventListener('click', e => {
 // text inputs and selects: update state without stealing focus
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.dataset.in === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); el.setAttribute('aria-valuetext', el.value + '%'); MUSIC.sync(); return; }
   if (el.dataset.wz === 'ppv') { UI.wiz.ppv = el.value; return; }
   if (el.dataset.wz === 'xName') { const x = UI.wiz.extra?.[+el.dataset.i]; if (x) x.name = el.value; return; }
   if (el.dataset.wz === 'name' || el.dataset.wz === 'show') {
@@ -6533,7 +6538,9 @@ document.addEventListener('change', e => {
     }
     else if (k === 'theme') { meta.theme = ['light', 'auto'].includes(el.value) ? el.value : 'dark'; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'motion') { meta.motion = ['reduce', 'full'].includes(el.value) ? el.value : ''; applyTheme(); ls.set(META, JSON.stringify(meta)); }
-    else if (k === 'soundOn') { meta.sound = el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) SFX.tap(); }
+    else if (k === 'soundOn') { meta.sound = el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) SFX.tap(); render(); }
+    else if (k === 'musicOn') { meta.music = el.checked; ls.set(META, JSON.stringify(meta)); render(); }
+    else if (k === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); ls.set(META, JSON.stringify(meta)); MUSIC.sync(); }
     else if (['promoName', 'showName', 'bigEvents', 'notebook', 'wNotes', 'sNotes'].includes(k)) { save(); render(); }
   }
   if (el.dataset.ew != null) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
@@ -6608,6 +6615,36 @@ const SFX = (() => {
       (R[s] || (() => {}))(); },
   };
 })();
+
+// ---------- menu music: a rotating playlist of recorded tracks (credits in README and About) ----------
+// Never starts before the player taps or presses a key, stays off when sound is muted,
+// fades out for the live show (bell and crowd take over) and pauses when the app is hidden.
+const MUSIC = (() => {
+  const SRC = ['sounds/music-summon-the-rawk.mp3', 'sounds/music-raw.mp3', 'sounds/music-take-the-lead.mp3'];
+  let el = null, gain = null, unlocked = false, want = false, fadeT = 0, cur = Math.floor(Math.random() * SRC.length);
+  const on = () => meta.sound !== false && meta.music !== false;
+  const vol = () => clamp(meta.musicVol == null ? .35 : +meta.musicVol, 0, 1);
+  const quiet = () => document.hidden || UI.modal?.type === 'live';
+  const level = v => { if (gain) gain.gain.value = v; else if (el) el.volume = v; };
+  const make = () => { if (el) return el; el = new Audio(); el.src = SRC[cur]; el.preload = 'none'; el.setAttribute('playsinline', '');
+    // when a track ends, the next one starts (at full music volume, no fade needed)
+    el.addEventListener('ended', () => { cur = (cur + 1) % SRC.length; el.src = SRC[cur]; if (want) el.play().catch(() => {}); });
+    // route through Web Audio where possible, because iPhones ignore the volume of a plain audio element
+    try { const C = window.AudioContext || window.webkitAudioContext; if (C) { const c = MUSIC.ctx || (MUSIC.ctx = new C()); gain = c.createGain(); c.createMediaElementSource(el).connect(gain).connect(c.destination); } } catch (e) { gain = null; }
+    return el; };
+  const fade = (to, ms, done) => { clearInterval(fadeT); const from = gain ? gain.gain.value : el.volume, t0 = Date.now();
+    fadeT = setInterval(() => { const k = Math.min(1, (Date.now() - t0) / ms); level(from + (to - from) * k); if (k >= 1) { clearInterval(fadeT); done && done(); } }, 40); };
+  return {
+    // called after every screen change and setting change
+    sync() { want = unlocked && on() && !quiet() && vol() > 0;
+      if (want) { const a = make(); if (MUSIC.ctx?.state === 'suspended') MUSIC.ctx.resume(); if (a.paused) { level(0); a.play().then(() => fade(vol(), 1200)).catch(() => {}); } else fade(vol(), 300); }
+      else if (el && !el.paused) fade(0, 700, () => { if (!want) el.pause(); }); },
+    unlock() { if (unlocked) return; unlocked = true; this.sync(); },
+    get playing() { return !!el && !el.paused; },
+  };
+})();
+['pointerdown', 'keydown'].forEach(t => addEventListener(t, () => MUSIC.unlock(), { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
 const VERSION = '1.6';
