@@ -65,3 +65,28 @@ revoke all on function public.docs_touch() from public, anon, authenticated;
 -- The read rule above already limits these rows to the player who owns them (and moderators).
 alter table public.docs drop constraint if exists docs_col_check;
 alter table public.docs add constraint docs_col_check check (col in ('creations', 'reports', 'feedback', 'cloud1', 'cloud2', 'cloud3'));
+
+-- Space guard (added in v1.6.1, safe to run again). The free plan has 500 MB of database, and going over it
+-- makes the whole database read-only. So past 400 MB, new uploads and cloud saves are refused with 'bookit_full'
+-- (the game says the online space is full and keeps playing offline). Past 460 MB, rows can only get smaller.
+-- Reports and feedback are tiny and always allowed. Raise or remove the limits after moving to a paid plan.
+create or replace function public.docs_space() returns trigger
+language plpgsql set search_path = ''
+as $$
+declare used bigint;
+begin
+  if new.col in ('reports', 'feedback') then return new; end if;
+  -- the game saves with an upsert, which runs this as an INSERT first even when the row exists; the UPDATE check then follows
+  if tg_op = 'INSERT' and exists (select 1 from public.docs where col = new.col and id = new.id) then return new; end if;
+  used := pg_database_size(current_database());
+  if used > 460 * 1024 * 1024 and (tg_op = 'INSERT' or octet_length(new.data::text) > octet_length(old.data::text)) then
+    raise exception 'bookit_full' using errcode = 'P0001';
+  end if;
+  if used > 400 * 1024 * 1024 and tg_op = 'INSERT' then
+    raise exception 'bookit_full' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+drop trigger if exists docs_space on public.docs;
+create trigger docs_space before insert or update on public.docs for each row execute function public.docs_space();
+revoke all on function public.docs_space() from public, anon, authenticated;

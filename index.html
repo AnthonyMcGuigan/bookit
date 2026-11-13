@@ -3956,7 +3956,7 @@ function modalMenu() {
 
 // ---- cloud saves (Supabase): one row per player in cloud1..cloud3, readable only by that player ----
 const CLOUD_SLOTS = [1, 2, 3];
-const cloudErr = e => e?.code === 'big' ? 'This save is too big for the cloud. Use Back up instead.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
+const cloudErr = e => e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'This save is too big for the cloud. Use Back up instead.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
 async function cloudPush(n) {
   await sbGuest(); if (!sbSess?.user?.id) throw { code: 'unavailable' };
   const z = await gz(JSON.stringify({ ...G, savedAt: Date.now() }));
@@ -5389,7 +5389,8 @@ async function sbFetch(path, opt = {}, auth = true) {
   if (auth) { const t = await sbToken(); if (t) h.Authorization = 'Bearer ' + t; } // with no session, the public key alone is enough
   const r = await fetch(SUPABASE_URL.replace(/\/+$/, '') + path, { ...opt, headers: h });
   const txt = await r.text(); let j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
-  if (!r.ok) throw { code: r.status === 401 || r.status === 403 ? 'permission-denied' : r.status === 429 ? 'rate_limited' : 'unavailable', status: r.status, err: String(j?.error_code || j?.code || '') };
+  // 'full': the database is near the free plan's space limit, so new uploads wait (see supabase/setup.sql). 'big': one row is over its size cap.
+  if (!r.ok) throw { code: j?.message === 'bookit_full' ? 'full' : j?.code === '23514' ? 'big' : r.status === 401 || r.status === 403 ? 'permission-denied' : r.status === 429 ? 'rate_limited' : r.status === 402 ? 'full' : 'unavailable', status: r.status, err: String(j?.error_code || j?.code || '') };
   return j;
 }
 async function sbToken() {
@@ -5405,6 +5406,21 @@ async function sbGuest() { await sbLinkP; if (await sbToken()) return; sbStore(a
 const sbBack = () => location.origin + location.pathname;
 const sbQ = v => encodeURIComponent(String(v));
 const sbListeners = new Set();
+const FULL_MSG = 'The online space is full for now. Your game is still saved on this phone. Try again later.';
+// Community rows are kept on this device, and only rows that changed since the last look are downloaded again.
+// That keeps each player's downloads small as Community grows (the free plan allows 5 GB a month for everyone).
+const sbCache = (() => {
+  let p = null;
+  const open = () => p ||= new Promise(res => {
+    const t = setTimeout(() => res(null), 1500);
+    try { const r = indexedDB.open('bookit-cache', 1); r.onupgradeneeded = () => r.result.createObjectStore('rows'); r.onsuccess = () => { clearTimeout(t); res(r.result); }; r.onerror = r.onblocked = () => { clearTimeout(t); res(null); }; } catch (e) { clearTimeout(t); res(null); }
+  });
+  return {
+    get: async k => { const db = await open(); if (!db) return null; return new Promise(res => { try { const q = db.transaction('rows').objectStore('rows').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); },
+    put: async (k, v) => { const db = await open(); if (!db) return; try { db.transaction('rows', 'readwrite').objectStore('rows').put(v, k); } catch (e) {} },
+    clear: async () => { const db = await open(); if (!db) return; try { db.transaction('rows', 'readwrite').objectStore('rows').clear(); } catch (e) {} },
+  };
+})();
 let sbPokeT = 0;
 const sbPoke = () => { clearTimeout(sbPokeT); sbPokeT = setTimeout(() => sbListeners.forEach(f => f()), 400); };
 setInterval(() => { if (sbListeners.size && !document.hidden && ['community', 'cview', 'creator', 'inbox', 'support'].includes(UI.modal?.type)) sbListeners.forEach(f => f()); }, 60000);
@@ -5419,10 +5435,29 @@ const sbDb = () => ({
   },
   collection(col) {
     return { limit: n => ({ onSnapshot(cb, onErr) {
-      let busy = false, ok = false;
+      // first a light list of ids and change times, then the full rows for only the new or changed ones
+      let busy = false, ok = false, sent = '';
+      const rows = new Map(), keep = col === 'creations', lim = +n || 100;
+      const emit = (order, fromCache) => cb({ docs: order.filter(id => rows.has(id)).map(id => ({ id, data: () => rows.get(id).data })), metadata: { fromCache } });
       const run = async () => {
         if (busy) return; busy = true;
-        try { const rows = await sbFetch(`/rest/v1/docs?select=id,data&col=eq.${sbQ(col)}&order=updated.desc&limit=${+n || 100}`); ok = true; cb({ docs: (Array.isArray(rows) ? rows : []).map(r => ({ id: String(r.id), data: () => r.data })), metadata: { fromCache: false } }); }
+        try {
+          if (keep && !ok && !rows.size) {
+            const c = await sbCache.get(col);
+            if (Array.isArray(c)) { for (const r of c) if (r && typeof r.id === 'string' && typeof r.updated === 'string') rows.set(r.id, r); if (rows.size) emit(c.map(r => r?.id), true); }
+          }
+          const heads = await sbFetch(`/rest/v1/docs?select=id,updated&col=eq.${sbQ(col)}&order=updated.desc&limit=${lim}`);
+          const list = (Array.isArray(heads) ? heads : []).map(h => ({ id: String(h.id), updated: String(h.updated) })).filter(h => AUTHOR_ID.test(h.id));
+          const need = list.filter(h => rows.get(h.id)?.updated !== h.updated).map(h => h.id);
+          for (let i = 0; i < need.length; i += 25) {
+            const got = await sbFetch(`/rest/v1/docs?select=id,updated,data&col=eq.${sbQ(col)}&id=in.(${need.slice(i, i + 25).map(sbQ).join(',')})`);
+            for (const r of Array.isArray(got) ? got : []) rows.set(String(r.id), { id: String(r.id), updated: String(r.updated), data: r.data });
+          }
+          const ids = new Set(list.map(h => h.id)); for (const id of [...rows.keys()]) if (!ids.has(id)) rows.delete(id);
+          const order = list.map(h => h.id), sig = list.map(h => h.id + h.updated).join();
+          if (!ok || sig !== sent) { emit(order, false); if (keep) sbCache.put(col, order.filter(id => rows.has(id)).map(id => rows.get(id))); }
+          ok = true; sent = sig;
+        }
         catch (e) { if (!ok && onErr) onErr(e); }
         busy = false;
       };
@@ -5746,7 +5781,7 @@ async function commMe(patch) {
   const body = { ...COMM.body, items: COMM.mine, ...patch, updated: Date.now() };
   if (JSON.stringify(body).length > 240000) return toast('Your space is full. Remove an old upload first.');
   COMM.body = body; render();
-  try { await cdb.doc('creations/' + COMM.me).set(body); } catch (e) { toast(e?.code === 'permission-denied' ? 'You can browse, but the owner has not given you access to post.' : 'Could not save that. Try again.'); }
+  try { await cdb.doc('creations/' + COMM.me).set(body); } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'permission-denied' ? 'You can browse, but the owner has not given you access to post.' : 'Could not save that. Try again.'); }
 }
 function markUsed(key) { if (!COMM.me || myList('used').includes(key) || COMM.canWrite === false) return; commMe({ used: [key, ...myList('used')].slice(0, 300) }); }
 function modalCommunity(m) {
@@ -6103,7 +6138,7 @@ const CREATOR_ACTIONS = {
     const pack = makePack(ws, { titles: m.what === 'roster', title: (m.title || '').trim() || (m.what === 'roster' ? G.promo.name + ' roster' : ws.length === 1 ? ws[0].name : 'Custom wrestlers') });
     const item = { id: uid(), title: pack.title, desc: (m.desc || '').trim().slice(0, 300), kind: m.what === 'roster' ? 'roster' : 'wrestler', count: ws.length, created: Date.now(), pack };
     try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.'); }
-    catch (e) { toast(e?.code === 'too_big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+    catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   async cPublishSave() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
@@ -6115,7 +6150,7 @@ const CREATOR_ACTIONS = {
       const item = { id: uid(), title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' · week ' + G.week, desc: (m.desc || '').trim().slice(0, 300), kind: 'save', count: signed().length, created: Date.now(), sum: saveSummary(G), save: data };
       await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30));
       UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Save shared with the community.');
-    } catch (e) { toast(e?.code === 'too_big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+    } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   cPlaySave(key, el) {
     const n = +el.dataset.f, i = COMM.items.find(x => x.author + '|' + x.id === key); if (!i) return toast('This save was removed.');
