@@ -1478,7 +1478,7 @@ function modalShows() {
     ${sh.length < MAX_SHOWS ? '<button class="btn block" data-act="addShow">＋ Add a weekly show</button>' : `<div class="tiny muted">A company can have up to ${MAX_SHOWS} weekly shows.</div>`}
     ${many ? `<div class="sec">Brand split</div>
     <label class="todo"><input type="checkbox" data-in="split" ${G.split ? 'checked' : ''}><span>Each show has its own roster</span></label>
-    <p class="small muted" style="margin-top:4px">${G.split ? 'Wrestlers only work their own show, except at big events. Move someone from their profile, or redo the draft to even things out.' : 'Off: everyone can work every show. Turn it on for separate brands with their own stars and champions.'}</p>
+    <p class="small muted" style="margin-top:4px">${G.split ? 'Wrestlers only work their own show, except at big events. Move someone from their profile, or redo the draft to even things out.' : 'Off: everyone can work every show, and extra shows are B shows (smaller crowds, half a TV deal). Turn it on for separate brands with their own stars and champions; every brand then gets a full A show.'}</p>
     ${G.split ? '<button class="btn block" data-act="brandDraft">🎲 Redo the brand draft</button>' : ''}` : ''}
     ${titles}`;
   return modal('Weekly shows', body);
@@ -1913,10 +1913,11 @@ function runShow(opts = {}) {
   const topHeat = G.stories.filter(s => s.status === 'active').map(s => s.heat).sort((a, b) => b - a).slice(0, 3);
   const hype = 1 + avg(topHeat.length ? topHeat : [0]) / 250 + (G.promo.prestige - 50) / 250;
   // the main show is the A show; other weekly shows are B shows: smaller crowds, half a TV deal, a bit more to put on
-  const bShow = !onMain();
+  // with the brand split on, every brand's show is an A show; B shows are the extra nights on a shared roster
+  const bShow = !onMain() && !splitOn();
   const attendance = Math.round(Math.min(big ? 22000 : bShow ? 4000 : 9000, G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype) * rnd(.93, 1.07));
   const fin = {
-    gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (onMain() ? 1 : 0.5)), ppv: big ? Math.round(G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150)) : 0,
+    gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (bShow ? 0.5 : 1)), ppv: big ? Math.round(G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150)) : 0,
     merch: Math.round(sum(crew.map(w => w.pop * w.pop)) / 9 * share),
     payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary)) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15))
   };
@@ -5339,8 +5340,8 @@ function viewWizard() {
         <input type="text" data-wz="xName" data-i="${i}" value="${esc(x.name)}" maxlength="40" aria-label="Show name" placeholder="e.g. Friday Fallout" style="margin-bottom:8px">
         <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === x.day ? 'on' : ''}" data-act="wzXDay" data-id="${i}:${k}">${d.slice(0, 3)}</button>`).join('')}</div></div>`).join('')}
       ${(z.extra || []).length < MAX_SHOWS - 1 ? `<button class="btn block" style="margin:-2px 0 12px" data-act="wzAddShow">＋ Add another weekly show</button>` : ''}
-      ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} Extra shows are B shows: smaller crowds, half a TV deal and their own costs. Each one adds 8 picks to your roster.</div>` : ''}
-      <label class="f"><span>Brand color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
+      ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} ${z.split ? 'Every brand gets a full A show: its own crowd, TV deal and costs.' : 'Extra shows are B shows: smaller crowds, half a TV deal and their own costs.'} Each one adds 8 picks to your roster.</div>` : ''}
+      <label class="f"><span>Company color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
       <div class="sec">Big events</div>
       ${z.add ? `<p class="small muted" style="margin-top:0">This world has a big event every ${G.settings.bigEvery} weeks.</p>` : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}
       <label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>

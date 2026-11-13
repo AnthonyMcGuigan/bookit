@@ -166,7 +166,7 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 - Menu → Weekly shows and brands: a company can run up to 4 weekly shows, each on its own night (like a Monday show and a Friday show).
 - Brand split (optional): each show gets its own roster and its own titles, like separate brands. "Redo the brand draft" shares the roster out best-first, keeping tag teams together. Move a wrestler from their profile; pick each title's show in Weekly shows (or leave it shared).
 - Big events take the main show's slot that week and can use everyone.
-- A show and B shows: the main show is the A show. Other weekly shows are B shows with smaller crowds (up to 4,000), half a TV deal and higher production costs, so a second show adds money without doubling it.
+- A show and B shows: the main show is the A show. Other weekly shows are B shows with smaller crowds (up to 4,000), half a TV deal and higher production costs, so a second show adds money without doubling it. With the brand split on, every brand's show is an A show.
 - Each extra show picked at setup adds 8 draft picks (with a bigger payroll budget) or 8 signings on the starter roster. The Briefing warns when a brand has fewer than 10 wrestlers.
 - One calendar for the whole world: every show, across all your companies, runs in night order (Monday to Sunday). When a show is done the game moves you to the next one, so no company or brand can run ahead. The strip at the top of the Shows tab shows the week's order.
 - Auto-book: tick it on a show you don't want to book yourself and it books and runs itself when its turn comes.
