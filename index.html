@@ -65,6 +65,18 @@ nav.tabs button { flex: 1; background: none; border: 0; padding: 6px 0 4px; colo
 nav.tabs button .ic { font-size: 20px; line-height: 1; opacity: .55; }
 nav.tabs button.on { color: var(--accent-t); }
 nav.tabs button.on .ic { filter: none; opacity: 1; }
+header.top .ph-btn { position: relative; }
+header.top .ph-btn .dot { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center; padding: 0 4px; font-family: system-ui, sans-serif; }
+.ph-m { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ph-m:last-child { border-bottom: 0; }
+.ph-av { padding: 0; border: 0; background: none; border-radius: 50%; flex: none; }
+.ph-h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+.ph-b { background: var(--card2); border-radius: 4px 14px 14px 14px; padding: 8px 12px; font-size: 14px; line-height: 1.4; margin-bottom: 8px; }
+.ph-m.new .ph-b { box-shadow: inset 3px 0 0 var(--accent); }
+.ph-you { font-size: 12px; color: var(--dim); text-align: right; }
+.mem { display: flex; gap: 6px; padding: 2px 0; }
+.mem.neg { color: color-mix(in srgb, var(--bad) 75%, var(--ink)); }
+.mem .wk { font-size: 10px; font-weight: 700; opacity: .7; min-width: 38px; padding-top: 2px; }
 nav.tabs .dot { position: absolute; top: 2px; right: calc(50% - 18px); min-width: 16px; height: 16px; border-radius: 8px; background: var(--bad); color: #fff; font-size: 10px; display: grid; place-items: center; padding: 0 4px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin-bottom: 12px; }
 .card h3 { font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
@@ -987,7 +999,7 @@ function migrate(g) {
   for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; }
   for (const s of g.stories) { s.notes ??= ''; s.log ||= []; }
   for (const c of [g.card, ...Object.values(g.future || {})]) if (Array.isArray(c)) for (const x of c) if (x && OLD_FIN[x.finish]) x.finish = OLD_FIN[x.finish];
-  g.settings.aging ??= true;
+  g.settings.aging ??= true; g.settings.persona ??= false;
   g.teams = (Array.isArray(g.teams) ? g.teams : []).filter(t => t && t.id && Array.isArray(t.members)).map(t => ({ ...t, name: String(t.name || 'Tag Team').slice(0, 40), w: +t.w || 0, l: +t.l || 0, d: +t.d || 0 }));
   g.factions = (Array.isArray(g.factions) ? g.factions : []).filter(f => f && f.id && Array.isArray(f.members)).map(f => ({ ...f, name: String(f.name || 'Faction').slice(0, 40), tms: Array.isArray(f.tms) ? f.tms : [], w: +f.w || 0, l: +f.l || 0, d: +f.d || 0 }));
   g.tourneys = (Array.isArray(g.tourneys) ? g.tourneys : []).filter(t => t && t.id && Array.isArray(t.ents) && Array.isArray(t.rounds) && t.rounds.length && t.rounds.every(r => Array.isArray(r) && r.every(x => x && Array.isArray(x.pair) && x.pair.length === 2))).map(t => ({ ...t, name: String(t.name || 'Tournament').slice(0, 50) }));
@@ -1045,7 +1057,7 @@ function newGame(opts) {
     money: { easy: 1500000, normal: 400000, hard: 120000 }[diff], difficulty: diff,
     fans: 22000, tv: 46000, tvWeeks: 26,
     wrestlers: [], titles: [], stories: [], card: [], future: {}, news: [], history: [], todos: [], notebook: '',
-    settings: { injuries: true, finances: opts.finances !== false, contracts: opts.contracts !== false, bigEvery: 4, difficulty: Object.hasOwn(DIFF, String(opts.challenge)) ? opts.challenge : 'normal' }, bigEvents: BIG_EVENTS.slice(),
+    settings: { injuries: true, finances: opts.finances !== false, contracts: opts.contracts !== false, persona: opts.persona !== false, bigEvery: 4, difficulty: Object.hasOwn(DIFF, String(opts.challenge)) ? opts.challenge : 'normal' }, bigEvents: BIG_EVENTS.slice(),
     booker: { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0 }, event: null,
     teams: [], factions: [], tourneys: [], awards: [], popAt: {}, rankPrev: {}
   };
@@ -2133,6 +2145,7 @@ function runShow(opts = {}) {
   if (best && best.rating >= 80) news(`⭐ ${best.seg.kind === 'match' ? 'Match' : 'Segment'} of the night: ${best.text} (${starStr(best.rating)})`, 'show');
   const mark = G.news[0];
   organicStories(results, holdersBefore);
+  personaShow(results, rec);
   // the week's upkeep (fatigue, contracts, injuries, rivals) happens once, after the company's last show
   if (coLast) endOfWeek(G.history.filter(h => h.wk === G.week).flatMap(h => h.results.map(r => r.seg)), world);
   // headlines: what changed this week, shown at the top of the results
@@ -2168,7 +2181,7 @@ function endOfWeek(card, world = true) {
     if (!w.contract) { w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
     if (!booked.has(w.id) && w.injury === 0 && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
     if (CON() && w.contract.salary < asking(w) * 0.75) w.morale = clamp(w.morale - 1, 0, 100);
-    w.morale += (65 + room - w.morale) * 0.02;
+    w.morale += (65 + room + (PER() ? ((w.trust ?? 50) - 50) / 5 : 0) - w.morale) * 0.02;
   }
   // champions gain from holding gold
   for (const t of G.titles) for (const id of t.holder) { const w = W(id); if (w) addPop(w, t.prestige / 400); }
@@ -2192,14 +2205,14 @@ function endOfWeek(card, world = true) {
     if (wl === TALKS_OPEN) news(`📝 ${w.name} has ${TALKS_OPEN} weeks left and is open to talks. Renew in the Office.`, 'contract');
     if (wl === 4) news(`📝 ${w.name}'s contract ends in 4 weeks.${w.courted ? ` ${w.courted} is circling.` : ''}`, 'contract');
     // the last 8 weeks: rival promotions call the bigger names
-    if (wl > 0 && wl <= 8 && !w.courted && Math.random() < 0.04 + w.pop / 900) {
+    if (wl > 0 && wl <= 8 && !w.courted && Math.random() < 0.04 + w.pop / 900 + (PER() && w.pers === 'money' ? 0.04 : 0)) {
       ensureRivals(); w.courted = G.rivals?.length ? pick(G.rivals) : 'A rival promotion';
       news(`🗞️ ${w.courted} is talking to ${w.name}, whose deal ends in ${wl} weeks. Their price just went up.`, 'contract');
     }
     if (wl <= 0) {
-      const re = !w.courted && w.morale > 60 && Math.random() < 0.15 + w.morale / 400;
+      const re = !w.courted && (w.morale > 60 || (PER() && w.trust >= 70)) && Math.random() < 0.15 + w.morale / 400 + (PER() ? (w.trust - 50) / 300 : 0);
       if (re) { w.contract.weeks = 4; news(`📝 ${w.name}'s contract ran out, but they agreed to work 4 more weeks on a handshake while you sort out a new deal.`, 'contract'); }
-      else if (w.courted && Math.random() < 0.35 + w.pop / 200) {
+      else if (w.courted && Math.random() < 0.35 + w.pop / 200 - (PER() ? (w.trust - 50) / 200 + (w.pers === 'loyal' ? .15 : 0) : 0)) {
         const r = w.courted; leaveCompany(w, 'contract expired');
         const to = goRival(w, r); news(`✍️ ${w.name} signed with ${to} the moment their deal ended.`, 'contract');
       }
@@ -2221,6 +2234,7 @@ function endOfWeek(card, world = true) {
     const old = G.tv; G.tv = Math.round((30000 * Math.pow(G.fans / 22000, 0.65) * (0.6 + recent / 100)) / 1000) * 1000; G.tvWeeks = 26;
     if (MON()) news(`📡 New TV deal: ${money(G.tv)} per week (was ${money(old)}), based on fans and recent show quality.`, 'office');
   }
+  personaWeek(booked);
   if (G.settings.finances && G.money < 0) news('💸 You are in the red. Cut payroll or run bigger events.', 'office');
 }
 
@@ -2801,6 +2815,7 @@ function offerChance(w, salary, weeks) {
   let c = (salary / ask - 0.7) / 0.45;
   c += (w.morale - 55) / (w.contract ? 150 : 400);
   c += (G.promo.prestige - 45) / 250;
+  if (PER()) c += ((w.trust ?? 50) - 50) / 200 + (w.pers === 'loyal' && w.contract ? .08 : w.pers === 'money' ? -.05 : 0);
   // distance from the length they want
   const steps = Math.abs(DEAL_LENS.findIndex(d => d[0] >= weeks) - DEAL_LENS.findIndex(d => d[0] >= prefLen(w)));
   c -= steps * 0.07;
@@ -2916,6 +2931,11 @@ function attention() {
   if (inj.length) a.push({ lv: 'bad', ic: '🩹', t: 'Injured wrestlers on the card', d: [...new Set(inj.map(w => w.name))].join(', ') + ' (big rating penalty, risk of worse injury)', go: 'book' });
   if (CON()) for (const w of signed().filter(w => !w.loan && w.contract.weeks <= TALKS_OPEN).sort((x, y) => x.contract.weeks - y.contract.weeks))
     a.push({ lv: w.contract.weeks <= 1 ? 'bad' : w.contract.weeks <= 4 || w.courted ? 'warn' : 'info', ic: '📝', t: `${w.name}: contract ends in ${w.contract.weeks} wk`, d: `${w.courted ? `${w.courted} wants them. ` : ''}Asking about ${money(askFor(w, prefLen(w)))}/wk for ${lenLabel(prefLen(w))}. Renew or let them go.`, wid: w.id, neg: true });
+  if (PER() && Array.isArray(G.promises)) {
+    for (const p of G.promises) { const w = W(p.wid); if (w && p.until - G.week <= 1) a.push({ lv: p.until <= G.week ? 'bad' : 'warn', ic: '🎯', t: `You promised ${w.name} ${ASKS[p.key].what(p)}`, d: p.until <= G.week ? 'This week is the last chance. Break it and they will remember.' : `Due by week ${p.until}.`, wid: w.id }); }
+    const asks = (G.phone || []).filter(m => m.ask && m.ans == null && W(m.wid)?.contract).length;
+    if (asks) a.push({ lv: 'info', ic: '📱', t: `${asks} wrestler${asks === 1 ? ' is' : 's are'} waiting on your answer`, d: 'Open Messages from the phone at the top.', act: 'phone' });
+  }
   for (const w of signed().filter(w => w.morale < 35)) a.push({ lv: 'warn', ic: '😠', t: `${w.name} is unhappy (${Math.round(w.morale)})`, d: G.week - w.lastBooked >= 2 ? 'Not booked. Put them on the card.' : CON() ? 'Losing or underpaid. Try a win or a raise.' : 'Losing streak. Give them a win.', wid: w.id });
   for (const st of G.stories.filter(s => s.status === 'active' && s.heat < 25 && G.week - s.start > 1)) a.push({ lv: 'warn', ic: '🧊', t: `"${st.title}" is cooling off`, d: 'Heat drops every week the story is not on the card.', sid: st.id });
   for (const t of G.titles.filter(t => t.holder.length && G.week - t.lastDefense >= 5)) a.push({ lv: 'info', ic: '🏆', t: `${t.short} title hasn't been defended in ${G.week - t.lastDefense} weeks`, d: 'Regular defenses keep the belt prestigious.', go: 'book' });
@@ -3108,6 +3128,7 @@ function render() {
       <div class="brand"><b role="heading" aria-level="1">${esc(G.promo.name)}</b><span>Week ${G.week} · ${big ? '🎆 ' : ''}${esc(showName(G.week))}</span></div>
       ${G.settings.finances ? `<div class="money" style="color:${G.money < 0 ? 'var(--bad)' : 'inherit'}">${money(G.money)}</div>` : ''}
       ${multi() ? '<button class="iconbtn" data-act="cos" aria-label="Switch company">⇅</button>' : ''}
+      ${PER() ? (n => `<button class="iconbtn ph-btn" data-act="phone" aria-label="Messages${n ? `, ${n} new` : ''}">📱${n ? `<span class="dot" aria-hidden="true">${n}</span>` : ''}</button>`)(phoneNew()) : ''}
       <button class="iconbtn" data-act="menu" aria-label="Menu">☰</button>
     </header>
     <main tabindex="-1">${({ book: viewBook, roster: viewRoster, stories: viewStories, office: viewOffice, notes: viewNotes })[UI.tab]()}</main>
@@ -3547,6 +3568,7 @@ function renderModal() {
     case 'shows': return modalShows();
     case 'live': return liveScreen(m);
     case 'trophies': return modalTrophies();
+    case 'phone': return modalPhone();
     case 'about': return modal('About', `<div class="help" style="text-align:center">${beltSVG('belt-art', verLabel())}
       <p><b>Book It: Wrestling Booking Sim</b> · version ${VERSION}${BETA ? ' <span class="tag gold">Beta</span>' : ''}</p>
       <p class="small muted">A free, fan-made wrestling booking game. Everything built in is fictional.</p>
@@ -3628,6 +3650,7 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''}><span>Contracts</span></label>
     <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
+    <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>Wrestler personalities (texts, demands, memory)</span></label>
     <label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>
     <div class="small muted" style="margin:14px 0 8px">Sound &amp; display</div>
     <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound effects</span></label>
@@ -3909,6 +3932,7 @@ function modalWrestler(m) {
      ${CON() ? `<div class="row small"><span class="muted sp">Contract</span><b>${w.contract ? `${money(w.contract.salary)}/wk · ${lenLabel(w.contract.weeks)} left` : 'Free agent'}</b></div>
      <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Free agent'}</b></div>`}
    </div>
+   ${w.contract ? personaBlock(w) : ''}
    ${(() => { const st = STATS(w), ranks = G.titles.filter(t => !t.tag).map(t => [t, contenders(t, 10).findIndex(x => x.id === w.id)]).filter(x => x[1] >= 0);
      return `<div class="sec">Career stats</div><div class="grid3 cstats"><div><b>${st.m}</b><span>matches</span></div><div><b>${st.m ? Math.round(st.sum / st.m) : '–'}</b><span>avg rating</span></div><div><b>${st.best || '–'}</b><span>best match</span></div><div><b>${st.tw}</b><span>title wins</span></div><div><b>${st.def}</b><span>defenses</span></div><div><b>${st.motn}</b><span>match of the night</span></div></div>
      ${ranks.length ? `<div class="small" style="margin-top:6px">${ranks.map(([t, i]) => `🏆 <b>#${i + 1}</b> contender for the ${esc(t.short)} title`).join('<br>')}</div>` : ''}`; })()}
@@ -4304,7 +4328,7 @@ const A = {
   trophies() { openModal({ type: 'trophies' }); },
   evPick(i) {
     const e = G.event; if (!e) return; const E = EVENTS[e.key];
-    let msg; try { msg = E.pick(+i, e.d); } catch (x) { msg = 'That moment passed.'; }
+    let msg; try { msg = E.pick(+i, e.d); personaEvent(e.key, +i, e.d); } catch (x) { msg = 'That moment passed.'; }
     G.event = null; G.booker.events = (G.booker.events || 0) + 1; G.booker.xp += 3;
     news(`${E.title.split(' ')[0]} ${msg}`, 'office');
     if (G.booker.events >= 5) award('backstage');
@@ -5813,6 +5837,212 @@ const CREATOR_ACTIONS = {
 };
 
 Object.assign(A, CREATOR_ACTIONS);
+
+// ---------- wrestler personalities (optional: G.settings.persona) ----------
+// Each wrestler gets a personality, a trust level in you (0-100) and a short memory of how you treated them.
+// They text you after shows and between weeks, and some texts ask for something. A promise has a deadline:
+// keep it and trust goes up, break it and they remember. With the option off none of this runs.
+const PER = () => !!G?.settings?.persona;
+const PERS = {
+  ego: { n: 'Glory hound', ic: '👑', d: 'Wants wins and main events. Big losses sting.' },
+  loyal: { n: 'Loyal', ic: '❤️', d: 'Forgives easily, rarely asks for much and hates to leave.' },
+  hot: { n: 'Hothead', ic: '🔥', d: 'Big reactions both ways. Wants payback after a loss.' },
+  money: { n: 'Money first', ic: '💰', d: 'Pay matters most. Easier for rivals to tempt.' },
+  star: { n: 'Spotlight seeker', ic: '🎤', d: 'Wants TV time and the mic. Hates sitting at home.' },
+  team: { n: 'Team player', ic: '👥', d: 'Happy to help others. Losing does not bother them much.' }
+};
+function persFor(w) {
+  const wt = { ego: 1 + (w.pop >= 60 ? 1.2 : 0), loyal: 1 + (w.age >= 33 ? .6 : 0), hot: 1 + (w.style === 'Brawler' ? 1 : 0), money: 1 + (w.pop >= 50 ? .4 : 0), star: 1 + (w.style === 'Showman' || w.mic >= 70 ? 1 : 0), team: 1 + (w.age >= 35 || w.style === 'Technician' ? .6 : 0) };
+  let r = Math.random() * sum(Object.values(wt));
+  for (const [k, v] of Object.entries(wt)) if ((r -= v) <= 0) return k;
+  return 'team';
+}
+function ensurePers() {
+  const first = !Array.isArray(G.phone);
+  if (first) G.phone = [];
+  if (!Array.isArray(G.promises)) G.promises = [];
+  G.phone = G.phone.filter(m => m && typeof m === 'object' && typeof m.t === 'string');
+  G.promises = G.promises.filter(p => p && ASKS[p.key] && W(p.wid));
+  for (const w of G.wrestlers) {
+    if (!Object.hasOwn(PERS, w.pers)) w.pers = persFor(w);
+    w.trust = clamp(isFinite(+w.trust) && w.trust !== null ? +w.trust : 50, 0, 100);
+    if (!Array.isArray(w.mem)) w.mem = [];
+  }
+  // the first time it's on, someone reaches out so the player finds their phone
+  const top = first && signed().filter(w => !w.loan).sort((a, b) => b.pop - a.pop)[0];
+  if (top) textFrom(top, `Hey, it's ${top.name.split(' ')[0]}. Got your number from the office. I'll text you when something's on my mind.`);
+}
+// trust moves more or less depending on who they are
+function remember(w, v, t) {
+  if (!w) return;
+  const k = w.pers === 'hot' ? 1.5 : w.pers === 'money' ? .7 : w.pers === 'loyal' && v < 0 ? .5 : 1;
+  w.trust = clamp((w.trust ?? 50) + v * k, 0, 100);
+  if (t) w.mem = [{ wk: G.week, t, v }, ...(w.mem || [])].slice(0, 8);
+}
+function textFrom(w, t, ask) {
+  G.phone.unshift({ id: uid(), wk: G.week, wid: w.id, t, ask: ask || null, ans: null, read: false });
+  if (G.phone.length > 40) G.phone.length = 40;
+}
+const phoneNew = () => PER() && Array.isArray(G.phone) ? G.phone.filter(m => !m.read).length : 0;
+const openAsk = w => (G.phone || []).some(m => m.wid === w.id && m.ask && m.ans == null) || (G.promises || []).some(p => p.wid === w.id);
+const mainedIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.length > 1 && segPeople(h.results.at(-1).seg).includes(w.id));
+const promoIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.some(r => r.seg.kind === 'promo' && (r.seg.who || []).includes(w.id)));
+const shotAt = w => G.titles.find(t => !t.tag && t.holder.length && !t.holder.includes(w.id) && contenders(t, 6).some(x => x.id === w.id));
+// what a wrestler can ask for: who asks, how long you get, and what counts as keeping your word
+const ASKS = {
+  main: { who: w => w.pers === 'ego' && w.pop >= 40 && !mainedIn(w, 4), wk: 3, what: () => 'a main event',
+    ask: () => 'I should be closing shows, not opening them. Put me in a main event in the next 3 weeks.',
+    met: (p, r, main) => main && segPeople(r.seg).includes(p.wid) },
+  shot: { who: w => ['ego', 'hot', 'star'].includes(w.pers) && w.pop >= 50 && shotAt(w), wk: 5, b: w => shotAt(w).id, what: p => `a ${G.titles.find(t => t.id === p.b)?.short || 'title'} title shot`,
+    ask: (w, b) => `I've earned a shot at the ${G.titles.find(t => t.id === b)?.name || 'title'}. Give it to me in the next 5 weeks.`,
+    met: (p, r) => r.seg.kind === 'match' && r.seg.title === p.b && segPeople(r.seg).includes(p.wid) },
+  win: { who: w => w.pers !== 'team' && (w.streak || 0) <= -3, wk: 2, what: () => 'a win',
+    ask: w => `That's ${-w.streak} losses in a row. I need a win in the next 2 weeks or the fans will forget me.`,
+    met: (p, r) => (r.winners || []).includes(p.wid) },
+  promo: { who: w => w.pers === 'star' && w.mic >= 40 && !promoIn(w, 4), wk: 2, what: () => 'a promo',
+    ask: () => 'Give me a mic. I want a promo in the next 2 weeks.',
+    met: (p, r) => r.seg.kind === 'promo' && (r.seg.who || []).includes(p.wid) },
+  tv: { who: w => ['star', 'ego'].includes(w.pers) && G.week - (w.lastBooked || 0) >= 2, wk: 1, what: () => 'TV time',
+    ask: () => `I haven't been on TV in weeks. Put me on the show this week.`,
+    met: (p, r) => segPeople(r.seg).includes(p.wid) },
+  rematch: { who: w => w.pers === 'hot' && w.lastLoss && G.week - w.lastLoss.wk <= 1 && W(w.lastLoss.by)?.contract, wk: 3, b: w => w.lastLoss.by, what: p => `a rematch with ${nameOf(p.b)}`,
+    ask: (w, b) => `${nameOf(b)} got lucky. Give me the rematch in the next 3 weeks.`,
+    met: (p, r) => r.seg.kind === 'match' && r.seg.sides.some(sd => sd.includes(p.wid)) && r.seg.sides.some(sd => sd.includes(p.b) && !sd.includes(p.wid)) },
+  raise: { who: w => w.pers === 'money' && MON() && CON() && w.contract.salary < asking(w) * .95, now: true, what: () => 'a raise',
+    ask: w => `Other places pay more than ${money(w.contract.salary)} a week for someone like me. I want a raise.` }
+};
+const persLead = w => (w.mem || []).some(m => m.v <= -10 && G.week - m.wk <= 26) ? 'Last time you made me a promise you didn\'t keep. ' : w.trust >= 72 ? 'You\'ve always looked after me, so I\'ll ask straight. ' : w.trust < 30 ? 'I\'ll be honest, I don\'t trust you much. ' : '';
+function newAsk() {
+  const opts = [];
+  for (const w of signed().filter(w => !w.loan && !w.injury && !openAsk(w))) for (const [k, A] of Object.entries(ASKS)) { try { if (A.who(w)) opts.push([w, k]); } catch (e) { } }
+  if (!opts.length) return;
+  const [w, k] = pick(opts), A = ASKS[k], b = A.b ? A.b(w) : null;
+  textFrom(w, persLead(w) + A.ask(w, b), { key: k, b });
+}
+// after each show: reactions, kept promises, and how each personality takes a win or a loss
+function personaShow(results, rec) {
+  if (!PER()) return; ensurePers();
+  const n = results.length; let said = 0;
+  const say = (w, t) => { if (said < 2 && !(G.phone[0]?.wid === w.id && G.phone[0].wk === G.week)) { textFrom(w, t); said++; } };
+  for (const p of G.promises.slice()) {
+    const w = W(p.wid), A = ASKS[p.key];
+    if (!w?.contract) { G.promises.splice(G.promises.indexOf(p), 1); continue; }
+    if (results.some((r, i) => A.met(p, r, n > 1 && i === n - 1))) {
+      G.promises.splice(G.promises.indexOf(p), 1); remember(w, 12, `You kept your promise: ${A.what(p)}`); w.morale = clamp(w.morale + 8, 0, 100);
+      textFrom(w, pick(['You kept your word. I won\'t forget that.', 'Thanks for coming through. That means a lot.', 'Promise kept. You can count on me.'])); said++;
+    }
+  }
+  results.forEach((r, i) => {
+    const main = n > 1 && i === n - 1, isM = r.seg.kind === 'match', win = new Set(r.winners || []);
+    const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x));
+    for (const w of segPeople(r.seg).map(W).filter(w => w?.contract && !w.loan)) {
+      const won = win.has(w.id), lost = isM && win.size > 0 && !won, P = w.pers;
+      if (lost) { const opp = r.seg.sides.find(sd => sd.some(id => win.has(id))); w.lastLoss = { wk: G.week, by: opp?.[0] || null }; }
+      if (champ && won) { remember(w, 8, 'You put the title on me'); say(w, P === 'ego' ? 'Told you I was the best. Now everyone knows it.' : P === 'team' ? 'I won\'t let the locker room down. Thank you.' : 'I\'m the champ! Thank you for believing in me.'); continue; }
+      if (P === 'ego') {
+        if (lost) { w.morale = clamp(w.morale - (rec.big ? 5 : 2), 0, 100); if (rec.big) { remember(w, -5, `You had me lose at ${rec.name}`); say(w, pick([`Losing at ${rec.name}? In front of all those people? I'll remember this.`, `You had me lose at ${rec.name}. That was supposed to be my night.`, `I didn't come here to lose at ${rec.name}. Think about that.`])); } }
+        if (won && main) { w.morale = clamp(w.morale + 3, 0, 100); remember(w, 2); }
+      }
+      if (P === 'hot') { w.morale = clamp(w.morale + (won ? 3 : lost ? -3 : 0), 0, 100); if (lost && rec.big) say(w, pick(['That loss was a joke. I want them again.', 'I\'m still angry about that loss. Run it back.'])); }
+      if (P === 'team' && lost) w.morale = clamp(w.morale + 1, 0, 100);
+      if (P === 'star' && r.seg.kind === 'promo') { w.morale = clamp(w.morale + 3, 0, 100); remember(w, 1); if (r.rating >= 75) say(w, pick(['Did you hear that crowd? Give me the mic more often.', 'That promo was fire. More of that, please.', 'They hung on every word. Keep the mic coming.'])); }
+      if (P === 'loyal') remember(w, .5);
+      if (main && !G.history.some(h => h !== rec && h.results.length > 1 && segPeople(h.results.at(-1).seg).includes(w.id))) { if (P !== 'team') say(w, pick(['My first main event. I won\'t ever forget you gave me this.', 'Main event! Thanks for trusting me with the spot.'])); remember(w, 3, 'You gave me my first main event'); }
+    }
+  });
+}
+// at the end of the week: broken promises, ignored texts, contract feelings and maybe a new ask
+function personaWeek(booked) {
+  if (!PER()) return; ensurePers();
+  for (const p of G.promises.slice()) if (G.week >= p.until) {
+    G.promises.splice(G.promises.indexOf(p), 1); const w = W(p.wid); if (!w?.contract) continue;
+    remember(w, -15, `You broke your promise: ${ASKS[p.key].what(p)}`); w.morale = clamp(w.morale - 12, 0, 100);
+    textFrom(w, w.pers === 'hot' ? `You PROMISED me ${ASKS[p.key].what(p)}. Don't ever do that again.` : w.pers === 'loyal' ? `You said I'd get ${ASKS[p.key].what(p)}. I'm disappointed, but I'm still here.` : `You promised me ${ASKS[p.key].what(p)}. I won't believe that next time.`);
+  }
+  for (const m of G.phone) if (m.ask && m.ans == null && G.week - m.wk >= 2) { m.ans = -1; const w = W(m.wid); if (w?.contract) remember(w, -4, 'You ignored my message'); }
+  for (const w of signed()) {
+    w.trust += ((w.pers === 'loyal' ? 60 : 50) - w.trust) * 0.01;
+    if (w.pers === 'star' && !booked.has(w.id) && !w.injury && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
+    if (w.pers === 'money' && CON() && w.contract.salary < asking(w) * .85) w.morale = clamp(w.morale - 1, 0, 100);
+    if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? 'My deal is up for talks. I want to stay. Let\'s get it done.' : w.trust < 35 ? 'My contract is up soon. Honestly, I\'m listening to other offers.' : 'My contract is coming up. Make me a fair offer and we can talk.');
+  }
+  if (G.week >= 2 && G.phone.filter(m => m.ask && m.ans == null).length < 2 && Math.random() < .5) newAsk();
+}
+// backstage events you've already answered are remembered by the people in them
+const EV_MEM = {
+  brawl: [[0], [-5, 'You fined me for the brawl'], [3, 'You let the brawl slide']],
+  tweak: [[3, 'You rested me when I was hurt'], [0]],
+  raid: [[0], [8, 'You turned down a buyout for me']],
+  mentor: [[3, 'You let me mentor a young wrestler'], [-1]],
+  gimmick: [[5, 'You backed my new character'], [-3, 'You passed on my gimmick idea']],
+  creative: [[8, 'You gave me creative control'], [-6, 'You refused me creative control']],
+  leader: [[6, 'You backed me as locker room leader'], [-2]],
+  noshow: [[-4, 'You fined me for missing TV'], [4, 'You talked it out with me']],
+  refuse: [[4, 'You changed the finish for me'], [-8, 'You made me lose when I didn\'t want to'], [0]],
+  starRaid: [[6, 'You fought to keep me'], [-6, 'You held me to my contract'], [0]]
+};
+function personaEvent(key, i, d) {
+  if (!PER() || !EV_MEM[key]?.[i]) return; ensurePers();
+  const [v, t] = EV_MEM[key][i]; if (!v) return;
+  for (const id of key === 'brawl' ? [d.a, d.b] : [d.a]) { const w = W(id); if (w?.contract) remember(w, v, t); }
+}
+function phoneAnswer(m, i) {
+  const w = W(m.wid), A = m.ask && ASKS[m.ask.key]; if (!w?.contract || !A) { m.ans = -1; return 'They have moved on.'; }
+  const p = { wid: w.id, key: m.ask.key, b: m.ask.b };
+  m.ans = i;
+  if (i === 0 && A.now) {
+    const sal = Math.round(w.contract.salary * 1.1 / 100) * 100; w.contract.salary = sal; w.morale = clamp(w.morale + 8, 0, 100); remember(w, 10, 'You gave me a raise when I asked');
+    textFrom(w, 'Now that\'s respect. Thanks.'); G.phone[0].read = true; return `${w.name} now earns ${money(sal)}/wk.`;
+  }
+  if (i === 0) {
+    G.promises.push({ ...p, until: G.week + A.wk - 1, made: G.week }); w.morale = clamp(w.morale + 4, 0, 100); remember(w, 2);
+    return `You promised ${w.name} ${A.what(p)} by week ${G.week + A.wk - 1}.`;
+  }
+  w.morale = clamp(w.morale - 4, 0, 100); remember(w, ['ego', 'money', 'hot'].includes(w.pers) ? -6 : -3, `You said no to ${A.what(p)}`);
+  return `${w.name} won't forget that.`;
+}
+function phoneChoices(m) {
+  const w = W(m.wid), A = ASKS[m.ask.key]; if (!w || !A) return [];
+  if (A.now) return [[MON() ? `Give a 10% raise` : 'Give a raise', `${money(Math.round(w.contract.salary * 1.1 / 100) * 100)}/wk. Trust up`], ['Not now', 'They\'ll remember']];
+  return [['Promise it', `${A.wk === 1 ? 'This week' : 'By week ' + (G.week + A.wk - 1)}. Keep it and they trust you more`], ['Not now', 'They\'ll remember']];
+}
+const trustWord = v => v >= 75 ? 'Trusts you' : v >= 55 ? 'Likes you' : v >= 40 ? 'Unsure of you' : v >= 25 ? 'Wary of you' : 'Doesn\'t trust you';
+function modalPhone() {
+  ensurePers();
+  const pr = G.promises.map(p => { const w = W(p.wid); return w && `<div class="news"><span class="sp">🎯 <b>${esc(w.name)}</b>: ${esc(ASKS[p.key].what(p))}</span><span class="tiny ${p.until <= G.week ? '' : 'muted'}"${p.until <= G.week ? ' style="color:var(--bad)"' : ''}>${p.until <= G.week ? 'This week' : 'By week ' + p.until}</span></div>`; }).filter(Boolean).join('');
+  const msgs = G.phone.map(m => { const w = W(m.wid); if (!w) return '';
+    const open = m.ask && m.ans == null && w.contract, ch = open ? phoneChoices(m) : [];
+    return `<div class="ph-m${m.read ? '' : ' new'}"><button class="ph-av" data-act="openW" data-id="${w.id}" aria-label="${esc(w.name)}">${av(w, 36)}</button><div class="sp">
+      <div class="ph-h"><b>${esc(w.name)}</b><span class="tiny muted">Week ${m.wk}</span></div>
+      <div class="ph-b">${esc(m.t)}</div>
+      ${open ? `<div class="bs-c">${ch.map(([l, d], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="phoneAns" data-id="${m.id}:${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>`
+        : m.ask ? `<div class="ph-you">${m.ans === 0 ? (ASKS[m.ask.key]?.now ? 'You gave the raise' : 'You promised') : m.ans === 1 ? 'You said not now' : 'No answer'}</div>` : ''}
+    </div></div>`; }).join('');
+  const body = `<p class="small muted" style="margin-top:0">Your wrestlers text you here. Answer their asks before the next show. They remember what you do.</p>
+    ${pr ? `<div class="sec" style="margin-top:0">Promises you made</div><div class="card" style="padding:4px 14px">${pr}</div>` : ''}
+    ${pr ? '<div class="sec">Messages</div>' : ''}${msgs || '<div class="empty">No messages yet. They\'ll text you after shows.</div>'}`;
+  return modal('📱 Messages', body, '<button class="btn pri" data-act="closeModal">Close</button>');
+}
+function personaBlock(w) {
+  if (!PER()) return '';
+  ensurePers();
+  const P = PERS[w.pers], pr = G.promises.filter(p => p.wid === w.id);
+  return `<div class="sec">Personality</div><div class="card">
+    <div class="row small"><span class="muted sp">Type</span><select data-in="wPers" data-id="${w.id}" style="width:auto;padding:4px 8px" aria-label="Personality">${Object.entries(PERS).map(([k, x]) => `<option value="${k}" ${k === w.pers ? 'selected' : ''}>${x.n}</option>`).join('')}</select></div>
+    <div class="tiny muted" style="margin:2px 0 8px">${P.ic} ${esc(P.d)}</div>
+    ${statLine('Trust in you', w.trust, w.trust < 35 ? 'var(--bad)' : w.trust >= 65 ? 'var(--good)' : 'var(--info)')}
+    <div class="tiny muted">${trustWord(w.trust)}. Trust lifts their mood and makes them easier to re-sign.</div>
+    ${pr.map(p => `<div class="small" style="margin-top:6px">🎯 You promised ${esc(ASKS[p.key].what(p))} by week ${p.until}.</div>`).join('')}
+    ${(w.mem || []).length ? `<div class="small muted" style="margin:10px 0 2px">What they remember</div>${w.mem.slice(0, 5).map(x => `<div class="small mem ${x.v < 0 ? 'neg' : 'pos'}"><span class="wk">WK ${x.wk}</span> ${esc(x.t)}</div>`).join('')}` : ''}
+  </div>`;
+}
+Object.assign(A, {
+  phone() { ensurePers(); openModal({ type: 'phone' }); setTimeout(() => { if (UI.modal?.type !== 'phone') return; G.phone.forEach(m => m.read = true); save(); const b = document.querySelector('[data-act=phone] .dot'); if (b) b.remove(); }, 400); },
+  phoneAns(v) {
+    const [id, i] = String(v).split(':'), m = (G.phone || []).find(x => x.id === id); if (!m || m.ans != null) return;
+    const msg = phoneAnswer(m, +i); G.booker.xp += 1; commit(msg);
+  }
+});
 // =====================================================================
 //  Welcome sequence: build your company, then draft a roster
 // =====================================================================
@@ -5850,7 +6080,7 @@ const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w
 
 function wizStart(add, chain) {
   add = add === true && !!G;
-  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
+  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
   render(); window.scrollTo(0, 0);
 }
 function wizPool() {
@@ -5920,7 +6150,7 @@ function wizToChamps() {
 function wizFinish() {
   const z = UI.wiz, host = z.add && G ? G : null;
   if (!host) meta.slot = z.slot;
-  newGame({ name: z.name.trim() || 'My Wrestling Promotion', show: z.show.trim() || 'Weekly Warfare', difficulty: z.budget, challenge: z.challenge, roster: z.source === 'starter' ? 'starter' : 'empty', finances: z.money !== false, contracts: z.contracts !== false });
+  newGame({ name: z.name.trim() || 'My Wrestling Promotion', show: z.show.trim() || 'Weekly Warfare', difficulty: z.budget, challenge: z.challenge, roster: z.source === 'starter' ? 'starter' : 'empty', finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false });
   if (host) { G.week = host.week; G.settings = host.settings; G.titles.forEach(t => { t.since = t.lastDefense = host.week; }); G.stories.forEach(s => s.start = host.week); }
   G.promo.day = z.day; G.promo.color = z.color; G.rivals = z.rivals || shuffle(RIVALS).slice(0, 2);
   // only the big events this booker named: nothing pre-filled shows up on a company they built
@@ -6031,7 +6261,7 @@ function viewWizard() {
     return `<div class="app wz">${wizSteps('budget')}
       <div class="wz-k">Step 2 · Starting position</div><h2 class="wz-h">How do you want to run ${esc(z.name)}?</h2>
       ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="sec" style="margin-top:4px">Game rules</div>
-      <div class="list" style="margin-bottom:14px">${[['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.']].map(([k, l, d]) => `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}"><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}</div></div></button>`).join('')}</div>
+      <div class="list" style="margin-bottom:14px">${[['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.']].map(([k, l, d]) => `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}"><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}</div></div></button>`).join('')}</div>
       <div class="sec">Challenge</div>
       <div class="seg-ctl" style="margin-bottom:6px">${CHALLENGES.map(([k, l]) => `<button class="${(z.challenge || 'normal') === k ? 'on' : ''}" data-act="wzSet" data-f="challenge" data-id="${k}">${l}</button>`).join('')}</div>
       <p class="muted tiny" style="margin:0 0 14px">${CHALLENGES.find(c => c[0] === (z.challenge || 'normal'))[2]} You can change it later in the menu.</p>`}
@@ -6187,7 +6417,7 @@ const WIZ_ACTIONS = {
   wzPpvIdeas() { const l = shuffle(BIG_EVENTS).slice(0, 12); UI.wiz.ppv = l.join('\n'); if (!Object.values(UI.wiz.sig || {}).some(Boolean)) UI.wiz.sig = { [l[0]]: 'mt:Rumble' }; render(); },
   wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
-  wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false }); tutStart(); UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = null; save(); render(); },
+  wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false }); tutStart(); UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = null; save(); render(); },
   wzDraft() { if (!UI.wiz.show.trim()) UI.wiz.show = DAYS[UI.wiz.day] + ' Mayhem'; wizBeginDraft(); },
   wzPick(id) { const y = window.scrollY; draftPick(id); if (UI.wiz?.step === 'draft') window.scrollTo(0, y); },
   wzAuto() { draftAuto(false); },
@@ -6290,6 +6520,8 @@ document.addEventListener('change', e => {
     else if (k === 'injuries') { G.settings.injuries = el.checked; commit(); }
     else if (k === 'organic') { G.settings.organic = el.checked; commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
+    else if (k === 'persona') { G.settings.persona = el.checked; if (el.checked) ensurePers(); commit(el.checked ? 'Personalities on. Check 📱 for texts from your wrestlers.' : 'Personalities off.'); }
+    else if (k === 'wPers') { const w = W(el.dataset.id); if (w && Object.hasOwn(PERS, el.value)) { w.pers = el.value; commit(`${w.name} is now a ${PERS[w.pers].n.toLowerCase()}.`); } }
     else if (k === 'difficulty') { G.settings.difficulty = Object.hasOwn(DIFF, el.value) ? el.value : 'normal'; commit('Challenge set to ' + CHALLENGES.find(c => c[0] === G.settings.difficulty)[1] + '.'); }
     else if (k === 'finances') { G.settings.finances = el.checked; commit(); }
     else if (k === 'cNotes') { UI.modal.notes = el.checked; }
