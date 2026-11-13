@@ -2700,13 +2700,15 @@ function liveScreen(m) {
   let t = 1.4; const n = h.results.length;
   const segs = h.results.map((r, i) => {
     const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0), d1 = d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
+    // the crowd is only heard for the big moments (main event, title changes, 80+ segments) so it never gets repetitive
+    const loud = main || /champ/.test(crowdSound(r)) || r.rating >= 80;
     t = d1 + (/ovation|champ/.test(crowdSound(r)) ? 1.9 : 1.3);
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x)), hurt = (r.notes || []).find(x => /injured/i.test(x));
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
     <div class="lv-seg ${main ? 'main' : ''}" style="--d:${t0(d0)}" data-lv="${i}">
       <div class="lv-k">${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${segTitle(r.seg)}</div>
       <div class="lv-w">${segWho(r.seg)}</div>
-      <div class="lv-o" style="--d:${t0(d1)}" data-s="${crowdSound(r)}" data-k="${r.cue ? r.cue.k : clamp((r.rating - 40) / 50, 0, 1)}"${r.cue?.near || (!r.cue && r.seg.kind === 'match' && r.rating >= 65) ? ' data-near="1"' : ''}>
+      <div class="lv-o" style="--d:${t0(d1)}"${loud ? ` data-s="${crowdSound(r)}" data-k="${r.cue ? r.cue.k : clamp((r.rating - 40) / 50, 0, 1)}"${r.cue?.near || (!r.cue && r.seg.kind === 'match' && r.rating >= 65) ? ' data-near="1"' : ''}` : ''}>
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
         <div class="lv-crowd">${esc(r.crowd || '')}</div>
@@ -2742,7 +2744,7 @@ function startLive() {
   const dOf = el => parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0;
   SFX.load();
   SFX.bell(3);
-  box.querySelectorAll('.lv-o').forEach(el => { const d = dOf(el);
+  box.querySelectorAll('.lv-o[data-s]').forEach(el => { const d = dOf(el);
     if (el.dataset.near) at(el, d - .9, () => SFX.crowd('ooh', .8));
     at(el, d, () => SFX.react(el.dataset.s, +el.dataset.k)); });
   box.querySelectorAll('.lv-fin').forEach(el => { const d = parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0; liveTimers.push(setTimeout(() => { if (!el.closest('.skip')) SFX.bell(1); }, d * 1000)); });
@@ -6307,7 +6309,7 @@ const WHATS_NEW = [
   ['⚡ Run-ins', 'Pick who runs in to help the winner. A run-in can start a brand new feud.'],
   ['🔄 Turns in matches', 'Have someone turn heel or face mid-match, even on their own partner.'],
   ['💼 Managers', 'Give a wrestler a manager from their profile. Managers talk for weak speakers and help at ringside.'],
-  ['🔊 Sound', 'The bell and a real crowd on show night: cheers, applause and boos that match what happened. Mute it from the live screen or the menu.'],
+  ['🔊 Sound', 'The bell, and a real crowd for the big moments: main events, title changes and great segments. Mute it from the live screen or the menu.'],
   ['🎯 Challenge levels', 'Relaxed, Normal or Tough. Fans now level off as you grow, so big companies stay a challenge.'],
   ['💾 Real backups', 'Download a backup file, and get a reminder when it has been a while.'],
   ['🚩 Safer Community', 'Report posts or creators, and rude words are blocked.'],
