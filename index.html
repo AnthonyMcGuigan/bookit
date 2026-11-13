@@ -861,11 +861,37 @@ const managing = id => G.wrestlers.filter(w => w.manager === id && w.contract &&
 // who actually runs in: the booker's pick, or else a winner-side manager (decided once the winner is known)
 function runinPick(seg, inMatch) { const id = Array.isArray(seg.runin) ? seg.runin[0] : null, w = id && W(id); return w && !inMatch.has(w.id) && w.contract && !w.retired && !(w.injury > 0) ? w : null; }
 const turnedSoon = w => w.turnWk && G.week - w.turnWk < 8;
+// a plain-words read on how a planned promo tone suits the speakers
+function promoOdds(s) {
+  const T = PROMO_TONES[s.tone || '']; const sp = (s.who || []).map(W).filter(Boolean); if (!T || !sp.length) return '';
+  if (T.heel) return sp.every(w => w.align === 'heel') ? 'Good fit for a heel.' : 'Bad fit: only heels should do this.';
+  if (T.face && !sp.every(w => w.align === 'face')) return 'Bad fit: only faces should do this.';
+  if (!T.bar) return '';
+  const skill = avg(sp.map(w => T.cha ? w.mic * 0.3 + w.cha * 0.7 : w.mic * 0.7 + w.cha * 0.3)), d = skill - T.bar;
+  return d >= 12 ? 'Should land well.' : d >= 0 ? 'Should land.' : d >= -10 ? 'Could go either way.' : 'Likely to fall flat.';
+}
 const PROMO_TYPES = {
   'Call-out': { desc: 'Challenge a rival. Builds heat.', heat: 7, needT: true },
   'Hype Promo': { desc: 'Speaker builds themself up. Raises popularity.', heat: 2 },
   'Face-off': { desc: 'Nose to nose. Big heat with good talkers.', heat: 10, needT: true },
   'Interview': { desc: 'Safe and low-key. Good for weak talkers.', heat: 3, safe: true }
+};
+// what a promo is about and how it's delivered. Empty = let them improvise (the old behavior).
+const PROMO_TOPICS = {
+  '': { n: 'Improvise', desc: 'No plan. A safe, average promo.' },
+  title: { n: 'The title', desc: 'Best for a champion or a top contender.' },
+  personal: { n: 'Get personal', desc: 'Huge with a hot storyline. Falls flat without one.', needT: true },
+  crowd: { n: 'The crowd', desc: 'Faces win the fans over. Heels get easy boos.' },
+  loss: { n: 'Their last loss', desc: 'Rub it in. Works if the target just lost.', needT: true },
+  brag: { n: 'Brag', desc: 'Works on a winning streak or a hot run.' }
+};
+const PROMO_TONES = {
+  '': { n: 'Natural', desc: 'Their usual style.' },
+  fiery: { n: 'Fiery', desc: 'Big swing. Great talkers soar, weak ones stumble.', bar: 66, swing: 0.45 },
+  calm: { n: 'Cool and calm', desc: 'Low risk, steady.', bar: 42, swing: 0.15 },
+  funny: { n: 'Funny', desc: 'Charisma matters most. Faces get more from it.', bar: 62, swing: 0.3, cha: true },
+  cheap: { n: 'Cheap heat', desc: 'Heels only. Insult the town: more story heat, lower rating.', heel: true },
+  sincere: { n: 'From the heart', desc: 'Faces only. Builds popularity when it lands.', face: true, bar: 55, swing: 0.3 }
 };
 const ANGLE_TYPES = {
   'Sneak Attack': { desc: 'Ambush the target. Huge heat.', heat: 14, needT: true },
@@ -918,6 +944,7 @@ function save() {
   const ok = ls.set(KEY(meta.slot), JSON.stringify(G));
   ls.set(META, JSON.stringify(meta));
   if (!ok && !saveFailed) { saveFailed = true; toast('Could not save in this browser. Use Export to keep a backup.'); }
+  if (meta.cloudAuto) setTimeout(cloudAutoPush, 0);
 }
 function loadSlot(n) {
   const raw = ls.get(KEY(n)); if (!raw) return null;
@@ -1795,8 +1822,29 @@ function simSegment(seg, ctx) {
     const st = tg.length ? storyBetween(speakers.map(w => w.id), tg.map(w => w.id)) : storiesTouching(speakers.map(w => w.id))[0];
     if (st) r += add(st.heat * (tg.length ? 0.18 : 0.1), 'Storyline: ' + st.title);
     if (tg.length && speakers[0] && tg[0] && speakers[0].align !== tg[0].align) r += add(3, 'Face vs heel tension');
+    // the booker's plan: topic and tone. The speaker's mic skill decides how it lands.
+    const tp = Object.hasOwn(PROMO_TOPICS, seg.topic || '') ? seg.topic || '' : '', tn = Object.hasOwn(PROMO_TONES, seg.tone || '') ? seg.tone || '' : '';
+    const T = PROMO_TONES[tn], heel = speakers.every(w => w.align === 'heel'), face = speakers.every(w => w.align === 'face');
+    out.pHeat = 0;
+    if (tp === 'title') { const ids = [...speakers, ...tg].map(w => w.id); const fit = G.titles.some(t => t.holder.some(h => ids.includes(h)) || contenders(t, 3).some(w => ids.includes(w.id)));
+      r += fit ? add(4, 'Title talk: they are in the title picture') : add(-3, 'Title talk, but nobody buys them as a contender'); if (fit) out.pHeat += 2; }
+    else if (tp === 'personal') { if (st) { r += add(3 + st.heat * 0.06, 'Got personal with real history'); out.pHeat += 4; } else r += add(-6, 'Got personal with no history'); }
+    else if (tp === 'crowd') { if (face) r += add(3, 'Fans love being talked to'); else if (heel) { r += add(1, 'Easy boos'); out.pHeat += 1; } }
+    else if (tp === 'loss') { const lost = tg.some(w => formOf(w)[0] === 'L'); r += lost ? add(4, 'Rubbed in a fresh loss') : add(-4, 'Target has not lost lately'); if (lost) out.pHeat += 2; }
+    else if (tp === 'brag') { const hot = speakers.some(w => (w.streak || 0) >= 3 || (w.momentum || 0) > 10); r += hot ? add(4, 'Bragging about a real run') : add(-4, 'Nothing to brag about'); }
+    if (tn === 'cheap') { if (heel) { r += add(-3, 'Cheap heat: easy, but low ceiling'); out.pHeat += 4; } else r += add(-8, 'Fans hate a face going for cheap heat'); }
+    else if (T.face && !face) r += add(-5, 'Nobody buys a heel speaking from the heart');
+    if (T.bar) {
+      const skill = avg(speakers.map(w => T.cha ? w.mic * 0.3 + w.cha * 0.7 : w.mic * 0.7 + w.cha * 0.3));
+      let land = (skill - T.bar) * T.swing + (ctx.proj ? 0 : rnd(-5, 5));
+      if (tn === 'funny' && heel) land -= 2;
+      r += add(land, land >= 0 ? `${T.n} delivery landed` : `${T.n} delivery fell flat`);
+      out.land = land;
+    }
+    out.text_extra = out.land >= 4 ? ' The crowd ate it up.' : out.land <= -4 ? ' It fell flat.' : '';
     out.story = st; out.pt = pt;
-    out.text = `${speakers.map(w => w.name).join(' & ')} ${seg.ptype === 'Interview' ? 'sat down for an interview' : seg.ptype === 'Hype Promo' ? 'cut a promo' : seg.ptype === 'Face-off' ? 'went face to face with ' + tg.map(w => w.name).join(' & ') : (tg.length ? 'called out ' + tg.map(w => w.name).join(' & ') : 'called out the whole locker room, but nobody answered')}.`;
+    out.text = `${speakers.map(w => w.name).join(' & ')} ${seg.ptype === 'Interview' ? 'sat down for an interview' : seg.ptype === 'Hype Promo' ? 'cut a promo' : seg.ptype === 'Face-off' ? 'went face to face with ' + tg.map(w => w.name).join(' & ') : (tg.length ? 'called out ' + tg.map(w => w.name).join(' & ') : 'called out the whole locker room, but nobody answered')}.` + (out.text_extra || '');
+    delete out.text_extra;
   } else {
     const at = ANGLE_TYPES[seg.atype] || ANGLE_TYPES['Backstage Skit'];
     const doers = (seg.who || []).map(W).filter(Boolean), tg = (seg.target || []).map(W).filter(Boolean);
@@ -1931,10 +1979,14 @@ function applySegment(seg, res, ctx) {
     if (res.story) res.story.heat = clamp(res.story.heat + 2, 0, 100);
   }
   if (seg.kind === 'promo' && seg.ptype === 'Hype Promo') (seg.who || []).map(W).filter(Boolean).forEach(w => addPop(w, (res.rating - 50) / 20));
+  if (seg.kind === 'promo' && res.land != null) (seg.who || []).map(W).filter(Boolean).forEach(w => {
+    if (res.land <= -4) w.momentum = clamp(w.momentum - 3, -50, 50);
+    else if (res.land >= 4) { w.momentum = clamp(w.momentum + 2, -50, 50); if (seg.tone === 'sincere') addPop(w, 1); }
+  });
   // storyline heat
   const st = res.story;
   if (st) {
-    let gain = (seg.kind === 'match' ? 6 : seg.kind === 'promo' ? (res.pt?.heat ?? 4) : (res.at?.heat ?? 5)) * (0.6 + res.rating / 100);
+    let gain = (seg.kind === 'match' ? 6 : seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
     gain = Math.round(gain);
     st.heat = clamp(st.heat + gain, 0, 100); st._touched = G.week;
@@ -1986,10 +2038,15 @@ function runShow(opts = {}) {
   const big = isBig(G.week);
   const results = [], keys = [], holdersBefore = Object.fromEntries(G.titles.map(t => [t.id, t.holder.slice()]));
   card.forEach((seg, i) => {
+    // creative control: a star booked to lose may change the finish
+    let veto = null;
+    if (seg.kind === 'match' && seg.winner >= 0 && seg.sides[seg.winner]) { const v = seg.sides.map((sd, si) => [si, sd.map(W).find(w => w && w.creative >= G.week)]).find(([si, w]) => si !== seg.winner && w);
+      if (v && Math.random() < 0.6) { seg.winner = v[0]; veto = `💼 ${v[1].name} used creative control and changed the finish.`; news(veto, 'office'); } }
     const ctx = { big, main: i === card.length - 1 && card.length > 1 };
     const res = simSegment(seg, ctx);
     applySegment(seg, res, ctx);
     if (seg.tid) tResult(seg, res);
+    if (veto) res.notes = [veto, ...(res.notes || [])];
     results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners });
     if (seg.kind === 'match') keys.push(segPeople(seg).slice().sort().join(','));
   });
@@ -2073,6 +2130,11 @@ function runShow(opts = {}) {
 function endOfWeek(card, world = true) {
   const booked = new Set(card.flatMap(segPeople));
   const s = signed();
+  // a locker room leader sets the mood: happy leader, happier room; unhappy leader, the room follows
+  const ld = G.leader && W(G.leader);
+  if (G.leader && !ld?.contract) { if (ld) news(`👑 ${ld.name} is gone, and the locker room has no leader.`, 'office'); delete G.leader; }
+  const room = !G.leader ? 0 : ld.morale >= 50 ? 4 : ld.morale < 35 ? -5 : 0;
+  if (G.leader && room < 0 && Math.random() < 0.3) news(`😠 ${ld.name} is unhappy, and the locker room feels it.`, 'office');
   for (const w of G.wrestlers) {
     if (!world && !w.contract) continue;
     if (!booked.has(w.id)) w.fatigue = clamp(w.fatigue - 18, 0, 100); else w.fatigue = clamp(w.fatigue - 6, 0, 100);
@@ -2082,7 +2144,7 @@ function endOfWeek(card, world = true) {
     if (!w.contract) { w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
     if (!booked.has(w.id) && w.injury === 0 && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
     if (CON() && w.contract.salary < asking(w) * 0.75) w.morale = clamp(w.morale - 1, 0, 100);
-    w.morale += (65 - w.morale) * 0.02;
+    w.morale += (65 + room - w.morale) * 0.02;
   }
   // champions gain from holding gold
   for (const t of G.titles) for (const id of t.holder) { const w = W(id); if (w) addPop(w, t.prestige / 400); }
@@ -2099,7 +2161,8 @@ function endOfWeek(card, world = true) {
     }
   }
   // contracts (frozen when contracts are off: nobody's deal runs down and nobody walks out)
-  for (const w of CON() ? s : []) {
+  endLoans();
+  for (const w of CON() ? signed().filter(w => !w.loan) : []) {
     w.contract.weeks--;
     const wl = w.contract.weeks;
     if (wl === TALKS_OPEN) news(`📝 ${w.name} has ${TALKS_OPEN} weeks left and is open to talks. Renew in the Office.`, 'contract');
@@ -2155,6 +2218,39 @@ function ensureRivals() {
   syncRivals();
 }
 // the promotion a wrestler leaves for: named one if it exists, otherwise a big promotion with room
+// a rival books a real card each week: a title main event and a few matches. Results move their wrestlers.
+function rivalCard(r, sup) {
+  const pool = r.roster.filter(w => !w.injury).sort((a, b) => (b.pop + (b.momentum || 0)) - (a.pop + (a.momentum || 0)));
+  if (pool.length < 2) { r.card = { wk: G.week, segs: [] }; return; }
+  const champ = pool.find(w => w.id === r.champId), used = new Set(), segs = [];
+  const take = w => { used.add(w.id); return w; };
+  const rate = (a, b, t) => Math.round(clamp((overall(a) + overall(b)) / 2 * 0.6 + r.last * 0.4 + (t ? 3 : 0) + rnd(-6, 6), 20, 98));
+  const bout = (a, b, t) => {
+    const pa = a.pop + (a.momentum || 0) + rnd(0, 40) + (t && a.id === r.champId ? 12 : 0), pb = b.pop + (b.momentum || 0) + rnd(0, 40) + (t && b.id === r.champId ? 12 : 0);
+    const win = pa >= pb ? a : b, lose = win === a ? b : a;
+    win.momentum = clamp((win.momentum || 0) + 3, -50, 50); lose.momentum = clamp((lose.momentum || 0) - 2, -50, 50); win.pop = clamp(win.pop + 0.3, 1, 100);
+    if (t && win.id !== r.champId) { r.champId = win.id; news(`🏆 ${r.name}: ${win.name} beat ${lose.name} for their top title.`, 'office'); }
+    return { an: a.name, bn: b.name, a: a.id, b: b.id, won: win.id, title: !!t, rating: rate(a, b, t) };
+  };
+  if (champ) { const ch = pool.find(w => w !== champ && w.align !== champ.align) || pool.find(w => w !== champ); if (ch) segs.push(bout(take(champ), take(ch), true)); }
+  const rest = pool.filter(w => !used.has(w.id)).slice(0, sup ? 10 : 8);
+  for (let i = 0; i + 1 < rest.length && segs.length < (sup ? 5 : 4); i += 2) segs.unshift(bout(rest[i], rest[i + 1], false));
+  r.card = { wk: G.week, sup: !!sup, segs };
+}
+// a rival wrestler joins your roster: trades and invasions
+function fromRival(w, r, contract) {
+  r.roster = r.roster.filter(x => x !== w); delete w.rival; delete w.rWeeks; setRivalChamp(r);
+  w.contract = contract; w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(Math.max(w.morale || 60, 60), 0, 100);
+  if (splitOn()) w.brand = G.showId;
+  G.wrestlers.push(w);
+}
+// invaders go home when their 8 weeks are up
+function endLoans() {
+  for (const w of signed().filter(w => w.loan && G.week >= (w.loanUntil || 0))) {
+    const r = RV(w.loan); leaveCompany(w, 'the invasion is over'); delete w.loan; delete w.loanUntil;
+    if (r) { G.wrestlers = G.wrestlers.filter(x => x !== w); r.roster.push(rivWrestler(w, r)); setRivalChamp(r); news(`🚪 ${w.name} went back to ${r.name}.`, 'contract'); }
+  }
+}
 function goRival(w, name) {
   ensureRivals();
   const rs = G.rivalPromos, r = rs.find(x => x.name === name) || rs.slice().sort((a, b) => (b.prestige - b.roster.length * 1.5 + rnd(0, 25)) - (a.prestige - a.roster.length * 1.5 + rnd(0, 25)))[0];
@@ -2173,19 +2269,28 @@ function rivalWeek(world = true) {
       }
     }
     const top = r.roster.slice().sort((a, b) => b.pop - a.pop).slice(0, 8);
-    r.last = top.length ? Math.round(clamp(avg(top.map(w => (w.pop + overall(w)) / 2)) * 0.55 + r.prestige * 0.25 + 15 + rnd(-6, 6), 30, 95)) : 30;
+    const sup = r.counter === G.week;
+    r.last = top.length ? Math.round(clamp(avg(top.map(w => (w.pop + overall(w)) / 2)) * 0.55 + r.prestige * 0.25 + 15 + rnd(-6, 6) + (sup ? 8 : 0), 30, 97)) : 30;
+    rivalCard(r, sup);
     r.hist = [...(r.hist || []).slice(-11), r.last];
     r.fans = Math.max(1000, Math.round(r.fans * (1 + (r.last - 60) / 2500)));
     r.prestige = clamp(r.prestige + (r.last - r.prestige) * 0.03, 1, 100);
-    if (r.roster.length > 1 && Math.random() < 0.06) { const c = pick(r.roster.filter(w => w.id !== r.champId && !w.injury).sort((a, b) => b.pop - a.pop).slice(0, 4)); if (c) { r.champId = c.id; news(`🏆 ${r.name}: ${c.name} won their top title.`, 'office'); } }
     setRivalChamp(r);
+    if (r.counter && r.counter < G.week) delete r.counter;
     if (r.roster.length < 30 && Math.random() < 0.1) { const fa = freeAgents().filter(w => w.pop < r.prestige + 20); if (fa.length) { const w = pick(fa); goRival(w, r.name); news(`🗞️ Free agent ${w.name} signed with ${r.name}.`, 'contract'); } }
+  }
+  // counter-programming: the biggest rival loads up a show against your next big event
+  if (world && bigWk(G.week + 2) && !G.rivalPromos.some(r => r.counter === G.week + 2) && Math.random() < 0.5) {
+    const r = G.rivalPromos.filter(r => r.roster.length >= 6).sort((a, b) => b.prestige - a.prestige)[0];
+    if (r) { r.counter = G.week + 2; news(`📺 ${r.name} is running a loaded ${r.show} against ${bigName(G.week + 2)} in 2 weeks. If they beat you that night, they take twice the fans.`, 'office'); }
   }
   // the ratings war: a rival that beats your show takes a few of your fans
   const last = G.history.at(-1), best = G.rivalPromos.filter(r => r.roster.length).sort((a, b) => b.last - a.last)[0];
   if (last && best && last.wk === G.week) {
-    if (best.last > last.rating + 3) { const loss = Math.round(G.fans * 0.001 * Math.min(4, (best.last - last.rating) / 4) * DF().rival); G.fans = Math.max(1000, G.fans - loss); best.fans += loss; if (Math.random() < 0.5 || best.last > last.rating + 10) news(`📉 ${best.name}'s ${best.show} (${best.last}) beat your show (${last.rating}). About ${kfmt(loss)} fans watched them instead.`, 'office'); }
-    else if (last.rating > best.last + 3) { const gain = Math.round(Math.min(best.fans * 0.004, G.fans * 0.002) * Math.max(0.1, 1 - G.fans / fanCap())); best.fans = Math.max(1000, best.fans - gain); G.fans += gain; if (Math.random() < 0.4) news(`📈 You won the week: ${last.rating} to ${best.name}'s ${best.last}.`, 'office'); }
+    const x2 = best.counter === G.week ? 2 : 1;
+    if (x2 > 1 && last.rating > best.last + 3) news(`📈 Your ${last.name} beat ${best.name}'s loaded ${best.show}, ${last.rating} to ${best.last}.`, 'office');
+    if (best.last > last.rating + 3) { const loss = Math.round(G.fans * 0.001 * x2 * Math.min(4, (best.last - last.rating) / 4) * DF().rival); G.fans = Math.max(1000, G.fans - loss); best.fans += loss; if (Math.random() < 0.5 || best.last > last.rating + 10) news(`📉 ${best.name}'s ${best.show} (${best.last}) beat your show (${last.rating}). About ${kfmt(loss)} fans watched them instead.`, 'office'); }
+    else if (last.rating > best.last + 3) { const gain = Math.round(x2 * Math.min(best.fans * 0.004, G.fans * 0.002) * Math.max(0.1, 1 - G.fans / fanCap())); best.fans = Math.max(1000, best.fans - gain); G.fans += gain; if (Math.random() < 0.4) news(`📈 You won the week: ${last.rating} to ${best.name}'s ${best.last}.`, 'office'); }
   }
 }
 function leaveCompany(w, why) {
@@ -2398,6 +2503,102 @@ const EVENTS = {
     pick(i) { if (i) return 'Business as usual.'; ensureGoals(); G.booker.goals.push({ key: 'exec', T: 70, wk: G.week, xp: 30, fans: .01, text: 'Impress the TV exec (70+ show)' }); return 'New goal: rate 70+ this week.'; }
   }
 };
+// ---- rival moves and backstage politics: more random events, same backstage card ----
+const champOf = w => G.titles.some(t => t.holder.includes(w.id));
+const bigRival = () => (G.rivalPromos || []).filter(r => r.roster.length >= 4).sort((a, b) => b.prestige - a.prestige + rnd(-15, 15))[0];
+Object.assign(EVENTS, {
+  starRaid: {
+    when() { if (!CON()) return null; ensureRivals(); const r = bigRival(); if (!r) return null;
+      const w = pick(signed().filter(w => !w.loan && w.contract.weeks > 8).sort((a, b) => b.pop - a.pop).slice(0, 5)); if (!w || w.pop < 50) return null;
+      return { a: w.id, r: r.id, amt: Math.round(w.contract.salary * Math.min(w.contract.weeks, 52) * .5 / 1000) * 1000 }; },
+    title: '💼 Rival offer', text: d => `${RV(d.r)?.name || 'A rival'} offered ${nameOf(d.a)} a bigger deal to jump ship now, even with time left on their contract.`,
+    choices: d => [[MON() ? 'Match it' : 'Promise a bigger push', MON() ? `Raise their pay 25% to ${money(Math.round(W(d.a).contract.salary * 1.25 / 100) * 100)}/wk` : 'They stay, and want to be featured'], ['They\'re under contract', 'Hold them to it. They may not like it'], ['Let them go', MON() ? `${RV(d.r)?.name || 'The rival'} pays you ${money(d.amt)}` : 'They leave now']],
+    pick(i, d) { const w = W(d.a), r = RV(d.r); if (!w?.contract || !r) return 'The offer fell through.';
+      if (i === 0) { if (MON()) w.contract.salary = Math.round(w.contract.salary * 1.25 / 100) * 100; else G.todos.unshift({ t: `Give ${w.name} a big win (you promised a push)`, done: false }); w.morale = clamp(w.morale + 8, 0, 100); return `${w.name} is staying${MON() ? ' on a raise' : ''}.`; }
+      if (i === 1) { w.morale = clamp(w.morale - 12, 0, 100);
+        if (w.morale < 45 && Math.random() < .4) { leaveCompany(w, 'forced their way out'); goRival(w, r.name); if (MON()) G.money += Math.round(d.amt / 2000) * 1000; news(`💼 ${w.name} forced their way out and joined ${r.name}.`, 'contract'); return `${w.name} forced their way out to ${r.name}${MON() ? ' for a smaller buyout' : ''}.`; }
+        return `${w.name} stays, but they're not happy about it.`; }
+      if (MON()) G.money += d.amt; leaveCompany(w, 'left for a rival'); goRival(w, r.name); news(`💼 ${w.name} left for ${r.name}${MON() ? ' for a ' + money(d.amt) + ' buyout' : ''}.`, 'contract'); return `${w.name} is off to ${r.name}.`; }
+  },
+  trade: {
+    when() { ensureRivals(); const r = pick((G.rivalPromos || []).filter(r => r.roster.length >= 6)); if (!r) return null;
+      const mine = pick(signed().filter(w => !w.loan && w.pop >= 25 && w.pop < 70 && !champOf(w) && !storiesOf(w.id).length)); if (!mine) return null;
+      const theirs = shuffle(r.roster.filter(x => x.id !== r.champId && Math.abs(overall(x) - overall(mine)) <= 6 && (x.style !== mine.style || x.align !== mine.align)))[0];
+      return theirs && { a: mine.id, b: theirs.id, r: r.id }; },
+    title: '↔️ Trade offer', text: d => `${RV(d.r)?.name || 'A rival'} wants to trade ${nameOf(d.b)} for your ${nameOf(d.a)}.`,
+    choices: d => { const a = W(d.a), b = rivalW(d.b); return [['Make the trade', b ? `${b.style}, ${b.align}, Pop ${Math.round(b.pop)}, OVR ${overall(b)}` : 'Swap them'], ['No thanks', a ? `Keep ${a.name}` : 'Nothing changes']]; },
+    pick(i, d) { if (i) return 'You kept your roster as it is.';
+      const a = W(d.a), r = RV(d.r), b = r?.roster.find(x => x.id === d.b); if (!a?.contract || !b) return 'The trade fell through.';
+      const c = { ...a.contract }; leaveCompany(a, 'traded'); goRival(a, r.name);
+      fromRival(b, r, { salary: CON() ? Math.max(c.salary, askFor(b, 52)) : 0, weeks: Math.max(26, c.weeks) });
+      news(`↔️ Trade: ${a.name} to ${r.name} for ${b.name}.`, 'contract'); return `${b.name} joins your roster. ${a.name} goes to ${r.name}.`; }
+  },
+  invasion: {
+    when() { if (G.week < 4 || signed().some(w => w.loan)) return null; ensureRivals(); const r = bigRival(); if (!r || r.roster.length < 6) return null;
+      const inv = r.roster.filter(w => w.id !== r.champId && !w.injury).sort((a, b) => b.pop - a.pop).slice(0, 2); if (inv.length < 2) return null;
+      return { a: inv[0].id, b: inv[1].id, r: r.id }; },
+    title: '🚪 Invasion', text: d => `${nameOf(d.a)} and ${nameOf(d.b)} from ${RV(d.r)?.name || 'a rival'} want to storm your show for an invasion story.`,
+    choices: () => [['Let them invade', 'They join for 8 weeks with a hot storyline'], ['Lock the doors', 'Your locker room likes that you protect them']],
+    pick(i, d) { const r = RV(d.r);
+      if (i) { for (const w of signed()) w.morale = clamp(w.morale + 2, 0, 100); return 'You kept them out. The locker room is fired up.'; }
+      const inv = [d.a, d.b].map(id => r?.roster.find(x => x.id === id)).filter(Boolean); if (!inv.length) return 'They never showed up.';
+      for (const w of inv) { fromRival(w, r, { salary: 0, weeks: 8 }); w.loan = r.id; w.loanUntil = G.week + 8; }
+      const home = signed().filter(w => !w.loan && !w.injury).sort((a, b) => b.pop - a.pop).slice(0, inv.length);
+      if (home.length) G.stories.push({ id: uid(), title: `Invasion: ${r.short}`, type: 'Feud', a: home.map(w => w.id), b: inv.map(w => w.id), titleId: null, heat: 45, start: G.week, status: 'active', notes: `${r.name} invaded. They leave in 8 weeks, so pay it off at a big event before then.`, log: [], autoEnd: true });
+      news(`🚪 ${inv.map(w => w.name).join(' & ')} invaded from ${r.name}. They're here for 8 weeks.`, 'story');
+      return `${inv.map(w => w.name).join(' & ')} are here for 8 weeks. Storyline started at 45 heat.`; }
+  },
+  refuse: {
+    when() { for (const seg of G.card) { if (seg.kind !== 'match' || !(seg.winner >= 0) || !seg.sides[seg.winner]) continue;
+        const wp = Math.max(...seg.sides[seg.winner].map(id => W(id)?.pop || 0));
+        const x = seg.sides.filter((_, i) => i !== seg.winner).flat().map(W).filter(w => w && w.pop >= 55 && w.pop >= wp + 6 && !(w.creative >= G.week)).sort((a, b) => b.pop - a.pop)[0];
+        if (x) return { a: x.id, b: seg.sides[seg.winner][0], seg: seg.id }; }
+      return null; },
+    title: '😠 Refusing to lose', text: d => `${nameOf(d.a)} refuses to lose to ${nameOf(d.b)} tonight. "The fans didn't pay to see me lose to them."`,
+    choices: () => [['Change the finish', 'They win instead'], ['Hold firm', 'Keep your finish. They may walk out'], ['Let the match decide', 'Sim the winner']],
+    pick(i, d) { const w = W(d.a), seg = G.card.find(x => x.id === d.seg); if (!w || !seg) return 'It sorted itself out.';
+      const side = seg.sides.findIndex(sd => sd.includes(w.id)); if (side < 0) return 'They are not on the card anymore.';
+      if (i === 0) { seg.winner = side; w.morale = clamp(w.morale + 4, 0, 100); return `${w.name} goes over tonight.`; }
+      if (i === 2) { seg.winner = -1; return 'The match will decide it.'; }
+      w.morale = clamp(w.morale - 12, 0, 100);
+      if (Math.random() < .25) { removeFromSeg(seg, w.id); news(`😠 ${w.name} walked out before the show.`, 'office'); return `${w.name} walked out. Find a replacement for their match.`; }
+      return `${w.name} will do the job, but they're angry.`; }
+  },
+  creative: {
+    when() { const w = pick(signed().filter(w => !w.loan && w.pop >= 60 && !(w.creative >= G.week)).sort((a, b) => b.pop - a.pop).slice(0, 4)); return w && { a: w.id }; },
+    title: '💼 Creative control', text: d => `${nameOf(d.a)} wants creative control: a say in when they win and lose.`,
+    choices: () => [['Grant it for 16 weeks', 'Happy star, but they may change finishes'], ['Refuse', 'Morale drops']],
+    pick(i, d) { const w = W(d.a); if (!w) return 'Never mind.';
+      if (i) { w.morale = clamp(w.morale - 10, 0, 100); return `${w.name} is upset you said no.`; }
+      w.creative = G.week + 16; w.morale = clamp(w.morale + 12, 0, 100); return `${w.name} has creative control until week ${w.creative}. Book them to lose and they may change it.`; }
+  },
+  leader: {
+    when() { if (G.leader && W(G.leader)?.contract) return null; const w = pick(signed().filter(w => !w.loan && w.morale >= 55 && (w.age >= 32 || w.pop >= 70))); return w && { a: w.id }; },
+    title: '👑 Locker room leader', text: d => `${nameOf(d.a)} wants to be the voice of the locker room.`,
+    choices: () => [['Back them as leader', 'Everyone\'s mood follows theirs. Keep them happy'], ['Stay neutral', 'No leader for now']],
+    pick(i, d) { const w = W(d.a); if (!w) return 'Never mind.'; if (i) return 'No leader for now.';
+      G.leader = w.id; w.morale = clamp(w.morale + 8, 0, 100); for (const x of signed()) x.morale = clamp(x.morale + 2, 0, 100);
+      return `${w.name} leads the locker room. Keep them happy and everyone is happier.`; }
+  },
+  clique: {
+    when() { const groups = [...(G.factions || []), ...(G.teams || [])].map(g => ({ name: g.name, ids: g.members.filter(id => W(id)?.contract) })).filter(g => g.ids.length >= 2);
+      const g = pick(groups.filter(g => g.ids.every(id => G.week - (W(id).lastBooked || 0) >= 1))); return g && { a: g.ids[0], ids: g.ids.slice(0, 8), n: g.name }; },
+    title: '👥 Backstage clique', text: d => `${d.n} are complaining that they're being held down, and others are starting to listen.`,
+    choices: () => [['Give them TV time', 'They\'re happy. Book them this week'], ['Break up the clique', 'They\'re upset, but the room calms down']],
+    pick(i, d) { const ws = (d.ids || []).map(W).filter(Boolean);
+      if (i === 0) { ws.forEach(w => w.morale = clamp(w.morale + 6, 0, 100)); G.todos.unshift({ t: `Book ${d.n} this week (you promised TV time)`, done: false }); return `${d.n} are happy. Put them on the show.`; }
+      ws.forEach(w => w.morale = clamp(w.morale - 10, 0, 100)); for (const x of signed().filter(x => !ws.includes(x))) x.morale = clamp(x.morale + 1, 0, 100); return `${d.n} are upset, but the rest of the room settles down.`; }
+  },
+  noshow: {
+    when() { const w = pick(signed().filter(w => !w.loan && !w.injury && w.morale < 45)); return w && { a: w.id }; },
+    title: '🚪 No-show', text: d => `${nameOf(d.a)} didn't show up for TV this week.`,
+    choices: () => [[MON() ? 'Fine them' : 'Read them the riot act', 'Order is kept. Their morale drops'], ['Talk it out', 'They feel heard. It looks soft']],
+    pick(i, d) { const w = W(d.a); if (!w) return 'Never mind.';
+      for (const seg of G.card) if (segPeople(seg).includes(w.id)) removeFromSeg(seg, w.id);
+      if (i === 0) { w.morale = clamp(w.morale - 5, 0, 100); if (MON()) G.money += 2000; for (const x of signed()) if (x !== w) x.morale = clamp(x.morale + 1, 0, 100); return `${w.name} is off this week's card${MON() ? ' and fined' : ''}. The locker room respects it.`; }
+      w.morale = clamp(w.morale + 8, 0, 100); G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return `You talked it out with ${w.name}. They're off this week's card.`; }
+  }
+});
 function rollEvent() {
   G.event = null;
   if (G.week < 2 || Math.random() > .55) return;
@@ -2631,7 +2832,7 @@ function attention() {
   if (!G.card.length) a.push({ lv: 'info', ic: '📋', t: 'This week\'s card is empty', d: 'Tap Book show to build it, or use Auto-fill.', go: 'book' });
   const inj = G.card.flatMap(segPeople).map(W).filter(w => w && w.injury > 0);
   if (inj.length) a.push({ lv: 'bad', ic: '🩹', t: 'Injured wrestlers on the card', d: [...new Set(inj.map(w => w.name))].join(', ') + ' (big rating penalty, risk of worse injury)', go: 'book' });
-  if (CON()) for (const w of signed().filter(w => w.contract.weeks <= TALKS_OPEN).sort((x, y) => x.contract.weeks - y.contract.weeks))
+  if (CON()) for (const w of signed().filter(w => !w.loan && w.contract.weeks <= TALKS_OPEN).sort((x, y) => x.contract.weeks - y.contract.weeks))
     a.push({ lv: w.contract.weeks <= 1 ? 'bad' : w.contract.weeks <= 4 || w.courted ? 'warn' : 'info', ic: '📝', t: `${w.name}: contract ends in ${w.contract.weeks} wk`, d: `${w.courted ? `${w.courted} wants them. ` : ''}Asking about ${money(askFor(w, prefLen(w)))}/wk for ${lenLabel(prefLen(w))}. Renew or let them go.`, wid: w.id, neg: true });
   for (const w of signed().filter(w => w.morale < 35)) a.push({ lv: 'warn', ic: '😠', t: `${w.name} is unhappy (${Math.round(w.morale)})`, d: G.week - w.lastBooked >= 2 ? 'Not booked. Put them on the card.' : CON() ? 'Losing or underpaid. Try a win or a raise.' : 'Losing streak. Give them a win.', wid: w.id });
   for (const st of G.stories.filter(s => s.status === 'active' && s.heat < 25 && G.week - s.start > 1)) a.push({ lv: 'warn', ic: '🧊', t: `"${st.title}" is cooling off`, d: 'Heat drops every week the story is not on the card.', sid: st.id });
@@ -2643,6 +2844,9 @@ function attention() {
       if (!ms.length && left <= 3) a.push({ lv: left <= 1 ? 'bad' : 'warn', ic: '🎆', t: `${bigName(nb)} has no matches announced`, d: `It's ${left} week${left > 1 ? 's' : ''} away. Book the card now so the weekly shows can build to it.`, go: 'book' });
       for (const m of ms) { const hurt = m.sides.flat().map(W).filter(w => w && w.injury >= left); if (hurt.length) a.push({ lv: 'warn', ic: '🩹', t: `${hurt.map(w => w.name).join(', ')} may miss ${bigName(nb)}`, d: 'Hurt past the event. Change the match or wait.', go: 'book' }); }
       const cold = ms.filter(m => (m.hype || 0) < 20 && left <= 2); if (cold.length) a.push({ lv: 'info', ic: '📈', t: `${cold.length} ${bigName(nb)} match${cold.length > 1 ? 'es have' : ' has'} low hype`, d: 'Put both sides together on this week\'s show.', go: 'book' }); } }
+  { const nb = nextBig(), cr = (G.rivalPromos || []).find(r => r.counter === nb); if (cr && onMain()) a.push({ lv: 'warn', ic: '📺', t: `${cr.name} is going head to head with ${bigName(nb)}`, d: 'They loaded their show. Stack your card: if they win the night, they take twice the fans.', go: 'book' }); }
+  for (const w of G.card.filter(s => s.kind === 'match' && s.winner >= 0).flatMap(s => s.sides.filter((_, i) => i !== s.winner).flat()).map(W).filter(w => w && w.creative >= G.week))
+    a.push({ lv: 'warn', ic: '💼', t: `${w.name} is booked to lose`, d: 'They have creative control and may change the finish.', go: 'book' });
   if (G.settings.finances && G.money < 50000) a.push({ lv: 'bad', ic: '💸', t: 'Money is running low', d: 'Cut payroll or build up big events.', go: 'office' });
   return a;
 }
@@ -2762,6 +2966,9 @@ function wTags(w) {
   const t = [`<span class="tag ${w.align}">${w.align === 'face' ? 'Face' : 'Heel'}</span>`];
   if (splitOn() && w.contract) t.push(`<span class="tag">📺 ${esc(brandName(brandOf(w)))}</span>`);
   for (const ti of titlesOf(w.id)) t.push(belt(ti.short));
+  if (G.leader === w.id && w.contract) t.push('<span class="tag">👑 Leader</span>');
+  if (w.creative >= G.week && w.contract) t.push('<span class="tag">💼 Creative control</span>');
+  if (w.loan && w.contract) t.push(`<span class="tag">🚪 Invader${RV(w.loan) ? ' · ' + esc(RV(w.loan).short) : ''}</span>`);
   if (w.injury > 0) t.push(`<span class="tag bad">🩹 ${w.injury}wk</span>`);
   const sk = streakTag(w); if (sk) t.push(sk);
   if (CON() && w.contract && w.contract.weeks <= TALKS_OPEN) t.push(`<span class="tag ${w.contract.weeks <= 4 ? 'warn' : ''}">📝 ${w.contract.weeks}wk</span>`);
@@ -2997,7 +3204,7 @@ function matchRow(s, i, n, o) {
     const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat()); if (st) chips.push(`🔥 ${esc(st.title)}`);
     if (!o.past) chips.push(s.winner >= 0 && s.sides[s.winner]?.length ? `👑 ${esc(s.sides[s.winner].map(id => (W(id)?.name || '').split(' ')[0]).join(' & '))}` : s.winner === -2 ? '🤝 draw' : '🎲 sim decides');
   } else {
-    chips.push(s.kind === 'promo' ? '🎤 ' + esc(s.ptype) : '🎬 ' + esc(s.atype));
+    chips.push(s.kind === 'promo' ? '🎤 ' + esc(s.ptype) + (PROMO_TONES[s.tone] && s.tone ? ' · ' + esc(PROMO_TONES[s.tone].n) : '') : '🎬 ' + esc(s.atype));
     const st = s.target?.length ? storyBetween(s.who || [], s.target) : storiesTouching(s.who || [])[0]; if (st) chips.push(`🔥 ${esc(st.title)}`);
   }
   if (o.builds) chips.push(`<span class="hype">📈 Builds ${esc(o.builds)}</span>`);
@@ -3086,6 +3293,8 @@ function modalRival(m) {
   const body = `<div class="row" style="gap:10px;margin-bottom:10px">${rivAv(r, 52)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(r.name)}</div><div class="small muted">${esc(r.show)} · ${kfmt(r.fans)} fans · prestige ${Math.round(r.prestige)}</div></div></div>
     ${r.hist?.length ? `<div class="small" style="margin-bottom:6px">Recent shows: ${r.hist.slice(-6).map(x => `<b>${x}</b>`).join(' · ')}</div>` : ''}
     ${c ? `<div class="small" style="margin-bottom:6px">🏆 Champion: <b>${esc(c.name)}</b></div>` : ''}
+    ${r.counter && r.counter >= G.week ? `<div class="alert warn"><span class="ic">📺</span><div class="small">Loaded show against <b>${esc(bigName(r.counter))}</b> in week ${r.counter}. Beat them that night or lose twice the fans.</div></div>` : ''}
+    ${r.card?.segs?.length ? `<div class="sec">Last show${r.card.sup ? ' (loaded)' : ''} · week ${r.card.wk}</div><div class="card" style="padding:4px 12px">${r.card.segs.map((x, i, a) => `<div class="row small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><span class="sp">${i === a.length - 1 ? '<b>Main event</b> · ' : ''}${x.title ? '🏆 ' : ''}<b>${esc(x.won === x.a ? x.an : x.bn)}</b> beat ${esc(x.won === x.a ? x.bn : x.an)}</span><span class="muted">${starStr(x.rating)}</span></div>`).join('')}</div>` : ''}
     <div class="sec">Roster (${r.roster.length})</div>
     <div class="list">${r.roster.slice().sort((a, b) => b.pop - a.pop).map(w => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align === 'heel' ? 'heel' : 'face'}">${esc(w.name)}</span>${w.id === r.champId ? ' <span class="tag gold">Champ</span>' : ''}</div><div class="d">${esc(w.style)} · Pop ${Math.round(w.pop)} · OVR ${overall(w)} · ${lenLabel(Math.max(1, w.rWeeks || 1))} left</div></div><button class="btn sm" data-act="poach" data-id="${w.id}">Sign</button></div>`).join('') || '<div class="empty">Nobody signed yet.</div>'}</div>`;
   return modal(esc(r.name), body, `<button class="btn" data-act="rivalCode" data-id="${r.id}">Share code</button><button class="btn pri" data-act="editRival" data-id="${r.id}">Edit</button>`);
@@ -3181,6 +3390,7 @@ function renderModal() {
   modalAnim = key !== lastModalKey; lastModalKey = key;
   switch (m.type) {
     case 'menu': return modalMenu();
+    case 'cloud': return modalCloud(m);
     case 'cos': return modalCos();
     case 'shows': return modalShows();
     case 'live': return liveScreen(m);
@@ -3256,6 +3466,7 @@ function modalMenu() {
     <div class="list">${slots.map(s => `<div class="item"><div class="av" style="background:${s.n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${s.n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${s.n}</div><div class="main"><div class="t">${s.info ? esc(s.info.name) : 'Empty'}</div><div class="d">${s.info ? `Week ${s.info.week} · ${new Date(s.info.savedAt).toLocaleString()}` : '—'}</div></div>
       ${s.n === meta.slot ? '<span class="tag good">Current</span>' : `${s.info ? `<button class="btn sm" data-act="loadSlot" data-id="${s.n}">Load</button>` : ''}<button class="btn sm" data-act="copyTo" data-id="${s.n}">Save here</button>`}</div>`).join('')}</div>
     <button class="btn block" style="margin-top:10px" data-act="export">💾 Back up or restore a save</button>
+    ${sbOn() ? `<button class="btn block" style="margin-top:8px" data-act="cloud">🌐 Cloud saves${meta.cloudAuto ? ' (auto backup on)' : ''}</button>` : ''}
     <div class="tiny muted" style="margin-top:8px">Company setup (names, shows, big events, match types) is in Office → Setup.</div>
     <div class="sec">Settings</div>
     <div class="small muted" style="margin-bottom:8px">Game rules</div>
@@ -3278,6 +3489,45 @@ function modalMenu() {
   `);
 }
 
+// ---- cloud saves (Supabase): one row per player in cloud1..cloud3, readable only by that player ----
+const CLOUD_SLOTS = [1, 2, 3];
+const cloudErr = e => e?.code === 'big' ? 'This save is too big for the cloud. Use Back up instead.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
+async function cloudPush(n) {
+  await sbGuest(); if (!sbSess?.user?.id) throw { code: 'unavailable' };
+  const z = await gz(JSON.stringify({ ...G, savedAt: Date.now() }));
+  if (z.length > 380000) throw { code: 'big' };
+  await sbDb().doc(`cloud${n}/${sbSess.user.id}`).set({ v: 1, save: z, sum: saveSummary(G), at: Date.now() });
+  meta.cloudWk = { ...(meta.cloudWk || {}), [n]: G.week }; ls.set(META, JSON.stringify(meta));
+}
+async function cloudList() {
+  const m = UI.modal; if (m?.type !== 'cloud') return;
+  try {
+    await sbGuest(); const id = sbSess?.user?.id; if (!id) throw 0;
+    const rows = await sbFetch(`/rest/v1/docs?select=col,data->sum,data->at&col=in.(cloud1,cloud2,cloud3)&id=eq.${sbQ(id)}`);
+    const list = {}; for (const r of Array.isArray(rows) ? rows : []) { const n = +String(r.col).slice(5); if (CLOUD_SLOTS.includes(n)) list[n] = { sum: r.sum && typeof r.sum === 'object' ? r.sum : {}, at: +r.at || 0 }; }
+    if (UI.modal === m) { m.list = list; m.err = ''; render(); }
+  } catch (e) { if (UI.modal === m) { m.list = {}; m.err = cloudErr(e); render(); } }
+}
+// after each week, the game backs itself up when auto backup is on
+let cloudBusy = false;
+function cloudAutoPush() {
+  if (!meta.cloudAuto || !sbOn() || !G || cloudBusy || meta.cloudWk?.[meta.slot] === G.week) return;
+  cloudBusy = true; cloudPush(meta.slot).catch(() => {}).finally(() => { cloudBusy = false; });
+}
+function modalCloud(m) {
+  const u = sbSess?.user, L = m.list;
+  const rows = CLOUD_SLOTS.map(n => { const x = L?.[n], sm = x?.sum || {};
+    return `<div class="item"><div class="av" style="background:${n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${n}</div><div class="main"><div class="t">${x ? esc(String(sm.promo || 'Saved game')) : 'Empty'}</div><div class="d">${x ? `Week ${+sm.week || '?'} · ${x.at ? new Date(x.at).toLocaleString() : ''}` : L ? '—' : 'Loading…'}</div></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${x ? `<button class="btn sm" data-act="cloudGet" data-id="${n}">Load</button>` : ''}${G ? `<button class="btn sm" data-act="cloudUp" data-id="${n}">Upload</button>` : ''}${x ? `<button class="btn sm bad" data-act="cloudDel" data-id="${n}" aria-label="Delete cloud slot ${n}">🗑</button>` : ''}</div></div>`; }).join('');
+  const body = `<p class="small muted" style="margin-top:0">Keep your games online, and load them on another phone or computer. Only you can see your cloud saves.</p>
+    ${m.err ? `<div class="alert bad"><span class="ic">⚠️</span><div class="small">${esc(m.err)}</div></div>` : ''}
+    <div class="list">${rows}</div>
+    ${G ? `<label class="todo" style="margin-top:10px"><input type="checkbox" data-act="cloudAuto" ${meta.cloudAuto ? 'checked' : ''}><span>Back up slot ${meta.slot} to cloud slot ${meta.slot} after every week</span></label>` : ''}
+    ${u && !u.email ? '<div class="tiny muted" style="margin-top:8px">To load these saves on another device, add your email below and sign in there with it.</div>' : ''}
+    ${sbAccountCard()}`;
+  return modal('Cloud saves', body);
+}
+
 function privacyHTML() {
   return `<div class="help">
   <p><b>The short version:</b> your game stays on your device. Only what you post to Community is shared.</p>
@@ -3285,6 +3535,7 @@ function privacyHTML() {
   <p>Your saves, notes, settings and private photos are kept in this browser only. Nobody else can see them, including us. Clearing your browser data deletes them, so back up from the Menu.</p>
   ${sbOn() ? `  <h3>When you use Community</h3>
   <p>Community and feedback are stored online with Supabase, a database service. When you open Community you get a guest account with a random id. We don't ask for your name. What you post, your profile (name, bio, color), what you like, what you play or add, and who you follow can be seen by anyone who plays.</p>
+  <p>Cloud saves (Menu → Cloud saves) are stored with the same guest account, and only you can read them. Delete them from that page any time.</p>
   <p>If you add your email to keep your account, Supabase stores it to send you sign-in links. Other players never see it. Remove your posts and profile any time from Community → My profile.</p>
   <h3>Reports and feedback</h3>
   <p>Reports and feedback are private: only the game's owner can read them. Feedback includes the game version, your week number and your browser type, so bugs can be fixed. Crash reports include the error message.</p>
@@ -3442,6 +3693,10 @@ function modalSeg(m) {
     const types = s.kind === 'promo' ? PROMO_TYPES : ANGLE_TYPES, key = s.kind === 'promo' ? 'ptype' : 'atype';
     const def = types[s[key]];
     body += `<label class="f"><span>${s.kind === 'promo' ? 'Promo type' : 'Angle type'}</span><select data-seg="${key}">${Object.keys(types).map(k => `<option ${k === s[key] ? 'selected' : ''}>${k}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(def.desc)}</div></label>`;
+    if (s.kind === 'promo') { const tp = PROMO_TOPICS[s.topic || ''] || PROMO_TOPICS[''], tn = PROMO_TONES[s.tone || ''] || PROMO_TONES[''];
+      body += `<div class="grid2"><label class="f"><span>Talk about</span><select data-seg="topic">${Object.entries(PROMO_TOPICS).map(([k, v]) => `<option value="${k}" ${k === (s.topic || '') ? 'selected' : ''}>${esc(v.n)}</option>`).join('')}</select></label>
+        <label class="f"><span>Tone</span><select data-seg="tone">${Object.entries(PROMO_TONES).map(([k, v]) => `<option value="${k}" ${k === (s.tone || '') ? 'selected' : ''}>${esc(v.n)}</option>`).join('')}</select></label></div>
+        <div class="tiny muted" style="margin:-4px 0 10px">${esc(tp.desc)} ${esc(tn.desc)}${(s.who || []).length && (s.tone || '') ? ` ${esc(promoOdds(s))}` : ''}</div>`; }
     body += `<div class="side"><div class="lbl">${s.kind === 'promo' ? 'Speaking' : 'Who'}</div>${chipsFor(s.who, 'who', 3)}</div>`;
     if (def.needT || (s.target || []).length) body += `<div class="side"><div class="lbl">Target${def.needT ? '' : ' (optional)'}</div>${chipsFor(s.target, 'target', 3)}</div>`;
     else body += `<button class="btn sm" data-act="pickFor" data-f="target" style="margin-bottom:10px">+ Add a target (optional)</button>`;
@@ -3712,6 +3967,21 @@ const A = {
   textSize(k) { meta.text = ['s', 'm', 'l', 'xl'].includes(k) ? k : 'm'; ls.set(META, JSON.stringify(meta)); applyTheme(); render(); },
   whatsNew() { UI.modal = { type: 'whatsnew' }; render(); },
   menu() { openModal({ type: 'menu' }); },
+  cloud() { openModal({ type: 'cloud', list: null }); cloudList(); },
+  async cloudUp(n) {
+    if (!G) return; const go = async () => { try { await cloudPush(+n); toast('Uploaded to cloud slot ' + n + '.'); cloudList(); } catch (e) { toast(cloudErr(e)); } };
+    if (UI.modal?.list?.[n]) confirmBox('Replace cloud slot ' + n + '?', 'The game saved there is replaced with this one.', 'Replace', go); else go();
+  },
+  cloudGet(n) {
+    const x = UI.modal?.list?.[n]; if (!x) return;
+    confirmBox('Load this cloud save?', `${x.sum?.promo || 'This game'}, week ${x.sum?.week || '?'}, goes into slot ${meta.slot}, replacing the game there.`, 'Load it', async () => {
+      try { const d = (await sbDb().doc(`cloud${+n}/${sbSess.user.id}`).get()).data(); if (!d?.save) throw { code: 'gone' };
+        const g = sanitizeGame(JSON.parse(await ungz(d.save))); G = g; save(); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Cloud save loaded into slot ' + meta.slot + '.'); }
+      catch (e) { toast(e?.code === 'gone' ? 'That cloud save is gone.' : 'Could not load it. Try again.'); }
+    });
+  },
+  cloudDel(n) { confirmBox('Delete cloud slot ' + n + '?', 'Saves on this device are not touched.', 'Delete', async () => { try { await sbDb().doc(`cloud${+n}/${sbSess.user.id}`).delete(); toast('Deleted.'); cloudList(); } catch (e) { toast(cloudErr(e)); } }, true); },
+  cloudAuto() { meta.cloudAuto = !meta.cloudAuto; ls.set(META, JSON.stringify(meta)); if (meta.cloudAuto && G) cloudPush(meta.slot).then(() => cloudList(), e => toast(cloudErr(e))); render(); },
   help() { openModal({ type: 'help' }); },
   closeModal,
   openRival(id) { openModal({ type: 'rival', id }); },
@@ -4885,7 +5155,7 @@ function saveSummary(g) {
 // drops prototype keys, keeps ids to a safe alphabet, strips markup characters, coerces numbers,
 // and only allows known values in fixed-choice fields, so a crafted save can't inject markup or crash the game.
 const SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
-const NUM_KEYS = new Set(['turnWk', 'ranWk', 'curWk', 'raidWk', 'rating', 'wk', 'week', 'heat', 'hype', 'prestige', 'salary', 'weeks', 'attendance', 'net', 'fanDelta', 'defenses', 'since', 'lastDefense', 'start', 'xp', 'pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue', 'age', 'injury', 'momentum', 'money', 'fans', 'winner', 'streak', 'joined', 'lastBooked', 'day', 'tips', 'goalsWk', 'done', 'events', 'T', 'savedAt', 'bigEvery', 'calMonth', '_touched', 'backstage', 'champ', 'classic', 'first', 'four', 'sellout', 'stories', 'fans50', 'fans100', 'goals10', 'year', 'hof', 'best', 'created', 'd', 'def', 'ended', 'gate', 'l', 'm', 'merch', 'motn', 'n', 'payroll', 'ppv', 'production', 'showXp', 'sum', 'tv', 'tvWeeks', 'tw', 'v', 'w', 'amt', 'rWeeks', 'poachWk', 'last', 'tr', 'ti', 'from', 'to', 'retired', 'yr']);
+const NUM_KEYS = new Set(['creative', 'loanUntil', 'counter', 'turnWk', 'ranWk', 'curWk', 'raidWk', 'rating', 'wk', 'week', 'heat', 'hype', 'prestige', 'salary', 'weeks', 'attendance', 'net', 'fanDelta', 'defenses', 'since', 'lastDefense', 'start', 'xp', 'pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue', 'age', 'injury', 'momentum', 'money', 'fans', 'winner', 'streak', 'joined', 'lastBooked', 'day', 'tips', 'goalsWk', 'done', 'events', 'T', 'savedAt', 'bigEvery', 'calMonth', '_touched', 'backstage', 'champ', 'classic', 'first', 'four', 'sellout', 'stories', 'fans50', 'fans100', 'goals10', 'year', 'hof', 'best', 'created', 'd', 'def', 'ended', 'gate', 'l', 'm', 'merch', 'motn', 'n', 'payroll', 'ppv', 'production', 'showXp', 'sum', 'tv', 'tvWeeks', 'tw', 'v', 'w', 'amt', 'rWeeks', 'poachWk', 'last', 'tr', 'ti', 'from', 'to', 'retired', 'yr']);
 // player-made participant types and gimmicks: plain fields only, safe names, sane limits
 const cmName = v => String(v || '').replace(/[\u0000-\u001f<>`"&]/g, '').trim().slice(0, 30);
 function fixCustomMatch(c) {
@@ -4899,9 +5169,9 @@ function fixCustomMatch(c) {
   return o;
 }
 function scrubGame(raw) {
-  const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES) };
+  const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES), topic: Object.keys(PROMO_TOPICS), tone: Object.keys(PROMO_TONES) };
   const idMap = new Map(), fixId = v => { v = String(v); if (SAFE_ID.test(v)) return v; if (!idMap.has(v)) idMap.set(v, uid()); return idMap.get(v); };
-  const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|coId|brand|bid|showId)$/;
+  const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|coId|brand|bid|showId|loan)$/;
   let budget = 400000;
   const clean = (v, k, depth, inId) => {
     if (--budget < 0 || depth > 14) return undefined;
@@ -5300,8 +5570,8 @@ const CREATOR_ACTIONS = {
   },
   sbWipe() {
     if (!COMM.me) return;
-    confirmBox('Remove your Community posts?', 'Your uploads, profile, likes, follows, reports and feedback are deleted for everyone. This can\'t be undone.', 'Remove', async () => {
-      try { for (const col of ['creations', 'reports', 'feedback']) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
+    confirmBox('Remove your Community posts?', `Your uploads, profile, likes, follows, reports and feedback${sbOn() ? ', and your cloud saves,' : ''} are deleted for everyone. This can't be undone.`, 'Remove', async () => {
+      try { for (const col of ['creations', 'reports', 'feedback', ...(sbOn() ? ['cloud1', 'cloud2', 'cloud3'] : [])]) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
       catch (e) { toast('Could not remove it. Try again.'); }
     }, true);
   },
@@ -5868,8 +6138,12 @@ const SFX = (() => {
 })();
 
 // ---------- crash safety ----------
-const VERSION = '1.5.1';
+const VERSION = '1.6';
 const WHATS_NEW = [
+  ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Rivals), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
+  ['🎤 Plan your promos', 'Pick what a promo is about and its tone: fiery, calm, funny, cheap heat or from the heart. The speaker\'s mic skill decides if it lands or falls flat.'],
+  ['💼 Backstage politics', 'New backstage moments: stars who refuse to lose, creative control, a locker room leader, cliques and no-shows.'],
+  ['🌐 Cloud saves', 'Menu → Cloud saves keeps up to 3 games online. Add your email to load them on another device, and turn on auto backup.'],
   ['🤼 Participants plus a gimmick', 'Every match is who is in it (singles, tag, handicap, up to six-way, eight-person tag, battle royal, rumble) plus a gimmick on top: ladder, cage, tables, I quit, last man standing, the Cell and more. Mix any of them.'],
   ['👑 Rumbles and battle royals', 'Up to 40 entrants from every show. One tap fills the field, and wrestling earlier that night is fine.'],
   ['✏️ Make your own', 'Create match types and gimmicks in Office → Setup → Match types, or from any match.'],

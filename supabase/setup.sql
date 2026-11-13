@@ -4,7 +4,7 @@
 -- One row per player per collection: creations/<player id>, reports/<player id>, feedback/<player id>.
 -- creations/featured is the owner's featured pack and tip link.
 create table if not exists public.docs (
-  col text not null check (col in ('creations', 'reports', 'feedback')),
+  col text not null,
   id text not null check (id ~ '^[A-Za-z0-9_-]{1,64}$'),
   data jsonb not null default '{}'::jsonb,
   updated timestamptz not null default now(),
@@ -60,3 +60,8 @@ as $$ begin new.updated := now(); return new; end $$;
 drop trigger if exists docs_touch on public.docs;
 create trigger docs_touch before insert or update on public.docs for each row execute function public.docs_touch();
 revoke all on function public.docs_touch() from public, anon, authenticated;
+
+-- Cloud saves (added in v1.6, safe to run again): one row per player per cloud slot, cloud1..cloud3.
+-- The read rule above already limits these rows to the player who owns them (and moderators).
+alter table public.docs drop constraint if exists docs_col_check;
+alter table public.docs add constraint docs_col_check check (col in ('creations', 'reports', 'feedback', 'cloud1', 'cloud2', 'cloud3'));
