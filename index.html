@@ -5164,7 +5164,7 @@ const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w
 
 function wizStart(add) {
   add = add === true && !!G;
-  UI.wiz = { step: add ? 'company' : 'welcome', add, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
+  UI.wiz = { step: add ? 'company' : 'welcome', add, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
   render(); window.scrollTo(0, 0);
 }
 function wizPool() {
@@ -5262,7 +5262,15 @@ function wizFinish() {
     { t: `Build heat for your storylines, then pay them off at ${bigName(nextBig())} (week ${nextBig()})`, done: false, auto: 'bigEvent' },
     { t: 'Check the Briefing each week', done: false, auto: 'brief' }
   ];
+  // extra weekly shows picked at setup (and the brand draft between them)
+  const names = new Set([G.promo.show]);
+  for (const x of (z.extra || []).slice(0, MAX_SHOWS - 1)) {
+    let n = String(x.name || '').trim().replace(/[<>`"]/g, '').slice(0, 40) || SHOW_WORDS.map(w => `${DAYS[x.day]} Night ${w}`).find(w => !names.has(w)) || `${DAYS[x.day]} Show`;
+    names.add(n); G.shows.push({ id: uid(), name: n, day: clamp(+x.day || 0, 0, 6), ran: 0, card: [], future: {}, wk: G.week });
+  }
+  if (manyShows()) { G.split = !!z.split; if (G.split) brandDraft(); news(`📺 ${G.promo.name} runs ${SHOWS().length} weekly shows: ${SHOWS().map(x => x.name).join(', ')}.`, 'office'); }
   if (host) joinWorld(host);
+  { const u = nextUp(); if (u && u.c === G && !u.on) goUnit(u); }
   G.tips = 0;
   UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : 'book'; UI.selWeek = G.week; UI.calMonth = null;
   UI.modal = z.source === 'import' ? { type: 'rtools', tab: 'import', mode: 'replace' } : null;
@@ -5309,6 +5317,10 @@ function viewWizard() {
       <div class="chips" style="margin:-4px 0 12px">${['Thunder Valley Wrestling', 'Rustbelt Pro', 'Pacific Rumble', 'Midnight Mat Club'].map(n => `<button class="chip" data-act="wzSet" data-f="name" data-id="${esc(n)}">${esc(n)}</button>`).join('')}</div>
       <label class="f"><span>Weekly TV show</span><input type="text" data-wz="show" value="${esc(z.show)}" maxlength="40" placeholder="e.g. Monday Mayhem"></label>
       <label class="f"><span>Show night</span><div class="seg-ctl">${DAYS.map((d, i) => `<button class="${z.day === i ? 'on' : ''}" data-act="wzSet" data-f="day" data-id="${i}">${d.slice(0, 3)}</button>`).join('')}</div></label>
+      ${(z.extra || []).map((x, i) => `<div class="card" style="margin:0 0 10px;padding:10px 12px"><div class="row" style="margin-bottom:6px"><b class="sp small">Weekly show ${i + 2}</b><button class="btn sm" data-act="wzDelShow" data-id="${i}" aria-label="Remove this show">✕</button></div>
+        <div class="row" style="gap:8px"><input type="text" data-wz="xName" data-i="${i}" value="${esc(x.name)}" maxlength="40" aria-label="Show name" placeholder="e.g. Friday Fallout" style="flex:1"><select data-wz="xDay" data-i="${i}" aria-label="Night" style="width:auto">${DAYS.map((d, k) => `<option value="${k}" ${k === x.day ? 'selected' : ''}>${d}</option>`).join('')}</select></div></div>`).join('')}
+      ${(z.extra || []).length < MAX_SHOWS - 1 ? `<button class="btn block" style="margin:-2px 0 12px" data-act="wzAddShow">＋ Add another weekly show</button>` : ''}
+      ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} Each extra show costs a night's production and earns half a TV deal.</div>` : ''}
       <label class="f"><span>Brand color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
       <div class="sec">Big events</div>
       ${z.add ? `<p class="small muted" style="margin-top:0">This world has a big event every ${G.settings.bigEvery} weeks.</p>` : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}
@@ -5394,6 +5406,8 @@ const WIZ_ACTIONS = {
   wzCancel() { UI.wiz = null; render(); window.scrollTo(0, 0); },
   wzGo(step) { UI.wiz.step = step; render(); window.scrollTo(0, 0); },
   wzRule(k) { UI.wiz[k] = !UI.wiz[k]; render(); },
+  wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
+  wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
   wzPpvIdeas() { UI.wiz.ppv = shuffle(BIG_EVENTS).slice(0, 12).join('\n'); render(); },
   wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
@@ -5426,6 +5440,7 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.wz === 'ppv') { UI.wiz.ppv = el.value; return; }
+  if (el.dataset.wz === 'xName') { const x = UI.wiz.extra?.[+el.dataset.i]; if (x) x.name = el.value; return; }
   if (el.dataset.wz === 'name' || el.dataset.wz === 'show') {
     const z = UI.wiz; z[el.dataset.wz] = el.value;
     const pv = document.querySelector('.wz-preview');
@@ -5468,6 +5483,8 @@ document.addEventListener('change', e => {
     else if (k === 'sort') { z.sort = el.value; render(); }
     else if (k === 'champ') { const arr = z.champs[el.dataset.k]; arr[+el.dataset.i] = el.value || undefined; z.champs[el.dataset.k] = arr.filter(Boolean); render(); }
     else if (k === 'storyOn') z.story.on = el.checked;
+    else if (k === 'xDay') { const x = z.extra?.[+el.dataset.i]; if (x) x.day = clamp(+el.value || 0, 0, 6); }
+    else if (k === 'xSplit') { z.split = el.checked; render(); }
     return;
   }
   if (el.dataset.seg) { const d = UI.modal.draft, k = el.dataset.seg;
