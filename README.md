@@ -221,3 +221,16 @@ Before you upload, set these near the top of the Community code in `index.html` 
 
 What beta players get: the full game, saves in their own browser, backups, share codes for rosters. What they don't get: Community, accounts, reports. Those live on the claude.ai copy only, because they need its database. The privacy page says so automatically.
 
+
+## Sound credits
+
+The show-night crowd uses short recordings from Wikimedia Commons. All are public domain or CC0, so no attribution is required, but here they are. They are trimmed, faded and volume-matched in `sounds/`.
+
+| File | Source | License |
+| --- | --- | --- |
+| `sounds/cheer.mp3` | [Clapping hurray](https://commons.wikimedia.org/wiki/File:Clapping_hurray.ogg) by starlite | Public domain |
+| `sounds/applause.mp3` | [Applause after a concert](https://commons.wikimedia.org/wiki/File:Sound_Effects_-_Applause_after_a_concert.ogg) by Amada44 | CC0 |
+| `sounds/ooh.mp3` | [Ohhh ahhh](https://commons.wikimedia.org/wiki/File:Ohhh_ahhh.ogg) by starlite | Public domain |
+| `sounds/boo.mp3` | [Audience Booing](https://commons.wikimedia.org/wiki/File:Soundgoats_-_Audience_Booing.wav) by Brendon (Soundgoats) | Public domain |
+
+The bell is still made in code. Each crowd line under a result ("Huge pop", "Loud boos for X", "Crickets") is chosen from what actually happened, and the clip that plays matches it. A flat segment plays nothing.
