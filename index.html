@@ -756,6 +756,7 @@ html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-mo
 html[data-nw] .seg-ctl button { font-size: 12.5px; letter-spacing: .01em; padding: 8px 3px; } html[data-nw] .seg-ctl { gap: 2px; }
 html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw="2"] .stat { padding: 8px 8px; } html[data-nw="2"] .stat .v { font-size: 18px; } html[data-nw="2"] .seg-ctl button { font-size: 11.5px; letter-spacing: 0; padding: 7px 2px; } html[data-nw="2"] .cal-t { font-size: 10px; letter-spacing: 0; }
 @media (max-width: 300px) { .cal-now { font-size: 8.5px; letter-spacing: 0; } .stat { padding: 8px 8px; } .stat .v { font-size: 18px; } .seg-ctl button { font-size: 11.5px; letter-spacing: 0; padding: 7px 2px; } .cal-t { font-size: 10px; letter-spacing: 0; } }
+.seg-ctl.tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-ctl .cnt, .filters .cnt { display: inline-block; min-width: 1.6em; padding: 0 .35em; border-radius: 99px; background: color-mix(in srgb, currentColor 10%, transparent); font-size: .85em; line-height: 1.4; letter-spacing: 0; }
 .item .main, .row > *, .sp { min-width: 0; }
 .t, .d, .small, .tiny, h1, h2, h3, p, li, label, td, th, b, .news { overflow-wrap: anywhere; }
@@ -912,10 +913,10 @@ const finOK = (stip, f) => { const g = GM(stip); return Object.hasOwn(FINISHES, 
 const finFallback = stip => GM(stip).rule === 'sub' ? 'Submission' : 'Clean';
 function finOf(seg) { let k = OLD_FIN[seg.finish] || seg.finish; if (!Object.hasOwn(FINISHES, k)) k = 'Clean'; if (!finOK(seg.stip, k)) k = finFallback(seg.stip); return k; }
 // a manager only helps while they are on the roster and healthy
-function mgrOf(w) { const m = w && w.manager && W(w.manager); return m && m.id !== w.id && m.contract && !m.retired && !(m.injury > 0) ? m : null; }
+function mgrOf(w) { const m = w && w.manager && W(w.manager); return m && m.id !== w.id && m.contract && !m.retired && !m.away && !(m.injury > 0) ? m : null; }
 const managing = id => G.wrestlers.filter(w => w.manager === id && w.contract && !w.retired);
 // who actually runs in: the booker's pick, or else a winner-side manager (decided once the winner is known)
-function runinPick(seg, inMatch) { const id = Array.isArray(seg.runin) ? seg.runin[0] : null, w = id && W(id); return w && !inMatch.has(w.id) && w.contract && !w.retired && !(w.injury > 0) ? w : null; }
+function runinPick(seg, inMatch) { const id = Array.isArray(seg.runin) ? seg.runin[0] : null, w = id && W(id); return w && !inMatch.has(w.id) && w.contract && !w.retired && !w.away && !(w.injury > 0) ? w : null; }
 const turnedSoon = w => w.turnWk && G.week - w.turnWk < 8;
 // a plain-words read on how a planned promo tone suits the speakers
 function promoOdds(s) {
@@ -1181,7 +1182,7 @@ function seedSig(wk) {
 function fillEntrants(d, wk = UI.selWeek ?? G.week) {
   const mt = MT(d.mtype), n = clamp(Math.round(+d.n || mt.def || 10), mt.min || 3, mt.max || 40);
   const have = entrants(d).filter(id => W(id)).slice(0, n);
-  let pool = (mt.wide ? signed() : bookable(wk)).filter(w => !have.includes(w.id) && !(w.injury > 0) && w.fatigue < 85);
+  let pool = (mt.wide ? signed() : bookable(wk)).filter(w => !have.includes(w.id) && !w.away && !(w.injury > 0) && w.fatigue < 85);
   let ref = have.length ? W(have[0]) : null;
   if (!ref) { const by = {}; for (const w of pool) by[w.division || 'Open'] = (by[w.division || 'Open'] || 0) + 1; const top = Object.keys(by).sort((a, b) => by[b] - by[a])[0]; ref = pool.find(w => (w.division || 'Open') === top) || null; }
   pool = pool.filter(w => sameDiv(ref, w)).map(w => [w, w.pop + rnd(0, 25)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
@@ -1340,8 +1341,8 @@ function titleDiv(t) {
 }
 const divOk = (t, w) => { const d = titleDiv(t); return d === 'Open' || !w.division || w.division === 'Open' || w.division === d; };
 function contenders(t, n = 5) {
-  const ok = w => w && w.contract && !t.holder.includes(w.id) && !w.injury && divOk(t, w);
-  const picked = (t.contenders || []).map(W).filter(w => w && w.contract && !t.holder.includes(w.id) && !w.injury); // the booker's picks skip the division check
+  const ok = w => w && w.contract && !t.holder.includes(w.id) && !w.injury && !w.away && divOk(t, w);
+  const picked = (t.contenders || []).map(W).filter(w => w && w.contract && !t.holder.includes(w.id) && !w.injury && !w.away); // the booker's picks skip the division check
   // auto ranks: other singles champions and the top 3 of more prestigious titles go chase those instead
   const busy = new Set();
   for (const o of G.titles) {
@@ -1496,7 +1497,7 @@ const brandOf = w => showById(w?.brand) ? w.brand : mainShowId();
 const showRanNow = () => (curShow()?.ran || 0) >= G.week;
 // with the brand split on, a weekly show books its own brand; a big event can use anyone
 const onBrand = (w, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || brandOf(w) === G.showId;
-const bookable = wk => signed().filter(w => onBrand(w, wk));
+const bookable = wk => signed().filter(w => !w.away && onBrand(w, wk));
 const titleOn = (t, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || !showById(t.brand) || t.brand === G.showId;
 const brandName = id => showById(id)?.id === G.showId ? G.promo.show : showById(id)?.name || '';
 // history records carry the show they belong to (old records belong to the main show)
@@ -2209,7 +2210,7 @@ function endOfWeek(card, world = true) {
     else if (w.injury > 0) w.injury = Math.max(0, w.injury - 0.5) | 0;
     w.momentum *= 0.92;
     if (!w.contract) { w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
-    if (!booked.has(w.id) && w.injury === 0 && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
+    if (!booked.has(w.id) && w.injury === 0 && !w.away && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
     if (CON() && w.contract.salary < asking(w) * 0.75) w.morale = clamp(w.morale - 1, 0, 100);
     w.morale += (65 + room + (PER() ? ((w.trust ?? 50) - 50) / 5 : 0) - w.morale) * 0.02;
   }
@@ -2228,7 +2229,7 @@ function endOfWeek(card, world = true) {
     }
   }
   // contracts (frozen when contracts are off: nobody's deal runs down and nobody walks out)
-  endLoans();
+  endLoans(); mediaWeek();
   for (const w of CON() ? signed().filter(w => !w.loan) : []) {
     w.contract.weeks--;
     const wl = w.contract.weeks;
@@ -2719,7 +2720,7 @@ const crowdSound = r => r.cue?.s || (/Crickets/.test(r.crowd) ? 'crickets' : /BO
 
 // ---- backstage moments: a surprise between shows, you pick what happens ----
 const lastName = w => w.name.split(' ').pop();
-const healthy = () => signed().filter(w => !w.injury);
+const healthy = () => signed().filter(w => !w.injury && !w.away);
 const EVENTS = {
   // ---- company level unlocks ----
   sponsor: {
@@ -2752,6 +2753,25 @@ const EVENTS = {
       G.fans += f; d.ids.forEach(id => { const w = W(id); if (w) { addPop(w, i ? 1 : 3); w.momentum = clamp(w.momentum + (i ? 3 : 8), -50, 50); } });
       return `The clip did numbers: +${kfmt(f)} fans.`;
     }
+  },
+  // ---- media: the big offers you can't book yourself ----
+  mediaOffer: {
+    when() { if (Math.random() > .5) return null; const w = pick(healthy().filter(w => w.pop >= 30 && w.mediaWk !== G.week)); if (!w) return null; const k = pick(['talk', 'pod']); return { a: w.id, k, n: pick(OUTLETS[k]) }; },
+    title: '📺 Big media request', text: d => `${d.n}, one of the biggest ${d.k === 'pod' ? 'podcasts' : 'TV shows'} around, wants ${nameOf(d.a)} on this week.`,
+    choices: () => [['Send them', 'A big popularity boost. No fatigue, and they still work the show'], ['Pass', 'Nothing changes']],
+    pick(i, d) { const w = W(d.a); if (!w?.contract || w.away) return 'The booking fell through.'; if (i) return `${w.name} stays focused on wrestling.`; return doMedia(w, d.k, 2.2, true); }
+  },
+  movieOffer: {
+    when() { if (Math.random() > .3) return null; const w = pick(healthy().filter(w => w.pop >= 45 && !w.loan && !isChamp(w) && !mediaIn(w, 26))); if (!w) return null; const wks = pick([6, 8, 10]); return { a: w.id, wks, fee: mediaFee(w, wks) }; },
+    title: '🎬 Hollywood calls', text: d => `A studio wants ${nameOf(d.a)} for a big movie. Filming takes ${d.wks} weeks.`,
+    choices: d => [['Let them go', `Out ${d.wks} weeks, back a much bigger star${MON() ? ` · studio pays ${money(d.fee)}` : ''}`], ['Keep them here', 'They stay, but they wanted this']],
+    pick(i, d) { const w = W(d.a); if (!w?.contract || w.away || isChamp(w)) return 'The studio went with someone else.'; if (i) { w.morale = clamp(w.morale - 5, 0, 100); return `${w.name} stays, but they're not happy about it.`; } return sendAway(w, 'movie', { wks: d.wks, m: 1.5, fee: d.fee }); }
+  },
+  indieOffer: {
+    when() { if (Math.random() > .35) return null; const w = pick(healthy().filter(w => w.pop < 50 && !w.loan && !isChamp(w) && !mediaIn(w, 12))); return w && { a: w.id, wks: pick([3, 4, 5]) }; },
+    title: '🤼 Indie tour offer', text: d => `A big indie tour wants ${nameOf(d.a)} for ${d.wks} weeks of shows.`,
+    choices: d => [['Let them go', `Out ${d.wks} weeks. Back sharper and more popular`], ['Keep them here', 'Nothing changes']],
+    pick(i, d) { const w = W(d.a); if (!w?.contract || w.away || isChamp(w)) return 'The tour found someone else.'; if (i) return `${w.name} stays home.`; return sendAway(w, 'indies', { wks: d.wks, m: 1.5 }); }
   },
   brawl: {
     when() { const hs = shuffle(healthy()); for (const a of hs) for (const b of hs) if (a !== b && a.align !== b.align && !storiesOf(a.id).some(s => s.a.includes(b.id) || s.b.includes(b.id))) return { a: a.id, b: b.id }; return null; },
@@ -2797,7 +2817,7 @@ const EVENTS = {
       w.morale = clamp(w.morale + 10, 0, 100); return `${w.name} heard you turned it down. Morale way up.`; }
   },
   dream: {
-    when() { const top = signed().filter(w => !w.injury).sort((a, b) => b.pop - a.pop).slice(0, 6); const met = new Set(G.history.flatMap(h => h.keys || [])); for (const a of top) for (const b of top) if (a !== b && a.id < b.id && !met.has([a.id, b.id].sort().join(','))) return { a: a.id, b: b.id }; return null; },
+    when() { const top = healthy().sort((a, b) => b.pop - a.pop).slice(0, 6); const met = new Set(G.history.flatMap(h => h.keys || [])); for (const a of top) for (const b of top) if (a !== b && a.id < b.id && !met.has([a.id, b.id].sort().join(','))) return { a: a.id, b: b.id }; return null; },
     title: '🗣️ Fans want a dream match', text: d => `"${lastName(W(d.a)).toUpperCase()} VS ${lastName(W(d.b)).toUpperCase()}!" is trending. They've never faced each other.`,
     choices: () => [['Book it this week', 'Added to this week\'s card'], ['Make them wait', 'Start a storyline and build to it']],
     pick(i, d) { const a = W(d.a), b = W(d.b);
@@ -2866,7 +2886,7 @@ Object.assign(EVENTS, {
       if (i) { for (const w of signed()) w.morale = clamp(w.morale + 2, 0, 100); return 'You kept them out. The locker room is fired up.'; }
       const inv = [d.a, d.b].map(id => r?.roster.find(x => x.id === id)).filter(Boolean); if (!inv.length) return 'They never showed up.';
       for (const w of inv) { fromRival(w, r, { salary: 0, weeks: 8 }); w.loan = r.id; w.loanUntil = G.week + 8; }
-      const home = signed().filter(w => !w.loan && !w.injury).sort((a, b) => b.pop - a.pop).slice(0, inv.length);
+      const home = signed().filter(w => !w.loan && !w.injury && !w.away).sort((a, b) => b.pop - a.pop).slice(0, inv.length);
       if (home.length) G.stories.push({ id: uid(), title: `Invasion: ${r.short}`, type: 'Feud', a: home.map(w => w.id), b: inv.map(w => w.id), titleId: null, heat: 45, start: G.week, status: 'active', notes: `${r.name} invaded. They leave in 8 weeks, so pay it off at a big event before then.`, log: [], autoEnd: true });
       news(`🚪 ${inv.map(w => w.name).join(' & ')} invaded from ${r.name}. They're here for 8 weeks.`, 'story');
       return `${inv.map(w => w.name).join(' & ')} are here for 8 weeks. Storyline started at 45 heat.`; }
@@ -3384,6 +3404,7 @@ function wTags(w) {
   if (G.leader === w.id && w.contract) t.push('<span class="tag">👑 Leader</span>');
   if (w.creative >= G.week && w.contract) t.push('<span class="tag">💼 Creative control</span>');
   if (w.loan && w.contract) t.push(`<span class="tag">🚪 Invader${RV(w.loan) ? ' · ' + esc(RV(w.loan).short) : ''}</span>`);
+  if (w.away && w.contract) t.push(`<span class="tag warn">${MEDIA[w.away.k]?.ic || '🎬'} Away ${awayLeft(w)}wk</span>`);
   if (w.injury > 0) t.push(`<span class="tag bad">🩹 ${w.injury}wk</span>`);
   const sk = streakTag(w); if (sk) t.push(sk);
   if (CON() && w.contract && w.contract.weeks <= TALKS_OPEN) t.push(`<span class="tag ${w.contract.weeks <= 4 ? 'warn' : ''}">📝 ${w.contract.weeks}wk</span>`);
@@ -3786,8 +3807,9 @@ function viewOffice() {
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn it on in Menu → Settings.</div>`}
   ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
-  <div class="seg-ctl" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  <div class="seg-ctl tri" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
   ${t === 'setup' ? setupView() : ''}
+  ${t === 'media' ? mediaView() : ''}
   ${t === 'rivals' ? rivalsView() : ''}
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
@@ -3856,6 +3878,7 @@ function renderModal() {
     case 'live': return liveScreen(m);
     case 'trophies': return modalTrophies();
     case 'phone': return modalPhone();
+    case 'media': return modalMedia(m);
     case 'about': return modal('About', `<div class="help" style="text-align:center">${beltSVG('belt-art', verLabel())}
       <p><b>Book It: Wrestling Booking Sim</b> · version ${VERSION}${BETA ? ' <span class="tag gold">Beta</span>' : ''}</p>
       <p class="small muted">A free, fan-made wrestling booking game. Everything built in is fictional.</p>
@@ -4181,10 +4204,10 @@ function renderPicker() {
   const q = (p.q || '').toLowerCase();
   const onCard = new Set(BK().filter(s => s.id !== UI.modal?.draft?.id).flatMap(segPeople));
   const inDraft = p.others || new Set();
-  let list = signed();
+  let list = signed().filter(w => !w.away);
   const brandF = splitOn() && !isBig(UI.selWeek) && !p.free;
   if (brandF && !p.allB) list = list.filter(w => onBrand(w));
-  if (p.free) list = G.wrestlers.slice();
+  if (p.free) list = G.wrestlers.filter(w => !w.away);
   if (q) list = list.filter(w => (w.name + ' ' + w.nick + ' ' + w.style).toLowerCase().includes(q));
   if (p.align) list = list.filter(w => w.align === p.align);
   // suggest story rivals and opposite-alignment opponents of whoever is already in the segment
@@ -4241,6 +4264,7 @@ function modalWrestler(m) {
      <button class="btn" data-act="negotiate" data-id="${w.id}">${CON() ? `📝 ${w.contract ? 'Contract' : 'Sign'}` : w.contract ? '👋 Release' : '✍️ Sign'}</button>
      <button class="btn" data-act="storyWith" data-id="${w.id}">🔥 New story</button>
    </div>
+   ${w.contract ? `<button class="btn block" style="margin-top:8px" data-act="mediaFor" data-id="${w.id}">${w.away ? `${MEDIA[w.away.k]?.ic || '🎬'} Away: ${esc(MEDIA[w.away.k]?.n || 'media')} · back week ${w.away.until}` : '📺 Media appearance'}</button>` : ''}
    <div class="tiny muted" style="margin-top:8px">“Make heel/face” switches instantly behind the scenes. For a big moment, book a Turn angle on a show instead. <button class="link" data-act="retireW" data-id="${w.id}">Retire ${esc(w.name.split(' ')[0])}</button></div>`}`;
   return modal(esc(w.name), body);
 }
@@ -5629,7 +5653,7 @@ function saveSummary(g) {
 // drops prototype keys, keeps ids to a safe alphabet, strips markup characters, coerces numbers,
 // and only allows known values in fixed-choice fields, so a crafted save can't inject markup or crash the game.
 const SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
-const NUM_KEYS = new Set(['creative', 'loanUntil', 'counter', 'turnWk', 'ranWk', 'curWk', 'raidWk', 'rating', 'wk', 'week', 'heat', 'hype', 'prestige', 'salary', 'weeks', 'attendance', 'net', 'fanDelta', 'defenses', 'since', 'lastDefense', 'start', 'xp', 'pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue', 'age', 'injury', 'momentum', 'money', 'fans', 'winner', 'streak', 'joined', 'lastBooked', 'day', 'tips', 'goalsWk', 'done', 'events', 'T', 'savedAt', 'bigEvery', 'calMonth', '_touched', 'backstage', 'champ', 'classic', 'first', 'four', 'sellout', 'stories', 'fans50', 'fans100', 'goals10', 'year', 'hof', 'best', 'created', 'd', 'def', 'ended', 'gate', 'l', 'm', 'merch', 'motn', 'n', 'payroll', 'ppv', 'production', 'showXp', 'sum', 'tv', 'tvWeeks', 'tw', 'v', 'w', 'amt', 'rWeeks', 'poachWk', 'last', 'tr', 'ti', 'from', 'to', 'retired', 'yr']);
+const NUM_KEYS = new Set(['creative', 'loanUntil', 'counter', 'turnWk', 'ranWk', 'curWk', 'raidWk', 'rating', 'wk', 'week', 'heat', 'hype', 'prestige', 'salary', 'weeks', 'attendance', 'net', 'fanDelta', 'defenses', 'since', 'lastDefense', 'start', 'xp', 'pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue', 'age', 'injury', 'momentum', 'money', 'fans', 'winner', 'streak', 'joined', 'lastBooked', 'day', 'tips', 'goalsWk', 'done', 'events', 'T', 'savedAt', 'bigEvery', 'calMonth', '_touched', 'backstage', 'champ', 'classic', 'first', 'four', 'sellout', 'stories', 'fans50', 'fans100', 'goals10', 'year', 'hof', 'best', 'created', 'd', 'def', 'ended', 'gate', 'l', 'm', 'merch', 'motn', 'n', 'payroll', 'ppv', 'production', 'showXp', 'sum', 'tv', 'tvWeeks', 'tw', 'v', 'w', 'amt', 'rWeeks', 'poachWk', 'last', 'tr', 'ti', 'from', 'to', 'retired', 'yr', 'until', 'mediaWk']);
 // player-made participant types and gimmicks: plain fields only, safe names, sane limits
 const cmName = v => String(v || '').replace(/[\u0000-\u001f<>`"&]/g, '').trim().slice(0, 30);
 function fixCustomMatch(c) {
@@ -5730,7 +5754,11 @@ function sanitizeGame(g) {
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
     if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520) };
+    if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && MEDIA[a.k].long ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3) } : undefined; if (!w.away) delete w.away; }
+    if (w.mediaWk != null) w.mediaWk = Math.floor(+w.mediaWk) || 0;
   }
+  g.mediaLog = (Array.isArray(g.mediaLog) ? g.mediaLog : []).filter(x => x && typeof x === 'object' && Object.hasOwn(MEDIA, x.k) && typeof x.wid === 'string').slice(0, 30)
+    .map(x => ({ wk: Math.floor(+x.wk) || 0, wid: x.wid, k: x.k, ...(x.short ? { short: 1 } : {}), ...(x.long ? { long: 1, wks: clamp(Math.floor(+x.wks) || 1, 1, 20) } : {}), ...(x.back ? { back: 1 } : {}), ...(x.bad ? { bad: 1 } : {}), ...(x.d != null ? { d: clamp(+x.d || 0, -50, 50) } : {}) }));
   return g;
 }
 
@@ -6213,12 +6241,20 @@ const ASKS = {
     ask: (w, b) => `${nameOf(b)} got lucky. Give me the rematch in the next 3 weeks.`,
     met: (p, r) => r.seg.kind === 'match' && r.seg.sides.some(sd => sd.includes(p.wid)) && r.seg.sides.some(sd => sd.includes(p.b) && !sd.includes(p.wid)) },
   raise: { who: w => w.pers === 'money' && MON() && CON() && w.contract.salary < asking(w) * .95, now: true, what: () => 'a raise',
-    ask: w => `Other places pay more than ${money(w.contract.salary)} a week for someone like me. I want a raise.` }
+    ask: w => `Other places pay more than ${money(w.contract.salary)} a week for someone like me. I want a raise.` },
+  // media: a promise kept from Office → Media (keptMediaAsk), so a show result never meets it
+  media: { who: w => ['star', 'money', 'ego'].includes(w.pers) && w.pop >= 30 && !mediaIn(w, 6), wk: 3, what: () => 'a media appearance',
+    ask: w => w.pers === 'money' ? 'A podcast wants me and the money is good. Book me some media in the next 3 weeks.' : 'I want people outside wrestling to know my name. Get me on a talk show or a podcast in the next 3 weeks.',
+    met: () => false },
+  movie: { who: w => ['star', 'ego'].includes(w.pers) && w.pop >= 55 && !isChamp(w) && !w.loan && !mediaIn(w, 26) && Math.random() < .25, now: true, b: () => pick([6, 8, 10]), what: () => 'time off for a movie',
+    ask: (w, b) => `A studio wants me in a movie. Filming takes ${b} weeks. Can I go? I'll come back a bigger star.`,
+    choices: (w, b) => [['Let them go', `Out ${b} weeks, back much more popular${MON() ? ` · studio pays ${money(mediaFee(w, b))}` : ''}`], ['Not now', 'They\'ll remember']], yesLbl: 'You let them go',
+    yes(w, b) { if (mediaWhyNot(w, 'movie') && !/popularity/.test(mediaWhyNot(w, 'movie'))) return `${w.name} can't go right now.`; remember(w, 8, 'You let me do the movie'); w.morale = clamp(w.morale + 6, 0, 100); textFrom(w, 'Thank you! I won\'t forget this. See you in a few weeks.'); return sendAway(w, 'movie', { wks: clamp(+b || 8, 4, 12), m: 1.2 }); } }
 };
 const persLead = w => (w.mem || []).some(m => m.v <= -10 && G.week - m.wk <= 26) ? 'Last time you made me a promise you didn\'t keep. ' : w.trust >= 72 ? 'You\'ve always looked after me, so I\'ll ask straight. ' : w.trust < 30 ? 'I\'ll be honest, I don\'t trust you much. ' : '';
 function newAsk() {
   const opts = [];
-  for (const w of signed().filter(w => !w.loan && !w.injury && !openAsk(w))) for (const [k, A] of Object.entries(ASKS)) { try { if (A.who(w)) opts.push([w, k]); } catch (e) { } }
+  for (const w of signed().filter(w => !w.loan && !w.injury && !w.away && !openAsk(w))) for (const [k, A] of Object.entries(ASKS)) { try { if (A.who(w)) opts.push([w, k]); } catch (e) { } }
   if (!opts.length) return;
   const [w, k] = pick(opts), A = ASKS[k], b = A.b ? A.b(w) : null;
   textFrom(w, persLead(w) + A.ask(w, b), { key: k, b });
@@ -6266,7 +6302,7 @@ function personaWeek(booked) {
   for (const m of G.phone) if (m.ask && m.ans == null && G.week - m.wk >= 2) { m.ans = -1; const w = W(m.wid); if (w?.contract) remember(w, -4, 'You ignored my message'); }
   for (const w of signed()) {
     w.trust += ((w.pers === 'loyal' ? 60 : 50) - w.trust) * 0.01;
-    if (w.pers === 'star' && !booked.has(w.id) && !w.injury && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
+    if (w.pers === 'star' && !booked.has(w.id) && !w.injury && !w.away && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
     if (w.pers === 'money' && CON() && w.contract.salary < asking(w) * .85) w.morale = clamp(w.morale - 1, 0, 100);
     if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? 'My deal is up for talks. I want to stay. Let\'s get it done.' : w.trust < 35 ? 'My contract is up soon. Honestly, I\'m listening to other offers.' : 'My contract is coming up. Make me a fair offer and we can talk.');
   }
@@ -6283,7 +6319,10 @@ const EV_MEM = {
   leader: [[6, 'You backed me as locker room leader'], [-2]],
   noshow: [[-4, 'You fined me for missing TV'], [4, 'You talked it out with me']],
   refuse: [[4, 'You changed the finish for me'], [-8, 'You made me lose when I didn\'t want to'], [0]],
-  starRaid: [[6, 'You fought to keep me'], [-6, 'You held me to my contract'], [0]]
+  starRaid: [[6, 'You fought to keep me'], [-6, 'You held me to my contract'], [0]],
+  mediaOffer: [[2, 'You got me on a big show'], [-2, 'You turned down a big media spot for me']],
+  movieOffer: [[8, 'You let me do the movie'], [-6, 'You stopped me doing the movie']],
+  indieOffer: [[4, 'You let me tour the indies'], [-2]]
 };
 function personaEvent(key, i, d) {
   if (!PER() || !EV_MEM[key]?.[i]) return; ensurePers();
@@ -6294,6 +6333,7 @@ function phoneAnswer(m, i) {
   const w = W(m.wid), A = m.ask && ASKS[m.ask.key]; if (!w?.contract || !A) { m.ans = -1; return 'They have moved on.'; }
   const p = { wid: w.id, key: m.ask.key, b: m.ask.b };
   m.ans = i;
+  if (i === 0 && A.yes) return A.yes(w, m.ask.b);
   if (i === 0 && A.now) {
     const sal = Math.round(w.contract.salary * 1.1 / 100) * 100; w.contract.salary = sal; w.morale = clamp(w.morale + 8, 0, 100); remember(w, 10, 'You gave me a raise when I asked');
     textFrom(w, 'Now that\'s respect. Thanks.'); G.phone[0].read = true; return `${w.name} now earns ${money(sal)}/wk.`;
@@ -6307,6 +6347,7 @@ function phoneAnswer(m, i) {
 }
 function phoneChoices(m) {
   const w = W(m.wid), A = ASKS[m.ask.key]; if (!w || !A) return [];
+  if (A.choices) return A.choices(w, m.ask.b);
   if (A.now) return [[MON() ? `Give a 10% raise` : 'Give a raise', `${money(Math.round(w.contract.salary * 1.1 / 100) * 100)}/wk. Trust up`], ['Not now', 'They\'ll remember']];
   return [['Promise it', `${A.wk === 1 ? 'This week' : 'By week ' + (G.week + A.wk - 1)}. Keep it and they trust you more`], ['Not now', 'They\'ll remember']];
 }
@@ -6320,7 +6361,7 @@ function modalPhone() {
       <div class="ph-h"><b>${esc(w.name)}</b><span class="tiny muted">Week ${m.wk}</span></div>
       <div class="ph-b">${esc(m.t)}</div>
       ${open ? `<div class="bs-c">${ch.map(([l, d], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="phoneAns" data-id="${m.id}:${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>`
-        : m.ask ? `<div class="ph-you">${m.ans === 0 ? (ASKS[m.ask.key]?.now ? 'You gave the raise' : 'You promised') : m.ans === 1 ? 'You said not now' : 'No answer'}</div>` : ''}
+        : m.ask ? `<div class="ph-you">${m.ans === 0 ? (ASKS[m.ask.key]?.yesLbl || (ASKS[m.ask.key]?.now ? 'You gave the raise' : 'You promised')) : m.ans === 1 ? 'You said not now' : 'No answer'}</div>` : ''}
     </div></div>`; }).join('');
   const body = `<p class="small muted" style="margin-top:0">Your wrestlers text you here. Answer their asks before the next show. They remember what you do.</p>
     ${pr ? `<div class="sec" style="margin-top:0">Promises you made</div><div class="card" style="padding:4px 14px">${pr}</div>` : ''}
@@ -6345,6 +6386,174 @@ Object.assign(A, {
   phoneAns(v) {
     const [id, i] = String(v).split(':'), m = (G.phone || []).find(x => x.id === id); if (!m || m.ans != null) return;
     const msg = phoneAnswer(m, +i); G.booker.xp += 1; commit(msg);
+  }
+});
+// =====================================================================
+//  Media appearances: short spots keep them on TV, long ones take them away for a while
+// =====================================================================
+const MEDIA = {
+  talk: { ic: '📺', n: 'TV talk show', d: 'A spot on a talk show or morning TV.', pop: 3, risk: .14, stat: 'cha' },
+  pod: { ic: '🎤', n: 'Podcast', d: 'A long chat. Gets them noticed, but loose lips happen.', pop: 2.5, risk: .18, stat: 'mic' },
+  press: { ic: '🗞️', n: 'Press and radio', d: 'Interviews with papers, websites and radio.', pop: 1.5, risk: .08, stat: 'mic' },
+  con: { ic: '🎟️', n: 'Fan signing', d: 'Meet fans at a convention. Safe and steady.', pop: 1.5, risk: .04, stat: 'cha', cash: true },
+  movie: { ic: '🎬', n: 'Movie role', d: 'Shoot a movie. They come back a much bigger star.', long: true, wks: 8, pop: 18, mo: 15, min: 50, fee: true },
+  tour: { ic: '🌐', n: 'Media tour', d: 'Travel doing press. Your company gains fans too.', long: true, wks: 3, pop: 9, mo: 8, fans: .03, cost: true },
+  indies: { ic: '🤼', n: 'Work the indies', d: 'Wrestle on indie shows. Sharpens their ring work.', long: true, wks: 4, pop: 8, mo: 10, ring: 3, fit: true }
+};
+const MEDIA_SLOTS = 3;
+const mText = (w, t) => { if (PER()) { ensurePers(); textFrom(w, t); } };
+const OUTLETS = { talk: ['Late Night Live', 'The Morning Mix', 'Sunday Night Chat'], pod: ['Off the Ropes', 'The Big Chat', 'Hot Mic Radio'] };
+const mediaLog = () => Array.isArray(G.mediaLog) ? G.mediaLog : (G.mediaLog = []);
+const mediaUsed = () => mediaLog().filter(x => x.wk === G.week && x.short).length;
+const mediaIn = (w, n) => mediaLog().some(x => x.wid === w.id && x.wk > G.week - n);
+const isChamp = w => G.titles.some(t => t.holder.includes(w.id));
+const awayLeft = w => Math.max(1, (w.away?.until || 0) - G.week);
+function mediaRisk(w, k) {
+  const M = MEDIA[k], s = +w[M.stat] || 50, p = PER() ? { hot: 1.6, ego: 1.3, loyal: .8, team: .9 }[w.pers] || 1 : 1;
+  return clamp(M.risk * (1.35 - s / 100 * .7) * p, .02, .4);
+}
+// popularity gains shrink near the top, like addPop, so a slip-up costs about the same as a good spot earns
+const mediaGain = (w, k, m = 1) => MEDIA[k].pop * m * Math.max(0.08, 1 - w.pop / 105);
+function mediaWhyNot(w, k) {
+  const M = MEDIA[k];
+  if (!w?.contract) return 'Not signed';
+  if (w.away) return 'Away right now';
+  if (!M.long) return w.mediaWk === G.week ? 'Did media this week' : '';
+  if (w.loan) return 'Here on loan';
+  if (isChamp(w)) return 'Champions stay on TV';
+  if (M.fit && w.injury > 0) return 'Injured';
+  if (M.min && w.pop < M.min) return `Needs ${M.min}+ popularity`;
+  return '';
+}
+function logMedia(w, k, o) { mediaLog().unshift({ wk: G.week, wid: w.id, k, ...o }); if (G.mediaLog.length > 30) G.mediaLog.length = 30; }
+function keptMediaAsk(w) {
+  if (!PER() || !Array.isArray(G.promises)) return;
+  const p = G.promises.find(p => p.wid === w.id && p.key === 'media'); if (!p) return;
+  G.promises.splice(G.promises.indexOf(p), 1); remember(w, 12, 'You kept your promise: a media appearance'); w.morale = clamp(w.morale + 8, 0, 100);
+  mText(w, pick(['You got me that media spot. Thanks for keeping your word.', 'Promise kept. People outside wrestling know my name now.']));
+}
+// a short spot: no fatigue, they stay on the show, usually a boost with a small chance of a slip-up
+function doMedia(w, k, m = 1, ev = false) {
+  const M = MEDIA[k], before = w.pop, g = mediaGain(w, k, m);
+  w.mediaWk = G.week; keptMediaAsk(w);
+  if (Math.random() < mediaRisk(w, k) * (ev ? .7 : 1)) {
+    // heels get away with more: bad press is still press for a villain
+    w.pop = clamp(w.pop - g / m * (w.align === 'heel' ? .6 : 1.1), 1, 100); w.momentum = clamp(w.momentum - 4, -50, 50);
+    const what = pick(['said something they shouldn\'t have', 'took a cheap shot at the fans', 'talked about backstage business', 'froze up on air']);
+    if (Math.random() < .5) mText(w, pick(['Ok, that interview did not go how I wanted. My bad.', 'I know, I know. I shouldn\'t have said that.']));
+    logMedia(w, k, { short: !ev, d: Math.round((w.pop - before) * 10) / 10, bad: 1 });
+    news(`${M.ic} ${w.name} ${what} during a ${M.n.toLowerCase()} spot. Popularity down.`, 'office');
+    return `${w.name} ${what}. Pop ${Math.round(before)} → ${Math.round(w.pop)}.`;
+  }
+  addPop(w, M.pop * m); w.momentum = clamp(w.momentum + 2 * m, -50, 50);
+  let cash = 0; if (M.cash && MON()) { cash = Math.round((400 + w.pop * 40) * m / 100) * 100; G.money += cash; }
+  logMedia(w, k, { short: !ev, d: Math.round((w.pop - before) * 10) / 10 });
+  news(`${M.ic} ${w.name} did a ${M.n.toLowerCase()} spot and the fans loved it.`, 'office');
+  return `${w.name} went over well. Pop ${Math.round(before)} → ${Math.round(w.pop)}${cash ? ` · +${money(cash)}` : ''}.`;
+}
+// pull someone from every booked card when they leave for a while
+function pullFromCards(w) {
+  const cards = [G.card, ...Object.values(G.future || {})];
+  for (const s of G.shows || []) { if (Array.isArray(s.card)) cards.push(s.card); for (const c of Object.values(s.future || {})) cards.push(c); }
+  let n = 0;
+  for (const c of new Set(cards)) {
+    if (!Array.isArray(c)) continue;
+    for (let i = c.length - 1; i >= 0; i--) {
+      const seg = c[i]; if (!segPeople(seg).includes(w.id)) continue;
+      n++; removeFromSeg(seg, w.id);
+      if (!segPeople(seg).length || (seg.kind === 'match' && seg.sides.filter(sd => sd.length).length < 2)) c.splice(i, 1);
+    }
+  }
+  return n;
+}
+const mediaFee = (w, wks) => Math.round(w.pop * 80 * wks / 1000) * 1000;
+const tourCost = wks => Math.round(1500 * wks / 500) * 500;
+// a long one: away for some weeks, back with a big boost (mediaWeek)
+function sendAway(w, k, o = {}) {
+  const M = MEDIA[k], wks = o.wks || M.wks, m = o.m || 1;
+  const pulled = pullFromCards(w);
+  if (PER() && Array.isArray(G.promises)) G.promises = G.promises.filter(p => p.wid !== w.id || p.key === 'media');
+  keptMediaAsk(w);
+  w.away = { k, until: G.week + wks, from: G.week, m };
+  let extra = '';
+  if (M.fee && MON()) { const f = o.fee ?? mediaFee(w, wks); G.money += f; extra = ` The studio paid ${money(f)}.`; }
+  if (M.cost && MON()) { const c = tourCost(wks); G.money -= c; extra = ` Travel cost ${money(c)}.`; }
+  logMedia(w, k, { long: 1, wks });
+  news(`${M.ic} ${w.name} is away for ${wks} weeks: ${M.n.toLowerCase()}. Back in week ${w.away.until}.`, 'office');
+  return `${w.name} is away until week ${w.away.until}.${pulled ? ` Taken off ${pulled} booked segment${pulled === 1 ? '' : 's'}.` : ''}${extra}`;
+}
+// end of the week: whoever is due back returns a bigger star
+function mediaWeek() {
+  for (const w of G.wrestlers) {
+    if (!w.away) continue;
+    const M = MEDIA[w.away.k];
+    if (!w.contract || !M) { delete w.away; continue; }
+    if (G.week + 1 < w.away.until) continue;
+    const k = w.away.k, m = clamp(+w.away.m || 1, .5, 3), before = w.pop;
+    addPop(w, M.pop * m); w.momentum = clamp(w.momentum + M.mo * m, -50, 50);
+    if (M.ring) w.ring = clamp(w.ring + Math.round(M.ring * m), 0, 100);
+    let f = 0; if (M.fans) { f = Math.round(G.fans * M.fans * m * Math.max(0.15, 1 - G.fans / fanCap())); G.fans += f; }
+    w.fatigue = k === 'indies' ? 25 : 0; w.lastBooked = G.week + 1; w.morale = clamp(w.morale + 6, 0, 100);
+    delete w.away;
+    logMedia(w, k, { back: 1, d: Math.round((w.pop - before) * 10) / 10 });
+    news(`${M.ic} ${w.name} is back from ${k === 'indies' ? 'the indies' : 'their ' + M.n.toLowerCase()} and more popular than ever: Pop ${Math.round(before)} → ${Math.round(w.pop)}${f ? `, +${kfmt(f)} fans` : ''}.`, 'office');
+    G.todos.unshift({ t: `${w.name} is back: book a big return`, done: false });
+    mText(w, pick(['I\'m back. Put me on the show, the fans are waiting.', 'Good to be home. Let\'s use this buzz while it lasts.', 'Back and ready. Give me something big.']));
+  }
+}
+function mediaView() {
+  const used = mediaUsed(), away = signed().filter(w => w.away), log = mediaLog().slice(0, 8);
+  const item = (k, M, full) => `<button class="item" data-act="mediaType" data-id="${k}" ${full ? 'disabled aria-disabled="true" style="opacity:.55"' : ''}><span class="mile-i">${M.ic}</span><div class="main"><div class="t">${M.n}</div><div class="d">${M.d}</div>
+    <div class="d"><b>${M.long ? `Out ${M.wks} weeks · big boost when back` : `Popularity up · ${M.risk >= .15 ? 'some' : M.risk >= .08 ? 'small' : 'tiny'} risk`}</b>${M.long && M.fee && MON() ? ' · studio pays' : ''}${M.long && M.cost && MON() ? ` · costs ${money(tourCost(M.wks))}` : ''}${M.ring ? ' · Ring up' : ''}${M.min ? ` · ${M.min}+ pop` : ''}</div></div></button>`;
+  const lw = x => { const w = W(x.wid), M = MEDIA[x.k]; if (!w || !M) return '';
+    return `<div class="news"><span class="wk">WK ${x.wk}</span><span class="sp">${M.ic} <b>${esc(w.name)}</b> ${x.back ? 'came back' : x.long ? `left for ${x.wks} weeks` : x.bad ? 'slipped up' : 'went over'}${x.long ? `: ${esc(M.n.toLowerCase())}` : ''}</span>${x.d ? `<span class="tiny" style="color:${x.d < 0 ? 'var(--bad)' : 'var(--good)'}">${x.d > 0 ? '+' : ''}${x.d} pop</span>` : ''}</div>`; };
+  return `<div class="small muted" style="margin-bottom:8px">Short spots use no fatigue and keep them on your shows. Long ones take them away for a while, then they come back much more popular.</div>
+    ${away.length ? `<div class="sec" style="margin-top:4px">Away now</div><div class="list">${away.map(w => wItem(w, 'openW', `${MEDIA[w.away.k]?.n || 'Away'} · back week ${w.away.until}`)).join('')}</div>` : ''}
+    <div class="sec">Short appearances <span class="cnt">${used}/${MEDIA_SLOTS} this week</span></div>
+    <div class="list">${Object.entries(MEDIA).filter(([, M]) => !M.long).map(([k, M]) => item(k, M, used >= MEDIA_SLOTS)).join('')}</div>
+    ${used >= MEDIA_SLOTS ? '<div class="tiny muted" style="margin-top:6px">All media spots are used this week. More open next week.</div>' : ''}
+    <div class="sec">Long appearances</div>
+    <div class="list">${Object.entries(MEDIA).filter(([, M]) => M.long).map(([k, M]) => item(k, M, false)).join('')}</div>
+    ${log.length ? `<div class="sec">Recent</div><div class="card" style="padding:4px 14px">${log.map(lw).join('')}</div>` : ''}
+    <div class="tiny muted" style="margin-top:8px">Bigger offers come up as backstage events.${PER() ? ' Some wrestlers will text you asking for media.' : ''}</div>`;
+}
+// pick who goes (m.k set), pick what they do (m.wid set), then confirm
+function modalMedia(m) {
+  const w = m.wid && W(m.wid), M = m.k && MEDIA[m.k];
+  if (w && M) {
+    const why = mediaWhyNot(w, m.k), full = !M.long && mediaUsed() >= MEDIA_SLOTS;
+    const n = M.long ? [G.card, ...Object.values(G.future || {})].flat().filter(s => segPeople(s).includes(w.id)).length : 0;
+    const g = Math.round(mediaGain(w, m.k) * 10) / 10;
+    const body = `<div class="row" style="gap:10px;margin-bottom:10px">${av(w, 44)}<div class="sp"><b>${esc(w.name)}</b><div class="tiny muted">Pop ${Math.round(w.pop)} · Mic ${w.mic} · Charisma ${w.cha}</div></div></div>
+      <div class="card"><div class="row"><span class="mile-i">${M.ic}</span><div class="sp"><b>${M.n}</b><div class="tiny muted">${M.d}</div></div></div>
+      ${M.long ? `<div class="small" style="margin-top:8px">Away for <b>${M.wks} weeks</b>, back in week ${G.week + M.wks}. About <b>+${g} pop</b> when they return${M.ring ? `, Ring +${M.ring}` : ''}.${M.fee && MON() ? ` The studio pays ${money(mediaFee(w, M.wks))}.` : ''}${M.cost && MON() ? ` Travel costs ${money(tourCost(M.wks))}.` : ''}</div>
+        ${n ? `<div class="small" style="margin-top:6px;color:var(--warn)">They're booked in ${n} segment${n === 1 ? '' : 's'}. They'll be taken off.</div>` : ''}`
+      : `<div class="small" style="margin-top:8px">About <b>+${g} pop</b>. ${Math.round(mediaRisk(w, m.k) * 100)}% chance they slip up and lose some. No fatigue, and they stay on the show.</div>`}</div>
+      ${why || full ? `<div class="small" style="color:var(--bad);margin-top:8px">${esc(why || 'All media spots are used this week.')}</div>` : ''}`;
+    return modal('Media appearance', body, `<button class="btn" data-act="${m.from === 'w' ? 'mediaFor' : 'mediaType'}" data-id="${m.from === 'w' ? w.id : m.k}">Back</button><button class="btn pri" data-act="mediaGo" ${why || full ? 'disabled' : ''}>${M.long ? 'Send them' : 'Book it'}</button>`);
+  }
+  if (w) {
+    const body = `<div class="small muted" style="margin-bottom:8px">What should ${esc(w.name.split(' ')[0])} do?</div><div class="list">${Object.entries(MEDIA).map(([k, X]) => { const why = mediaWhyNot(w, k) || (!X.long && mediaUsed() >= MEDIA_SLOTS ? 'No spots left this week' : '');
+      return `<button class="item" data-act="mediaPickT" data-id="${k}" ${why ? 'style="opacity:.55"' : ''}><span class="mile-i">${X.ic}</span><div class="main"><div class="t">${X.n}</div><div class="d">${why ? esc(why) : X.long ? `Out ${X.wks} weeks · +${Math.round(mediaGain(w, k) * 10) / 10} pop when back` : `+${Math.round(mediaGain(w, k) * 10) / 10} pop · ${Math.round(mediaRisk(w, k) * 100)}% risk`}</div></div></button>`; }).join('')}</div>`;
+    return modal('Media appearance', body);
+  }
+  const q = (m.q || '').toLowerCase();
+  const list = signed().filter(x => !mediaWhyNot(x, m.k) && (!q || x.name.toLowerCase().includes(q))).sort((a, b) => b.pop - a.pop);
+  const body = `<div class="row" style="gap:8px;margin-bottom:8px"><span class="mile-i">${M.ic}</span><div class="sp small muted">${M.d}</div></div>
+    <input type="search" placeholder="Search" aria-label="Search wrestlers" value="${esc(m.q || '')}" data-in="mediaQ" style="margin-bottom:8px">
+    <div class="list">${list.map(x => wItem(x, 'mediaPickW', M.long ? `+${Math.round(mediaGain(x, m.k) * 10) / 10} pop when back` : `+${Math.round(mediaGain(x, m.k) * 10) / 10} pop · ${Math.round(mediaRisk(x, m.k) * 100)}% risk`)).join('') || `<div class="empty">Nobody can do this right now.${M.min ? ` It needs ${M.min}+ popularity.` : ''}</div>`}</div>`;
+  return modal(`${M.ic} ${M.n}`, body);
+}
+Object.assign(A, {
+  mediaType(k) { if (MEDIA[k]) openModal({ type: 'media', k }); },
+  mediaFor(id) { if (W(id)) openModal({ type: 'media', wid: id, from: 'w' }); },
+  mediaPickW(id) { UI.modal = { ...UI.modal, wid: id }; render(); },
+  mediaPickT(k) { UI.modal = { ...UI.modal, k }; render(); },
+  mediaGo() {
+    const m = UI.modal, w = m && W(m.wid), M = m && MEDIA[m.k]; if (!w || !M) return;
+    if (mediaWhyNot(w, m.k) || (!M.long && mediaUsed() >= MEDIA_SLOTS)) return toast('They can\'t do that right now.');
+    const msg = M.long ? sendAway(w, m.k) : doMedia(w, m.k);
+    UI.modal = null; UI.picker = null; commit(msg);
   }
 });
 // =====================================================================
@@ -6764,6 +6973,7 @@ document.addEventListener('input', e => {
     if (k === 'rosterQ') { UI.rosterQ = v; debRender(el, e); }
     else if (k === 'pickQ') { UI.picker.q = v; debRender(el, e); }
     else if (k === 'cQ') { UI.modal.q = v; debRender(el, e); }
+    else if (k === 'mediaQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'cTitle') UI.modal.title = v;
     else if (k === 'cDesc') UI.modal.desc = v;
     else if (k === 'sbEmail') UI.modal.email = v;
@@ -6874,7 +7084,7 @@ function reRender(el) {
 }
 // filter lists after a short typing pause; never mid-composition (predictive text / IME)
 let renT; function debRender(el, e) { clearTimeout(renT); if (e && e.isComposing) return; renT = setTimeout(() => { if (el.isConnected) reRender(el); }, 180); }
-document.addEventListener('compositionend', e => { if (e.target.dataset?.in && /^(rosterQ|pickQ|cQ)$/.test(e.target.dataset.in)) debRender(e.target); });
+document.addEventListener('compositionend', e => { if (e.target.dataset?.in && /^(rosterQ|pickQ|cQ|mediaQ)$/.test(e.target.dataset.in)) debRender(e.target); });
 let saveT; function debSave() { clearTimeout(saveT); saveT = setTimeout(save, 900); }
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
@@ -6949,6 +7159,7 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.6';
 const WHATS_NEW = [
+  ['📺 Media appearances', 'Office → Media: send wrestlers on talk shows, podcasts and fan signings for a popularity boost (with a small chance of a slip-up), or away on movies, media tours and indie runs to come back much bigger. Big offers come as backstage events, and some wrestlers will ask.'],
   ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Rivals), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
   ['🎤 Plan your promos', 'Pick what a promo is about and its tone: fiery, calm, funny, cheap heat or from the heart. The speaker\'s mic skill decides if it lands or falls flat.'],
   ['💼 Backstage politics', 'New backstage moments: stars who refuse to lose, creative control, a locker room leader, cliques and no-shows.'],
