@@ -233,4 +233,4 @@ The show-night crowd uses short recordings from Wikimedia Commons. All are publi
 | `sounds/ooh.mp3` | [Ohhh ahhh](https://commons.wikimedia.org/wiki/File:Ohhh_ahhh.ogg) by starlite | Public domain |
 | `sounds/boo.mp3` | [Audience Booing](https://commons.wikimedia.org/wiki/File:Soundgoats_-_Audience_Booing.wav) by Brendon (Soundgoats) | Public domain |
 
-The bell is still made in code. Each crowd line under a result ("Huge pop", "Loud boos for X", "Crickets") is chosen from what actually happened, and the clip that plays matches it. A flat segment plays nothing.
+The bell is still made in code. The crowd is only heard for the main event, title changes and segments rated 80+, so it stays special. Each crowd line under a result ("Huge pop", "Loud boos for X", "Crickets") is chosen from what actually happened, and the clip that plays matches it. A flat segment plays nothing.
