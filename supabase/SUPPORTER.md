@@ -1,6 +1,6 @@
-# Book It Supporter: setup
+# BookIt Supporter: setup
 
-Book It Supporter is an optional subscription: **$2.99 a month or $24.99 a year**. The whole game stays free.
+BookIt Supporter is an optional subscription: **$2.99 a month or $24.99 a year**. The whole game stays free.
 Supporters get 6 cloud save slots (instead of 3), more Community space with up to 10 shared saves (instead of 3),
 a gold Supporter badge in Community, and early access to new features.
 
@@ -13,7 +13,7 @@ enforce the perks, so nobody can unlock them by editing the game.
 Do it all in Stripe's **Test mode** first, then repeat in live mode.
 
 1. **Stripe account.** Sign up at stripe.com and finish activation (business details and a bank account for payouts).
-2. **Product.** Product catalogue → Add product → "Book It Supporter", with two recurring prices: $2.99 monthly and $24.99 yearly.
+2. **Product.** Product catalogue → Add product → "BookIt Supporter", with two recurring prices: $2.99 monthly and $24.99 yearly.
 3. **Payment Links.** Create one link for each price. Under *After payment*, choose *Don't show confirmation page* and redirect to
    `https://anthonymcguigan.github.io/bookit/?supporter=done`. Send the two `https://buy.stripe.com/...` links to Claude. They are public, so they're safe to share.
 4. **Customer portal.** Settings → Billing → Customer portal → turn it on and allow cancelling. Send Claude the login link (`https://billing.stripe.com/p/login/...`), so supporters can cancel or change their card.

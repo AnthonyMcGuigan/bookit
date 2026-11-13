@@ -1,7 +1,7 @@
 {
-  "name": "Book It: Wrestling Booking Sim",
-  "short_name": "Book It",
-  "description": "Book It: run your own pro wrestling promotion. Book shows, build storylines, sign contracts.",
+  "name": "BookIt: Wrestling Booking Sim",
+  "short_name": "BookIt",
+  "description": "BookIt: run your own pro wrestling promotion. Book shows, build storylines, sign contracts.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

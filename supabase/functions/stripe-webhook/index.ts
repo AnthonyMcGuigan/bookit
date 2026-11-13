@@ -1,4 +1,4 @@
-// Book It Supporter: Stripe calls this after a checkout and whenever a subscription changes.
+// BookIt Supporter: Stripe calls this after a checkout and whenever a subscription changes.
 // It records who is a supporter in public.supporters. Nothing else in the game can write that table.
 //
 // Secrets (Supabase → Edge Functions → Secrets, set them yourself and never share them):

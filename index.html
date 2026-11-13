@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>/* iOS only: block the zoom-on-focus. iOS Safari still lets people pinch-zoom with this set. */
 if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) document.querySelector('meta[name=viewport]').content = 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover';</script>
-<title>Book It: Wrestling Booking Sim</title>
+<title>BookIt: Wrestling Booking Sim</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://svqfswhnesaglciviprw.supabase.co; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap">
 <meta name="description" content="Run your own pro wrestling promotion: draft a roster, book weekly shows, build storylines, sign contracts. Free, works offline.">
-<meta property="og:title" content="Book It: Wrestling Booking Sim">
+<meta property="og:title" content="BookIt: Wrestling Booking Sim">
 <meta property="og:description" content="Run your own pro wrestling promotion: draft a roster, book weekly shows, build storylines, sign contracts.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="icons/icon-512.png">
@@ -805,7 +805,7 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 .co-st { font-weight: 800; }
 .co-wait { flex-wrap: wrap; gap: 8px; }
 .co-wait .sp { flex: 1 1 180px; }
-/* ---- Book It logo and splash ---- */
+/* ---- BookIt logo and splash ---- */
 .home .hero h1 em, .wz .hero h1 em { display: inline; font-size: inherit; }
 .logo-art { width: min(250px, 70vw); height: auto; display: block; margin: 0 auto 4px; filter: drop-shadow(0 14px 26px rgba(0,0,0,.45)); overflow: visible; }
 .logo-art.sm { width: min(170px, 50vw); }
@@ -844,12 +844,12 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 <div id="root"></div>
 <div id="modals"></div>
 <div id="toast" role="status" aria-live="polite"></div>
-<noscript>Book It needs JavaScript turned on.</noscript>
+<noscript>BookIt needs JavaScript turned on.</noscript>
 <script>
 (() => {
 'use strict';
 // =====================================================================
-//  Book It: Wrestling Booking Sim (formerly Ringside Booker). Save keys keep the old ringsideBooker.* names so saves carry over.
+//  BookIt: Wrestling Booking Sim (formerly Ringside Booker). Save keys keep the old ringsideBooker.* names so saves carry over.
 //  Single file, no dependencies. All saves live in this browser's localStorage.
 // =====================================================================
 
@@ -3334,7 +3334,7 @@ function toast(msg) {
 // ---------- wrestling art (inline SVG, no image files) ----------
 function belt(t) { return `<span class="belt">${esc(t)}</span>`; }
 function logoSVG(cls = 'logo-art') {
-  return `<svg class="${cls}" viewBox="-10 -6 260 232" role="img" aria-label="Book It logo: a ring bell being struck"><defs>
+  return `<svg class="${cls}" viewBox="-10 -6 260 232" role="img" aria-label="BookIt logo: a ring bell being struck"><defs>
 <radialGradient id="bg1" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#fff6cf"/><stop offset=".35" stop-color="#f6c544"/><stop offset=".8" stop-color="#c98512"/><stop offset="1" stop-color="#8a5a08"/></radialGradient>
 <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c2"/><stop offset=".5" stop-color="#f6c544"/><stop offset="1" stop-color="#c98512"/></linearGradient>
 <linearGradient id="wd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a0522d"/><stop offset="1" stop-color="#6b3418"/></linearGradient>
@@ -3364,7 +3364,7 @@ function ringSVG(label) {
   <ellipse cx="150" cy="108" rx="44" ry="15" style="fill:var(--accent)" opacity=".9"/>
   <text x="150" y="114" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="17" letter-spacing="1" style="fill:var(--accent-ink)">${L}</text>
   <rect x="12" y="140" width="276" height="34" style="fill:var(--card2)"/><rect x="12" y="140" width="276" height="4" fill="#000" opacity=".25"/>
-  <text x="150" y="164" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="15" letter-spacing="4" style="fill:var(--accent)">BOOK IT</text>
+  <text x="150" y="164" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="15" letter-spacing="4" style="fill:var(--accent)">BOOKIT</text>
   <g stroke-linecap="round" fill="none">
    <path d="M48 42L252 42" stroke="#e53945" stroke-width="3"/><path d="M48 54L252 54" stroke="#f1f1f4" stroke-width="3"/><path d="M48 66L252 66" stroke="#2f6fe0" stroke-width="3"/>
    <path d="M48 42L12 80M252 42L288 80" stroke="#e53945" stroke-width="3"/><path d="M48 54L12 98M252 54L288 98" stroke="#f1f1f4" stroke-width="3"/><path d="M48 66L12 116M252 66L288 116" stroke="#2f6fe0" stroke-width="3"/>
@@ -3539,7 +3539,7 @@ function viewStart() {
           ${Array.isArray(u.stars) && u.stars.length ? `<span class="hs-s">${u.stars.slice(0, 3).map(x => esc(String(x))).join(' · ')}</span>` : ''}
           <span class="hs-go">Play this ›</span></button>`; }).join('')
       : [0, 1].map(() => '<div class="hs-card skel"><span></span><span></span><span></span></div>').join('')}</div>`;
-  return `<div class="app home"><button class="iconbtn home-menu" data-act="menu" aria-label="Menu">☰</button><div class="hero">${logoSVG()}<h1>Book <em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div>
+  return `<div class="app home"><button class="iconbtn home-menu" data-act="menu" aria-label="Menu">☰</button><div class="hero">${logoSVG()}<h1>Book<em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div>
   <p class="muted">Book the shows. Write the stories. Sign the talent.</p></div>
   ${top ? `<button class="hs-cont" data-act="loadSlot" data-id="${top.n}"><span class="hs-k">Continue</span><span class="hs-ct">${esc(top.info.name)}</span><span class="hs-cd">Week ${top.info.week} · saved ${new Date(top.info.savedAt).toLocaleDateString()}</span><span class="hs-arrow">›</span></button>
     ${rest.length ? `<div class="list" style="margin-top:8px">${rest.map(s => `<button class="item" data-act="loadSlot" data-id="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">${esc(s.info.name)}</div><div class="d">Week ${s.info.week} · saved ${new Date(s.info.savedAt).toLocaleDateString()}</div></div></button>`).join('')}</div>` : ''}` : ''}
@@ -3906,7 +3906,7 @@ function renderModal() {
     case 'phone': return modalPhone();
     case 'media': return modalMedia(m);
     case 'about': return modal('About', `<div class="help" style="text-align:center">${beltSVG('belt-art', verLabel())}
-      <p><b>Book It: Wrestling Booking Sim</b> · version ${VERSION}${BETA ? ' <span class="tag gold">Beta</span>' : ''}</p>
+      <p><b>BookIt: Wrestling Booking Sim</b> · version ${VERSION}${BETA ? ' <span class="tag gold">Beta</span>' : ''}</p>
       <p class="small muted">A free, fan-made wrestling booking game. Everything built in is fictional.</p>
       <p class="small muted">Player-made rosters are unofficial and not tied to any wrestling company. Names belong to their owners.</p>
       <p class="small muted">Saves stay in this browser. Back them up from the menu.</p>
@@ -4021,7 +4021,7 @@ ${displaySettings()}
 }
 
 // ---- cloud saves (Supabase): one row per player in cloud1..cloud3, readable only by that player ----
-// ---- Book It Supporter: an optional subscription through Stripe. The core game stays free. ----
+// ---- BookIt Supporter: an optional subscription through Stripe. The core game stays free. ----
 // Fill in the Payment Links from your Stripe dashboard. Leave them empty and the Supporter page says "opening soon".
 const SUP_LIVE = { month: '', year: '' };
 // Stripe test-mode links show only when the game is opened with ?suptest (remembered for this tab), for trying a test card
@@ -4051,7 +4051,7 @@ async function supReturn() {
   if (!/[?&]supporter=done\b/.test(location.search)) return;
   try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
   UI.modal = { type: 'support', waiting: true }; render();
-  for (let i = 0; i < 10; i++) { await supCheck(); if (isSup()) { if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); } SFX.tap?.(); return toast('Thank you! You\'re a Book It Supporter. ⭐'); } await new Promise(r => setTimeout(r, 3000)); }
+  for (let i = 0; i < 10; i++) { await supCheck(); if (isSup()) { if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); } SFX.tap?.(); return toast('Thank you! You\'re a BookIt Supporter. ⭐'); } await new Promise(r => setTimeout(r, 3000)); }
   if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); }
   toast('Payment received. Your perks can take a minute. Check back here shortly.');
 }
@@ -4093,7 +4093,7 @@ function modalCloud(m) {
   const u = sbSess?.user, L = m.list;
   const sup = isSup();
   const rows = CLOUD_SLOTS.map(n => { const x = L?.[n], sm = x?.sum || {};
-    if (n > CLOUD_FREE && !sup && !x) return `<div class="item"><div class="av" style="background:var(--card2);color:var(--muted)">${n}</div><div class="main"><div class="t">Supporter slot</div><div class="d">⭐ Book It Supporters get 3 extra cloud slots.</div></div><button class="btn sm" data-act="support">See Supporter</button></div>`;
+    if (n > CLOUD_FREE && !sup && !x) return `<div class="item"><div class="av" style="background:var(--card2);color:var(--muted)">${n}</div><div class="main"><div class="t">Supporter slot</div><div class="d">⭐ BookIt Supporters get 3 extra cloud slots.</div></div><button class="btn sm" data-act="support">See Supporter</button></div>`;
     return `<div class="item"><div class="av" style="background:${n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${n}</div><div class="main"><div class="t">${x ? esc(String(sm.promo || 'Saved game')) : 'Empty'}</div><div class="d">${x ? `Week ${+sm.week || '?'} · ${x.at ? new Date(x.at).toLocaleString() : ''}` : L ? '—' : 'Loading…'}</div></div>
       <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${x ? `<button class="btn sm" data-act="cloudGet" data-id="${n}">Load</button>` : ''}${G && (n <= CLOUD_FREE || sup) ? `<button class="btn sm" data-act="cloudUp" data-id="${n}">Upload</button>` : ''}${x ? `<button class="btn sm bad" data-act="cloudDel" data-id="${n}" aria-label="Delete cloud slot ${n}">🗑</button>` : ''}</div></div>`; }).join('');
   const body = `<p class="small muted" style="margin-top:0">Keep your games online, and load them on another phone or computer. Only you can see your cloud saves.</p>
@@ -4113,7 +4113,7 @@ function privacyHTML() {
   ${sbOn() ? `  <h3>When you use Community</h3>
   <p>Community and feedback are stored online with Supabase, a database service. When you open Community you get a guest account with a random id. We don't ask for your name. What you post, your profile (name, bio, color), what you like, what you play or add, and who you follow can be seen by anyone who plays.</p>
   <p>Cloud saves (Menu → Cloud saves) are stored with the same guest account, and only you can read them. Delete them from that page any time.</p>
-  <p>Book It Supporter payments are handled by Stripe. The game never sees your card. We keep only whether your plan is active, when it renews, and Stripe's customer and subscription ids. Current supporters with a Community profile show a Supporter badge.</p>
+  <p>BookIt Supporter payments are handled by Stripe. The game never sees your card. We keep only whether your plan is active, when it renews, and Stripe's customer and subscription ids. Current supporters with a Community profile show a Supporter badge.</p>
   <p>If you add your email to keep your account, Supabase stores it to send you sign-in links. Other players never see it. Remove your posts and profile any time from Community → My profile.</p>
   <h3>Reports and feedback</h3>
   <p>Reports and feedback are private: only the game's owner can read them. Feedback includes the game version, your week number and your browser type, so bugs can be fixed. Crash reports include the error message.</p>
@@ -4550,7 +4550,7 @@ const A = {
   menu() { openModal({ type: 'menu' }); },
   cloud() { openModal({ type: 'cloud', list: null }); cloudList(); },
   async cloudUp(n) {
-    if (!G) return; const go = async () => { try { await cloudPush(+n); toast('Uploaded to cloud slot ' + n + '.'); cloudList(); } catch (e) { toast(+n > CLOUD_FREE && e?.code === 'permission-denied' ? 'Cloud slots 4 to 6 are for Book It Supporters.' : cloudErr(e)); } };
+    if (!G) return; const go = async () => { try { await cloudPush(+n); toast('Uploaded to cloud slot ' + n + '.'); cloudList(); } catch (e) { toast(+n > CLOUD_FREE && e?.code === 'permission-denied' ? 'Cloud slots 4 to 6 are for BookIt Supporters.' : cloudErr(e)); } };
     if (UI.modal?.list?.[n]) confirmBox('Replace cloud slot ' + n + '?', 'The game saved there is replaced with this one.', 'Replace', go); else go();
   },
   cloudGet(n) {
@@ -4646,14 +4646,14 @@ const A = {
   pasteSave() {
     const t = document.getElementById('pasteText').value.trim(); if (!t) return toast('Paste a save first.');
     try { const g = sanitizeGame(JSON.parse(t)); G = g; save(); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Save loaded into slot ' + meta.slot + '.'); }
-    catch (e) { toast('That text is not a Book It save.'); }
+    catch (e) { toast('That text is not a BookIt save.'); }
   },
   import() { openModal({ type: 'transfer', importOnly: !G }); },
   importFile() {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
-    inp.onchange = () => { const f = inp.files[0]; if (!f) return; if (f.size > MAX_FILE) return toast('That file is too big to be a Book It save.'); f.text().then(t => {
+    inp.onchange = () => { const f = inp.files[0]; if (!f) return; if (f.size > MAX_FILE) return toast('That file is too big to be a BookIt save.'); f.text().then(t => {
       try { const g = sanitizeGame(JSON.parse(t)); G = g; if (!meta.slot) meta.slot = 1; save(); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Loaded into slot ' + meta.slot + '.'); }
-      catch (e) { toast('That file is not a Book It save.'); } }); };
+      catch (e) { toast('That file is not a BookIt save.'); } }); };
     inp.click();
   },
   setMoney() { const v = +document.getElementById('setMoney').value; if (isFinite(v)) { G.money = v; commit('Bank balance set.'); } },
@@ -5973,7 +5973,7 @@ function supporterHTML(m) {
   const perks = (done) => `<div class="sup-perks">${SUP_PERKS.map(([ic, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${done ? '✓' : ic}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
   if (on) {
     const portal = supUrl(SUP_PORTAL, 'billing.stripe.com'), bad = SUP.status === 'past_due';
-    return `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>You're a Book It Supporter</h3><p>Thank you for keeping Community and cloud saves running.</p></div>
+    return `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>You're a BookIt Supporter</h3><p>Thank you for keeping Community and cloud saves running.</p></div>
       <div class="card sup-status">
         <div class="row" style="justify-content:space-between;gap:10px"><div><div class="tiny muted">Your plan</div><b>${SUP.plan === 'year' ? 'Yearly · $24.99' : 'Monthly · $2.99'}</b></div>
         <div style="text-align:right"><div class="tiny muted">${bad ? 'Payment' : 'Renews'}</div><b>${bad ? 'Needs attention' : new Date(SUP.end).toLocaleDateString()}</b></div></div>
@@ -5983,7 +5983,7 @@ function supporterHTML(m) {
       <div class="sec">Your perks</div>${perks(true)}`;
   }
   if (m.waiting) return `<div class="sup-hero"><div class="sup-star spin" aria-hidden="true">⭐</div><h3>Finishing up…</h3><p>Payment received. Unlocking your Supporter perks. This takes a few seconds.</p></div>`;
-  let h = `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>Become a Book It Supporter</h3><p>Help keep Community and cloud saves running, and get a few extras.</p></div>${perks(false)}`;
+  let h = `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>Become a BookIt Supporter</h3><p>Help keep Community and cloud saves running, and get a few extras.</p></div>${perks(false)}`;
   if (!plans.length) return h + `<div class="hs-off" style="margin-top:12px"><div class="small">Supporter opens soon. Check back shortly.</div></div>`;
   const pick = plans.includes(m.plan) ? m.plan : plans.includes('year') ? 'year' : plans[0];
   h += `<div class="sec">Choose a plan</div><div class="sup-plans" role="radiogroup" aria-label="Plan">${plans.map(k => { const p = SUP_PLANS[k];
@@ -6003,7 +6003,7 @@ function supporterHTML(m) {
 function modalSupport(m) {
   setTimeout(commInit);
   const sp = supportLink(), host = sp ? new URL(sp.url).hostname.replace(/^www\./, '') : '';
-  let body = sbOn() ? supporterHTML(m) : `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">${sp?.note ? esc(sp.note) : 'If you enjoy Book It, a small tip helps keep new features and fixes coming.'}</p></div>`;
+  let body = sbOn() ? supporterHTML(m) : `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">${sp?.note ? esc(sp.note) : 'If you enjoy BookIt, a small tip helps keep new features and fixes coming.'}</p></div>`;
   if (sp) body += `<div class="sec">One-off tip</div>
     <a class="btn block sup-go" href="${esc(sp.url)}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center">❤️ Tip on ${esc(host)}</a>
     <div class="tiny muted" style="text-align:center;margin-top:6px">${sp.note && sbOn() ? esc(sp.note) + ' ' : ''}Opens ${esc(host)}. Tips don't unlock anything.</div>`;
@@ -6017,7 +6017,7 @@ function modalSupport(m) {
     <label class="f"><span>Message (optional)</span><input data-sup="note" maxlength="200" value="${esc(m.draft?.note ?? sp?.note ?? '')}" placeholder="Thanks for playing!"></label>
     <div class="tiny muted">Ko-fi, Buy Me a Coffee, Patreon, PayPal.me, Liberapay, GitHub Sponsors, Stripe and a few others work. Only you see this box.</div>
     <div class="row" style="gap:8px;margin-top:8px"><button class="btn pri" data-act="supSave">Save link</button>${COMM.support ? '<button class="btn bad" data-act="supClear">Turn off tips</button>' : ''}</div>`;
-  return modal(sbOn() ? 'Book It Supporter' : 'Support the game', body, '<button class="btn" data-act="closeModal">Close</button>');
+  return modal(sbOn() ? 'BookIt Supporter' : 'Support the game', body, '<button class="btn" data-act="closeModal">Close</button>');
 }
 // owner only: reports and feedback from players
 function modalInbox(m) {
@@ -6285,7 +6285,7 @@ const CREATOR_ACTIONS = {
     const m = UI.modal, text = String(document.querySelector('[data-in=fbText]')?.value || '').trim().slice(0, 1000);
     if (text.length < 3) return toast('Write a few words first.');
     try { await sendFeedback({ kind: m.kind || 'idea', text }); UI.modal = null; render(); toast('Sent. Thank you!'); }
-    catch (e) { fbFallback(`Book It ${verLabel()} feedback (${m.kind}), week ${G?.week || 0}, ${navigator.userAgent.slice(0, 120)}:\n${text}`); }
+    catch (e) { fbFallback(`BookIt ${verLabel()} feedback (${m.kind}), week ${G?.week || 0}, ${navigator.userAgent.slice(0, 120)}:\n${text}`); }
   },
   privacy() { UI.modal = { type: 'privacy', back: UI.modal }; render(); },
   privBack() { UI.modal = UI.modal.back || null; render(); },
@@ -6909,7 +6909,7 @@ function viewWizard() {
   const logo = `<div class="wz-logo" style="background:${esc(z.color)};color:${inkOn(z.color)};text-shadow:none">${esc(abbr(z.name || 'My Promotion'))}</div>`;
   if (z.step === 'welcome') {
     const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
-    return `<div class="app wz"><div class="hero">${logoSVG('logo-art sm')}<h1>Book <em>It</em></h1>
+    return `<div class="app wz"><div class="hero">${logoSVG('logo-art sm')}<h1>Book<em>It</em></h1>
       <p class="wz-lead">You just bought a wrestling company. Name it, draft a roster and book your first show.</p>
       <p class="muted small">About 3 minutes. Change anything later.</p></div>
       <label class="f" style="margin-top:14px"><span>How many companies will you run?</span><div class="seg-ctl">${[1, 2, 3, 4].map(n => `<button class="${(z.count || 1) === n ? 'on' : ''}" data-act="wzSet" data-f="count" data-id="${n}">${n}</button>`).join('')}</div>
@@ -7362,7 +7362,7 @@ function crash(msg) {
     <button class="btn block" data-crash="close" style="margin-top:8px">Keep playing</button>
     <button class="link" data-crash="send" style="margin-top:10px">Send this crash to the maker</button>
     <details style="margin-top:12px"><summary class="tiny muted">Technical details (v${VERSION})</summary><pre class="ex">${esc(String(msg || 'Unknown error')).slice(0, 600)}</pre></details></div>`;
-  d.addEventListener('click', e => { const k = e.target.closest('[data-crash]')?.dataset.crash; if (!k) return; if (k === 'send') { const b = e.target.closest('[data-crash]'); b.textContent = 'Sending…'; sendFeedback({ kind: 'crash', text: 'Crash on ' + (UI.modal?.type || UI.tab || 'home'), err: msg }).then(() => { b.textContent = 'Sent. Thank you!'; }, () => { fbFallback(`Book It ${verLabel()} crash on ${UI.modal?.type || UI.tab || 'home'}, ${navigator.userAgent.slice(0, 120)}:\n${msg}`, 'Crash details copied. Paste them into the feedback page.'); b.textContent = feedbackLink() ? 'Copied. Paste it into the feedback page.' : 'Copied. Send it to the game maker.'; }); return; } if (k === 'menu') { try { sessionStorage.setItem('rbSafe', '1'); } catch (x) {} } if (k === 'close') { d.remove(); crashShown = false; return; } location.reload(); });
+  d.addEventListener('click', e => { const k = e.target.closest('[data-crash]')?.dataset.crash; if (!k) return; if (k === 'send') { const b = e.target.closest('[data-crash]'); b.textContent = 'Sending…'; sendFeedback({ kind: 'crash', text: 'Crash on ' + (UI.modal?.type || UI.tab || 'home'), err: msg }).then(() => { b.textContent = 'Sent. Thank you!'; }, () => { fbFallback(`BookIt ${verLabel()} crash on ${UI.modal?.type || UI.tab || 'home'}, ${navigator.userAgent.slice(0, 120)}:\n${msg}`, 'Crash details copied. Paste them into the feedback page.'); b.textContent = feedbackLink() ? 'Copied. Paste it into the feedback page.' : 'Copied. Send it to the game maker.'; }); return; } if (k === 'menu') { try { sessionStorage.setItem('rbSafe', '1'); } catch (x) {} } if (k === 'close') { d.remove(); crashShown = false; return; } location.reload(); });
   document.body.appendChild(d);
 }
 window.addEventListener('error', e => { if (e.message) crash(e.message + (e.lineno ? ' (line ' + e.lineno + ')' : '') + (e.error?.stack ? '\n' + String(e.error.stack).slice(0, 900) : '')); });
@@ -7381,7 +7381,7 @@ if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); supResume(); }
 try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   const sp = document.createElement('div'); sp.id = 'splash'; sp.setAttribute('role', 'presentation');
   if (reduceMotion()) sp.className = 'still';
-  sp.innerHTML = `<div class="sp-in">${logoSVG()}<div class="sp-t">Book <b>It</b></div><div class="sp-s">Wrestling Booking Sim</div></div>`;
+  sp.innerHTML = `<div class="sp-in">${logoSVG()}<div class="sp-t">Book<b>It</b></div><div class="sp-s">Wrestling Booking Sim</div></div>`;
   const done = () => sp.remove(); sp.addEventListener('click', done); sp.addEventListener('animationend', e => { if (e.target === sp) done(); });
   setTimeout(done, 4000); document.body.appendChild(sp);
 } } catch (e) {}
