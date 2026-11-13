@@ -546,8 +546,29 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .tro b { font-size: 13px; }
 .lvl { font-family: var(--f-display); font-size: 12px; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; background: linear-gradient(180deg, #ffe99a, #f2c443 55%, #d19a1c); color: #2a1c00; white-space: nowrap; }
 .sup-badge { background: linear-gradient(180deg, #fff3b0, #ffd24a 55%, #e0a512); margin-right: 4px; }
-.sup-perk { display: flex; gap: 10px; align-items: flex-start; }
-.sup-perk .ic { font-size: 20px; line-height: 1.2; }
+.sup-hero { text-align: center; padding: 4px 6px 14px; }
+.sup-hero h3 { margin: 6px 0 4px; font-family: var(--f-display); font-weight: 400; font-size: 26px; letter-spacing: .03em; text-transform: uppercase; }
+.sup-hero p { margin: 0; color: var(--muted); font-size: 14px; }
+.sup-star { width: 58px; height: 58px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; font-size: 28px; background: radial-gradient(circle at 35% 30%, #fff3b0, #ffd24a 55%, #c98512); box-shadow: 0 8px 24px rgba(255, 200, 60, .25); }
+.sup-star.spin { animation: supSpin 1.4s linear infinite; } @keyframes supSpin { to { transform: rotate(360deg); } }
+.sup-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sup-perk { display: flex; gap: 8px; align-items: flex-start; padding: 10px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.sup-perk .ic { font-size: 18px; line-height: 1.2; flex: none; color: var(--good); font-weight: 800; }
+.sup-perk b { display: block; font-size: 13.5px; line-height: 1.25; }
+.sup-perk span:not(.ic) { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
+.sup-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.sup-plan { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 16px 8px 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+.sup-plan.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+.sup-pn { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.sup-pp { font-family: var(--f-display); font-size: 30px; line-height: 1.1; }
+.sup-pper { font-size: 12px; color: var(--muted); }
+.sup-pnote { margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--good); }
+.sup-best { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: linear-gradient(180deg, #fff3b0, #ffd24a 55%, #e0a512); color: #2a1c00; }
+.sup-cta { min-height: 52px; font-size: 17px; }
+.sup-step input { width: 100%; }
+.sup-sn { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-t); margin-bottom: 2px; }
+.sup-status b { font-size: 15px; }
+@media (max-width: 360px) { .sup-perks { grid-template-columns: 1fr; } }
 .flair { display: inline-block; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: linear-gradient(180deg, #ffe99a, #f2c443 55%, #d19a1c); color: #2a1c00; margin: 2px 0; white-space: nowrap; width: fit-content; }
 .cv-by .flair { display: block; }
 .belt-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 4px; }
@@ -4029,8 +4050,18 @@ async function supCheck() {
 async function supReturn() {
   if (!/[?&]supporter=done\b/.test(location.search)) return;
   try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
-  for (let i = 0; i < 8; i++) { await supCheck(); if (isSup()) { render(); return toast('Thank you! You\'re a Book It Supporter. ⭐'); } await new Promise(r => setTimeout(r, 3000)); }
-  toast('Payment received. Your Supporter perks can take a minute. Open Support the game to check.');
+  UI.modal = { type: 'support', waiting: true }; render();
+  for (let i = 0; i < 10; i++) { await supCheck(); if (isSup()) { if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); } SFX.tap?.(); return toast('Thank you! You\'re a Book It Supporter. ⭐'); } await new Promise(r => setTimeout(r, 3000)); }
+  if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); }
+  toast('Payment received. Your perks can take a minute. Check back here shortly.');
+}
+// back from the sign-in email with a plan picked: reopen the Supporter page, ready for checkout
+async function supResume() {
+  let x = null; try { x = JSON.parse(localStorage.getItem('bookit.supIntent') || 'null'); } catch (e) {}
+  if (!x || Date.now() - (+x.at || 0) > 3 * 3600e3) return;
+  await sbLinkP; sbSess ||= sbLoad(); if (!sbSess?.user?.email) return;
+  try { localStorage.removeItem('bookit.supIntent'); } catch (e) {}
+  UI.modal = { type: 'support', plan: SUP_PLANS[x.plan] ? x.plan : 'year' }; render();
 }
 const SUP_PERKS = [['☁️', '6 cloud save slots', 'Three more than the free three.'], ['🌐', 'More Community space', 'Up to 10 shared saves and more room for rosters and photos.'], ['⭐', 'Supporter badge', 'A gold badge next to your name in Community.'], ['🧪', 'Early access', 'Try new features before everyone else.']];
 const CLOUD_SLOTS = [1, 2, 3, 4, 5, 6], CLOUD_FREE = 3;
@@ -5935,40 +5966,48 @@ function modalCommunity(m) {
   return modal('🌐 Community', body);
 }
 // donations: a link out to the owner's tip page, plus free ways to help
-function supporterHTML() {
+const SUP_PLANS = { month: { price: '$2.99', per: 'a month', note: 'Cancel any time' }, year: { price: '$24.99', per: 'a year', note: 'Save 30%' } };
+function supporterHTML(m) {
   if (!sbOn()) return '';
-  const u = sbSess?.user, on = isSup(), open = supUrl(SUP_LINKS.month, 'buy.stripe.com') || supUrl(SUP_LINKS.year, 'buy.stripe.com');
-  let h = `<div class="sec">⭐ Book It Supporter</div><div class="card">`;
+  const u = sbSess?.user, on = isSup(), plans = ['month', 'year'].filter(k => supUrl(SUP_LINKS[k], 'buy.stripe.com'));
+  const perks = (done) => `<div class="sup-perks">${SUP_PERKS.map(([ic, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${done ? '✓' : ic}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
   if (on) {
-    const portal = supUrl(SUP_PORTAL, 'billing.stripe.com');
-    h += `<div class="small"><b>You're a Supporter. Thank you!</b> Your ${SUP.plan === 'year' ? 'yearly' : 'monthly'} plan ${SUP.status === 'past_due' ? 'has a payment problem. Check your card' : `renews on ${new Date(SUP.end).toLocaleDateString()}`}.</div>
-      ${portal ? `<a class="btn block" style="margin-top:8px" href="${esc(portal.href)}" target="_blank" rel="noopener noreferrer">Manage or cancel</a>` : ''}`;
+    const portal = supUrl(SUP_PORTAL, 'billing.stripe.com'), bad = SUP.status === 'past_due';
+    return `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>You're a Book It Supporter</h3><p>Thank you for keeping Community and cloud saves running.</p></div>
+      <div class="card sup-status">
+        <div class="row" style="justify-content:space-between;gap:10px"><div><div class="tiny muted">Your plan</div><b>${SUP.plan === 'year' ? 'Yearly · $24.99' : 'Monthly · $2.99'}</b></div>
+        <div style="text-align:right"><div class="tiny muted">${bad ? 'Payment' : 'Renews'}</div><b>${bad ? 'Needs attention' : new Date(SUP.end).toLocaleDateString()}</b></div></div>
+        ${bad ? '<div class="alert warn" style="margin-top:10px"><span class="ic">💳</span><div class="small">Your last payment didn\'t go through. Update your card to keep your perks.</div></div>' : ''}
+        ${portal ? `<button class="btn block" style="margin-top:12px" data-act="supManage">${bad ? 'Update card' : 'Manage or cancel'}</button>` : ''}
+      </div>
+      <div class="sec">Your perks</div>${perks(true)}`;
+  }
+  if (m.waiting) return `<div class="sup-hero"><div class="sup-star spin" aria-hidden="true">⭐</div><h3>Finishing up…</h3><p>Payment received. Unlocking your Supporter perks. This takes a few seconds.</p></div>`;
+  let h = `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>Become a Book It Supporter</h3><p>Help keep Community and cloud saves running, and get a few extras.</p></div>${perks(false)}`;
+  if (!plans.length) return h + `<div class="hs-off" style="margin-top:12px"><div class="small">Supporter opens soon. Check back shortly.</div></div>`;
+  const pick = plans.includes(m.plan) ? m.plan : plans.includes('year') ? 'year' : plans[0];
+  h += `<div class="sec">Choose a plan</div><div class="sup-plans" role="radiogroup" aria-label="Plan">${plans.map(k => { const p = SUP_PLANS[k];
+    return `<button class="sup-plan ${pick === k ? 'on' : ''}" role="radio" aria-checked="${pick === k}" data-act="supPlan" data-id="${k}">${k === 'year' ? '<span class="sup-best">Best value</span>' : ''}<span class="sup-pn">${k === 'year' ? 'Yearly' : 'Monthly'}</span><span class="sup-pp">${p.price}</span><span class="sup-pper">${p.per}</span><span class="sup-pnote">${p.note}</span></button>`; }).join('')}</div>`;
+  if (!u?.email) {
+    h += `<div class="card sup-step"><div class="sup-sn">Step 1 of 2</div><b>Add your email</b>
+      <div class="small muted" style="margin:4px 0 8px">So your perks follow you to any phone or computer. We'll email you a link. Tap it and you'll come right back here to finish.</div>
+      <label class="f" style="margin:0"><span>Your email</span><input type="email" data-in="sbEmail" value="${esc(m.email || '')}" maxlength="120" autocomplete="email" placeholder="you@example.com"></label>
+      <button class="btn pri block" style="margin-top:8px" data-act="supEmail">Email me a sign-in link</button></div>
+      <button class="btn block" disabled>Step 2: Checkout</button>`;
   } else {
-    h += `<div class="small">Support the servers that run Community and cloud saves, and get a few extras. The game itself stays free.</div>`;
+    h += `<button class="btn pri block sup-cta" data-act="supJoin" data-id="${pick}">Continue · ${SUP_PLANS[pick].price} ${SUP_PLANS[pick].per}</button>
+      <div class="tiny muted" style="text-align:center;margin-top:6px">Signed in as ${esc(u.email)}</div>`;
   }
-  h += `<div class="list" style="margin-top:8px">${SUP_PERKS.map(([ic, t, d]) => `<div class="item sup-perk"><span class="ic">${ic}</span><div class="main"><div class="t">${t}</div><div class="d">${d}</div></div></div>`).join('')}</div>`;
-  if (!on) {
-    if (!open) h += `<div class="hs-off" style="margin-top:8px"><div class="small">Supporter opens soon.</div></div>`;
-    else if (!u?.email) h += `<div class="alert warn" style="margin-top:8px"><span class="ic">✉️</span><div class="small">First add your email in Account below, so your Supporter perks follow you to any device.</div></div>`;
-    else h += `<div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">${['month', 'year'].filter(k => supUrl(SUP_LINKS[k], 'buy.stripe.com')).map(k => `<button class="btn ${k === 'month' ? 'pri' : ''}" style="flex:1" data-act="supJoin" data-id="${k}">${SUP_PRICE[k]}</button>`).join('')}</div>
-      <div class="tiny muted" style="margin-top:6px">Opens Stripe's secure checkout. Cancel any time. Payments never go through the game.</div>`;
-  }
-  h += `</div>`;
-  if (!on && open && !u?.email) h += sbAccountCard();
-  return h;
+  return h + `<div class="tiny muted" style="text-align:center;margin-top:8px">🔒 Secure checkout by Stripe. Cancel any time. Your card never touches the game.</div>`;
 }
 function modalSupport(m) {
   setTimeout(commInit);
   const sp = supportLink(), host = sp ? new URL(sp.url).hostname.replace(/^www\./, '') : '';
-  let body = `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}
-    <p style="font-size:17px"><b>Book It is free.</b> No ads, and the whole game is free to play.</p>
-    <p class="small muted">${sp?.note ? esc(sp.note) : 'If you enjoy it, a small tip helps keep new features and fixes coming.'}</p></div>`;
-  body += supporterHTML();
-  body += sp ? `<div class="sec">One-off tip</div>` : '';
-  body += sp ? `<a class="btn pri block sup-go" href="${esc(sp.url)}" target="_blank" rel="noopener noreferrer">❤️ Support on ${esc(host)}</a>
-    <button class="btn block" style="margin-top:8px" data-act="supCopy">📋 Copy the link</button>
-    <div class="tiny muted" style="text-align:center;margin-top:6px">Opens ${esc(host)}. Payments are handled there, never in the game. Tips are optional and don't unlock anything.</div>`
-    : sbOn() ? '' : `<div class="hs-off"><div class="small">Tips aren't open yet. Check back soon.</div></div>`;
+  let body = sbOn() ? supporterHTML(m) : `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">${sp?.note ? esc(sp.note) : 'If you enjoy Book It, a small tip helps keep new features and fixes coming.'}</p></div>`;
+  if (sp) body += `<div class="sec">One-off tip</div>
+    <a class="btn block sup-go" href="${esc(sp.url)}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center">❤️ Tip on ${esc(host)}</a>
+    <div class="tiny muted" style="text-align:center;margin-top:6px">${sp.note && sbOn() ? esc(sp.note) + ' ' : ''}Opens ${esc(host)}. Tips don't unlock anything.</div>`;
+  else if (!sbOn()) body += `<div class="hs-off"><div class="small">Tips aren't open yet. Check back soon.</div></div>`;
   body += `<div class="sec">Free ways to help</div><div class="list">
     <div class="item"><div class="main"><div class="t">Share the game</div><div class="d">Send the link to a friend who loves wrestling.</div></div></div>
     <div class="item"><div class="main"><div class="t">Share your creations</div><div class="d">Post a roster or a save in Community so others can play it.</div></div></div>
@@ -5978,7 +6017,7 @@ function modalSupport(m) {
     <label class="f"><span>Message (optional)</span><input data-sup="note" maxlength="200" value="${esc(m.draft?.note ?? sp?.note ?? '')}" placeholder="Thanks for playing!"></label>
     <div class="tiny muted">Ko-fi, Buy Me a Coffee, Patreon, PayPal.me, Liberapay, GitHub Sponsors, Stripe and a few others work. Only you see this box.</div>
     <div class="row" style="gap:8px;margin-top:8px"><button class="btn pri" data-act="supSave">Save link</button>${COMM.support ? '<button class="btn bad" data-act="supClear">Turn off tips</button>' : ''}</div>`;
-  return modal('Support the game', body, '<button class="btn" data-act="closeModal">Close</button>');
+  return modal(sbOn() ? 'Book It Supporter' : 'Support the game', body, '<button class="btn" data-act="closeModal">Close</button>');
 }
 // owner only: reports and feedback from players
 function modalInbox(m) {
@@ -6147,12 +6186,18 @@ const CREATOR_ACTIONS = {
   // community
   community() { openModal({ type: 'community', tab: 'browse' }); },
   support() { openModal({ type: 'support' }); supCheck().then(() => { if (UI.modal?.type === 'support') render(); }); },
+  supPlan(k) { if (SUP_PLANS[k]) { UI.modal.plan = k; render(); } },
+  // checkout opens in this tab, and Stripe sends the player straight back to the game
   supJoin(k) {
     const u = supUrl(SUP_LINKS[k], 'buy.stripe.com'), id = sbSess?.user?.id; if (!u || !id) return;
     u.searchParams.set('client_reference_id', id); // tells the webhook which player paid
     if (sbSess.user.email) u.searchParams.set('prefilled_email', sbSess.user.email);
-    try { window.open(u.href, '_blank', 'noopener'); } catch (e) { location.href = u.href; }
+    try { localStorage.removeItem('bookit.supIntent'); } catch (e) {}
+    location.href = u.href;
   },
+  // remember the plan, so tapping the sign-in link brings the player back to checkout
+  supEmail() { try { localStorage.setItem('bookit.supIntent', JSON.stringify({ plan: UI.modal?.plan || 'year', at: Date.now() })); } catch (e) {} A.sbLink(); },
+  supManage() { const p = supUrl(SUP_PORTAL, 'billing.stripe.com'); if (p) try { window.open(p.href, '_blank', 'noopener'); } catch (e) { location.href = p.href; } },
   supCopy() { const sp = supportLink(); if (sp) copyText(sp.url, 'Link copied.'); },
   async supSave() {
     if (!COMM.owner || !cdb) return;
@@ -7331,7 +7376,7 @@ if (cur) G = cur;
 try { const hadGame = [1, 2, 3].some(n => slotInfo(n)); if (meta.seen !== VERSION) { if (hadGame && G && !UI.modal) UI.modal = { type: 'whatsnew' }; meta.seen = VERSION; ls.set(META, JSON.stringify(meta)); } } catch (e) {}
 try { render(); } catch (e) { crash(e && e.message); }
 sbFromLink(); addEventListener('hashchange', sbFromLink);
-if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); }
+if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); supResume(); }
 // animated splash: once per app launch, tap to skip, skipped under automated tests (?splash forces it)
 try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   const sp = document.createElement('div'); sp.id = 'splash'; sp.setAttribute('role', 'presentation');
