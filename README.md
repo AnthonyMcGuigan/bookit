@@ -107,6 +107,15 @@ Every 4th week is a **big event** (configurable). Big events earn far more and p
 
 Office → Rivals. Each rival has a roster, a champion, a weekly show with a rating, fans and prestige (`G.rivalPromos`). Every week they run a show, re-sign or release wrestlers, and sign free agents. When a rival outrates you, they take a few of your fans. Wrestlers who leave you, or who get bought out, join a real rival roster. You can create, edit and close rivals, copy a rival's share code, or try to sign their wrestlers (buyout plus a chance based on prestige). Any roster from a share code, a pasted list or Community can be imported as a rival with "Make it a rival promotion". The draft's two rivals become real promotions with the wrestlers they picked. Older saves get rival rosters generated on first use.
 
+## Rivals fight back, promo plans, backstage politics, cloud saves (v1.6)
+
+- **Rival cards**: every week each rival books a real card (`rivalCard()`, stored in `r.card`): a title main event and three or four matches. Results move momentum and can change their champion. See the last card in the rival's page.
+- **Loaded shows**: two weeks before your big event, the biggest rival may announce a loaded show against it (`r.counter`). That night they rate about 8 points higher, and the fan swing is doubled both ways. It shows up in the news and the Briefing.
+- **Rival moves (random backstage events)**: a rival tries to lure a top star mid-contract (match the offer, hold them to the deal, or take a buyout), trade offers for a similar wrestler, and invasions: two rival wrestlers join for 8 weeks (`w.loan`, `w.loanUntil`) with an "Invasion" storyline, then go home.
+- **Promo plans**: each promo has a topic (`seg.topic`: title, personal, crowd, last loss, brag) and a tone (`seg.tone`: fiery, calm, funny, cheap heat, from the heart). The topic needs the right situation, and the tone is a skill check on mic and charisma: it lands or falls flat. The editor says how likely it is to land.
+- **Backstage politics (random events)**: a star refuses to lose (change the finish, hold firm, or let the match decide), creative control (`w.creative`: they may change a finish where they lose), a locker room leader (`G.leader`: everyone's mood drifts with theirs), cliques, and no-shows.
+- **Cloud saves** (Supabase copy only): Menu → Cloud saves keeps up to 3 games in rows `cloud1`..`cloud3`, readable only by their owner. Auto backup uploads after every week. Players add their email to load them on another device. **Re-run `supabase/setup.sql` once** so the database accepts the new rows.
+
 ## Storylines that grow on their own
 
 After each show the game looks for a moment worth a story and starts at most one: a dethroned champion wants a rematch, a broken win streak wants revenge, an attack on a recent tag partner becomes a betrayal, a draw or an 82+ match leaves unfinished business, and two people who meet 3 times in 4 shows become a feud. It shows up in the news and the results. Switch it off in Menu → "Stories start on their own".
