@@ -239,8 +239,6 @@ The show-night crowd uses short recordings from Wikimedia Commons. All are publi
 | --- | --- | --- |
 | `sounds/cheer.mp3` | [Clapping hurray](https://commons.wikimedia.org/wiki/File:Clapping_hurray.ogg) by starlite | Public domain |
 | `sounds/applause.mp3` | [Applause after a concert](https://commons.wikimedia.org/wiki/File:Sound_Effects_-_Applause_after_a_concert.ogg) by Amada44 | CC0 |
-| `sounds/ooh.mp3` | [Ohhh ahhh](https://commons.wikimedia.org/wiki/File:Ohhh_ahhh.ogg) by starlite | Public domain |
-| `sounds/boo.mp3` | [Audience Booing](https://commons.wikimedia.org/wiki/File:Soundgoats_-_Audience_Booing.wav) by Brendon (Soundgoats) | Public domain |
 
 ### Menu music
 
@@ -254,4 +252,4 @@ Three tracks by Kevin MacLeod rotate in the menus. They are CC BY 3.0, so the cr
 
 Music never starts before the player taps or presses a key. It follows the main Sound switch, has its own on/off and volume in Menu → Settings, fades out for the live show (the bell and crowd take over) and pauses when the app is in the background.
 
-The bell is still made in code. The crowd is only heard for the main event, title changes and segments rated 80+, so it stays special. Each crowd line under a result ("Huge pop", "Loud boos for X", "Crickets") is chosen from what actually happened, and the clip that plays matches it. A flat segment plays nothing.
+The bell is still made in code. The crowd reacts once per show, when the final rating comes in: a big cheer for a great show, applause for a good one, and quiet for a weak one. The crowd line under each result ("Huge pop", "Loud boos for X") still follows what actually happened.
