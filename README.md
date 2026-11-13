@@ -116,6 +116,15 @@ Office → Rivals. Each rival has a roster, a champion, a weekly show with a rat
 - **Backstage politics (random events)**: a star refuses to lose (change the finish, hold firm, or let the match decide), creative control (`w.creative`: they may change a finish where they lose), a locker room leader (`G.leader`: everyone's mood drifts with theirs), cliques, and no-shows.
 - **Cloud saves** (Supabase copy only): Menu → Cloud saves keeps up to 3 games in rows `cloud1`..`cloud3`, readable only by their owner. Auto backup uploads after every week. Players add their email to load them on another device. **Re-run `supabase/setup.sql` once** so the database accepts the new rows.
 
+## Wrestler personalities (optional)
+
+Turn it on at game setup (step 2, Game rules) or in Menu → Settings. New games start with it on; older saves start with it off. With it off, nothing below runs.
+
+- **Personalities** (`w.pers`): Glory hound, Loyal, Hothead, Money first, Spotlight seeker, Team player. Picked from each wrestler's style, age and popularity, and you can change one on their profile. Each takes wins, losses, promos and time off TV differently.
+- **Texts** (`G.phone`, the phone button at the top): wrestlers react after shows (a title win, a loss at a big event, a first main event, a great promo) and when contract talks open. About one or two texts a week.
+- **Asks and promises** (`G.promises`): some texts ask for something: a main event, a title shot, a win, a promo, TV time, a rematch or a raise. Promise it and you get a deadline, which shows in the Briefing. Keep it and trust goes up. Break it, say no or ignore the text, and they remember.
+- **Memory and trust** (`w.trust` 0–100, `w.mem` last 8 moments): their profile shows what they remember, including how you handled their backstage events. Trust nudges their mood, how easily they re-sign, and whether they walk to a rival who is courting them. Their texts change with it too.
+
 ## Storylines that grow on their own
 
 After each show the game looks for a moment worth a story and starts at most one: a dethroned champion wants a rematch, a broken win streak wants revenge, an attack on a recent tag partner becomes a betrayal, a draw or an 82+ match leaves unfinished business, and two people who meet 3 times in 4 shows become a feud. It shows up in the news and the results. Switch it off in Menu → "Stories start on their own".
