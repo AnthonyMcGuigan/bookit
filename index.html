@@ -1551,7 +1551,7 @@ function modalShows() {
     ${many ? `<div class="sec">Brand split</div>
     <label class="todo"><input type="checkbox" data-in="split" ${G.split ? 'checked' : ''}><span>Each show has its own roster</span></label>
     <p class="small muted" style="margin-top:4px">${G.split ? 'Wrestlers only work their own show, except at big events. Move someone from their profile, or redo the draft to even things out.' : 'Off: everyone can work every show, and extra shows are B shows (smaller crowds, half a TV deal). Turn it on for separate brands with their own stars and champions; every brand then gets a full A show.'}</p>
-    ${G.split ? '<button class="btn block" data-act="brandDraft">🎲 Redo the brand draft</button>' : ''}` : ''}
+    ${G.split ? '<button class="btn block" data-act="brandDraft">🎲 Redo the brand draft</button>' : ''}` : '<div class="sec">Brand split</div><p class="small muted" style="margin-top:0">Add a second weekly show, then you can split your roster into brands, each with its own show.</p>'}
     ${titles}`;
   return modal('Weekly shows', body);
 }
@@ -3107,6 +3107,7 @@ function viewOffice() {
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn it on in Menu → Settings.</div>`}
   ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
+  <div class="grid2" style="margin-top:12px"><button class="btn" data-act="matchTypes">🤼 Match types</button><button class="btn" data-act="shows">📺 ${manyShows() ? 'Shows &amp; brand split' : 'Shows &amp; brands'}</button></div>
   <div class="seg-ctl" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button></div>
   ${t === 'rivals' ? rivalsView() : ''}
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
