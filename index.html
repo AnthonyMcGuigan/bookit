@@ -3983,7 +3983,11 @@ function modalMenu() {
 // ---- cloud saves (Supabase): one row per player in cloud1..cloud3, readable only by that player ----
 // ---- Book It Supporter: an optional subscription through Stripe. The core game stays free. ----
 // Fill in the Payment Links from your Stripe dashboard. Leave them empty and the Supporter page says "opening soon".
-const SUP_LINKS = { month: '', year: '' };
+const SUP_LIVE = { month: '', year: '' };
+// Stripe test-mode links show only when the game is opened with ?suptest (remembered for this tab), for trying a test card
+const SUP_TEST = { month: 'https://buy.stripe.com/test_9B65kEevJ9qj6cb4x92cg01', year: 'https://buy.stripe.com/test_cNi8wQgDRfOH1VV6Fh2cg02' };
+const supTesting = (() => { try { if (/[?&]suptest\b/.test(location.search)) sessionStorage.setItem('bookit.suptest', '1'); return sessionStorage.getItem('bookit.suptest') === '1'; } catch (e) { return false; } })();
+const SUP_LINKS = supTesting ? SUP_TEST : SUP_LIVE;
 const SUP_PRICE = { month: '$2.99 a month', year: '$24.99 a year' };
 const SUP_PORTAL = ''; // Stripe customer portal login link, so supporters can cancel or change their card
 const SUP_KEY = 'bookit.supporter';
