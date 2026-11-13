@@ -543,6 +543,9 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .tro-i { font-size: 26px; }
 .tro b { font-size: 13px; }
 .lvl { font-family: var(--f-display); font-size: 12px; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; background: linear-gradient(180deg, #ffe99a, #f2c443 55%, #d19a1c); color: #2a1c00; white-space: nowrap; }
+.sup-badge { background: linear-gradient(180deg, #fff3b0, #ffd24a 55%, #e0a512); margin-right: 4px; }
+.sup-perk { display: flex; gap: 10px; align-items: flex-start; }
+.sup-perk .ic { font-size: 20px; line-height: 1.2; }
 .flair { display: inline-block; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: linear-gradient(180deg, #ffe99a, #f2c443 55%, #d19a1c); color: #2a1c00; margin: 2px 0; white-space: nowrap; width: fit-content; }
 .cv-by .flair { display: block; }
 .belt-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 4px; }
@@ -3978,8 +3981,35 @@ function modalMenu() {
 }
 
 // ---- cloud saves (Supabase): one row per player in cloud1..cloud3, readable only by that player ----
-const CLOUD_SLOTS = [1, 2, 3];
-const cloudErr = e => e?.code === 'big' ? 'This save is too big for the cloud. Use Back up instead.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
+// ---- Book It Supporter: an optional subscription through Stripe. The core game stays free. ----
+// Fill in the Payment Links from your Stripe dashboard. Leave them empty and the Supporter page says "opening soon".
+const SUP_LINKS = { month: '', year: '' };
+const SUP_PRICE = { month: '$2.99 a month', year: '$24.99 a year' };
+const SUP_PORTAL = ''; // Stripe customer portal login link, so supporters can cancel or change their card
+const SUP_KEY = 'bookit.supporter';
+const supUrl = (u, host) => { try { const x = new URL(u); return x.protocol === 'https:' && x.hostname === host && !x.username && !x.port ? x : null; } catch (e) { return null; } };
+let SUP = (() => { try { const x = JSON.parse(localStorage.getItem(SUP_KEY) || 'null'); return x && typeof x === 'object' ? { status: String(x.status || ''), plan: String(x.plan || ''), end: +x.end || 0, uid: String(x.uid || '') } : null; } catch (e) { return null; } })();
+// the server decides what a supporter can do; this copy only shapes the screens, with the same 3 days of grace
+const isSup = () => !!(SUP && SUP.uid && SUP.uid === (sbSess ||= sbLoad())?.user?.id && ['active', 'trialing', 'past_due'].includes(SUP.status) && SUP.end > Date.now() - 3 * 864e5);
+async function supCheck() {
+  if (!sbOn()) return;
+  sbSess ||= sbLoad(); const id = sbSess?.user?.id; if (!id) return;
+  try {
+    const r = await sbFetch(`/rest/v1/supporters?select=status,plan,period_end&uid=eq.${sbQ(id)}`), x = Array.isArray(r) ? r[0] : null;
+    SUP = x ? { status: String(x.status || ''), plan: String(x.plan || ''), end: Date.parse(x.period_end) || 0, uid: id } : null;
+    try { SUP ? localStorage.setItem(SUP_KEY, JSON.stringify(SUP)) : localStorage.removeItem(SUP_KEY); } catch (e) {}
+  } catch (e) {}
+}
+// back from Stripe: the webhook can take a few seconds, so look a few times
+async function supReturn() {
+  if (!/[?&]supporter=done\b/.test(location.search)) return;
+  try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+  for (let i = 0; i < 8; i++) { await supCheck(); if (isSup()) { render(); return toast('Thank you! You\'re a Book It Supporter. ⭐'); } await new Promise(r => setTimeout(r, 3000)); }
+  toast('Payment received. Your Supporter perks can take a minute. Open Support the game to check.');
+}
+const SUP_PERKS = [['☁️', '6 cloud save slots', 'Three more than the free three.'], ['🌐', 'More Community space', 'Up to 10 shared saves and more room for rosters and photos.'], ['⭐', 'Supporter badge', 'A gold badge next to your name in Community.'], ['🧪', 'Early access', 'Try new features before everyone else.']];
+const CLOUD_SLOTS = [1, 2, 3, 4, 5, 6], CLOUD_FREE = 3;
+const cloudErr = e => e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'This save is too big for the cloud. Use Back up instead.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
 async function cloudPush(n) {
   await sbGuest(); if (!sbSess?.user?.id) throw { code: 'unavailable' };
   const z = await gz(JSON.stringify({ ...G, savedAt: Date.now() }));
@@ -3991,8 +4021,9 @@ async function cloudList() {
   const m = UI.modal; if (m?.type !== 'cloud') return;
   try {
     await sbGuest(); const id = sbSess?.user?.id; if (!id) throw 0;
-    const rows = await sbFetch(`/rest/v1/docs?select=col,data->sum,data->at&col=in.(cloud1,cloud2,cloud3)&id=eq.${sbQ(id)}`);
+    const rows = await sbFetch(`/rest/v1/docs?select=col,data->sum,data->at&col=in.(cloud1,cloud2,cloud3,cloud4,cloud5,cloud6)&id=eq.${sbQ(id)}`);
     const list = {}; for (const r of Array.isArray(rows) ? rows : []) { const n = +String(r.col).slice(5); if (CLOUD_SLOTS.includes(n)) list[n] = { sum: r.sum && typeof r.sum === 'object' ? r.sum : {}, at: +r.at || 0 }; }
+    await supCheck();
     if (UI.modal === m) { m.list = list; m.err = ''; render(); }
   } catch (e) { if (UI.modal === m) { m.list = {}; m.err = cloudErr(e); render(); } }
 }
@@ -4004,9 +4035,11 @@ function cloudAutoPush() {
 }
 function modalCloud(m) {
   const u = sbSess?.user, L = m.list;
+  const sup = isSup();
   const rows = CLOUD_SLOTS.map(n => { const x = L?.[n], sm = x?.sum || {};
+    if (n > CLOUD_FREE && !sup && !x) return `<div class="item"><div class="av" style="background:var(--card2);color:var(--muted)">${n}</div><div class="main"><div class="t">Supporter slot</div><div class="d">⭐ Book It Supporters get 3 extra cloud slots.</div></div><button class="btn sm" data-act="support">See Supporter</button></div>`;
     return `<div class="item"><div class="av" style="background:${n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${n}</div><div class="main"><div class="t">${x ? esc(String(sm.promo || 'Saved game')) : 'Empty'}</div><div class="d">${x ? `Week ${+sm.week || '?'} · ${x.at ? new Date(x.at).toLocaleString() : ''}` : L ? '—' : 'Loading…'}</div></div>
-      <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${x ? `<button class="btn sm" data-act="cloudGet" data-id="${n}">Load</button>` : ''}${G ? `<button class="btn sm" data-act="cloudUp" data-id="${n}">Upload</button>` : ''}${x ? `<button class="btn sm bad" data-act="cloudDel" data-id="${n}" aria-label="Delete cloud slot ${n}">🗑</button>` : ''}</div></div>`; }).join('');
+      <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${x ? `<button class="btn sm" data-act="cloudGet" data-id="${n}">Load</button>` : ''}${G && (n <= CLOUD_FREE || sup) ? `<button class="btn sm" data-act="cloudUp" data-id="${n}">Upload</button>` : ''}${x ? `<button class="btn sm bad" data-act="cloudDel" data-id="${n}" aria-label="Delete cloud slot ${n}">🗑</button>` : ''}</div></div>`; }).join('');
   const body = `<p class="small muted" style="margin-top:0">Keep your games online, and load them on another phone or computer. Only you can see your cloud saves.</p>
     ${m.err ? `<div class="alert bad"><span class="ic">⚠️</span><div class="small">${esc(m.err)}</div></div>` : ''}
     <div class="list">${rows}</div>
@@ -4024,6 +4057,7 @@ function privacyHTML() {
   ${sbOn() ? `  <h3>When you use Community</h3>
   <p>Community and feedback are stored online with Supabase, a database service. When you open Community you get a guest account with a random id. We don't ask for your name. What you post, your profile (name, bio, color), what you like, what you play or add, and who you follow can be seen by anyone who plays.</p>
   <p>Cloud saves (Menu → Cloud saves) are stored with the same guest account, and only you can read them. Delete them from that page any time.</p>
+  <p>Book It Supporter payments are handled by Stripe. The game never sees your card. We keep only whether your plan is active, when it renews, and Stripe's customer and subscription ids. Current supporters with a Community profile show a Supporter badge.</p>
   <p>If you add your email to keep your account, Supabase stores it to send you sign-in links. Other players never see it. Remove your posts and profile any time from Community → My profile.</p>
   <h3>Reports and feedback</h3>
   <p>Reports and feedback are private: only the game's owner can read them. Feedback includes the game version, your week number and your browser type, so bugs can be fixed. Crash reports include the error message.</p>
@@ -4460,7 +4494,7 @@ const A = {
   menu() { openModal({ type: 'menu' }); },
   cloud() { openModal({ type: 'cloud', list: null }); cloudList(); },
   async cloudUp(n) {
-    if (!G) return; const go = async () => { try { await cloudPush(+n); toast('Uploaded to cloud slot ' + n + '.'); cloudList(); } catch (e) { toast(cloudErr(e)); } };
+    if (!G) return; const go = async () => { try { await cloudPush(+n); toast('Uploaded to cloud slot ' + n + '.'); cloudList(); } catch (e) { toast(+n > CLOUD_FREE && e?.code === 'permission-denied' ? 'Cloud slots 4 to 6 are for Book It Supporters.' : cloudErr(e)); } };
     if (UI.modal?.list?.[n]) confirmBox('Replace cloud slot ' + n + '?', 'The game saved there is replaced with this one.', 'Replace', go); else go();
   },
   cloudGet(n) {
@@ -5413,7 +5447,8 @@ async function sbFetch(path, opt = {}, auth = true) {
   if (auth) { const t = await sbToken(); if (t) h.Authorization = 'Bearer ' + t; } // with no session, the public key alone is enough
   const r = await fetch(SUPABASE_URL.replace(/\/+$/, '') + path, { ...opt, headers: h });
   const txt = await r.text(); let j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
-  if (!r.ok) throw { code: r.status === 401 || r.status === 403 ? 'permission-denied' : r.status === 429 ? 'rate_limited' : 'unavailable', status: r.status, err: String(j?.error_code || j?.code || '') };
+  // 'full': the database is near the free plan's space limit, so new uploads wait (see supabase/setup.sql). 'big': one row is over its size cap.
+  if (!r.ok) throw { code: j?.message === 'bookit_full' ? 'full' : j?.code === '23514' ? 'big' : r.status === 401 || r.status === 403 ? 'permission-denied' : r.status === 429 ? 'rate_limited' : r.status === 402 ? 'full' : 'unavailable', status: r.status, err: String(j?.error_code || j?.code || '') };
   return j;
 }
 async function sbToken() {
@@ -5429,6 +5464,21 @@ async function sbGuest() { await sbLinkP; if (await sbToken()) return; sbStore(a
 const sbBack = () => location.origin + location.pathname;
 const sbQ = v => encodeURIComponent(String(v));
 const sbListeners = new Set();
+const FULL_MSG = 'The online space is full for now. Your game is still saved on this phone. Try again later.';
+// Community rows are kept on this device, and only rows that changed since the last look are downloaded again.
+// That keeps each player's downloads small as Community grows (the free plan allows 5 GB a month for everyone).
+const sbCache = (() => {
+  let p = null;
+  const open = () => p ||= new Promise(res => {
+    const t = setTimeout(() => res(null), 1500);
+    try { const r = indexedDB.open('bookit-cache', 1); r.onupgradeneeded = () => r.result.createObjectStore('rows'); r.onsuccess = () => { clearTimeout(t); res(r.result); }; r.onerror = r.onblocked = () => { clearTimeout(t); res(null); }; } catch (e) { clearTimeout(t); res(null); }
+  });
+  return {
+    get: async k => { const db = await open(); if (!db) return null; return new Promise(res => { try { const q = db.transaction('rows').objectStore('rows').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); },
+    put: async (k, v) => { const db = await open(); if (!db) return; try { db.transaction('rows', 'readwrite').objectStore('rows').put(v, k); } catch (e) {} },
+    clear: async () => { const db = await open(); if (!db) return; try { db.transaction('rows', 'readwrite').objectStore('rows').clear(); } catch (e) {} },
+  };
+})();
 let sbPokeT = 0;
 const sbPoke = () => { clearTimeout(sbPokeT); sbPokeT = setTimeout(() => sbListeners.forEach(f => f()), 400); };
 setInterval(() => { if (sbListeners.size && !document.hidden && ['community', 'cview', 'creator', 'inbox', 'support'].includes(UI.modal?.type)) sbListeners.forEach(f => f()); }, 60000);
@@ -5443,10 +5493,29 @@ const sbDb = () => ({
   },
   collection(col) {
     return { limit: n => ({ onSnapshot(cb, onErr) {
-      let busy = false, ok = false;
+      // first a light list of ids and change times, then the full rows for only the new or changed ones
+      let busy = false, ok = false, sent = '';
+      const rows = new Map(), keep = col === 'creations', lim = +n || 100;
+      const emit = (order, fromCache) => cb({ docs: order.filter(id => rows.has(id)).map(id => ({ id, data: () => rows.get(id).data })), metadata: { fromCache } });
       const run = async () => {
         if (busy) return; busy = true;
-        try { const rows = await sbFetch(`/rest/v1/docs?select=id,data&col=eq.${sbQ(col)}&order=updated.desc&limit=${+n || 100}`); ok = true; cb({ docs: (Array.isArray(rows) ? rows : []).map(r => ({ id: String(r.id), data: () => r.data })), metadata: { fromCache: false } }); }
+        try {
+          if (keep && !ok && !rows.size) {
+            const c = await sbCache.get(col);
+            if (Array.isArray(c)) { for (const r of c) if (r && typeof r.id === 'string' && typeof r.updated === 'string') rows.set(r.id, r); if (rows.size) emit(c.map(r => r?.id), true); }
+          }
+          const heads = await sbFetch(`/rest/v1/docs?select=id,updated&col=eq.${sbQ(col)}&order=updated.desc&limit=${lim}`);
+          const list = (Array.isArray(heads) ? heads : []).map(h => ({ id: String(h.id), updated: String(h.updated) })).filter(h => AUTHOR_ID.test(h.id));
+          const need = list.filter(h => rows.get(h.id)?.updated !== h.updated).map(h => h.id);
+          for (let i = 0; i < need.length; i += 25) {
+            const got = await sbFetch(`/rest/v1/docs?select=id,updated,data&col=eq.${sbQ(col)}&id=in.(${need.slice(i, i + 25).map(sbQ).join(',')})`);
+            for (const r of Array.isArray(got) ? got : []) rows.set(String(r.id), { id: String(r.id), updated: String(r.updated), data: r.data });
+          }
+          const ids = new Set(list.map(h => h.id)); for (const id of [...rows.keys()]) if (!ids.has(id)) rows.delete(id);
+          const order = list.map(h => h.id), sig = list.map(h => h.id + h.updated).join();
+          if (!ok || sig !== sent) { emit(order, false); if (keep) sbCache.put(col, order.filter(id => rows.has(id)).map(id => rows.get(id))); }
+          ok = true; sent = sig;
+        }
         catch (e) { if (!ok && onErr) onErr(e); }
         busy = false;
       };
@@ -5501,7 +5570,7 @@ function cleanSupport(v) {
   return { url: u.href.slice(0, 200), note: cleanTxt(v.note, 200) };
 }
 const supportLink = () => COMM.support || cleanSupport({ url: SUPPORT_URL });
-const COMM = { status: 'idle', support: null, reports: [], feedback: [], items: [], mine: [], me: null, owner: false, canWrite: null, names: Object.create(null), err: '', profiles: Object.create(null), body: {}, likes: {}, uses: {}, followers: {} };
+const COMM = { sups: new Set(), status: 'idle', support: null, reports: [], feedback: [], items: [], mine: [], me: null, owner: false, canWrite: null, names: Object.create(null), err: '', profiles: Object.create(null), body: {}, likes: {}, uses: {}, followers: {} };
 let cdb = null, cuser = null;
 async function commInit() {
   if (COMM.status !== 'idle') return;
@@ -5512,6 +5581,7 @@ async function commInit() {
   if (!cdb) { COMM.status = 'off'; return rerenderComm(); }
   try { COMM.me = cuser ? await cuser.id() : null; COMM.owner = cuser ? await cuser.isOwner() : false; COMM.canWrite = cuser ? await cuser.can('data.write') : null; } catch (e) {}
   const timer = setTimeout(() => { if (COMM.status === 'loading') { COMM.status = 'slow'; rerenderComm(); } }, 10000);
+  if (sbOn()) { supCheck(); sbFetch('/rest/v1/rpc/supporter_ids', { method: 'POST', body: '{}' }).then(r => { COMM.sups = new Set((Array.isArray(r) ? r : []).map(x => String(typeof x === 'object' && x ? Object.values(x)[0] : x)).filter(x => AUTHOR_ID.test(x))); rerenderComm(); }, () => {}); }
   if (COMM.owner) for (const col of ['reports', 'feedback']) {
     try { cdb.collection(col).limit(500).onSnapshot(sn => { COMM[col] = sn.docs.flatMap(d => { if (!AUTHOR_ID.test(d.id)) return []; const b = d.data() || {}; return (Array.isArray(b.list) ? b.list.slice(0, col === 'reports' ? 30 : 20) : []).map(x => cleanInbox(col, x, d.id)).filter(Boolean); }); rerenderComm(); }, () => {}); } catch (e) {}
   }
@@ -5553,7 +5623,7 @@ function rerenderComm() {
 }
 // a Community flair: only known ids, and only one the booker level on the profile has reached
 function cleanFlair(pr) { const lvl = clamp(Math.floor(+pr.lvl) || 0, 0, MAX_LVL), f = FLAIRS.find(x => x[0] === pr.flair), y = BELTS.find(x => x[0] === pr.sym); return lvl ? { lvl, flair: f && f[2] <= lvl ? f[0] : '', sym: y && y[2] <= lvl ? y[0] : '' } : {}; }
-function flairTag(id) { const p = COMM.profiles[id]; if (!p || !p.lvl) return ''; const f = FLAIRS.find(x => x[0] === p.flair); return `<span class="flair">${p.sym ? symSVG(p.sym, 'LV ' + p.lvl, 'sym-xs') : ''}Lv ${p.lvl}${f ? ' · ' + esc(f[1]) : ''}</span>`; }
+function flairTag(id) { const sup = COMM.sups.has(id) ? '<span class="flair sup-badge">⭐ Supporter</span>' : ''; const p = COMM.profiles[id]; if (!p || !p.lvl) return sup; const f = FLAIRS.find(x => x[0] === p.flair); return sup + `<span class="flair">${p.sym ? symSVG(p.sym, 'LV ' + p.lvl, 'sym-xs') : ''}Lv ${p.lvl}${f ? ' · ' + esc(f[1]) : ''}</span>`; }
 // the big version on a profile page
 const symBig = id => { const p = COMM.profiles[id]; return p && p.sym ? `<div class="sym-big">${symSVG(p.sym, 'LV ' + p.lvl)}</div>` : ''; };
 const authorName = id => id === COMM.me ? 'You' : id === 'featured' ? 'Featured pick' : (COMM.profiles[id]?.name || COMM.names[id] || 'A player');
@@ -5616,7 +5686,7 @@ async function inboxAdd(col, entry, max) {
 }
 const popScore = i => (i.nLikes || 0) * 3 + (i.nUses || 0) + (i.author === 'featured' ? 1000 : 0);
 // ---- shared save files: trimmed, gzipped and base64'd so a few fit in each player's space ----
-const SAVE_SHARE_MAX = 3;
+const saveShareMax = () => isSup() ? 10 : 3, spaceMax = () => isSup() ? 600000 : 240000; // the server allows 400 KB, or 800 KB for supporters
 async function gz(str) {
   const cs = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
   const buf = new Uint8Array(await new Response(cs).arrayBuffer()); let bin = '';
@@ -5766,15 +5836,15 @@ async function commWrite(authorId, items) {
   // a player's space holds their uploads, profile, likes, plays and follows; keep whatever we are not changing
   const base = authorId === COMM.me ? COMM.body : knownFields((await cdb.doc('creations/' + authorId).get()).data());
   const body = { ...base, items, updated: Date.now() };
-  if (authorId === COMM.me && JSON.stringify(body).length > 240000) throw { code: 'too_big' };
+  if (authorId === COMM.me && JSON.stringify(body).length > spaceMax()) throw { code: 'too_big' };
   await cdb.doc('creations/' + authorId).set(body);
 }
 async function commMe(patch) {
   if (!cdb || !COMM.me) return toast(hosted() ? 'Sign in to do that.' : 'Community isn\'t in this version of the game.');
   const body = { ...COMM.body, items: COMM.mine, ...patch, updated: Date.now() };
-  if (JSON.stringify(body).length > 240000) return toast('Your space is full. Remove an old upload first.');
+  if (JSON.stringify(body).length > spaceMax()) return toast('Your space is full. Remove an old upload first.');
   COMM.body = body; render();
-  try { await cdb.doc('creations/' + COMM.me).set(body); } catch (e) { toast(e?.code === 'permission-denied' ? 'You can browse, but the owner has not given you access to post.' : 'Could not save that. Try again.'); }
+  try { await cdb.doc('creations/' + COMM.me).set(body); } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'Your space is full. Remove an old upload first.' : e?.code === 'permission-denied' ? 'You can browse, but the owner has not given you access to post.' : 'Could not save that. Try again.'); }
 }
 function markUsed(key) { if (!COMM.me || myList('used').includes(key) || COMM.canWrite === false) return; commMe({ used: [key, ...myList('used')].slice(0, 300) }); }
 function modalCommunity(m) {
@@ -5814,8 +5884,8 @@ function modalCommunity(m) {
         <label class="f"><span>Title</span><input type="text" data-in="cTitle" value="${esc(m.title || '')}" maxlength="60" placeholder="${esc(G.promo.name + ' · week ' + G.week)}"></label>
         <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="What's going on in this universe? Who are the champions? What's the big storyline?">${esc(m.desc || '')}</textarea></label>
         <label class="todo"><input type="checkbox" data-in="cNotes" ${m.notes ? 'checked' : ''}><span>Include my notes (notebook, to-dos, wrestler and story notes)</span></label>
-        <div class="tiny muted" style="margin:6px 0 10px">You can have ${SAVE_SHARE_MAX} saves shared at once${mineSaves ? ` (you have ${mineSaves})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
-        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishSave" ${mineSaves >= SAVE_SHARE_MAX ? 'disabled' : ''}>${mineSaves >= SAVE_SHARE_MAX ? 'Remove an old save in My uploads first' : '💾 Share this save'}</button>`}`;
+        <div class="tiny muted" style="margin:6px 0 10px">You can have ${saveShareMax()} saves shared at once${mineSaves ? ` (you have ${mineSaves})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
+        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishSave" ${mineSaves >= saveShareMax() ? 'disabled' : ''}>${mineSaves >= saveShareMax() ? 'Remove an old save in My uploads first' : '💾 Share this save'}</button>`}`;
       return modal('🌐 Community', body);
     }
     body += whatCtl + ``;
@@ -5840,16 +5910,40 @@ function modalCommunity(m) {
   return modal('🌐 Community', body);
 }
 // donations: a link out to the owner's tip page, plus free ways to help
+function supporterHTML() {
+  if (!sbOn()) return '';
+  const u = sbSess?.user, on = isSup(), open = supUrl(SUP_LINKS.month, 'buy.stripe.com') || supUrl(SUP_LINKS.year, 'buy.stripe.com');
+  let h = `<div class="sec">⭐ Book It Supporter</div><div class="card">`;
+  if (on) {
+    const portal = supUrl(SUP_PORTAL, 'billing.stripe.com');
+    h += `<div class="small"><b>You're a Supporter. Thank you!</b> Your ${SUP.plan === 'year' ? 'yearly' : 'monthly'} plan ${SUP.status === 'past_due' ? 'has a payment problem. Check your card' : `renews on ${new Date(SUP.end).toLocaleDateString()}`}.</div>
+      ${portal ? `<a class="btn block" style="margin-top:8px" href="${esc(portal.href)}" target="_blank" rel="noopener noreferrer">Manage or cancel</a>` : ''}`;
+  } else {
+    h += `<div class="small">Support the servers that run Community and cloud saves, and get a few extras. The game itself stays free.</div>`;
+  }
+  h += `<div class="list" style="margin-top:8px">${SUP_PERKS.map(([ic, t, d]) => `<div class="item sup-perk"><span class="ic">${ic}</span><div class="main"><div class="t">${t}</div><div class="d">${d}</div></div></div>`).join('')}</div>`;
+  if (!on) {
+    if (!open) h += `<div class="hs-off" style="margin-top:8px"><div class="small">Supporter opens soon.</div></div>`;
+    else if (!u?.email) h += `<div class="alert warn" style="margin-top:8px"><span class="ic">✉️</span><div class="small">First add your email in Account below, so your Supporter perks follow you to any device.</div></div>`;
+    else h += `<div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">${['month', 'year'].filter(k => supUrl(SUP_LINKS[k], 'buy.stripe.com')).map(k => `<button class="btn ${k === 'month' ? 'pri' : ''}" style="flex:1" data-act="supJoin" data-id="${k}">${SUP_PRICE[k]}</button>`).join('')}</div>
+      <div class="tiny muted" style="margin-top:6px">Opens Stripe's secure checkout. Cancel any time. Payments never go through the game.</div>`;
+  }
+  h += `</div>`;
+  if (!on && open && !u?.email) h += sbAccountCard();
+  return h;
+}
 function modalSupport(m) {
   setTimeout(commInit);
   const sp = supportLink(), host = sp ? new URL(sp.url).hostname.replace(/^www\./, '') : '';
   let body = `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}
-    <p style="font-size:17px"><b>Book It is free.</b> No ads, no paywalls.</p>
+    <p style="font-size:17px"><b>Book It is free.</b> No ads, and the whole game is free to play.</p>
     <p class="small muted">${sp?.note ? esc(sp.note) : 'If you enjoy it, a small tip helps keep new features and fixes coming.'}</p></div>`;
+  body += supporterHTML();
+  body += sp ? `<div class="sec">One-off tip</div>` : '';
   body += sp ? `<a class="btn pri block sup-go" href="${esc(sp.url)}" target="_blank" rel="noopener noreferrer">❤️ Support on ${esc(host)}</a>
     <button class="btn block" style="margin-top:8px" data-act="supCopy">📋 Copy the link</button>
     <div class="tiny muted" style="text-align:center;margin-top:6px">Opens ${esc(host)}. Payments are handled there, never in the game. Tips are optional and don't unlock anything.</div>`
-    : `<div class="hs-off"><div class="small">Tips aren't open yet. Check back soon.</div></div>`;
+    : sbOn() ? '' : `<div class="hs-off"><div class="small">Tips aren't open yet. Check back soon.</div></div>`;
   body += `<div class="sec">Free ways to help</div><div class="list">
     <div class="item"><div class="main"><div class="t">Share the game</div><div class="d">Send the link to a friend who loves wrestling.</div></div></div>
     <div class="item"><div class="main"><div class="t">Share your creations</div><div class="d">Post a roster or a save in Community so others can play it.</div></div></div>
@@ -6027,7 +6121,13 @@ const CREATOR_ACTIONS = {
   },
   // community
   community() { openModal({ type: 'community', tab: 'browse' }); },
-  support() { openModal({ type: 'support' }); },
+  support() { openModal({ type: 'support' }); supCheck().then(() => { if (UI.modal?.type === 'support') render(); }); },
+  supJoin(k) {
+    const u = supUrl(SUP_LINKS[k], 'buy.stripe.com'), id = sbSess?.user?.id; if (!u || !id) return;
+    u.searchParams.set('client_reference_id', id); // tells the webhook which player paid
+    if (sbSess.user.email) u.searchParams.set('prefilled_email', sbSess.user.email);
+    try { window.open(u.href, '_blank', 'noopener'); } catch (e) { location.href = u.href; }
+  },
   supCopy() { const sp = supportLink(); if (sp) copyText(sp.url, 'Link copied.'); },
   async supSave() {
     if (!COMM.owner || !cdb) return;
@@ -6080,7 +6180,7 @@ const CREATOR_ACTIONS = {
   sbWipe() {
     if (!COMM.me) return;
     confirmBox('Remove your Community posts?', `Your uploads, profile, likes, follows, reports and feedback${sbOn() ? ', and your cloud saves,' : ''} are deleted for everyone. This can't be undone.`, 'Remove', async () => {
-      try { for (const col of ['creations', 'reports', 'feedback', ...(sbOn() ? ['cloud1', 'cloud2', 'cloud3'] : [])]) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
+      try { for (const col of ['creations', 'reports', 'feedback', ...(sbOn() ? CLOUD_SLOTS.map(n => 'cloud' + n) : [])]) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
       catch (e) { toast('Could not remove it. Try again.'); }
     }, true);
   },
@@ -6131,19 +6231,19 @@ const CREATOR_ACTIONS = {
     const pack = makePack(ws, { titles: m.what === 'roster', title: (m.title || '').trim() || (m.what === 'roster' ? G.promo.name + ' roster' : ws.length === 1 ? ws[0].name : 'Custom wrestlers') });
     const item = { id: uid(), title: pack.title, desc: (m.desc || '').trim().slice(0, 300), kind: m.what === 'roster' ? 'roster' : 'wrestler', count: ws.length, created: Date.now(), pack };
     try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.'); }
-    catch (e) { toast(e?.code === 'too_big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+    catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   async cPublishSave() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
     if (isRude(m.title) || isRude(m.desc) || isRude(G.promo.name) || isRude(G.promo.show)) return toast('Please remove the rude words first.');
     if (typeof CompressionStream === 'undefined') return toast('This browser can\'t pack save files. Try an up-to-date browser.');
-    if (COMM.mine.filter(x => x.kind === 'save').length >= SAVE_SHARE_MAX) return toast('Remove an old save first.');
+    if (COMM.mine.filter(x => x.kind === 'save').length >= saveShareMax()) return toast('Remove an old save first.');
     try {
       const data = await gz(JSON.stringify(shareableSave(G, !!m.notes)));
       const item = { id: uid(), title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' · week ' + G.week, desc: (m.desc || '').trim().slice(0, 300), kind: 'save', count: signed().length, created: Date.now(), sum: saveSummary(G), save: data };
       await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30));
       UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Save shared with the community.');
-    } catch (e) { toast(e?.code === 'too_big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+    } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   cPlaySave(key, el) {
     const n = +el.dataset.f, i = COMM.items.find(x => x.author + '|' + x.id === key); if (!i) return toast('This save was removed.');
@@ -7157,7 +7257,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.6';
+const VERSION = '1.7';
 const WHATS_NEW = [
   ['📺 Media appearances', 'Office → Media: send wrestlers on talk shows, podcasts and fan signings for a popularity boost (with a small chance of a slip-up), or away on movies, media tours and indie runs to come back much bigger. Big offers come as backstage events, and some wrestlers will ask.'],
   ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Rivals), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
@@ -7206,6 +7306,7 @@ if (cur) G = cur;
 try { const hadGame = [1, 2, 3].some(n => slotInfo(n)); if (meta.seen !== VERSION) { if (hadGame && G && !UI.modal) UI.modal = { type: 'whatsnew' }; meta.seen = VERSION; ls.set(META, JSON.stringify(meta)); } } catch (e) {}
 try { render(); } catch (e) { crash(e && e.message); }
 sbFromLink(); addEventListener('hashchange', sbFromLink);
+if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); }
 // animated splash: once per app launch, tap to skip, skipped under automated tests (?splash forces it)
 try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   const sp = document.createElement('div'); sp.id = 'splash'; sp.setAttribute('role', 'presentation');
