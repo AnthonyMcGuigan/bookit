@@ -150,6 +150,10 @@ label.f > span { display: block; font-size: 12px; font-weight: 700; color: var(-
 .modal .mh { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
 .modal .mh h2 { font-size: 17px; flex: 1; }
 .modal .mb { padding: 14px 16px; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
+/* while any sheet or overlay is open the page behind it stays put (see syncScrollLock) */
+html.scroll-lock, html.scroll-lock body { overflow: hidden; overscroll-behavior: none; }
+.modal-bg, .live, .crash { overscroll-behavior: contain; }
+.modal .mb, .lv-body, .modal textarea, .live textarea { overscroll-behavior: contain; }
 .modal .mf { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); display: flex; gap: 8px; }
 .modal .mf .btn { flex: 1; }
 .picker-bg { z-index: 30; }
@@ -2872,6 +2876,33 @@ function storyIdea() {
 // =====================================================================
 const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', newsF: 'all', notesTab: 'todo', faTab: 'contracts' };
 const root = document.getElementById('root'), modals = document.getElementById('modals');
+// ---------- scroll lock: nothing behind an open sheet, picker or overlay may scroll ----------
+const LOCK_SEL = '.modal-bg, .live, .crash';
+function syncScrollLock() { document.documentElement.classList.toggle('scroll-lock', !!document.querySelector(LOCK_SEL)); }
+new MutationObserver(syncScrollLock).observe(document.body, { childList: true, subtree: true });
+// iOS can still drag the page through a fixed layer, so a drag inside an overlay only goes through
+// when it lands on something that can scroll in that direction (a sheet body, a text box, a chip row, a slider)
+let lockTouch = null;
+document.addEventListener('touchstart', e => { const t = e.touches[0]; lockTouch = t ? { x: t.clientX, y: t.clientY } : null; }, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (!document.documentElement.classList.contains('scroll-lock') || e.touches.length > 1 || !lockTouch) return;
+  const t = e.touches[0], dx = t.clientX - lockTouch.x, dy = t.clientY - lockTouch.y;
+  lockTouch = { x: t.clientX, y: t.clientY };
+  if (!dx && !dy) return;
+  if (e.target.closest?.('input[type=range]')) return;
+  const layers = document.querySelectorAll(LOCK_SEL), top = layers[layers.length - 1];
+  for (let el = e.target; el && el.nodeType === 1; el = el.parentElement) {
+    const cs = getComputedStyle(el);
+    if (Math.abs(dy) >= Math.abs(dx)) {
+      if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1) {
+        const atTop = el.scrollTop <= 0, atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+        if (!((dy > 0 && atTop) || (dy < 0 && atEnd))) return;
+      }
+    } else if (/(auto|scroll)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1) return;
+    if (el === top) break;
+  }
+  if (e.cancelable) e.preventDefault();
+}, { passive: false });
 
 
 // ---------- minimal line icons: emoji in any rendered text become small SVG icons ----------
