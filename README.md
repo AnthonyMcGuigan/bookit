@@ -233,4 +233,16 @@ The show-night crowd uses short recordings from Wikimedia Commons. All are publi
 | `sounds/ooh.mp3` | [Ohhh ahhh](https://commons.wikimedia.org/wiki/File:Ohhh_ahhh.ogg) by starlite | Public domain |
 | `sounds/boo.mp3` | [Audience Booing](https://commons.wikimedia.org/wiki/File:Soundgoats_-_Audience_Booing.wav) by Brendon (Soundgoats) | Public domain |
 
+### Menu music
+
+Three tracks by Kevin MacLeod rotate in the menus. They are CC BY 3.0, so the credit below must stay in the game (it is in About) and here. Volume-matched and re-encoded at 96 kbps in `sounds/`.
+
+| File | Track | License |
+| --- | --- | --- |
+| `sounds/music-summon-the-rawk.mp3` | [Summon the Rawk](https://commons.wikimedia.org/wiki/File:Summon_the_Rawk_(ISRC_USUAN1200050).mp3) by Kevin MacLeod (incompetech.com) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `sounds/music-raw.mp3` | [Raw](https://commons.wikimedia.org/wiki/File:Raw_(ISRC_USUAN1100791).mp3) by Kevin MacLeod (incompetech.com) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `sounds/music-take-the-lead.mp3` | [Take the Lead](https://commons.wikimedia.org/wiki/File:Take_the_Lead_(ISRC_USUAN1100695).mp3) by Kevin MacLeod (incompetech.com) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+
+Music never starts before the player taps or presses a key. It follows the main Sound switch, has its own on/off and volume in Menu → Settings, fades out for the live show (the bell and crowd take over) and pauses when the app is in the background.
+
 The bell is still made in code. The crowd is only heard for the main event, title changes and segments rated 80+, so it stays special. Each crowd line under a result ("Huge pop", "Loud boos for X", "Crickets") is chosen from what actually happened, and the clip that plays matches it. A flat segment plays nothing.

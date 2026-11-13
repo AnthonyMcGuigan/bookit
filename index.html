@@ -3544,6 +3544,7 @@ function renderModal() {
       <p class="small muted">A free, fan-made wrestling booking game. Everything built in is fictional.</p>
       <p class="small muted">Player-made rosters are unofficial and not tied to any wrestling company. Names belong to their owners.</p>
       <p class="small muted">Saves stay in this browser. Back them up from the menu.</p>
+      <p class="tiny muted">Music: "Summon the Rawk", "Raw" and "Take the Lead" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 3.0 (creativecommons.org/licenses/by/3.0). Crowd recordings from Wikimedia Commons (public domain and CC0).</p>
       <p><button class="link" data-act="privacy">Privacy &amp; terms</button> · <button class="link" data-act="whatsNew">What's new</button> · <button class="link" data-act="feedback">Send feedback</button></p></div>`, '<button class="btn" data-act="support">❤️ Support</button><button class="btn pri" data-act="closeModal">Close</button>');
     case 'help': return modal('How to play', helpHTML());
     case 'brief': return modal('Briefing', viewHome());
@@ -6299,17 +6300,19 @@ const SFX = (() => {
   };
 })();
 
-// ---------- menu music: one looping recorded track (credits in README and About) ----------
+// ---------- menu music: a rotating playlist of recorded tracks (credits in README and About) ----------
 // Never starts before the player taps or presses a key, stays off when sound is muted,
 // fades out for the live show (bell and crowd take over) and pauses when the app is hidden.
 const MUSIC = (() => {
-  const SRC = 'sounds/music-menu.mp3';
-  let el = null, gain = null, unlocked = false, want = false, fadeT = 0;
+  const SRC = ['sounds/music-summon-the-rawk.mp3', 'sounds/music-raw.mp3', 'sounds/music-take-the-lead.mp3'];
+  let el = null, gain = null, unlocked = false, want = false, fadeT = 0, cur = Math.floor(Math.random() * SRC.length);
   const on = () => meta.sound !== false && meta.music !== false;
   const vol = () => clamp(meta.musicVol == null ? .35 : +meta.musicVol, 0, 1);
   const quiet = () => document.hidden || UI.modal?.type === 'live';
   const level = v => { if (gain) gain.gain.value = v; else if (el) el.volume = v; };
-  const make = () => { if (el) return el; el = new Audio(); el.src = SRC; el.loop = true; el.preload = 'none'; el.setAttribute('playsinline', '');
+  const make = () => { if (el) return el; el = new Audio(); el.src = SRC[cur]; el.preload = 'none'; el.setAttribute('playsinline', '');
+    // when a track ends, the next one starts (at full music volume, no fade needed)
+    el.addEventListener('ended', () => { cur = (cur + 1) % SRC.length; el.src = SRC[cur]; if (want) el.play().catch(() => {}); });
     // route through Web Audio where possible, because iPhones ignore the volume of a plain audio element
     try { const C = window.AudioContext || window.webkitAudioContext; if (C) { const c = MUSIC.ctx || (MUSIC.ctx = new C()); gain = c.createGain(); c.createMediaElementSource(el).connect(gain).connect(c.destination); } } catch (e) { gain = null; }
     return el; };
