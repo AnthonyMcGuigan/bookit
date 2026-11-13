@@ -535,7 +535,9 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .cv-by .flair { display: block; }
 .belt-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 4px; }
 .bp { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font-size: 11px; font-weight: 700; text-align: center; }
-.bp svg { width: 100%; height: auto; max-height: 40px; }
+.bp svg { width: 100%; height: auto; max-height: 46px; }
+.sym-xs { width: 26px; height: auto; vertical-align: -3px; margin-right: 4px; }
+.sym-big { text-align: center; margin: -2px 0 8px; } .sym-big svg { width: 160px; max-width: 60%; height: auto; }
 .bp.on { border-color: var(--gold); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 45%, transparent); }
 .bp.lock, .chip.lock { opacity: .5; } .bp.lock svg { filter: grayscale(1); }
 .chip.on { border-color: var(--gold); color: var(--ink); background: color-mix(in srgb, var(--gold) 18%, transparent); }
@@ -1009,7 +1011,6 @@ function migrate(g) {
   g.booker.cxp ??= +g.booker.xp || 0; g.booker.coPaid ??= coLvlOf(+g.booker.cxp || 0); g.booker.perks = (Array.isArray(g.booker.perks) ? g.booker.perks : []).filter(k => Object.hasOwn(PERKS, k)).slice(0, 6);
   if (g.sponsor && (typeof g.sponsor !== 'object' || !(+g.sponsor.pay >= 0))) g.sponsor = null;
   if (g.sponsor) g.sponsor = { n: String(g.sponsor.n || 'Sponsor').replace(/[<>&"'`]/g, '').slice(0, 30), pay: clamp(+g.sponsor.pay || 0, 0, 1e6), T: clamp(+g.sponsor.T || 60, 1, 100), left: clamp(Math.floor(+g.sponsor.left) || 0, 0, 52), paidWk: +g.sponsor.paidWk || 0 };
-  for (const t of g.titles || []) if (t && t.design && !BELTS.some(b => b[0] === t.design)) delete t.design;
   for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; }
   for (const s of g.stories) { s.notes ??= ''; s.log ||= []; }
   for (const c of [g.card, ...Object.values(g.future || {})]) if (Array.isArray(c)) for (const x of c) if (x && OLD_FIN[x.finish]) x.finish = OLD_FIN[x.finish];
@@ -2522,7 +2523,7 @@ function checkMiles() {
 }
 
 // ---- unlocks ----
-// Booker level (the player, every save) unlocks belt designs and Community flairs.
+// Booker level (the player, every save) unlocks profile symbols (belt badges) and Community flairs.
 // Company level (one promotion) unlocks business: cash bonuses, sponsors, bigger big-event cards, viral moments, TV specials, perks.
 const BELTS = [ // id, name, booker level, look
   ['classic', 'Classic Gold', 1, { strap: '#22180f', stitch: '#6b4a2a', p: ['#fff3c2', '#f2c443', '#a8740a'], edge: '#7a5408', gem: ['#ffd0d0', '#d62839', '#6d0a15'], ink: '#5a3c00' }],
@@ -2950,8 +2951,8 @@ function modalTrophies() {
       <div class="sec">Company unlocks</div><div class="list">${CO_UNLOCKS.map(([lv, ic, n, d]) => `<div class="mile ${L >= lv ? '' : 'dim'}"><span class="mile-i">${L >= lv ? ic : '🔒'}</span><div class="sp"><b>${n}</b><div class="tiny muted">Level ${lv} · ${d}</div></div>${L >= lv ? '<span class="tag">Unlocked</span>' : ''}</div>`).join('')}</div>`;
   } else {
     const L = lvlOf(c.xp);
-    body = `<div class="sec" style="margin-top:0">Belt designs</div><div class="belt-pick">${BELTS.map(([id, n, lv]) => `<div class="bp ${L >= lv ? '' : 'lock'}">${beltSVG('belt-sm', 'CHAMPION', id)}<span>${L >= lv ? esc(n) : `🔒 Lv ${lv}`}</span></div>`).join('')}</div>
-      <div class="tiny muted" style="margin:4px 0 0">Pick a design for any title in Office → Titles.</div>
+    body = `<div class="sec" style="margin-top:0">Profile symbols</div><div class="belt-pick">${BELTS.map(([id, n, lv]) => `<div class="bp ${L >= lv ? '' : 'lock'}">${symSVG(id, 'LV ' + lv)}<span>${L >= lv ? esc(n) : `🔒 Lv ${lv}`}</span></div>`).join('')}</div>
+      <div class="tiny muted" style="margin:4px 0 0">Your symbol shows on your Community profile. Set it in Community → My profile.</div>
       <div class="sec">Community flairs</div><div class="chips">${FLAIRS.map(([id, n, lv]) => `<span class="chip ${L >= lv ? '' : 'lock'}">${L >= lv ? '' : '🔒 '}${esc(n)} · Lv ${lv}</span>`).join('')}</div>
       <div class="tiny muted" style="margin:4px 0 0">Set yours in Community → My profile.</div>
       <div class="sec">Ranks</div>
@@ -3309,20 +3310,37 @@ function ringSVG(label) {
    <rect x="281" y="76" width="14" height="9" rx="3"/><rect x="281" y="94" width="14" height="9" rx="3"/><rect x="281" y="112" width="14" height="9" rx="3"/></g>
   </svg>`;
 }
-function beltSVG(cls, label, design) {
-  const [id, , , L] = beltOf(design), g = 'bt' + id, gem = L.big ? 16 : 12;
+function beltSVG(cls, label) {
   return `<svg class="${cls || 'belt-art'}" viewBox="0 0 240 100" role="img" aria-label="Championship belt">
-  <defs><linearGradient id="${g}P" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${L.p[0]}"/><stop offset=".45" stop-color="${L.p[1]}"/><stop offset="1" stop-color="${L.p[2]}"/></linearGradient>
-  <radialGradient id="${g}G" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="${L.gem[0]}"/><stop offset=".55" stop-color="${L.gem[1]}"/><stop offset="1" stop-color="${L.gem[2]}"/></radialGradient></defs>
-  <rect x="0" y="32" width="240" height="36" rx="12" fill="${L.strap}"/><path d="M8 38H232M8 62H232" stroke="${L.stitch}" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <rect x="24" y="36" width="34" height="28" rx="6" fill="url(#${g}P)" stroke="${L.edge}"/><rect x="182" y="36" width="34" height="28" rx="6" fill="url(#${g}P)" stroke="${L.edge}"/>
-  <circle cx="41" cy="50" r="5" fill="url(#${g}G)"/><circle cx="199" cy="50" r="5" fill="url(#${g}G)"/>
-  <path d="M84 6H156L178 28V72L156 94H84L62 72V28Z" fill="url(#${g}P)" stroke="${L.edge}" stroke-width="2"/>
-  <path d="M90 14H150L168 32V68L150 86H90L72 68V32Z" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="1.5"/>
-  ${L.spin ? `<g class="belt-spin" style="transform-origin:120px 40px"><circle cx="120" cy="40" r="${gem + 7}" fill="none" stroke="${L.edge}" stroke-width="2" stroke-dasharray="5 4"/></g>` : ''}
-  <circle cx="120" cy="40" r="${gem}" fill="url(#${g}G)" stroke="${L.edge}" stroke-width="2"/>
-  ${L.gems ? `<circle cx="84" cy="50" r="4" fill="url(#${g}G)"/><circle cx="156" cy="50" r="4" fill="url(#${g}G)"/><circle cx="100" cy="20" r="3" fill="url(#${g}G)"/><circle cx="140" cy="20" r="3" fill="url(#${g}G)"/>` : ''}
-  <text x="120" y="${L.big ? 76 : 72}" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="13" letter-spacing="1.5" fill="${L.ink}">${esc(label || 'CHAMPION')}</text>
+  <defs><linearGradient id="btGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c2"/><stop offset=".45" stop-color="#f2c443"/><stop offset="1" stop-color="#a8740a"/></linearGradient>
+  <radialGradient id="btGem" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#ffd0d0"/><stop offset=".55" stop-color="#d62839"/><stop offset="1" stop-color="#6d0a15"/></radialGradient></defs>
+  <rect x="0" y="32" width="240" height="36" rx="12" fill="#22180f"/><path d="M8 38H232M8 62H232" stroke="#6b4a2a" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <rect x="24" y="36" width="34" height="28" rx="6" fill="url(#btGold)" stroke="#7a5408"/><rect x="182" y="36" width="34" height="28" rx="6" fill="url(#btGold)" stroke="#7a5408"/>
+  <circle cx="41" cy="50" r="5" fill="url(#btGem)"/><circle cx="199" cy="50" r="5" fill="url(#btGem)"/>
+  <path d="M84 6H156L178 28V72L156 94H84L62 72V28Z" fill="url(#btGold)" stroke="#7a5408" stroke-width="2"/>
+  <path d="M90 14H150L168 32V68L150 86H90L72 68V32Z" fill="none" stroke="#fff6cf" stroke-opacity=".6" stroke-width="1.5"/>
+  <circle cx="120" cy="40" r="12" fill="url(#btGem)" stroke="#7a5408" stroke-width="2"/>
+  <text x="120" y="72" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="13" letter-spacing="1.5" fill="#5a3c00">${esc(label || 'CHAMPION')}</text>
+  </svg>`;
+}
+// a booker's profile symbol: a bold belt badge unlocked by booker level (championships keep their own belt art)
+function symSVG(id, label, cls) {
+  const b = BELTS.find(x => x[0] === id); if (!b) return '';
+  const L = b[3], O = id === 'blackgold' ? '#c48e14' : '#14100a', plate = 'M78 14 H162 L186 40 V80 L162 106 H78 L54 80 V40 Z';
+  return `<svg class="${cls || 'sym'}" viewBox="0 -4 240 116" role="img" aria-label="${esc(b[1])} symbol">
+  <rect x="4" y="38" width="232" height="44" rx="14" fill="${L.strap}" stroke="${O}" stroke-width="4"/>
+  <rect x="14" y="46" width="212" height="28" rx="8" fill="none" stroke="${L.stitch}" stroke-width="2" stroke-dasharray="5 4"/>
+  ${[18, 186].map(x => `<rect x="${x}" y="42" width="36" height="36" rx="8" fill="${L.p[1]}" stroke="${O}" stroke-width="4"/><rect x="${x + 4}" y="46" width="28" height="12" rx="4" fill="${L.p[0]}" opacity=".7"/><circle cx="${x + 18}" cy="62" r="6" fill="${L.gem[1]}" stroke="${O}" stroke-width="3"/>`).join('')}
+  <path d="${plate}" fill="${L.p[2]}" stroke="${O}" stroke-width="5" transform="translate(0 4)"/>
+  <path d="${plate}" fill="${L.p[1]}" stroke="${O}" stroke-width="5"/>
+  <path d="M84 22 H156 L174 42 V50 H66 V42 Z" fill="${L.p[0]}" opacity=".75"/>
+  ${L.spin ? `<circle class="belt-spin" style="transform-origin:120px 50px" cx="120" cy="50" r="${L.big ? 26 : 22}" fill="none" stroke="${O}" stroke-width="3" stroke-dasharray="7 5"/>` : ''}
+  <circle cx="120" cy="50" r="${L.big ? 19 : 15}" fill="${L.gem[1]}" stroke="${O}" stroke-width="4"/>
+  <circle cx="${L.big ? 113 : 115}" cy="${L.big ? 43 : 45}" r="${L.big ? 5 : 4}" fill="${L.gem[0]}"/>
+  ${L.gems ? [[78, 40], [162, 40], [78, 80], [162, 80]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="${L.gem[1]}" stroke="${O}" stroke-width="2.5"/>`).join('') : ''}
+  ${id === 'hof' ? `<path d="M100 16 L105 0 L113 10 L120 -2 L127 10 L135 0 L140 16 Z" fill="${L.p[1]}" stroke="${O}" stroke-width="3.5" stroke-linejoin="round"/>` : ''}
+  <rect x="74" y="74" width="92" height="20" rx="5" fill="${id === 'blackgold' ? '#000' : O}"/>
+  <text x="120" y="89" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="13" letter-spacing="1.5" fill="${id === 'blackgold' ? L.edge : L.p[0]}">${esc(label || 'BOOKER')}</text>
   </svg>`;
 }
 function ding() {
@@ -3472,7 +3490,7 @@ function viewHome() {
   const last = G.history[G.history.length - 1];
   const nb = nextBig();
   const att = attention();
-  const champs = G.titles.map(t => `<div class="item" style="padding:8px 10px">${beltSVG('belt-sm', (t.short || '').toUpperCase(), t.design)}<div class="main"><div class="t small">${esc(t.name)}</div><div class="d">${t.holder.length ? nmList(t.holder) + ` · since wk ${t.since} · ${t.defenses} defenses` : '<span class="muted">Vacant</span>'}</div></div><span class="tag gold">${Math.round(t.prestige)}</span></div>`).join('');
+  const champs = G.titles.map(t => `<div class="item" style="padding:8px 10px">${beltSVG('belt-sm', (t.short || '').toUpperCase())}<div class="main"><div class="t small">${esc(t.name)}</div><div class="d">${t.holder.length ? nmList(t.holder) + ` · since wk ${t.since} · ${t.defenses} defenses` : '<span class="muted">Vacant</span>'}</div></div><span class="tag gold">${Math.round(t.prestige)}</span></div>`).join('');
   const hot = G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat).slice(0, 3);
   return `
   <div class="card ${isBig(G.week) ? 'big-ev' : ''}">
@@ -3752,7 +3770,7 @@ function viewOffice() {
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
   ${t === 'fa' ? `<div class="small muted" style="margin-bottom:8px">Unsigned talent. Rivals sign them over time.</div><div class="list">${fa.map(w => wItem(w, 'negotiate', CON() ? `asks <b>${money(asking(w))}</b>/wk` : 'tap to sign instantly')).join('') || '<div class="empty">No free agents right now.</div>'}</div><button class="btn block" style="margin-top:12px" data-act="createW">+ Create a wrestler</button>` : ''}
-  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${beltSVG('belt-sm', (ti.short || '').toUpperCase(), ti.design)}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
+  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${beltSVG('belt-sm', (ti.short || '').toUpperCase())}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
@@ -4311,7 +4329,7 @@ function modalRankings(m) {
 function modalRecords(m) {
   const tab = m.tab || 'titles', legends = G.wrestlers.filter(w => w.retired).sort((a, b) => b.retired - a.retired);
   let body = tabsOf([['titles', 'Title history'], ['awards', 'Awards'], ['legends', 'Legends']], tab, 'recTab');
-  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${beltSVG('belt-sm', (t.short || '').toUpperCase(), t.design)}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
+  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${beltSVG('belt-sm', (t.short || '').toUpperCase())}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
   if (tab === 'awards') body += (G.awards || []).slice().reverse().map(a => `<div class="card aw"><div class="review-h">Year ${a.yr} awards · week ${a.wk}</div>${a.list.map(x => `<div class="aw-r"><span class="tiny muted">${esc(x.lbl)}</span><b>${esc(x.nm)}</b><span class="tiny muted">${esc(x.det || '')}</span></div>`).join('') || '<div class="tiny muted">No shows that year.</div>'}</div>`).join('') || `<div class="empty">Awards are handed out at the end of every year (week 52). ${52 - (G.week - 1) % 52} weeks to go.</div>`;
   if (tab === 'legends') body += legends.length ? `<div class="list">${legends.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">Retired week ${w.retired} at ${w.age} · ${recStr(w)} · ${reignsOfW(w.id).length} title reigns</div></div></button>`).join('')}</div>` : '<div class="empty">No one has retired yet. Older wrestlers start to slow down after 34 and may retire from 38.</div>';
   return modal('History', body);
@@ -4367,7 +4385,6 @@ function modalTitle(m) {
     <label class="todo"><input type="checkbox" data-et="tag" ${d.tag ? 'checked' : ''}><span>Tag team title (2 holders)</span></label>
     <label class="f" style="margin-top:10px"><span>Prestige (1–100)</span><input type="number" min="1" max="100" data-et="prestige" value="${Math.round(d.prestige)}"></label>
     <label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${titleDiv(d) === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
-    <div class="f"><span>Belt design</span><div class="belt-pick">${BELTS.map(([id, n, lv]) => { const lock = bookerLvl() < lv, on = (d.design || 'classic') === id; return `<button class="bp ${on ? 'on' : ''} ${lock ? 'lock' : ''}" data-act="beltPick" data-id="${id}" aria-pressed="${on}" aria-label="${esc(n)}${lock ? `, unlocks at booker level ${lv}` : ''}">${beltSVG('belt-sm', (d.short || '').toUpperCase(), id)}<span>${lock ? `🔒 Lv ${lv}` : esc(n)}</span></button>`; }).join('')}</div><span class="tiny muted">New designs unlock as your booker level goes up.</span></div>
     <div class="side"><div class="lbl">Champion${d.tag ? 's' : ''}</div>${chipsFor(d.holder, 'holder', d.tag ? 2 : 1)}</div>
     <div class="side"><div class="lbl">Contenders you pick</div>${chipsFor(d.contenders || [], 'contenders', 3)}<div class="tiny muted" style="margin-top:4px">Your picks go first, in order. The rest rank by record.</div></div>
     ${(() => { const c = contenders(d, 5); return c.length ? `<div class="contend" style="margin-top:4px">${c.map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)}${(d.contenders || []).includes(w.id) ? ' <span class="tag">picked</span>' : ''}</span>`).join('')}</div>` : '<div class="tiny muted">No eligible contenders in this division.</div>'; })()}
@@ -5483,8 +5500,10 @@ function rerenderComm() {
   const sc = document.querySelector('.modal .mb')?.scrollTop; render(); const mb = document.querySelector('.modal .mb'); if (mb && sc) mb.scrollTop = sc;
 }
 // a Community flair: only known ids, and only one the booker level on the profile has reached
-function cleanFlair(pr) { const lvl = clamp(Math.floor(+pr.lvl) || 0, 0, MAX_LVL), f = FLAIRS.find(x => x[0] === pr.flair); return lvl ? { lvl, flair: f && f[2] <= lvl ? f[0] : '' } : {}; }
-function flairTag(id) { const p = COMM.profiles[id]; if (!p || !p.lvl) return ''; const f = FLAIRS.find(x => x[0] === p.flair); return `<span class="flair">Lv ${p.lvl}${f ? ' · ' + esc(f[1]) : ''}</span>`; }
+function cleanFlair(pr) { const lvl = clamp(Math.floor(+pr.lvl) || 0, 0, MAX_LVL), f = FLAIRS.find(x => x[0] === pr.flair), y = BELTS.find(x => x[0] === pr.sym); return lvl ? { lvl, flair: f && f[2] <= lvl ? f[0] : '', sym: y && y[2] <= lvl ? y[0] : '' } : {}; }
+function flairTag(id) { const p = COMM.profiles[id]; if (!p || !p.lvl) return ''; const f = FLAIRS.find(x => x[0] === p.flair); return `<span class="flair">${p.sym ? symSVG(p.sym, 'LV ' + p.lvl, 'sym-xs') : ''}Lv ${p.lvl}${f ? ' · ' + esc(f[1]) : ''}</span>`; }
+// the big version on a profile page
+const symBig = id => { const p = COMM.profiles[id]; return p && p.sym ? `<div class="sym-big">${symSVG(p.sym, 'LV ' + p.lvl)}</div>` : ''; };
 const authorName = id => id === COMM.me ? 'You' : id === 'featured' ? 'Featured pick' : (COMM.profiles[id]?.name || COMM.names[id] || 'A player');
 const cleanTxt = (v, n) => (typeof v === 'string' ? v : '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff<>`"]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
 // a small rude-word filter: blocks posting, and masks anything that slips through
@@ -5753,7 +5772,7 @@ function modalCommunity(m) {
   } else {
     const mine = COMM.items.filter(i => i.author === COMM.me), pr = COMM.profiles[COMM.me], liked = COMM.items.filter(i => iLike(i.author + '|' + i.id));
     const fans = COMM.followers[COMM.me]?.size || 0, likesGot = sum(mine.map(i => i.nLikes || 0)), usesGot = sum(mine.map(i => i.nUses || 0));
-    body += !COMM.me ? (sbOn() ? '' : '<div class="empty">Open the online version while signed in to have a profile.</div>') : `<div class="card prof"><div class="row" style="gap:12px">${creatorAv(COMM.me, 56)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(pr?.name || COMM.names[COMM.me] || 'Your profile')}</div>${flairTag(COMM.me)}<div class="small muted">${pr?.bio ? esc(pr.bio) : 'Add a name and a short bio so players know who made your uploads.'}</div></div></div>
+    body += !COMM.me ? (sbOn() ? '' : '<div class="empty">Open the online version while signed in to have a profile.</div>') : `<div class="card prof">${symBig(COMM.me)}<div class="row" style="gap:12px">${creatorAv(COMM.me, 56)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(pr?.name || COMM.names[COMM.me] || 'Your profile')}</div>${flairTag(COMM.me)}<div class="small muted">${pr?.bio ? esc(pr.bio) : 'Add a name and a short bio so players know who made your uploads.'}</div></div></div>
       <div class="grid3 cstats" style="margin-top:10px"><div><b>${mine.length}</b><span>uploads</span></div><div><b>${likesGot}</b><span>likes</span></div><div><b>${fans}</b><span>followers</span></div></div>
       ${usesGot ? `<div class="tiny muted" style="margin-top:6px">Your uploads have been added or played ${usesGot} time${usesGot > 1 ? 's' : ''}.</div>` : ''}
       <button class="btn block" style="margin-top:10px" data-act="cEditProfile">✏️ ${pr ? 'Edit profile' : 'Set up your profile'}</button></div>
@@ -5811,7 +5830,7 @@ function modalInbox(m) {
 function modalCreator(m) {
   const id = m.id, pr = COMM.profiles[id], ups = COMM.items.filter(i => i.author === id).sort((a, b) => b.created - a.created);
   const fans = COMM.followers[id]?.size || 0, likes = sum(ups.map(i => i.nLikes || 0));
-  const body = `<div class="row" style="gap:12px;margin-bottom:10px">${creatorAv(id, 60)}<div class="sp"><div style="font-size:20px;font-weight:800">${esc(authorName(id))}</div>${flairTag(id)}${pr?.bio ? `<div class="small muted">${esc(pr.bio)}</div>` : ''}</div></div>
+  const body = `${symBig(id)}<div class="row" style="gap:12px;margin-bottom:10px">${creatorAv(id, 60)}<div class="sp"><div style="font-size:20px;font-weight:800">${esc(authorName(id))}</div>${flairTag(id)}${pr?.bio ? `<div class="small muted">${esc(pr.bio)}</div>` : ''}</div></div>
     <div class="grid3 cstats"><div><b>${ups.length}</b><span>uploads</span></div><div><b>${likes}</b><span>likes</span></div><div><b>${fans}</b><span>followers</span></div></div>
     <div class="sec">Uploads</div><div class="list">${ups.map(i => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? 'Save' : kindLbl(i)}${i.nLikes ? ' · ❤️ ' + i.nLikes : ''} · ${new Date(i.created).toLocaleDateString()}</div></div></button>`).join('') || '<div class="empty">Nothing shared yet.</div>'}</div>`;
   const foot = `${COMM.owner && id !== COMM.me && id !== 'featured' ? (pr ? '<button class="btn bad" data-act="cClearProfile" data-id="' + esc(id) + '">Clear profile</button>' : '') + '<button class="btn bad" data-act="cWipe" data-id="' + esc(id) + '">Remove all</button>' : ''}${id !== COMM.me && id !== 'featured' && COMM.me && !COMM.owner ? `<button class="btn" data-act="cReport" data-id="p:${esc(id)}" aria-label="Report this creator">🚩</button>` : ''}${id !== COMM.me && id !== 'featured' && COMM.me ? `<button class="btn ${iFollow(id) ? '' : 'pri'}" data-act="cFollow" data-id="${esc(id)}">${iFollow(id) ? 'Following ✓' : '+ Follow'}</button>` : ''}`;
@@ -5821,6 +5840,7 @@ function modalEditProfile(m) {
   const d = m.draft;
   const body = `<label class="f"><span>Display name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="30" placeholder="e.g. The Booking Genius"></label>
     <label class="f"><span>Bio</span><textarea data-et="bio" maxlength="160" style="min-height:70px" placeholder="What do you like to make? Fantasy rosters, real promotions, dream matches...">${esc(d.bio)}</textarea></label>
+    <div class="f"><span>Symbol <span class="muted">· booker level ${bookerLvl()}</span></span><div class="belt-pick"><button class="bp ${!d.sym ? 'on' : ''}" data-act="symPick" data-id="" aria-pressed="${!d.sym}"><span style="padding:12px 0">None</span></button>${BELTS.map(([id, n, lv]) => { const lock = bookerLvl() < lv, on = d.sym === id; return `<button class="bp ${on ? 'on' : ''} ${lock ? 'lock' : ''}" data-act="symPick" data-id="${id}" aria-pressed="${on}" aria-label="${esc(n)}${lock ? `, unlocks at booker level ${lv}` : ''}">${symSVG(id, 'LV ' + bookerLvl())}<span>${lock ? `🔒 Lv ${lv}` : esc(n)}</span></button>`; }).join('')}</div></div>
     <div class="f"><span>Flair <span class="muted">· booker level ${bookerLvl()}</span></span><div class="chips">${FLAIRS.map(([id, n, lv]) => { const lock = bookerLvl() < lv; return `<button class="chip ${d.flair === id ? 'on' : ''} ${lock ? 'lock' : ''}" data-act="flairPick" data-id="${id}" aria-pressed="${d.flair === id}">${lock ? `🔒 ${esc(n)} · Lv ${lv}` : esc(n)}</button>`; }).join('')}</div><span class="tiny muted">Shows next to your name with your booker level. More unlock as you level up.</span></div>
     <label class="f"><span>Color</span><div class="swatches">${RIV_COLORS.concat(['#ffb547', '#6b7280']).map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
     <div class="tiny muted">Everyone in Community sees your name, bio and color next to your uploads. Your account is your claude.ai sign-in, so there is no password to remember. Keep it friendly. <button class="link" data-act="privacy">Privacy</button></div>`;
@@ -5935,7 +5955,7 @@ const CREATOR_ACTIONS = {
   bPx(v, el) { const f = el.dataset.f; PX[f] = (f === 'detail' || f === 'colors' || f === 'zoom') ? +v : v; applyPX(); render(); },
   bColor(c) { UI.modal.draft.color = c; if (PX?.bg === 'color') applyPX(); render(); },
   bSet(v, el) { UI.modal.draft[el.dataset.f] = v; render(); },
-  beltPick(id) { const b = BELTS.find(x => x[0] === id); if (!b) return; if (bookerLvl() < b[2]) return toast(`${b[1]} unlocks at booker level ${b[2]}.`); UI.modal.draft.design = id; render(); },
+  symPick(id) { if (!id) { UI.modal.draft.sym = ''; return render(); } const b = BELTS.find(x => x[0] === id); if (!b) return; if (bookerLvl() < b[2]) return toast(`${b[1]} unlocks at booker level ${b[2]}.`); UI.modal.draft.sym = id; render(); },
   flairPick(id) { const f = FLAIRS.find(x => x[0] === id); if (!f) return; if (bookerLvl() < f[2]) return toast(`${f[1]} unlocks at booker level ${f[2]}.`); UI.modal.draft.flair = id; render(); },
   perkPick(k) { if (!Object.hasOwn(PERKS, k) || perksDue() <= 0 || perk(k)) return; (G.booker.perks ||= []).push(k); news(`⭐ New promotion perk: ${PERKS[k][1]} (${PERKS[k][2]})`, 'office'); commit(`${PERKS[k][1]} is active.`); },
   bArch(k) {
@@ -5968,15 +5988,15 @@ const CREATOR_ACTIONS = {
   cCreator(id) { UI.modal = { type: 'creator', id, back: UI.modal }; render(); },
   cLike(key) { if (!COMM.me || !ITEM_KEY.test(key)) return; const l = myList('likes'); commMe({ likes: l.includes(key) ? l.filter(x => x !== key) : [key, ...l].slice(0, 300) }); },
   cFollow(id) { if (!AUTHOR_ID.test(id) || id === COMM.me) return; const f = myList('follows'); commMe({ follows: f.includes(id) ? f.filter(x => x !== id) : [id, ...f].slice(0, 100) }); },
-  cEditProfile() { const p = COMM.profiles[COMM.me] || {}; UI.modal = { type: 'editProfile', draft: { name: p.name || COMM.names[COMM.me] || '', bio: p.bio || '', color: p.color || '', flair: p.flair || '' } }; render(); },
+  cEditProfile() { const p = COMM.profiles[COMM.me] || {}; UI.modal = { type: 'editProfile', draft: { name: p.name || COMM.names[COMM.me] || '', bio: p.bio || '', color: p.color || '', flair: p.flair || '', sym: p.sym || '' } }; render(); },
   async cSaveProfile() {
     const d = UI.modal.draft, name = cleanTxt(d.name, 30);
     if (!name) return toast('Pick a display name.');
     if (RESERVED_NAME.test(name)) return toast('That name is taken. Pick another.');
     if (isRude(name) || isRude(d.bio)) return toast('Please keep your name and bio friendly.');
-    const lvl = bookerLvl(), fl = FLAIRS.find(x => x[0] === d.flair && x[2] <= lvl);
-    await commMe({ profile: { name, bio: cleanTxt(d.bio, 160), color: safeColor(d.color) || '', since: COMM.profiles[COMM.me]?.since || Date.now(), lvl, flair: fl ? fl[0] : '' } });
-    COMM.profiles[COMM.me] = { ...(COMM.profiles[COMM.me] || {}), name, bio: cleanTxt(d.bio, 160), color: safeColor(d.color) || '', lvl, flair: fl ? fl[0] : '' };
+    const lvl = bookerLvl(), fl = FLAIRS.find(x => x[0] === d.flair && x[2] <= lvl), sy = BELTS.find(x => x[0] === d.sym && x[2] <= lvl);
+    await commMe({ profile: { name, bio: cleanTxt(d.bio, 160), color: safeColor(d.color) || '', since: COMM.profiles[COMM.me]?.since || Date.now(), lvl, flair: fl ? fl[0] : '', sym: sy ? sy[0] : '' } });
+    COMM.profiles[COMM.me] = { ...(COMM.profiles[COMM.me] || {}), name, bio: cleanTxt(d.bio, 160), color: safeColor(d.color) || '', lvl, flair: fl ? fl[0] : '', sym: sy ? sy[0] : '' };
     UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Profile saved.');
   },
   cClearProfile(id) { confirmBox('Clear this profile?', 'Their name and bio go back to the default. Their uploads stay.', 'Clear', async () => { try { const cur = knownFields((await cdb.doc('creations/' + id).get()).data()); delete cur.profile; await cdb.doc('creations/' + id).set({ ...cur, updated: Date.now() }); toast('Cleared.'); } catch (e) { toast('Could not clear it.'); } }, true); },
