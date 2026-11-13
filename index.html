@@ -303,6 +303,11 @@ img.av { display: block; }
 .dr-r { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 64px; }
 .dr-ovr { font-size: 22px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
 .dr-bar { bottom: 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+.tut-dots { display: flex; gap: 4px; margin: 6px 0 8px; } .tut-dots i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); } .tut-dots i.ok { background: color-mix(in srgb, var(--gold) 55%, var(--line)); } .tut-dots i.on { background: var(--gold); }
+.tut-hi { outline: 3px solid var(--gold) !important; outline-offset: -3px; animation: tutPulse 1.6s ease-in-out infinite; }
+@keyframes tutPulse { 50% { outline-color: color-mix(in srgb, var(--gold) 35%, transparent); } }
+.btn.pri.tut-hi { outline-color: currentColor !important; outline-offset: -5px; animation-name: tutPulseInk; } @keyframes tutPulseInk { 50% { outline-color: transparent; } }
+.lv-tut { margin: 12px 0 2px; padding: 10px; border-radius: var(--r); border: 1px solid var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); }
 .tip { background: color-mix(in srgb, var(--accent) 14%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: var(--r); padding: 12px; margin-bottom: 10px; }
 /* ===================== ARENA THEME (wrestling look) ===================== */
 :root {
@@ -2106,6 +2111,7 @@ function runShow(opts = {}) {
   if (sg) { const v = sgOn ? 4 : -4; overall += v; why.push([v, sgOn ? `Signature match: the ${sigName(sg)}` : `Fans missed the ${sigName(sg)}`]); }
   if (results.length > 1 && results[results.length - 1].seg.kind !== 'match' && results.some(r => r.seg.kind === 'match')) { overall -= 2; why.push([-2, 'Show did not close with a match']); }
   else if (results.length > 1 && results[results.length - 1].rating < Math.max(...results.filter(r => r.seg.kind === 'match').map(r => r.rating)) - 5) { overall -= 3; why.push([-3, 'Main event was not the best match']); }
+  { const tb = tutBoost(); if (tb) { overall += tb; why.push([tb, 'Opening night crowd']); } }
   overall = clamp(Math.round(overall), 1, 100);
 
   // money and fans
@@ -2161,6 +2167,7 @@ function runShow(opts = {}) {
   const fresh = G.news.slice(0, Math.max(0, G.news.indexOf(mark)));
   rec.headlines = [...results.flatMap(r => (r.notes || []).filter(n => /NEW CHAMPION|injured|turned|New storyline/i.test(n))), ...fresh.filter(n => /^(title|story|injury)$/.test(n.cat) || /left|signed with|jumped/i.test(n.text)).map(n => n.text)].filter((t, i, a) => a.indexOf(t) === i).slice(0, 8);
   autoTodo('firstShow'); if (big) autoTodo('bigEvent');
+  tutShowDone(rec);
   if (h2h.length) rec.headlines = [...h2h, ...(rec.headlines || [])];
   rec.prog = scoreShow(rec);
   G.card = []; curShow().ran = G.week; if (coLast) G.ranWk = G.week;
@@ -2992,6 +2999,7 @@ function liveScreen(m) {
     ${p.trophies.length || p.miles?.length ? `<div class="lv-tro">${p.trophies.map(x => `<div>${x[1]} <b>${esc(x[2])}</b> <span class="muted small">${esc(x[3])}${x[4] ? ` · +${x[4]} XP` : ''}</span></div>`).join('')}${(p.miles || []).map(m => `<div>${m.ic} <b>${m.tier}: ${esc(m.name)}</b> <span class="muted small">${m.n.toLocaleString()} · +${m.xp} XP</span></div>`).join('')}</div>` : ''}
     ${G.event && G.event.wk === G.week ? `<div class="lv-tease">📣 Something is happening backstage…</div>` : ''}
     ${G.awards?.length && G.awards[G.awards.length - 1].wk === h.wk ? `<button class="btn block lv-aw" data-act="records" data-id="awards">🏅 See the Year ${G.awards[G.awards.length - 1].yr} awards</button>` : ''}
+    ${tutWin(h)}
     <div class="grid2" style="margin-top:14px"><button class="btn" data-act="liveRecap">Full results</button><button class="btn pri" data-act="afterShow">${esc(nextLabel(h))}</button></div>
     <div class="lv-more"><button class="link" data-act="copyResults" data-id="${h.wk}">Copy results</button>${canUndo(h.wk) ? '<button class="link" data-act="undoShow">↶ Undo this show</button>' : ''}</div>
   </div>`;
@@ -3384,6 +3392,7 @@ function render() {
   // the week strip: keep the show being booked in view
   const chip = root.querySelector('.wk-chip.on'), strip = chip?.parentElement;
   if (chip && strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, chip.offsetLeft - strip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2);
+  tutMark();
   a11yAfter(fk);
 }
 // ---------- accessibility: keep keyboard focus through re-renders, and inside open sheets ----------
@@ -3569,7 +3578,7 @@ function viewBookCard() {
   let bestIx = -1;
   if (card.length > 2) { const live = prs.map((r, i) => card[i].kind === 'match' ? r.rating : -1), mx = Math.max(...live.slice(0, -1)); if (mx > 0 && (card[card.length - 1].kind !== 'match' || live[live.length - 1] < mx - 5)) bestIx = live.indexOf(mx); }
   const isNow = wk === G.week;
-  return `${statusBar}${isNow ? bkBar : ""}${cal}${isNow ? ppvFirst() : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
+  return `${statusBar}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
   <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showName(wk))}</h2>
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
@@ -3968,6 +3977,7 @@ function privacyHTML() {
 }
 function helpHTML() {
   return `<div class="help">
+  ${G ? '<button class="btn block" data-act="tutReplay" style="margin-bottom:10px">🎓 Replay the first-show tutorial</button>' : ''}
   <p><b>You're the booker.</b> Book a show each week, run it, and grow your fans. Gold weeks are big events.</p>
   <h3>Each week</h3>
   <p>1. Tap a week on the calendar.<br>2. Add matches, promos and angles, or tap Auto-fill.<br>3. Tap <b>Run</b> and watch the results.<br>4. Check the <b>Briefing</b> and the <b>Office</b>.</p>
@@ -4116,7 +4126,7 @@ function modalSeg(m) {
     const st = s.target?.length ? storyBetween(s.who, s.target) : storiesTouching(s.who)[0];
     if (st) body += `<div class="alert good"><span class="ic">🔥</span><div class="small">Builds <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}).</div></div>`;
   }
-  return modal(m.isNew ? `Add ${s.kind}` : `Edit ${s.kind}`, body, `${m.isNew ? '' : '<button class="btn bad" data-act="segDelModal">Remove</button>'}<button class="btn pri" data-act="segSave">${m.isNew ? 'Add to card' : 'Save'}</button>`);
+  return modal(m.isNew ? `Add ${s.kind}` : `Edit ${s.kind}`, tutSegHint(s) + body, `${m.isNew ? '' : '<button class="btn bad" data-act="segDelModal">Remove</button>'}<button class="btn pri" data-act="segSave">${m.isNew ? 'Add to card' : 'Save'}</button>`);
 }
 
 // ----- wrestler picker -----
@@ -6232,7 +6242,7 @@ function wizFinish() {
   if (manyShows()) { G.split = !!z.split; if (G.split) brandDraft(); news(`📺 ${G.promo.name} runs ${SHOWS().length} weekly shows: ${SHOWS().map(x => x.name).join(', ')}.`, 'office'); }
   if (host) joinWorld(host);
   { const u = nextUp(); if (u && u.c === G && !u.on) goUnit(u); }
-  G.tips = 0;
+  if (!z.add) tutStart();
   UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : 'book'; UI.selWeek = G.week; UI.calMonth = null;
   UI.modal = z.source === 'import' ? { type: 'rtools', tab: 'import', mode: 'replace' } : null;
   applyBrand(G.promo.color); save(); render(); window.scrollTo(0, 0);
@@ -6358,17 +6368,93 @@ function viewWizard() {
 }
 const W2 = id => UI.wiz?.pool?.find(w => w.id === id);
 
-// short coach marks on the booking screen for a brand-new company
-const TIPS = [
-  ['📅 Your calendar', 'One show a week. Gold weeks are big events.'],
-  ['🤼 Build the card', 'Tap + Match to add one. The last segment is the main event.'],
-  ['▶ Run the show', 'Tap Run to see how each segment rated.']
-];
-function tipCard() {
-  if (G.tips == null || G.tips >= TIPS.length || UI.selWeek !== G.week) return '';
-  const [t, d] = TIPS[G.tips];
-  return `<div class="tip"><div class="row"><b class="sp">${t}</b><span class="tiny muted">${G.tips + 1}/${TIPS.length}</span></div><div class="small">${d}</div><div class="row" style="margin-top:8px"><button class="link" data-act="tipSkip">Skip tips</button><span class="sp"></span><button class="btn sm pri" data-act="tipNext">${G.tips === TIPS.length - 1 ? 'Got it' : 'Next'}</button></div></div>`;
+// ---------- guided first show: a coach that walks a new booker through booking and running one show ----------
+// G.tut is the step, G.tutWk the week it is for, G.tutReplay marks a replay (no opening-night bonus).
+// Steps with done() move on by themselves when the player does the thing; the rest have a Next button.
+const TUT_BONUS = { rating: 6, fans: 1500, money: 25000, xp: 15 };
+const tutCardSegs = () => (G.card || []).filter(s => segPeople(s).length);
+function tutMainOk() {
+  const c = tutCardSegs(); if (c.length < 2 || c[c.length - 1].kind !== 'match') return false;
+  const r = c.map((s, i) => s.kind === 'match' ? projectFull(s, i, c, G.week).rating : -1);
+  return r[r.length - 1] >= Math.max(...r.slice(0, -1)) - 5;
 }
+const TUT = [
+  { k: 'hi', t: '🔔 Your first show', btn: 'Let\'s go',
+    d: () => G.tutReplay ? `A quick walk through booking and running ${esc(showName(G.week))}. It takes about two minutes.` : `Let's book and run ${esc(showName(G.week))} together. It takes about two minutes. Opening night crowds are hot, so this one is set up to be a win.` },
+  { k: 'cal', t: '📅 Your calendar', btn: 'Next', sel: '.cal',
+    d: () => { const b = nextBig(); return `One show a week. Tonight is the glowing week. Gold weeks are big events${b ? `, and your first is <b>${esc(bigName(b))}</b> in week ${b}` : ''}.`; } },
+  { k: 'match', t: '🤼 Book the opener', sel: '[data-act="addSeg"][data-id="match"]', done: () => tutCardSegs().some(s => s.kind === 'match'),
+    d: () => 'Tap <b>＋ Match</b>, pick a wrestler for each side, then tap <b>Add to card</b>. A face against a heel works best.' },
+  { k: 'fill', t: '✨ Fill out the card', sel: '[data-act="autoFill"]', done: () => { const c = tutCardSegs(); return c.length >= 4 && new Set(c.map(s => s.kind)).size >= 2; },
+    d: () => 'A full show has 4 to 8 segments, with promos or angles mixed in. Add more yourself, or tap <b>✨ Auto-fill</b> to finish the card for you.' },
+  { k: 'main', t: '⭐ The main event', btn: 'Next', sel: () => tutMainOk() ? '.mcard .mrow.me' : '[data-act="segMain"]',
+    d: () => tutMainOk() ? 'The last segment is the main event, and it counts the most. Yours closes with a strong match. Nice.' : 'The last segment is the main event, and it counts the most. Close with your best match: tap <b>Make it the main event</b>, or use Reorder.' },
+  { k: 'proj', t: '📈 The projected rating', btn: 'Next', sel: '.show-h .show-score',
+    d: () => 'This is how the show should rate. Tap any match to change its winner, finish or type. The hints under each match show how to raise it.' },
+  { k: 'run', t: '🔔 Ring the bell', sel: '[data-act="runShow"]',
+    d: () => `Tap <b>Run</b> to go live and watch each segment play out.${G.tutReplay ? '' : ` The hot opening night crowd adds +${TUT_BONUS.rating} to the show.`}` },
+  { k: 'win', t: '🏆 Your first show is in the books', btn: 'Finish',
+    d: () => { const r = G.tutRes || {}, b = nextBig();
+      return `${r.rating ? `It rated <b>${r.rating}</b> (${starStr(r.rating)}). ` : ''}From here, each week is the same: book, run, then check the Briefing and the Office.${b ? ` Build your stories toward <b>${esc(bigName(b))}</b> in week ${b}.` : ''} You can replay this from Menu → How to play.`; } }
+];
+const TUT_WIN = TUT.length - 1;
+const tutOn = () => G && G.tut != null && G.tut >= 0 && G.tut < TUT.length;
+function tutStart(replay) {
+  G.tut = 0; G.tutWk = G.week; delete G.tutRes;
+  if (replay) G.tutReplay = 1; else delete G.tutReplay;
+}
+function tutSync() {
+  // skip steps the player has already done (e.g. booked a match before reading the tip)
+  while (tutOn() && G.tut < TUT_WIN && TUT[G.tut].done?.()) G.tut++;
+}
+function tutCard() {
+  if (!tutOn() || UI.selWeek !== G.week) return '';
+  tutSync();
+  const s = TUT[G.tut], n = G.tut + 1;
+  const dots = TUT.map((_, i) => `<i class="${i < G.tut ? 'ok' : i === G.tut ? 'on' : ''}"></i>`).join('');
+  return `<section class="tip tut" aria-labelledby="tut-h"><div class="row"><b class="sp" id="tut-h">${s.t}</b><span class="tiny muted">Step ${n} of ${TUT.length}</span></div>
+    <div class="tut-dots" aria-hidden="true">${dots}</div><div class="small">${s.d()}</div>
+    <div class="row" style="margin-top:8px">${G.tut < TUT_WIN ? '<button class="link" data-act="tutSkip">Skip tutorial</button>' : ''}<span class="sp"></span>${s.btn ? `<button class="btn sm pri" data-act="tutNext">${s.btn}</button>` : `<span class="tiny muted">Waiting for you…</span>`}</div></section>`;
+}
+// one line inside the match editor while the coach is on "Book the opener"
+function tutSegHint(s) {
+  if (!tutOn() || TUT[G.tut].k !== 'match' || s.kind !== 'match' || UI.selWeek !== G.week) return '';
+  return '<div class="tip tut small" role="note"><b>Tutorial:</b> pick a wrestler for each side. Leave the rest as it is, then tap <b>Add to card</b>.</div>';
+}
+// after every render: ring the thing to tap, and tell screen readers when the step changes
+function tutMark() {
+  if (!tutOn()) { tutMark.last = null; return; }
+  let sel = null;
+  if (UI.modal?.type === 'seg' && TUT[G.tut].k === 'match') sel = modals.querySelector('[data-act="segSave"]');
+  else if (!UI.modal && UI.tab === 'book' && UI.selWeek === G.week) { const q = TUT[G.tut].sel; const qq = typeof q === 'function' ? q() : q; if (qq) sel = root.querySelector(qq); }
+  sel?.classList.add('tut-hi');
+  if (tutMark.last !== G.tut && UI.tab === 'book' && !UI.modal) {
+    tutMark.last = G.tut;
+    let say = document.getElementById('tut-say');
+    if (!say) { say = document.createElement('div'); say.id = 'tut-say'; say.className = 'sr-only'; say.setAttribute('aria-live', 'polite'); document.body.appendChild(say); }
+    const tmp = document.createElement('div'); tmp.innerHTML = TUT[G.tut].d();
+    say.textContent = `Tutorial step ${G.tut + 1} of ${TUT.length}. ${TUT[G.tut].t.replace(EMO_RE, '').trim()}. ${tmp.textContent.replace(EMO_RE, '').trim()}`;
+  }
+}
+// the early win: a hot opening-night crowd lifts the tutorial show, and a first-show bonus follows
+const tutBoost = () => tutOn() && !G.tutReplay && G.tut < TUT_WIN && G.week === G.tutWk ? TUT_BONUS.rating : 0;
+function tutShowDone(rec) {
+  if (!tutOn() || G.tut >= TUT_WIN || rec.wk !== G.tutWk) return;
+  G.tut = TUT_WIN; G.tutRes = { wk: rec.wk, rating: rec.rating };
+  if (G.tutReplay) return;
+  G.fans += TUT_BONUS.fans; G.booker.xp += TUT_BONUS.xp; if (MON()) G.money += TUT_BONUS.money;
+  G.tutRes.bonus = 1;
+  news(`🎉 Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? `, +${money(TUT_BONUS.money)}` : ''} and +${TUT_BONUS.xp} XP.`, 'office');
+}
+function tutWin(h) {
+  const r = G.tutRes; if (!tutOn() || G.tut !== TUT_WIN || !r || r.wk !== h.wk) return '';
+  return `<div class="lv-tut"><b>🎉 First show in the books!</b>${r.bonus ? `<div class="small">Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? ` · +${money(TUT_BONUS.money)}` : ''} · +${TUT_BONUS.xp} XP</div>` : ''}</div>`;
+}
+const TUT_ACTIONS = {
+  tutNext() { if (!tutOn()) return; if (G.tut >= TUT_WIN) { delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; commit('Tutorial done. Have a great run!'); return; } G.tut++; commit(); },
+  tutSkip() { delete G.tut; delete G.tutRes; delete G.tutReplay; commit('Tutorial off. Replay it from Menu → How to play.'); },
+  tutReplay() { if (!G) return; tutStart(true); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0); }
+};
 
 const WIZ_ACTIONS = {
   wzStart: wizStart,
@@ -6381,7 +6467,7 @@ const WIZ_ACTIONS = {
   wzPpvIdeas() { const l = shuffle(BIG_EVENTS).slice(0, 12); UI.wiz.ppv = l.join('\n'); if (!Object.values(UI.wiz.sig || {}).some(Boolean)) UI.wiz.sig = { [l[0]]: 'mt:Rumble' }; render(); },
   wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
-  wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false }); G.tips = 0; UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = { type: 'help' }; save(); render(); },
+  wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false }); tutStart(); UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = null; save(); render(); },
   wzDraft() { if (!UI.wiz.show.trim()) UI.wiz.show = DAYS[UI.wiz.day] + ' Mayhem'; wizBeginDraft(); },
   wzPick(id) { const y = window.scrollY; draftPick(id); if (UI.wiz?.step === 'draft') window.scrollTo(0, y); },
   wzAuto() { draftAuto(false); },
@@ -6392,11 +6478,9 @@ const WIZ_ACTIONS = {
     if (!z.add && slotInfo(z.slot)) confirmBox('Replace slot ' + z.slot + '?', 'The save already in this slot will be replaced by ' + (z.name || 'your new company') + '.', 'Replace', wizFinish, true);
     else wizFinish();
   },
-  tipNext() { G.tips++; commit(); },
-  tipSkip() { G.tips = TIPS.length; commit(); }
 };
 
-Object.assign(A, WIZ_ACTIONS);
+Object.assign(A, WIZ_ACTIONS, TUT_ACTIONS);
 
 // ---------- event wiring ----------
 document.addEventListener('click', e => {
