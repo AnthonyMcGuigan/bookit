@@ -206,6 +206,8 @@ details > summary::-webkit-details-marker { display: none; }
 .cal-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .cal-h small { font-weight: 600; color: var(--faint); font-size: 11px; }
 .cal-h b { flex: 1; text-align: center; font-size: 15px; }
+.home { position: relative; }
+.home-menu { position: absolute; top: calc(env(safe-area-inset-top) + 12px); right: 12px; z-index: 2; }
 .iconbtn.sm { width: 32px; height: 32px; font-size: 20px; border-radius: 10px; }
 .cal-g { display: grid; gap: 6px; }
 .cal-t { border: 1px solid var(--line); background: var(--bg2); border-radius: 10px; padding: 5px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; font-size: 11px; color: var(--dim); }
@@ -3516,7 +3518,7 @@ function viewStart() {
           ${Array.isArray(u.stars) && u.stars.length ? `<span class="hs-s">${u.stars.slice(0, 3).map(x => esc(String(x))).join(' · ')}</span>` : ''}
           <span class="hs-go">Play this ›</span></button>`; }).join('')
       : [0, 1].map(() => '<div class="hs-card skel"><span></span><span></span><span></span></div>').join('')}</div>`;
-  return `<div class="app home"><div class="hero">${logoSVG()}<h1>Book <em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div>
+  return `<div class="app home"><button class="iconbtn home-menu" data-act="menu" aria-label="Menu">☰</button><div class="hero">${logoSVG()}<h1>Book <em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div>
   <p class="muted">Book the shows. Write the stories. Sign the talent.</p></div>
   ${top ? `<button class="hs-cont" data-act="loadSlot" data-id="${top.n}"><span class="hs-k">Continue</span><span class="hs-ct">${esc(top.info.name)}</span><span class="hs-cd">Week ${top.info.week} · saved ${new Date(top.info.savedAt).toLocaleDateString()}</span><span class="hs-arrow">›</span></button>
     ${rest.length ? `<div class="list" style="margin-top:8px">${rest.map(s => `<button class="item" data-act="loadSlot" data-id="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">${esc(s.info.name)}</div><div class="d">Week ${s.info.week} · saved ${new Date(s.info.savedAt).toLocaleDateString()}</div></div></button>`).join('')}</div>` : ''}` : ''}
@@ -3946,7 +3948,30 @@ function renderModal() {
   return '';
 }
 
+// sound, music, text size, motion and theme: the same on the start screen and in a game
+const displaySettings = () => `
+    <div class="small muted" style="margin:14px 0 8px">Sound &amp; display</div>
+    <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound (bell, crowd and music)</span></label>
+    <label class="todo"><input type="checkbox" data-in="musicOn" ${meta.music !== false ? 'checked' : ''} ${meta.sound === false ? 'disabled' : ''}><span>Menu music${meta.sound === false ? ' (turn sound on first)' : ''}</span></label>
+    <label class="f"><span>Music volume</span><input type="range" min="0" max="100" step="5" data-in="musicVol" value="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}" aria-valuetext="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}%" ${meta.sound === false || meta.music === false ? 'disabled' : ''}></label>
+    <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
+    <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
+    <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
+`;
+// before any company exists: cloud saves, restore, settings and help, so a new player (or a new phone) can get set up
+function modalStartMenu() {
+  return modal('Menu', `
+    <div class="sec" style="margin-top:0">Saves</div>
+    <div class="list">${sbOn() ? '<button class="btn block" data-act="cloud">🌐 Cloud saves</button>' : ''}<button class="btn block" data-act="import">⬆ Restore a backup</button></div>
+    ${sbOn() ? '<div class="tiny muted" style="margin-top:6px">Played on another phone? Sign in to Cloud saves with the same email to load your game here.</div>' : ''}
+    <div class="sec">Settings</div>
+    ${displaySettings()}
+    <div class="sec">Help</div>
+    <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button></div>
+  `);
+}
 function modalMenu() {
+  if (!G) return modalStartMenu();
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
   return modal('Menu', `
     <div class="sec" style="margin-top:0">Save slots</div>
@@ -3966,13 +3991,7 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
     <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>Wrestler personalities (texts, demands, memory)</span></label>
     <label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>
-    <div class="small muted" style="margin:14px 0 8px">Sound &amp; display</div>
-    <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound (bell, crowd and music)</span></label>
-    <label class="todo"><input type="checkbox" data-in="musicOn" ${meta.music !== false ? 'checked' : ''} ${meta.sound === false ? 'disabled' : ''}><span>Menu music${meta.sound === false ? ' (turn sound on first)' : ''}</span></label>
-    <label class="f"><span>Music volume</span><input type="range" min="0" max="100" step="5" data-in="musicVol" value="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}" aria-valuetext="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}%" ${meta.sound === false || meta.music === false ? 'disabled' : ''}></label>
-    <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
-    <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
-    <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
+${displaySettings()}
     <div class="sec">Help</div>
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button></div>
     <div class="sec">Leave</div>
@@ -3983,7 +4002,11 @@ function modalMenu() {
 // ---- cloud saves (Supabase): one row per player in cloud1..cloud3, readable only by that player ----
 // ---- Book It Supporter: an optional subscription through Stripe. The core game stays free. ----
 // Fill in the Payment Links from your Stripe dashboard. Leave them empty and the Supporter page says "opening soon".
-const SUP_LINKS = { month: '', year: '' };
+const SUP_LIVE = { month: '', year: '' };
+// Stripe test-mode links show only when the game is opened with ?suptest (remembered for this tab), for trying a test card
+const SUP_TEST = { month: 'https://buy.stripe.com/test_9B65kEevJ9qj6cb4x92cg01', year: 'https://buy.stripe.com/test_cNi8wQgDRfOH1VV6Fh2cg02' };
+const supTesting = (() => { try { if (/[?&]suptest\b/.test(location.search)) sessionStorage.setItem('bookit.suptest', '1'); return sessionStorage.getItem('bookit.suptest') === '1'; } catch (e) { return false; } })();
+const SUP_LINKS = supTesting ? SUP_TEST : SUP_LIVE;
 const SUP_PRICE = { month: '$2.99 a month', year: '$24.99 a year' };
 const SUP_PORTAL = ''; // Stripe customer portal login link, so supporters can cancel or change their card
 const SUP_KEY = 'bookit.supporter';
