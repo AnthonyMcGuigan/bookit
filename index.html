@@ -4007,8 +4007,10 @@ const SUP_LIVE = { month: '', year: '' };
 const SUP_TEST = { month: 'https://buy.stripe.com/test_9B65kEevJ9qj6cb4x92cg01', year: 'https://buy.stripe.com/test_cNi8wQgDRfOH1VV6Fh2cg02' };
 const supTesting = (() => { try { if (/[?&]suptest\b/.test(location.search)) sessionStorage.setItem('bookit.suptest', '1'); return sessionStorage.getItem('bookit.suptest') === '1'; } catch (e) { return false; } })();
 const SUP_LINKS = supTesting ? SUP_TEST : SUP_LIVE;
+// Stripe customer portal login link, so supporters can cancel or change their card
+const SUP_PORTAL = supTesting ? 'https://billing.stripe.com/p/login/test_8x27sMgDR9qj2ZZaVx2cg00' : '';
 const SUP_PRICE = { month: '$2.99 a month', year: '$24.99 a year' };
-const SUP_PORTAL = ''; // Stripe customer portal login link, so supporters can cancel or change their card
+
 const SUP_KEY = 'bookit.supporter';
 const supUrl = (u, host) => { try { const x = new URL(u); return x.protocol === 'https:' && x.hostname === host && !x.username && !x.port ? x : null; } catch (e) { return null; } };
 let SUP = (() => { try { const x = JSON.parse(localStorage.getItem(SUP_KEY) || 'null'); return x && typeof x === 'object' ? { status: String(x.status || ''), plan: String(x.plan || ''), end: +x.end || 0, uid: String(x.uid || '') } : null; } catch (e) { return null; } })();
