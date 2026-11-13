@@ -11,5 +11,5 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   // only keep good responses from this site (fonts and anything else just pass through)
   const mine = new URL(e.request.url).origin === self.location.origin;
-  e.respondWith(fetch(e.request).then(r => { if (mine && r.ok && r.type === 'basic') { const c = r.clone(); caches.open(CACHE).then(cc => cc.put(e.request, c)); } return r; }).catch(() => caches.match(e.request)));
+  e.respondWith(fetch(e.request).then(r => { if (mine && r.status === 200 && r.type === 'basic') { const c = r.clone(); caches.open(CACHE).then(cc => cc.put(e.request, c)); } return r; }).catch(() => caches.match(e.request)));
 });
