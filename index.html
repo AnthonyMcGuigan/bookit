@@ -2060,10 +2060,11 @@ function runShow(opts = {}) {
       if (v && Math.random() < 0.6) { seg.winner = v[0]; veto = `💼 ${v[1].name} used creative control and changed the finish.`; news(veto, 'office'); } }
     const ctx = { big, main: i === card.length - 1 && card.length > 1 };
     const res = simSegment(seg, ctx);
+    const cue = cueOf(seg, res, ctx);
     applySegment(seg, res, ctx);
     if (seg.tid) tResult(seg, res);
     if (veto) res.notes = [veto, ...(res.notes || [])];
-    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners });
+    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue });
     if (seg.kind === 'match') keys.push(segPeople(seg).slice().sort().join(','));
   });
   // overall show score
@@ -2116,7 +2117,7 @@ function runShow(opts = {}) {
   }
 
   if (!big) buildHype(results, G.week);
-  results.forEach(r => r.crowd = crowdLine(r));
+  results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
   const rec = { wk: G.week, name: showName(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: G.promo.day ?? 0, sname: G.promo.show };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
@@ -2429,18 +2430,69 @@ function scoreShow(rec) {
 }
 
 // ---- crowd reactions ----
+// How the crowd feels about what happened, worked out before the turns and title changes are applied,
+// so the crowd line and the crowd sound both follow the actual result.
+// m: cheer | heat (boos) | champF | champH | mixed | chaos | flat | polite | dead. k: how big (0 to 1).
+function cueOf(seg, res, ctx = {}) {
+  const ppl = segPeople(seg).map(W).filter(Boolean), ws = (res.winners || []).map(W).filter(Boolean);
+  const x = res.rating, k = clamp((x - 40) / 50, 0, 1), top = a => a.length ? Math.max(...a.map(w => w.pop || 0)) / 100 : 0;
+  const faces = ppl.filter(w => w.align === 'face'), heels = ppl.filter(w => w.align === 'heel');
+  const wHeel = ws.length && ws.every(w => w.align === 'heel'), wFace = ws.length && ws.every(w => w.align === 'face');
+  const big = ctx.main ? .2 : 0;
+  // entrances: only stars and the main event get a reaction as they walk out, so the quiet stays quiet
+  let cin = null;
+  if (seg.kind === 'match') { const f = top(faces), h = top(heels); cin = f >= .6 || (ctx.main && f) ? ['cheer', clamp(f * .55 + big, .2, .8)] : !faces.length && (h >= .6 || ctx.main) ? ['boo', clamp(h * .45 + big, .2, .6)] : null; }
+  else if (seg.kind === 'promo') { const sp = (seg.who || []).map(W).filter(Boolean), a = sp.length ? sp : ppl; if (top(a) >= .55) cin = a.every(w => w.align === 'heel') ? ['boo', clamp(top(a) * .4, .2, .5)] : ['cheer', clamp(top(a) * .45, .2, .6)]; }
+  else if (seg.atype === 'Debut / Return') cin = ['cheer', 1];
+  let m;
+  if (x < 40) m = 'dead';
+  else if (seg.kind === 'match') {
+    const tw = res.tw, title = res.title, fk = res.fk;
+    const changed = title && ws.length && !title.holder.some(h => res.winners.includes(h)) && !(res.fin?.keep && title.holder.some(h => (res.losers || []).includes(h)));
+    const faceLost = (res.losers || []).map(W).some(w => w?.align === 'face');
+    let booed = wHeel || (!ws.length ? false : (fk === 'Cheating' && wFace) || (fk === 'Screwjob' && faceLost));
+    if (tw) booed = tw.align === 'face'; // someone turning heel gets booed, turning face gets cheered
+    m = !ws.length ? (seg.finish === 'No Contest' || fk === 'DQ' ? 'chaos' : 'mixed') : changed ? (booed ? 'champH' : 'champF') : booed ? 'heat' : 'cheer';
+  } else if (seg.kind === 'promo') {
+    const sp = (seg.who || []).map(W).filter(Boolean), a = sp.length ? sp : ppl;
+    m = res.land != null && res.land <= -4 ? 'flat' : ws.length ? (wHeel ? 'heat' : 'cheer') : a.every(w => w.align === 'heel') ? 'heat' : a.every(w => w.align === 'face') ? 'cheer' : 'mixed';
+  } else {
+    const at = seg.atype, d = (seg.who || []).map(W).filter(Boolean);
+    m = at === 'Turn Heel' ? 'heat' : at === 'Turn Face' || at === 'Debut / Return' ? 'cheer' : at === 'Contract Signing' ? 'chaos' : at === 'Backstage Skit' ? 'polite'
+      : ws.length ? (wHeel ? 'heat' : 'cheer') : d.length && d.every(w => w.align === 'heel') ? 'heat' : 'cheer';
+  }
+  return { in: cin, m, k: Math.round(k * 100) / 100, near: seg.kind === 'match' && x >= 65 && m !== 'dead' };
+}
+// the crowd line under each result, and the sound that goes with it ({t: text, s: sound})
 function crowdLine(r) {
   const who = (r.winners?.[0] && W(r.winners[0])) || W(segPeople(r.seg)[0]);
-  const last = who ? who.name.split(' ').pop().toUpperCase() : '';
-  const heel = who?.align === 'heel', x = r.rating;
-  const L = x >= 90 ? ['🏆 "FIGHT FOREVER!" Standing ovation', '⭐ Instant classic. Nobody is sitting down', '🤯 "THIS IS AWESOME!" times ten']
-    : x >= 80 ? ['🤯 "THIS IS AWESOME!" chants', '😱 That near-fall had everyone on their feet', '🔥 The building is shaking']
-    : x >= 70 ? [heel ? `😡 Boos rain down on ${last}. Perfect heat` : `📣 "LET'S GO ${last}!" chants`, '🙌 Huge pop from the crowd', '🔥 Crowd is red hot']
-    : x >= 55 ? ['👏 Solid reaction', '🔊 Dueling chants in the crowd', '📣 Good heat on this one']
-    : x >= 40 ? ['🙂 Polite applause', '😐 The crowd is lukewarm', '🍿 Some fans head for snacks']
-    : ['😴 Crowd is checking their phones', '🦗 Crickets', '🥱 "BORING!" chants'];
-  return pick(L);
+  const last = who ? who.name.split(' ').pop().toUpperCase() : '', nm = who ? who.name.split(' ').pop() : 'them';
+  const x = r.rating, c = r.cue || { m: x < 40 ? 'dead' : 'cheer' }, match = r.seg.kind === 'match';
+  const L = {
+    dead: [['😴 Crowd is checking their phones', 'murmur'], ['🦗 Crickets', 'crickets'], ['🥱 "BORING!" chants', 'boring']],
+    flat: [['😐 It fell flat. The building went quiet', 'murmur'], ['🍿 Some fans head for snacks', 'murmur']],
+    polite: x >= 70 ? [['👏 The crowd loved that', 'cheer']] : [['🙂 Polite applause', 'polite'], ['🙂 A few laughs and some applause', 'polite']],
+    mixed: [['😐 The crowd is split', 'mixed'], ['😠 The fans wanted a winner', 'mixed']],
+    chaos: [['😱 "OHHH!" The place goes wild', 'chaos'], ['😱 Total chaos, and the fans love it', 'chaos']],
+    champF: [['🎉 The roof comes off!', 'champF'], [`📣 "YOU DESERVE IT!" for ${nm}`, 'champF']],
+    champH: [[`😡 The fans can't believe it. Boos everywhere`, 'champH'], [`😡 Trash rains down on ${nm}`, 'champH']],
+    heat: x >= 80 ? [[`😡 Boos rain down on ${nm}. Perfect heat`, 'boo'], [`📣 "YOU SUCK!" chants for ${nm}`, 'jeer']]
+      : x >= 55 ? [[`😠 Loud boos for ${nm}`, 'boo'], ['😠 The fans let them hear it', 'boo']]
+      : [['😐 A few boos, mostly shrugs', 'boo']],
+    cheer: !match ? (x >= 80 ? [[`📣 "LET'S GO ${last}!" chants`, 'chant'], ['🔥 The building is shaking', 'pop'], ['🙌 The fans hung on every word', 'pop']]
+        : x >= 70 ? [['🙌 Huge pop from the crowd', 'pop'], ['🔥 Crowd is red hot', 'pop']]
+        : x >= 55 ? [['👏 Solid reaction', 'cheer'], ['👏 Good cheers for this one', 'cheer']]
+        : [['🙂 Polite applause', 'polite'], ['😐 The crowd is lukewarm', 'murmur']])
+      : x >= 90 ? [['🏆 "FIGHT FOREVER!" Standing ovation', 'ovation'], ['⭐ Instant classic. Nobody is sitting down', 'ovation'], ['🤯 "THIS IS AWESOME!" times ten', 'chant']]
+      : x >= 80 ? [['🤯 "THIS IS AWESOME!" chants', 'chant'], ...(match ? [['😱 That near-fall had everyone on their feet', 'pop']] : []), ['🔥 The building is shaking', 'pop']]
+      : x >= 70 ? [[`📣 "LET'S GO ${last}!" chants`, 'chant'], ['🙌 Huge pop from the crowd', 'pop'], ['🔥 Crowd is red hot', 'pop']]
+      : x >= 55 ? [['👏 Solid reaction', 'cheer'], ['👏 Good cheers for this one', 'cheer']]
+      : [['🙂 Polite applause', 'polite'], ['😐 The crowd is lukewarm', 'murmur']],
+  }[c.m] || [['👏 Solid reaction', 'cheer']];
+  const [t, s] = pick(L); return { t, s };
 }
+// the sound for an older result that has no cue saved
+const crowdSound = r => r.cue?.s || (/Crickets/.test(r.crowd) ? 'crickets' : /BORING/.test(r.crowd) ? 'boring' : /phones|lukewarm|snacks/.test(r.crowd) ? 'murmur' : /Polite/.test(r.crowd) ? 'polite' : /Boos/.test(r.crowd) ? 'boo' : /chant/i.test(r.crowd) ? 'chant' : /ovation|classic/.test(r.crowd) ? 'ovation' : 'cheer');
 
 // ---- backstage moments: a surprise between shows, you pick what happens ----
 const lastName = w => w.name.split(' ').pop();
@@ -2648,13 +2700,13 @@ function liveScreen(m) {
   let t = 1.4; const n = h.results.length;
   const segs = h.results.map((r, i) => {
     const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0), d1 = d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
-    t = d1 + 1.3;
+    t = d1 + (/ovation|champ/.test(crowdSound(r)) ? 1.9 : 1.3);
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x)), hurt = (r.notes || []).find(x => /injured/i.test(x));
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
     <div class="lv-seg ${main ? 'main' : ''}" style="--d:${t0(d0)}" data-lv="${i}">
       <div class="lv-k">${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${segTitle(r.seg)}</div>
       <div class="lv-w">${segWho(r.seg)}</div>
-      <div class="lv-o" style="--d:${t0(d1)}">
+      <div class="lv-o" style="--d:${t0(d1)}" data-s="${crowdSound(r)}" data-k="${r.cue ? r.cue.k : clamp((r.rating - 40) / 50, 0, 1)}"${r.cue?.near || (!r.cue && r.seg.kind === 'match' && r.rating >= 65) ? ' data-near="1"' : ''}>
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
         <div class="lv-crowd">${esc(r.crowd || '')}</div>
@@ -2684,11 +2736,15 @@ const t0 = x => Math.round(x * 100) / 100 + 's';
 function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
   const box = document.querySelector('.live .lv-body'); if (!box || box.closest('.skip')) return;
-  // the bell, a sting for the main event, and the crowd reacting to each segment
+  // the bell, then recorded crowd reactions that follow what each segment's text says happened:
+  // an "ohhh" on near-falls just before the finish, then cheers, applause, boos or silence
+  const at = (el, d, fn) => liveTimers.push(setTimeout(() => { if (!el.closest('.skip')) fn(); }, Math.max(0, d) * 1000));
+  const dOf = el => parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0;
+  SFX.load();
   SFX.bell(3);
-  box.querySelectorAll('.lv-me').forEach(el => { const d = parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0; liveTimers.push(setTimeout(() => { if (!el.closest('.skip')) SFX.sting(); }, d * 1000)); });
-  box.querySelectorAll('.lv-o').forEach(el => { const d = parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0, r = +el.querySelector('.lv-r')?.textContent || 60, champ = !!el.querySelector('.lv-champ');
-    liveTimers.push(setTimeout(() => { if (el.closest('.skip')) return; champ ? SFX.champ() : r < 45 ? SFX.boo() : SFX.pop(r); }, d * 1000)); });
+  box.querySelectorAll('.lv-o').forEach(el => { const d = dOf(el);
+    if (el.dataset.near) at(el, d - .9, () => SFX.crowd('ooh', .8));
+    at(el, d, () => SFX.react(el.dataset.s, +el.dataset.k)); });
   box.querySelectorAll('.lv-fin').forEach(el => { const d = parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0; liveTimers.push(setTimeout(() => { if (!el.closest('.skip')) SFX.bell(1); }, d * 1000)); });
   // keep the newest segment in view as it comes in
   box.querySelectorAll('.lv-seg, .lv-fin').forEach(el => {
@@ -6212,20 +6268,26 @@ addEventListener('resize', () => { clearTimeout(applyTheme.t); applyTheme.t = se
 
 // ---------- sound: made on the fly with Web Audio, no files ----------
 const SFX = (() => {
-  let ctx = null;
+  let ctx = null, loading = false;
+  const CLIPS = ['cheer', 'applause', 'ooh', 'boo'], bufs = {};
   const on = () => meta.sound !== false;
   const ac = () => { if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); } if (ctx.state === 'suspended') ctx.resume(); return ctx; };
   const tone = (f, t, d, type = 'sine', v = .2, f2) => { const c = ac(); if (!c) return; const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, c.currentTime + t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, c.currentTime + t + d); g.gain.setValueAtTime(0, c.currentTime + t); g.gain.linearRampToValueAtTime(v, c.currentTime + t + .01); g.gain.exponentialRampToValueAtTime(.0008, c.currentTime + t + d); o.connect(g).connect(c.destination); o.start(c.currentTime + t); o.stop(c.currentTime + t + d + .05); };
-  const noise = (t, d, v, lo, hi) => { const c = ac(); if (!c) return; const n = Math.floor(c.sampleRate * d), b = c.createBuffer(1, n, c.sampleRate), x = b.getChannelData(0); for (let i = 0; i < n; i++) x[i] = Math.random() * 2 - 1;
-    const s = c.createBufferSource(); s.buffer = b; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = (lo + hi) / 2; f.Q.value = .7; const g = c.createGain();
-    g.gain.setValueAtTime(0, c.currentTime + t); g.gain.linearRampToValueAtTime(v, c.currentTime + t + d * .35); g.gain.linearRampToValueAtTime(0, c.currentTime + t + d); s.connect(f).connect(g).connect(c.destination); s.start(c.currentTime + t); };
   return {
     bell(n = 3) { if (!on()) return; for (let i = 0; i < n; i++) { tone(1568, i * .32, 1.1, 'sine', .22); tone(2350, i * .32, .7, 'sine', .08); tone(3920, i * .32, .25, 'triangle', .04); } },
-    pop(r = 60) { if (!on()) return; const v = Math.max(.04, Math.min(.32, (r - 40) / 160)); noise(0, .9 + v * 3, v, 700, 2600); if (r >= 85) noise(.35, 1.6, v * .8, 900, 3200); },
-    boo() { if (!on()) return; noise(0, 1.1, .08, 150, 500); },
-    sting() { if (!on()) return; [196, 247, 294, 392].forEach((f, i) => tone(f, i * .09, .5, 'sawtooth', .07)); tone(392, .4, .9, 'square', .05, 380); },
-    champ() { if (!on()) return; [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .12, .6, 'triangle', .12)); this.pop(95); },
     tap() { if (!on()) return; tone(880, 0, .05, 'sine', .04); },
+    // recorded crowd clips (public domain / CC0, see README), fetched once and kept
+    load() { if (!on() || loading) return; const c = ac(); if (!c) return; loading = true;
+      for (const k of CLIPS) fetch('sounds/' + k + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => new Promise((ok, no) => c.decodeAudioData(b, ok, no))).then(b => { bufs[k] = b; }).catch(() => {}); },
+    crowd(k, v = 1, t = 0) { if (!on()) return; const c = ac(), b = bufs[k]; if (!c || !b) return; const T = c.currentTime + t, s = c.createBufferSource(), g = c.createGain();
+      s.buffer = b; s.playbackRate.value = .96 + Math.random() * .08; g.gain.value = Math.max(0, Math.min(1, v)) * .7; s.connect(g).connect(c.destination); s.start(T); },
+    // what the crowd line under a result says, played back: cheers, applause, boos, or nothing when the crowd is flat
+    react(s, k = .5) { if (!on()) return;
+      const R = { cheer: () => this.crowd('applause', .5 + .4 * k), pop: () => this.crowd('cheer', .7 + .3 * k), chant: () => this.crowd('cheer', .7 + .3 * k),
+        ovation: () => { this.crowd('cheer', 1); this.crowd('applause', .8, 1.2); }, polite: () => this.crowd('applause', .35),
+        boo: () => this.crowd('boo', .45 + .5 * k), jeer: () => this.crowd('boo', .5 + .5 * k), mixed: () => this.crowd('boo', .4),
+        chaos: () => { this.crowd('ooh', .9); this.crowd('cheer', .7, .9); }, champF: () => { this.crowd('cheer', 1); this.crowd('applause', .8, 1.5); }, champH: () => this.crowd('boo', 1) };
+      (R[s] || (() => {}))(); },
   };
 })();
 
@@ -6245,7 +6307,7 @@ const WHATS_NEW = [
   ['⚡ Run-ins', 'Pick who runs in to help the winner. A run-in can start a brand new feud.'],
   ['🔄 Turns in matches', 'Have someone turn heel or face mid-match, even on their own partner.'],
   ['💼 Managers', 'Give a wrestler a manager from their profile. Managers talk for weak speakers and help at ringside.'],
-  ['🔊 Sound', 'The bell, the crowd and a main-event sting on show night. Mute it from the live screen or the menu.'],
+  ['🔊 Sound', 'The bell and a real crowd on show night: cheers, applause and boos that match what happened. Mute it from the live screen or the menu.'],
   ['🎯 Challenge levels', 'Relaxed, Normal or Tough. Fans now level off as you grow, so big companies stay a challenge.'],
   ['💾 Real backups', 'Download a backup file, and get a reminder when it has been a while.'],
   ['🚩 Safer Community', 'Report posts or creators, and rude words are blocked.'],
