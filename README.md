@@ -160,6 +160,16 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 - **Managers:** set one from a wrestler's profile. Managers talk for weak speakers in promos and add a little at ringside. Managers aren't included in shared Community packs.
 - **Auto-fill** now mixes finishes: clean payoffs at big shows, dirtier finishes in hot weekly feuds, and heel champions sometimes keeping the belt by DQ.
 
+## Version 1.4: brands, several weekly shows and one shared calendar
+
+- Menu → Weekly shows and brands: a company can run up to 4 weekly shows, each on its own night (like a Monday show and a Friday show).
+- Brand split (optional): each show gets its own roster and its own titles, like separate brands. "Redo the brand draft" shares the roster out best-first, keeping tag teams together. Move a wrestler from their profile; pick each title's show in Weekly shows (or leave it shared).
+- Big events take the main show's slot that week and can use everyone.
+- One calendar for the whole world: every show, across all your companies, runs in night order (Monday to Sunday). When a show is done the game moves you to the next one, so no company or brand can run ahead. The strip at the top of the Shows tab shows the week's order.
+- Auto-book: tick it on a show you don't want to book yourself and it books and runs itself when its turn comes.
+- Big event names are chosen when you set up a company (or left empty for Big Event 1, 2, 3...), so a new company never shows events you didn't name. Change them later in Menu.
+- Older saves load as before: their one show becomes the main show.
+
 ## Version 1.3: several companies in one world
 
 - Menu → Your companies → Start another company in this world (up to 4).
