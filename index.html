@@ -1468,7 +1468,7 @@ function modalShows() {
     return `<div class="card show-row" style="margin-bottom:8px">
       <div class="row" style="gap:8px;margin-bottom:6px"><b class="sp">${i === 0 ? 'Main show' : 'Show ' + (i + 1)}${on ? ' <span class="tag good">Booking</span>' : ''}${(x.ran || 0) >= G.week ? ' <span class="tag">✓ done this week</span>' : ''}</b>${on ? '' : `<button class="btn sm" data-act="goShow" data-id="${esc(x.id)}">Book it</button>`}${many ? `<button class="btn sm" data-act="delShow" data-id="${esc(x.id)}" aria-label="Remove ${esc(name)}">✕</button>` : ''}</div>
       <div class="row" style="gap:8px"><input type="text" data-in="shName" data-id="${esc(x.id)}" value="${esc(name)}" maxlength="40" aria-label="Show name" style="flex:1"><select data-in="shDay" data-id="${esc(x.id)}" aria-label="Night" style="width:auto">${DAYS.map((d, k) => `<option value="${k}" ${k === +day ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
-      ${many ? `<div class="row small" style="margin-top:8px;gap:8px">${splitOn() ? `<span class="sp muted">${cnt(x.id)} wrestlers${G.titles.filter(t => t.brand === x.id).length ? ' · ' + G.titles.filter(t => t.brand === x.id).map(t => esc(t.short)).join(', ') : ''}</span><button class="link small" data-act="brandRoster" data-id="${esc(x.id)}">See roster</button>` : '<span class="sp"></span>'}<label class="todo" style="margin:0"><input type="checkbox" data-in="shAuto" data-id="${esc(x.id)}" ${x.auto ? 'checked' : ''}><span>Auto-book</span></label></div>` : ''}
+      ${many ? `<div class="row small" style="margin-top:8px;gap:8px">${splitOn() ? `<span class="sp ${cnt(x.id) < 10 ? '' : 'muted'}" ${cnt(x.id) < 10 ? 'style="color:var(--warn)"' : ''}>${cnt(x.id)} wrestlers${cnt(x.id) < 10 ? ' (thin)' : ''}${G.titles.filter(t => t.brand === x.id).length ? ' · ' + G.titles.filter(t => t.brand === x.id).map(t => esc(t.short)).join(', ') : ''}</span><button class="link small" data-act="brandRoster" data-id="${esc(x.id)}">See roster</button>` : '<span class="sp"></span>'}<label class="todo" style="margin:0"><input type="checkbox" data-in="shAuto" data-id="${esc(x.id)}" ${x.auto ? 'checked' : ''}><span>Auto-book</span></label></div>` : ''}
     </div>`; }).join('');
   const titles = splitOn() && G.titles.length ? `<div class="sec">Championships</div><p class="small muted" style="margin-top:0">Pick which show defends each title. Shared titles can be defended on any show.</p>
     ${G.titles.map(t => `<label class="f"><span>${esc(t.name)}</span><select data-in="tBrand" data-id="${esc(t.id)}"><option value="">Shared</option>${sh.map(x => `<option value="${esc(x.id)}" ${t.brand === x.id ? 'selected' : ''}>${esc(x.id === G.showId ? G.promo.show : x.name)}</option>`).join('')}</select></label>`).join('')}` : '';
@@ -1911,11 +1911,13 @@ function runShow(opts = {}) {
   // money and fans
   const topHeat = G.stories.filter(s => s.status === 'active').map(s => s.heat).sort((a, b) => b - a).slice(0, 3);
   const hype = 1 + avg(topHeat.length ? topHeat : [0]) / 250 + (G.promo.prestige - 50) / 250;
-  const attendance = Math.round(Math.min(big ? 22000 : 9000, G.fans * (big ? 0.16 : 0.07) * hype) * rnd(.93, 1.07));
+  // the main show is the A show; other weekly shows are B shows: smaller crowds, half a TV deal, a bit more to put on
+  const bShow = !onMain();
+  const attendance = Math.round(Math.min(big ? 22000 : bShow ? 4000 : 9000, G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype) * rnd(.93, 1.07));
   const fin = {
     gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (onMain() ? 1 : 0.5)), ppv: big ? Math.round(G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150)) : 0,
     merch: Math.round(sum(crew.map(w => w.pop * w.pop)) / 9 * share),
-    payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary)) * share) : 0, production: -Math.round((big ? 60000 : 12000) + G.fans * (big ? 0.8 : 0.15))
+    payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary)) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15))
   };
   for (const k of ['gate', 'tv', 'ppv', 'merch']) fin[k] = Math.round(fin[k] * DF().income);
   const net = sum(Object.values(fin));
@@ -2509,6 +2511,7 @@ function attention() {
   const a = [];
   const bk = backupDue(); if (bk) a.push({ lv: 'warn', ic: '💾', t: 'Back up your save', d: `Last backup ${bk >= G.week - 1 ? 'never' : bk + ' weeks ago'}. Saves live only in this browser.`, act: 'export' });
   const big = isBig(G.week);
+  if (splitOn()) for (const x of SHOWS()) { const n = signed().filter(w => brandOf(w) === x.id).length; if (n < 10) a.push({ lv: 'warn', ic: '📺', t: `${brandName(x.id)} has only ${n} wrestlers`, d: 'A brand needs about 10 or more for good shows. Sign someone, or move wrestlers over in Weekly shows.', act: 'shows' }); }
   if (big) a.push({ lv: 'good', ic: '🎆', t: `${bigName(G.week)} is THIS week`, d: 'Big event. Story matches pay off here.', go: 'book' });
   if (!G.card.length) a.push({ lv: 'info', ic: '📋', t: 'This week\'s card is empty', d: 'Tap Book show to build it, or use Auto-fill.', go: 'book' });
   const inj = G.card.flatMap(segPeople).map(W).filter(w => w && w.injury > 0);
@@ -5142,6 +5145,9 @@ const BUDGETS = {
   easy: { label: 'Network-backed', money: 1500000, cap: 150000, desc: 'Deep pockets. Sign anyone.' }
 };
 const DRAFT_ROUNDS = 16, DRAFT_MIN = 10;
+// each extra weekly show picked at setup adds 8 picks (and room in the budget for them), so brands aren't thin
+const wizExtra = () => Math.min(MAX_SHOWS - 1, (UI.wiz?.extra || []).length);
+const draftRounds = () => DRAFT_ROUNDS + 8 * wizExtra(), draftMin = () => DRAFT_MIN + 5 * wizExtra();
 const NEEDS = [
   ['Main eventers', w => overall(w) >= 70, 2], ['Faces', w => w.align === 'face', 5], ['Heels', w => w.align === 'heel', 5],
   ['High flyers', w => w.style === 'High Flyer', 1], ['Talkers (Mic 70+)', w => w.mic >= 70, 2]
@@ -5162,9 +5168,9 @@ function applyBrand(color) {
 }
 const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w) && !/^(of|the|and|&)$/i.test(w)).map(w => w[0].toUpperCase()).join('').slice(0, 4) || 'PRO';
 
-function wizStart(add) {
+function wizStart(add, chain) {
   add = add === true && !!G;
-  UI.wiz = { step: add ? 'company' : 'welcome', add, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
+  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
   render(); window.scrollTo(0, 0);
 }
 function wizPool() {
@@ -5174,7 +5180,7 @@ function wizPool() {
   while (base.length < NAMES.length) { let n; do n = pick(FIRST) + ' ' + pick(LAST); while (used.has(n)); used.add(n); base.push([n, '', null, null]); }
   const pool = shuffle(base).map(([n, nick, al, st], i) => makeWrestler(n, nick, al, st, i < 5 ? rnd(.82, .97) : i < 14 ? rnd(.55, .82) : i < 28 ? rnd(.3, .6) : rnd(.08, .42)));
   pool.forEach(w => used.add(w.name));
-  for (let i = 0; i < 14; i++) { let n; do n = pick(FIRST) + ' ' + pick(LAST); while (used.has(n)); used.add(n); pool.push(makeWrestler(n, '', null, null, rnd(.05, .55))); }
+  for (let i = 0; i < 14 + 24 * wizExtra(); i++) { let n; do n = pick(FIRST) + ' ' + pick(LAST); while (used.has(n)); used.add(n); pool.push(makeWrestler(n, '', null, null, rnd(.05, .55))); }
   pool.forEach(w => { w.division = 'Open'; w._ask = asking(w); });
   return pool;
 }
@@ -5193,22 +5199,22 @@ function rivalPick(rival) {
   const w = avail.map(w => [w, overall(w) + rnd(0, 10)]).sort((a, b) => b[1] - a[1])[0][0];
   z.rivalTook[w.id] = rival; z.log.unshift(`${rival} took ${w.name} (${overall(w)})`); z.log.length = Math.min(z.log.length, 6);
 }
-const draftCap = () => UI.wiz.money !== false && UI.wiz.contracts !== false ? BUDGETS[UI.wiz.budget].cap : Infinity;
+const draftCap = () => UI.wiz.money !== false && UI.wiz.contracts !== false ? Math.round(BUDGETS[UI.wiz.budget].cap * draftRounds() / DRAFT_ROUNDS) : Infinity;
 function draftPick(id) {
   const z = UI.wiz; const w = z.pool.find(x => x.id === id);
-  if (!w || z.mine.includes(w) || z.rivalTook[w.id] || z.mine.length >= DRAFT_ROUNDS) return;
+  if (!w || z.mine.includes(w) || z.rivalTook[w.id] || z.mine.length >= draftRounds()) return;
   if (draftPayroll() + w._ask > draftCap() * 1.15) return toast('That would blow your payroll budget. Pick someone cheaper.');
   z.mine.push(w);
   // snake order: on odd rounds rivals pick after you, on even rounds they picked before you
   z.rivals.forEach(r => rivalPick(r));
   z.round = z.mine.length + 1;
-  if (z.mine.length >= DRAFT_ROUNDS) return wizToChamps();
+  if (z.mine.length >= draftRounds()) return wizToChamps();
   render();
 }
 function draftAuto(all) {
   const z = UI.wiz;
   do {
-    const cap = draftCap(), left = cap - draftPayroll(), slots = DRAFT_ROUNDS - z.mine.length;
+    const cap = draftCap(), left = cap - draftPayroll(), slots = draftRounds() - z.mine.length;
     const avail = z.pool.filter(w => !z.mine.includes(w) && !z.rivalTook[w.id] && w._ask <= Math.max(800, left - (slots - 1) * 900));
     if (!avail.length) break;
     // fill the biggest unmet need first, otherwise take the best value for money
@@ -5218,7 +5224,7 @@ function draftAuto(all) {
     const best = (pool.length ? pool : avail).sort((a, b) => val(b) - val(a))[0];
     draftPick(best.id);
     if (UI.wiz.step !== 'draft') return;
-  } while (all && z.mine.length < DRAFT_ROUNDS);
+  } while (all && z.mine.length < draftRounds());
   render();
 }
 function wizToChamps() {
@@ -5263,6 +5269,11 @@ function wizFinish() {
     { t: 'Check the Briefing each week', done: false, auto: 'brief' }
   ];
   // extra weekly shows picked at setup (and the brand draft between them)
+  if (z.source === 'starter') for (let i = 0; i < 8 * Math.min(MAX_SHOWS - 1, (z.extra || []).length); i++) {
+    const fa = freeAgents().sort((a, b) => b.pop - a.pop), w = fa[rint(0, Math.min(5, fa.length - 1))] || makeWrestler(randomName(), '', null, null, rnd(.2, .6));
+    if (!G.wrestlers.includes(w)) G.wrestlers.push(w);
+    w.contract = { salary: Math.round(asking(w) / 100) * 100, weeks: rint(52, 130) }; w.joined = G.week;
+  }
   const names = new Set([G.promo.show]);
   for (const x of (z.extra || []).slice(0, MAX_SHOWS - 1)) {
     let n = String(x.name || '').trim().replace(/[<>`"]/g, '').slice(0, 40) || SHOW_WORDS.map(w => `${DAYS[x.day]} Night ${w}`).find(w => !names.has(w)) || `${DAYS[x.day]} Show`;
@@ -5275,6 +5286,9 @@ function wizFinish() {
   UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : 'book'; UI.selWeek = G.week; UI.calMonth = null;
   UI.modal = z.source === 'import' ? { type: 'rtools', tab: 'import', mode: 'replace' } : null;
   applyBrand(G.promo.color); save(); render(); window.scrollTo(0, 0);
+  // several companies chosen at the start: go straight on to setting up the next one
+  if ((z.count || 1) > (z.nth || 1) && (G.cos || []).length + 1 < MAX_COS) { wizStart(true, { n: (z.nth || 1) + 1, of: Math.min(MAX_COS, z.count) }); toast(`${G.promo.name} is ready. Now company ${(z.nth || 1) + 1} of ${z.count}.`); }
+  else if ((z.count || 1) > 1) { const u = nextUp(); if (u && !u.on) { goUnit(u); save(); render(); } }
 }
 
 // fold a freshly made company into the world it was started from, then switch to it
@@ -5295,7 +5309,7 @@ function wizSteps(cur) {
   const z = UI.wiz;
   const steps = z.source === 'draft' ? ['company', 'budget', 'roster', 'draft', 'champs'] : ['company', 'budget', 'roster'];
   const i = steps.indexOf(cur);
-  return `<div class="wz-steps">${steps.map((s, j) => `<span class="${j < i ? 'done' : j === i ? 'on' : ''}"></span>`).join('')}</div>`;
+  return `<div class="wz-steps">${steps.map((s, j) => `<span class="${j < i ? 'done' : j === i ? 'on' : ''}"></span>`).join('')}</div>${(z.count || 1) > 1 ? `<div class="tiny muted" style="margin:-6px 0 8px;font-weight:700;letter-spacing:.04em">COMPANY ${z.nth || 1} OF ${z.count}</div>` : ''}`;
 }
 function viewWizard() {
   const z = UI.wiz;
@@ -5305,7 +5319,9 @@ function viewWizard() {
     return `<div class="app wz"><div class="hero">${logoSVG('logo-art sm')}<h1>Book <em>It</em></h1>
       <p class="wz-lead">You just bought a wrestling company. Name it, draft a roster and book your first show.</p>
       <p class="muted small">About 3 minutes. Change anything later.</p></div>
-      <button class="btn pri block wz-cta" data-act="wzGo" data-id="company">Start my company</button>
+      <label class="f" style="margin-top:14px"><span>How many companies will you run?</span><div class="seg-ctl">${[1, 2, 3, 4].map(n => `<button class="${(z.count || 1) === n ? 'on' : ''}" data-act="wzSet" data-f="count" data-id="${n}">${n}</button>`).join('')}</div>
+        <div class="tiny muted" style="margin-top:4px">${(z.count || 1) > 1 ? `They share one world and take turns on the calendar. You set them up one after another.` : 'You can start more companies in the same world later, from Menu.'}</div></label>
+      <button class="btn pri block wz-cta" data-act="wzGo" data-id="company">${(z.count || 1) > 1 ? `Start company 1 of ${z.count}` : 'Start my company'}</button>
       ${slots.some(s => s.info) ? `<label class="f" style="margin-top:14px"><span>Save to</span><select data-wz="slot">${slots.map(s => `<option value="${s.n}" ${z.slot === s.n ? 'selected' : ''}>Slot ${s.n}${s.info ? ' (replaces ' + esc(s.info.name) + ')' : ' (empty)'}</option>`).join('')}</select></label>` : ''}
       <div class="row" style="justify-content:center;gap:8px;margin-top:16px"><button class="btn sm" data-act="wzQuick">Skip setup, use the starter roster</button><button class="btn sm" data-act="wzBack">Back</button></div></div>`;
   }
@@ -5320,13 +5336,13 @@ function viewWizard() {
       ${(z.extra || []).map((x, i) => `<div class="card" style="margin:0 0 10px;padding:10px 12px"><div class="row" style="margin-bottom:6px"><b class="sp small">Weekly show ${i + 2}</b><button class="btn sm" data-act="wzDelShow" data-id="${i}" aria-label="Remove this show">✕</button></div>
         <div class="row" style="gap:8px"><input type="text" data-wz="xName" data-i="${i}" value="${esc(x.name)}" maxlength="40" aria-label="Show name" placeholder="e.g. Friday Fallout" style="flex:1"><select data-wz="xDay" data-i="${i}" aria-label="Night" style="width:auto">${DAYS.map((d, k) => `<option value="${k}" ${k === x.day ? 'selected' : ''}>${d}</option>`).join('')}</select></div></div>`).join('')}
       ${(z.extra || []).length < MAX_SHOWS - 1 ? `<button class="btn block" style="margin:-2px 0 12px" data-act="wzAddShow">＋ Add another weekly show</button>` : ''}
-      ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} Each extra show costs a night's production and earns half a TV deal.</div>` : ''}
+      ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} Extra shows are B shows: smaller crowds, half a TV deal and their own costs. Each one adds 8 picks to your roster.</div>` : ''}
       <label class="f"><span>Brand color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
       <div class="sec">Big events</div>
       ${z.add ? `<p class="small muted" style="margin-top:0">This world has a big event every ${G.settings.bigEvery} weeks.</p>` : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}
       <label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
       <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order and repeat each year. Leave it empty for Big Event 1, 2, 3. You can change them later in Menu.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>
-      <div class="wz-nav">${z.add ? '<button class="btn" data-act="wzCancel">Cancel</button>' : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
+      <div class="wz-nav">${z.add ? `<button class="btn" data-act="wzCancel">${(z.nth || 1) > 1 ? 'Skip the rest' : 'Cancel'}</button>` : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
   }
   if (z.step === 'budget') {
     return `<div class="app wz">${wizSteps('budget')}
@@ -5344,7 +5360,7 @@ function viewWizard() {
   if (z.step === 'roster') {
     return `<div class="app wz">${wizSteps('roster')}
       <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">Where does your talent come from?</h2>
-      <div class="list">${[['draft', '🎯 Hold a roster draft', `Draft ${DRAFT_ROUNDS} wrestlers from a talent pool, taking turns with two rival promotions. Recommended.`], ['import', '📦 Build or import my own', 'Start empty. Build, import or grab a roster from Community.'], ['starter', '⚡ Use the starter roster', 'Skip the draft. 24 wrestlers, champions and stories ready.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>
+      <div class="list">${[['draft', '🎯 Hold a roster draft', `Draft ${draftRounds()} wrestlers from a talent pool, taking turns with two rival promotions. Recommended.`], ['import', '📦 Build or import my own', 'Start empty. Build, import or grab a roster from Community.'], ['starter', '⚡ Use the starter roster', 'Skip the draft. 24 wrestlers, champions and stories ready.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button><button class="btn pri" data-act="${z.source === 'draft' ? 'wzDraft' : 'wzFinish'}">${z.source === 'draft' ? 'Go to the draft' : 'Open for business'}</button></div></div>`;
   }
   if (z.step === 'draft') {
@@ -5354,10 +5370,10 @@ function viewWizard() {
     else if (STYLES.includes(z.filter)) avail = avail.filter(w => w.style === z.filter);
     avail.sort((a, b) => z.sort === 'cheap' ? a._ask - b._ask : z.sort === 'value' ? (overall(b) - b._ask / 600) - (overall(a) - a._ask / 600) : overall(b) - overall(a));
     const needs = NEEDS.map(([l, f, n]) => { const have = z.mine.filter(f).length; return `<span class="need ${have >= n ? 'met' : ''}">${have >= n ? '✓' : have + '/' + n} ${l}</span>`; }).join('');
-    const done = z.mine.length >= DRAFT_MIN;
+    const done = z.mine.length >= draftMin();
     return `<div class="app wz wz-draft">
       <div class="dr-head">
-        <div class="row"><div class="sp"><div class="wz-k" style="margin:0">Roster draft · Pick ${Math.min(z.round, DRAFT_ROUNDS)} of ${DRAFT_ROUNDS}</div><b>${esc(z.name)}</b></div>${logo}</div>
+        <div class="row"><div class="sp"><div class="wz-k" style="margin:0">Roster draft · Pick ${Math.min(z.round, draftRounds())} of ${draftRounds()}</div><b>${esc(z.name)}</b></div>${logo}</div>
         ${cap === Infinity ? '' : `<div class="dr-pay"><div class="row small"><span class="sp">Payroll <b>${money(pay)}</b> of ${money(cap)}/wk</span><span class="${pay > cap ? 'bad' : 'muted'}">${pay > cap ? 'Over budget' : money(cap - pay) + ' left'}</span></div><div class="bar"><i style="width:${clamp(pay / cap * 100, 0, 100)}%;${pay > cap ? 'background:var(--bad)' : ''}"></i></div></div>`}
         <div class="needs">${needs}</div>
       </div>
@@ -5370,7 +5386,7 @@ function viewWizard() {
         <div class="dr-stats"><span>Ring ${w.ring}</span><span>Mic ${w.mic}</span><span>Cha ${w.cha}</span><span>Pop ${Math.round(w.pop)}</span></div></div>
         <div class="dr-r"><div class="dr-ovr">${overall(w)}</div>${cap === Infinity ? '' : `<div class="tiny muted">${money(w._ask)}</div>`}<button class="btn sm pri" data-act="wzPick" data-id="${w.id}" ${over ? 'disabled' : ''}>Draft</button></div></div>`; }).join('') || '<div class="empty">Nobody left in this filter.</div>'}</div>
       <div class="runbar dr-bar"><div class="grid2"><button class="btn" data-act="wzAuto">🎲 Auto-pick</button><button class="btn" data-act="wzAutoAll">⏩ Draft the rest</button></div>
-        <button class="btn pri block" style="margin-top:8px" data-act="wzChamps" ${done ? '' : 'disabled'}>${done ? `Finish draft with ${z.mine.length} wrestlers` : `Draft at least ${DRAFT_MIN} to continue (${z.mine.length}/${DRAFT_MIN})`}</button></div>
+        <button class="btn pri block" style="margin-top:8px" data-act="wzChamps" ${done ? '' : 'disabled'}>${done ? `Finish draft with ${z.mine.length} wrestlers` : `Draft at least ${draftMin()} to continue (${z.mine.length}/${draftMin()})`}</button></div>
     </div>`;
   }
   if (z.step === 'champs') {
@@ -5409,7 +5425,7 @@ const WIZ_ACTIONS = {
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
   wzPpvIdeas() { UI.wiz.ppv = shuffle(BIG_EVENTS).slice(0, 12).join('\n'); render(); },
-  wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' ? +v : v; if (f === 'color') applyBrand(v); render(); },
+  wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
   wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false }); G.tips = 0; UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = { type: 'help' }; save(); render(); },
   wzDraft() { if (!UI.wiz.show.trim()) UI.wiz.show = DAYS[UI.wiz.day] + ' Mayhem'; wizBeginDraft(); },
