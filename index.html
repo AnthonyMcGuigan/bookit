@@ -594,7 +594,12 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .hype { color: #ff9a3d; font-weight: 700; }
 
 /* ----- line icons ----- */
-svg.i { width: 1.05em; height: 1.05em; vertical-align: -0.16em; fill: currentColor; stroke: none; flex: none; }
+svg.i { width: 1.05em; height: 1.05em; vertical-align: -0.16em; fill: var(--ic, currentColor); stroke: none; flex: none; }
+/* icons are gold by default; on colored buttons, tags and status text they follow the text color */
+body { --ic: var(--gold); }
+.btn.pri, .btn.bad, .tag, .n-face, .pick.sel .ck, .why .p, .kpi-alert, .kpi-ok, .cal-c, .cal-t.sel, .warnline, .need.met, .top-logo,
+.filters button.on, .seg-ctl button.on, .mrow.me .mpos, .mchips .hint, .mv.up, .br-m .won, .hs-cont, .cv-like.on, nav.tabs,
+[style*="color:var(--"], [style*="color: var(--"] { --ic: currentColor; }
 .tabs svg.i, nav svg.i { width: 22px; height: 22px; }
 
 /* ----- Shows screen hierarchy: card first ----- */
