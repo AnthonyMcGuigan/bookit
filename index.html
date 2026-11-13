@@ -1467,7 +1467,8 @@ function modalShows() {
   const rows = sh.map((x, i) => { const on = x.id === G.showId, name = on ? G.promo.show : x.name, day = on ? G.promo.day : x.day;
     return `<div class="card show-row" style="margin-bottom:8px">
       <div class="row" style="gap:8px;margin-bottom:6px"><b class="sp">${i === 0 ? 'Main show' : 'Show ' + (i + 1)}${on ? ' <span class="tag good">Booking</span>' : ''}${(x.ran || 0) >= G.week ? ' <span class="tag">✓ done this week</span>' : ''}</b>${on ? '' : `<button class="btn sm" data-act="goShow" data-id="${esc(x.id)}">Book it</button>`}${many ? `<button class="btn sm" data-act="delShow" data-id="${esc(x.id)}" aria-label="Remove ${esc(name)}">✕</button>` : ''}</div>
-      <div class="row" style="gap:8px"><input type="text" data-in="shName" data-id="${esc(x.id)}" value="${esc(name)}" maxlength="40" aria-label="Show name" style="flex:1"><select data-in="shDay" data-id="${esc(x.id)}" aria-label="Night" style="width:auto">${DAYS.map((d, k) => `<option value="${k}" ${k === +day ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+      <input type="text" data-in="shName" data-id="${esc(x.id)}" value="${esc(name)}" maxlength="40" aria-label="Show name" style="margin-bottom:8px">
+      <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === +day ? 'on' : ''}" data-act="shDaySet" data-id="${esc(x.id)}|${k}">${d.slice(0, 3)}</button>`).join('')}</div>
       ${many ? `<div class="row small" style="margin-top:8px;gap:8px">${splitOn() ? `<span class="sp ${cnt(x.id) < 10 ? '' : 'muted'}" ${cnt(x.id) < 10 ? 'style="color:var(--warn)"' : ''}>${cnt(x.id)} wrestlers${cnt(x.id) < 10 ? ' (thin)' : ''}${G.titles.filter(t => t.brand === x.id).length ? ' · ' + G.titles.filter(t => t.brand === x.id).map(t => esc(t.short)).join(', ') : ''}</span><button class="link small" data-act="brandRoster" data-id="${esc(x.id)}">See roster</button>` : '<span class="sp"></span>'}<label class="todo" style="margin:0"><input type="checkbox" data-in="shAuto" data-id="${esc(x.id)}" ${x.auto ? 'checked' : ''}><span>Auto-book</span></label></div>` : ''}
     </div>`; }).join('');
   const titles = splitOn() && G.titles.length ? `<div class="sec">Championships</div><p class="small muted" style="margin-top:0">Pick which show defends each title. Shared titles can be defended on any show.</p>
@@ -3715,6 +3716,7 @@ const A = {
     if (SHOWS().length < 2) return;
     confirmBox('Redo the brand draft?', 'Everyone is shared out again, best first, so each show gets its share of stars. Tag teams stay together. Champions take their titles with them.', 'Draft', go);
   },
+  shDaySet(v) { const [id, k] = String(v).split('|'), x = showById(id); if (!x) return; x.day = clamp(+k || 0, 0, 6); if (x.id === G.showId) G.promo.day = x.day; commit(); },
   brandRoster(id) { UI.modal = null; UI.tab = 'roster'; UI.rosterF = 'b:' + id; render(); window.scrollTo(0, 0); },
   coSwitch(id) { if (!G.cos?.some(c => c.coId === id)) return; switchCo(id); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0); toast(`Now booking ${G.promo.name}.`); },
   coAdd() { if ((G.cos || []).length + 1 >= MAX_COS) return toast(`A world can have up to ${MAX_COS} companies.`); confirmBox('Start another company?', `It joins this world and shares free agents, rival promotions and the calendar with ${G.promo.name}. Every company you run puts on a show each week.`, 'Start it', () => { UI.modal = null; wizStart(true); }); },
@@ -5334,7 +5336,8 @@ function viewWizard() {
       <label class="f"><span>Weekly TV show</span><input type="text" data-wz="show" value="${esc(z.show)}" maxlength="40" placeholder="e.g. Monday Mayhem"></label>
       <label class="f"><span>Show night</span><div class="seg-ctl">${DAYS.map((d, i) => `<button class="${z.day === i ? 'on' : ''}" data-act="wzSet" data-f="day" data-id="${i}">${d.slice(0, 3)}</button>`).join('')}</div></label>
       ${(z.extra || []).map((x, i) => `<div class="card" style="margin:0 0 10px;padding:10px 12px"><div class="row" style="margin-bottom:6px"><b class="sp small">Weekly show ${i + 2}</b><button class="btn sm" data-act="wzDelShow" data-id="${i}" aria-label="Remove this show">✕</button></div>
-        <div class="row" style="gap:8px"><input type="text" data-wz="xName" data-i="${i}" value="${esc(x.name)}" maxlength="40" aria-label="Show name" placeholder="e.g. Friday Fallout" style="flex:1"><select data-wz="xDay" data-i="${i}" aria-label="Night" style="width:auto">${DAYS.map((d, k) => `<option value="${k}" ${k === x.day ? 'selected' : ''}>${d}</option>`).join('')}</select></div></div>`).join('')}
+        <input type="text" data-wz="xName" data-i="${i}" value="${esc(x.name)}" maxlength="40" aria-label="Show name" placeholder="e.g. Friday Fallout" style="margin-bottom:8px">
+        <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === x.day ? 'on' : ''}" data-act="wzXDay" data-id="${i}:${k}">${d.slice(0, 3)}</button>`).join('')}</div></div>`).join('')}
       ${(z.extra || []).length < MAX_SHOWS - 1 ? `<button class="btn block" style="margin:-2px 0 12px" data-act="wzAddShow">＋ Add another weekly show</button>` : ''}
       ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} Extra shows are B shows: smaller crowds, half a TV deal and their own costs. Each one adds 8 picks to your roster.</div>` : ''}
       <label class="f"><span>Brand color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
@@ -5422,6 +5425,7 @@ const WIZ_ACTIONS = {
   wzCancel() { UI.wiz = null; render(); window.scrollTo(0, 0); },
   wzGo(step) { UI.wiz.step = step; render(); window.scrollTo(0, 0); },
   wzRule(k) { UI.wiz[k] = !UI.wiz[k]; render(); },
+  wzXDay(v) { const [i, k] = String(v).split(':').map(Number), x = UI.wiz.extra?.[i]; if (x) { x.day = clamp(k || 0, 0, 6); render(); } },
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
   wzPpvIdeas() { UI.wiz.ppv = shuffle(BIG_EVENTS).slice(0, 12).join('\n'); render(); },
