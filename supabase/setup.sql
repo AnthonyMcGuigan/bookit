@@ -1,4 +1,4 @@
--- Book It: Community database setup for Supabase.
+-- BookIt: Community database setup for Supabase.
 -- Paste all of this into Supabase → SQL Editor → New query, then press Run. Safe to run again.
 
 -- One row per player per collection: creations/<player id>, reports/<player id>, feedback/<player id>.
@@ -91,7 +91,7 @@ drop trigger if exists docs_space on public.docs;
 create trigger docs_space before insert or update on public.docs for each row execute function public.docs_space();
 revoke all on function public.docs_space() from public, anon, authenticated;
 
--- Book It Supporter (added in v1.7, safe to run again). Stripe tells the stripe-webhook edge function about
+-- BookIt Supporter (added in v1.7, safe to run again). Stripe tells the stripe-webhook edge function about
 -- each subscription, and the function writes one row per player here. Players can only read their own row.
 create table if not exists public.supporters (
   uid uuid primary key references auth.users (id) on delete cascade,

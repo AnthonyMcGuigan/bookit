@@ -1,6 +1,6 @@
-# Book It: Wrestling Booking Sim
+# BookIt: Wrestling Booking Sim
 
-(Formerly Book It. Saves carry over: the storage keys still use the old name.)
+(Formerly Book It, and before that Ringside Booker. Saves carry over: the storage keys still use the old name.)
 
 An original pro wrestling booking simulator for phones. You run a fictional promotion: book weekly shows, write storylines, manage contracts and money. All wrestlers, titles and events are made up.
 
