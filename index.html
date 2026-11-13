@@ -525,6 +525,14 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .tro.on { opacity: 1; border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .tro-i { font-size: 26px; }
 .tro b { font-size: 13px; }
+.lvl { font-family: var(--f-display); font-size: 12px; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; background: linear-gradient(180deg, #ffe99a, #f2c443 55%, #d19a1c); color: #2a1c00; white-space: nowrap; }
+.mile { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.mile.dim { opacity: .6; }
+.mile-i { font-size: 22px; width: 28px; text-align: center; flex: none; }
+.mile .bar { height: 5px; margin: 6px 0 3px; }
+.tiers { display: flex; gap: 4px; flex: none; }
+.tiers i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); }
+.tiers i.on.t0 { background: #c98a4b; border-color: #c98a4b; } .tiers i.on.t1 { background: #c9d1d9; border-color: #c9d1d9; } .tiers i.on.t2 { background: #f2c443; border-color: #f2c443; }
 .live { position: fixed; inset: 0; z-index: 58; display: flex; flex-direction: column; color: #fff; background: radial-gradient(ellipse at 50% -10%, rgba(255,255,255,.16), transparent 55%), linear-gradient(#0b0a12, #15121f); --muted-c: rgba(255,255,255,.65); }
 .live.big { background: radial-gradient(ellipse at 50% -10%, rgba(255,190,80,.28), transparent 60%), linear-gradient(#0d0a06, #1c1408); }
 .live .muted { color: var(--muted-c); }
@@ -1376,7 +1384,7 @@ function tAdvance(T) {
   news(`🏆 ${T.name}: the ${roundName(T, T.rounds.length - 1).toLowerCase()}${next.length > 1 ? 's are' : ' is'} set. ${next.map(x => x.pair.map(nameOf).join(' vs ')).join(', ')}.`, 'title');
 }
 function tFinish(T, wid) {
-  T.done = G.week; T.won = wid;
+  T.done = G.week; T.won = wid; carBump('tourneys'); award('bracket');
   const w = W(wid), t = T.titleId && G.titles.find(x => x.id === T.titleId);
   if (w) { addPop(w, 4); w.morale = clamp(w.morale + 10, 0, 100); w.momentum = clamp(w.momentum + 10, -50, 50); }
   let prize = '';
@@ -2045,7 +2053,7 @@ function runShow(opts = {}) {
   const nu = nextUp(); if (nu && !nu.on) { toast(`${unitLabel(nu)} goes on first this week.`); return; }
   const card = G.card.filter(s => segPeople(s).length);
   if (!card.length) { toast('Add at least one segment first.'); return; }
-  UNDO = { created: G.created, wk: G.week, bid: G.showId, co: G.coId, json: JSON.stringify(G) };
+  UNDO = { created: G.created, wk: G.week, bid: G.showId, co: G.coId, json: JSON.stringify(G), car: JSON.stringify(CAR()) };
   // the company's week ends with its last show; the world's week ends with the last show anywhere
   const coLast = SHOWS().every(s => s.id === G.showId || (s.ran || 0) >= G.week);
   const world = coLast && (!multi() || !waitingCos().length);
@@ -2325,7 +2333,7 @@ function removeFromSeg(seg, id) {
 }
 
 function concludeStory(st, met) {
-  st.status = 'ended'; st.ended = G.week;
+  st.status = 'ended'; st.ended = G.week; carBump('payoffs'); award('payoff');
   let winSide = null;
   if (met && met.winners?.length) winSide = st.a.some(x => met.winners.includes(x)) ? 'a' : 'b';
   const bonus = Math.round(st.heat / 12);
@@ -2345,9 +2353,9 @@ function concludeStory(st, met) {
 const RANKS = [[0, 'Rookie Booker', '🎟️'], [150, 'Local Legend', '🏟️'], [450, 'Regional Mastermind', '🧠'], [1000, 'National Name', '📺'], [1800, 'Creative Genius', '💡'], [2800, 'Hall of Fame Booker', '🏆']];
 const rankIx = xp => RANKS.reduce((r, x, i) => xp >= x[0] ? i : r, 0);
 function rankBar() {
-  const xp = G.booker.xp, i = rankIx(xp), cur = RANKS[i], nx = RANKS[i + 1];
-  const pct = nx ? (xp - cur[0]) / (nx[0] - cur[0]) * 100 : 100;
-  return `<div class="rank"><span class="rank-ic">${cur[2]}</span><div class="sp"><div class="rank-n">${cur[1]}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="tiny muted">${nx ? `${Math.round(xp)} / ${nx[0]} XP to ${nx[1]}` : `${Math.round(xp)} XP · top rank`}</div></div></div>`;
+  const xp = CAR().xp, i = rankIx(xp), cur = RANKS[i], nx = RANKS[i + 1], L = lvlOf(xp);
+  const lo = xpAt(L), hi = xpAt(L + 1), pct = L >= MAX_LVL ? 100 : (xp - lo) / (hi - lo) * 100;
+  return `<div class="rank"><span class="rank-ic">${cur[2]}</span><div class="sp"><div class="rank-n"><span class="lvl">Lv ${L}</span> ${cur[1]}</div><div class="bar" role="progressbar" aria-label="Progress to the next level" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div><div class="tiny muted">${L < MAX_LVL ? `${Math.round(xp - lo).toLocaleString()} / ${(hi - lo).toLocaleString()} XP to level ${L + 1}` : `${Math.round(xp).toLocaleString()} XP · top level`}${nx ? ` · ${nx[1]} at ${nx[0].toLocaleString()} XP` : ''}</div></div></div>`;
 }
 
 // ---- weekly goals ----
@@ -2373,60 +2381,174 @@ function ensureGoals() {
   b.goals = goals.concat(b.goals.filter(g => g.key === 'exec' && g.wk === G.week)); b.goalsWk = G.week;
 }
 
-// ---- trophies ----
-const TROPHIES = [
-  ['first', '🔔', 'Opening Bell', 'Run your first show'],
-  ['four', '⭐', 'Four-Star Night', 'Run a show rated 80+'],
-  ['classic', '🌟', 'Instant Classic', 'Book a match rated 90+'],
-  ['champ', '🏆', 'New Champion', 'Crown a new champion on a show'],
-  ['sellout', '🎟️', 'Sold Out', 'Fill the building'],
-  ['streak', '🔥', 'Hot Streak', 'Three shows in a row rated 70+'],
-  ['stories', '📚', 'Must-See TV', 'Run three storylines at once'],
-  ['fans50', '👥', 'Movement', 'Reach 50,000 fans'],
-  ['fans100', '🌎', 'Global Brand', 'Reach 100,000 fans'],
-  ['goals10', '🎯', 'Goal Getter', 'Complete 10 weekly goals'],
-  ['backstage', '🚪', 'Locker Room Leader', 'Handle 5 backstage moments'],
-  ['year', '📅', 'One Year Strong', 'Run 52 shows'],
-  ['hof', '👑', 'Hall of Famer', 'Reach the top booker rank']
+// ---- booker career: level, achievements, milestones ----
+// The career belongs to the player, not to one company: it lives in its own browser key and carries into every save.
+// Each company still keeps its own G.booker (weekly goals, the trophies it earned) so older saves and shared saves work.
+const CAREER_KEY = 'ringsideBooker.career', MAX_LVL = 50;
+const xpAt = L => L <= 1 ? 0 : Math.round(8 * (L - 1) ** 1.7);           // level 2 after a show, HoF rank ~level 32, level 50 ~4 years
+const lvlOf = xp => { let L = 1; while (L < MAX_LVL && xp >= xpAt(L + 1)) L++; return L; };
+const ACH = [ // id, icon, name, how, XP
+  ['first', '🔔', 'Opening Bell', 'Run your first show', 10],
+  ['four', '⭐', 'Four-Star Night', 'Run a show rated 80+', 40],
+  ['five', '🌟', 'Five-Star Night', 'Run a show rated 90+', 100],
+  ['classic', '🌟', 'Instant Classic', 'Book a match rated 90+', 60],
+  ['moty', '🏆', 'Match of the Year', 'Book a match rated 95+', 120],
+  ['champ', '🏆', 'New Champion', 'Crown a new champion on a show', 20],
+  ['guard', '👑', 'Changing of the Guard', 'Two titles change hands in one night', 50],
+  ['upset', '💥', 'Shock Upset', 'A much less popular wrestler wins a title', 50],
+  ['sellout', '🎟️', 'Sold Out', 'Fill the building', 30],
+  ['streak', '🔥', 'Hot Streak', 'Three shows in a row rated 70+', 40],
+  ['onfire', '🔥', 'On Fire', 'Five shows in a row rated 75+', 80],
+  ['bounce', '📈', 'Bounce Back', 'Rate 75+ right after a show under 50', 40],
+  ['stories', '📚', 'Must-See TV', 'Run three storylines at once', 30],
+  ['payoff', '🏁', 'The Blow-Off', 'Pay off a storyline at a big event', 40],
+  ['tag', '🤼', 'Tag Team Specialist', 'A tag match rated 80+', 40],
+  ['rumble', '👥', 'Thirty Strong', 'Run a Rumble with 30 or more entrants', 40],
+  ['debut', '🆕', 'Big Debut', 'A new signing wins a 70+ match in their first weeks', 40],
+  ['bracket', '🏆', 'Bracket Buster', 'Finish a tournament', 40],
+  ['sweep', '🎯', 'Clean Sweep', 'Complete every goal in a week (two or more)', 40],
+  ['goals10', '🎯', 'Goal Getter', 'Complete 10 weekly goals', 40],
+  ['backstage', '🚪', 'Locker Room Leader', 'Handle 5 backstage moments', 30],
+  ['money', '💰', 'Money Maker', 'Make $500K profit on one show', 60],
+  ['fans50', '👥', 'Movement', 'Reach 50,000 fans', 50],
+  ['fans100', '🌎', 'Global Brand', 'Reach 100,000 fans', 80],
+  ['fans250', '🌎', 'Worldwide', 'Reach 250,000 fans', 150],
+  ['brands', '📺', 'Brand Split', 'Run three weekly shows', 40],
+  ['empire', '🏟️', 'Media Empire', 'Run two companies in one world', 40],
+  ['year', '📅', 'One Year Strong', 'Run 52 shows with one company', 80],
+  ['hof', '👑', 'Hall of Famer', 'Reach the top booker rank', 200]
 ];
+// milestones: lifetime totals across every company, with bronze, silver and gold steps
+const TIER = ['Bronze', 'Silver', 'Gold'], TIER_XP = [30, 80, 200];
+const MILES = [
+  ['shows', '📺', 'Shows run', [25, 100, 300]],
+  ['ppv', '🎆', 'Big events run', [5, 25, 75]],
+  ['crowd', '🎟️', 'Fans through the door', [100000, 1000000, 5000000]],
+  ['m80', '⭐', 'Matches rated 80+', [10, 50, 200]],
+  ['m90', '🌟', 'Matches rated 90+', [1, 10, 40]],
+  ['champs', '🏆', 'Title changes', [5, 25, 75]],
+  ['payoffs', '🏁', 'Storyline payoffs', [5, 20, 50]],
+  ['goals', '🎯', 'Weekly goals done', [10, 50, 150]],
+  ['tourneys', '👑', 'Tournaments finished', [1, 5, 15]],
+  ['peak', '👥', 'Biggest fanbase', [25000, 100000, 500000]]
+];
+// old saves' trophies keep their place: the first 13 ids are the original trophies
+const TROPHIES = ACH;
+function cleanCareer(c) {
+  const o = { v: 1, xp: 0, ach: Object.create(null), st: Object.create(null), tier: Object.create(null), since: Date.now() };
+  if (!c || typeof c !== 'object') return o;
+  o.xp = clamp(+c.xp || 0, 0, 1e7); o.since = +c.since || o.since;
+  const ids = new Set(ACH.map(a => a[0])), ms = new Set(MILES.map(m => m[0]));
+  for (const [k, v] of Object.entries(c.ach || {})) if (ids.has(k) && v && typeof v === 'object') o.ach[k] = { wk: +v.wk || 0, co: String(v.co || '').replace(/[<>&"'`]/g, '').slice(0, 40), at: +v.at || 0 };
+  for (const [k, v] of Object.entries(c.st || {})) if (ms.has(k) || k === 'events') o.st[k] = clamp(+v || 0, 0, 1e10);
+  for (const [k, v] of Object.entries(c.tier || {})) if (ms.has(k)) o.tier[k] = clamp(Math.floor(+v || 0), 0, 3);
+  return o;
+}
+let CAREER = null;
+function CAR() {
+  if (CAREER) return CAREER;
+  const raw = ls.get(CAREER_KEY);
+  if (raw) { try { CAREER = cleanCareer(JSON.parse(raw)); return CAREER; } catch (e) {} }
+  // first time: start from the best booker on this device, so nobody loses their rank
+  CAREER = cleanCareer(null);
+  for (let n = 1; n <= SLOTS; n++) {
+    let g; try { g = JSON.parse(ls.get(KEY(n)) || 'null'); } catch (e) { g = null; } if (!g) continue;
+    for (const c of [g, ...(Array.isArray(g.cos) ? g.cos : [])]) {
+      const b = c && c.booker; if (!b) continue;
+      CAREER.xp = Math.max(CAREER.xp, +b.xp || 0);
+      for (const [id, wk] of Object.entries(b.trophies || {})) if (ACH.some(a => a[0] === id) && !CAREER.ach[id]) CAREER.ach[id] = { wk: +wk || 0, co: String(c.promo?.name || '').replace(/[<>&"'`]/g, '').slice(0, 40), at: Date.now() };
+      const h = Array.isArray(c.history) ? c.history : [];
+      CAREER.st.shows = (CAREER.st.shows || 0) + h.length;
+      CAREER.st.ppv = (CAREER.st.ppv || 0) + h.filter(x => x && x.big).length;
+      CAREER.st.crowd = (CAREER.st.crowd || 0) + sum(h.map(x => +x?.attendance || 0));
+      CAREER.st.peak = Math.max(CAREER.st.peak || 0, +c.fans || 0);
+      CAREER.st.goals = (CAREER.st.goals || 0) + (+b.done || 0);
+    }
+  }
+  // milestones already passed count as reached, without a pile of XP on day one
+  for (const [id, , , steps] of MILES) CAREER.tier[id] = steps.filter(x => (CAREER.st[id] || 0) >= x).length;
+  saveCareer();
+  return CAREER;
+}
+function saveCareer() { if (CAREER) ls.set(CAREER_KEY, JSON.stringify(CAREER)); }
+function addXP(n) { if (!G) return; G.booker.xp += n; CAR().xp += n; }
+function carBump(k, n = 1) { const c = CAR(); c.st[k] = (c.st[k] || 0) + n; }
 function award(id, list) {
-  if (G.booker.trophies[id]) return;
-  G.booker.trophies[id] = G.week; const t = TROPHIES.find(x => x[0] === id);
-  news(`🏅 Trophy unlocked: ${t[2]} (${t[3]})`, 'office'); list && list.push(t);
+  const a = ACH.find(x => x[0] === id); if (!a) return;
+  G.booker.trophies[id] ||= G.week;
+  const c = CAR(); if (c.ach[id]) return;
+  c.ach[id] = { wk: G.week, co: String(G.promo?.name || '').slice(0, 40), at: Date.now() }; c.xp += a[4]; G.booker.xp += a[4];
+  news(`🏅 Achievement: ${a[2]} (${a[3]}) · +${a[4]} XP`, 'office'); list && list.push(a);
+  saveCareer();
+}
+// a milestone step reached: returns [{icon, name, tier, xp}]
+function checkMiles() {
+  const c = CAR(), out = [];
+  for (const [id, ic, name, steps] of MILES) {
+    const v = c.st[id] || 0; let t = c.tier[id] || 0;
+    while (t < 3 && v >= steps[t]) { c.xp += TIER_XP[t]; G.booker.xp += TIER_XP[t]; out.push({ ic, name, tier: TIER[t], n: steps[t], xp: TIER_XP[t] }); news(`🏅 ${TIER[t]} milestone: ${name} (${steps[t].toLocaleString()}) · +${TIER_XP[t]} XP`, 'office'); t++; }
+    c.tier[id] = t;
+  }
+  return out;
 }
 
-// ---- after every show: XP, goals, trophies ----
+// ---- after every show: XP, goals, achievements, milestones ----
 function scoreShow(rec) {
-  const b = G.booker, before = rankIx(b.xp), got = [], trophies = [];
+  const b = G.booker, c = CAR(), before = rankIx(c.xp), lvBefore = lvlOf(c.xp), got = [], trophies = [];
   const showXp = Math.max(3, Math.round((rec.rating - 40) / 4)) * (rec.big ? 2 : 1);
-  b.xp += showXp;
+  addXP(showXp);
+  let goalsOk = 0;
   for (const g of b.goals) {
     const ok = g.key === 'exec' ? rec.rating >= g.T : !!GOALS[g.key]?.ok(g, rec);
     let reward = '';
     if (ok) {
-      b.xp += g.xp; b.done = (b.done || 0) + 1;
+      addXP(g.xp); b.done = (b.done || 0) + 1; goalsOk++; carBump('goals');
       const f = Math.round(G.fans * g.fans * Math.max(0.1, 1 - G.fans / fanCap())); G.fans += f; reward = `+${g.xp} XP · +${kfmt(f)} fans`;
       if (g.key === 'exec') { G.tv = Math.round(G.tv * 1.08); reward += ' · TV deal +8%'; }
     } else if (g.key === 'exec') { G.promo.prestige = clamp(G.promo.prestige - 2, 1, 100); reward = 'The exec left unimpressed. Prestige −2'; }
     got.push({ text: g.text, ok, reward });
   }
+  // lifetime totals
+  const ms = rec.results.filter(r => r.seg.kind === 'match');
+  const newChamps = rec.results.filter(r => (r.notes || []).some(n => /NEW CHAMPION/i.test(n)));
+  carBump('shows'); if (rec.big) carBump('ppv'); carBump('crowd', rec.attendance);
+  carBump('m80', ms.filter(r => r.rating >= 80).length); carBump('m90', ms.filter(r => r.rating >= 90).length);
+  carBump('champs', newChamps.length); c.st.peak = Math.max(c.st.peak || 0, G.fans);
+  const goalsTotal = b.goals.length;
   b.goals = []; b.goalsWk = 0;
-  const h = G.history;
+  const h = G.history, popOf = ids => Math.max(0, ...ids.map(id => W(id)?.pop || 0));
   award('first', trophies);
   if (rec.rating >= 80) award('four', trophies);
-  if (rec.results.some(r => r.seg.kind === 'match' && r.rating >= 90)) award('classic', trophies);
-  if (rec.results.some(r => (r.notes || []).some(n => /NEW CHAMPION/i.test(n)))) award('champ', trophies);
+  if (rec.rating >= 90) award('five', trophies);
+  if (ms.some(r => r.rating >= 90)) award('classic', trophies);
+  if (ms.some(r => r.rating >= 95)) award('moty', trophies);
+  if (newChamps.length) award('champ', trophies);
+  if (newChamps.length >= 2) award('guard', trophies);
+  if (newChamps.some(r => { const win = r.winners || [], lose = entrants(r.seg).filter(id => !win.includes(id)); return win.length && lose.length && popOf(win) + 15 <= popOf(lose); })) award('upset', trophies);
   if (rec.attendance >= (rec.big ? 22000 : 9000) * .96) award('sellout', trophies);
   if (h.length >= 3 && h.slice(-3).every(x => x.rating >= 70)) award('streak', trophies);
+  if (h.length >= 5 && h.slice(-5).every(x => x.rating >= 75)) award('onfire', trophies);
+  if (h.length >= 2 && rec.rating >= 75 && h.at(-2).rating < 50) award('bounce', trophies);
   if (G.stories.filter(s => s.status === 'active').length >= 3) award('stories', trophies);
+  if (ms.some(r => r.rating >= 80 && tagMT(MT(r.seg.mtype)))) award('tag', trophies);
+  if (ms.some(r => MT(r.seg.mtype).rumble && entrants(r.seg).length >= 30)) award('rumble', trophies);
+  if (ms.some(r => r.rating >= 70 && (r.winners || []).some(id => { const w = W(id); return w && w.joined > 1 && w.joined >= G.week - 3; }))) award('debut', trophies);
+  if (goalsTotal >= 2 && goalsOk === goalsTotal) award('sweep', trophies);
+  if (b.done >= 10) award('goals10', trophies);
+  if (MON() && rec.net >= 500000) award('money', trophies);
   if (G.fans >= 50000) award('fans50', trophies);
   if (G.fans >= 100000) award('fans100', trophies);
-  if (b.done >= 10) award('goals10', trophies);
+  if (G.fans >= 250000) award('fans250', trophies);
+  if ((G.shows || []).length >= 3) award('brands', trophies);
+  if (multi()) award('empire', trophies);
   if (h.length >= 52) award('year', trophies);
-  const after = rankIx(b.xp);
+  const miles = checkMiles();
+  const after = rankIx(c.xp), lv = lvlOf(c.xp);
   if (after === RANKS.length - 1) award('hof', trophies);
   if (after > before) news(`${RANKS[after][2]} You're now a ${RANKS[after][1]}!`, 'office');
-  return { showXp, goals: got, trophies, rankUp: after > before ? after : null };
+  if (lv > lvBefore) news(`⭐ Booker level ${lv}!`, 'office');
+  saveCareer();
+  return { showXp, goals: got, trophies, miles, rankUp: after > before ? after : null, lvUp: lv > lvBefore ? lv : null };
 }
 
 // ---- crowd reactions ----
@@ -2680,16 +2802,30 @@ function eventCard() {
 }
 function goalCard() {
   ensureGoals();
-  const g = G.booker.goals;
-  const xp = G.booker.xp, i = rankIx(xp), cur = RANKS[i], nx = RANKS[i + 1];
-  return `<div class="goals"><button class="g-rank" data-act="trophies" aria-label="Rank and trophies"><span>${cur[2]}</span><b>${cur[1]}</b><span class="bar"><i style="width:${nx ? (xp - cur[0]) / (nx[0] - cur[0]) * 100 : 100}%"></i></span><span class="tiny muted">🏅 ${Object.keys(G.booker.trophies).length}/${TROPHIES.length}</span></button>
+  const g = G.booker.goals, c = CAR();
+  const xp = c.xp, cur = RANKS[rankIx(xp)], L = lvlOf(xp), pct = L >= MAX_LVL ? 100 : (xp - xpAt(L)) / (xpAt(L + 1) - xpAt(L)) * 100;
+  return `<div class="goals"><button class="g-rank" data-act="trophies" aria-label="Booker level ${L}, ${cur[1]}. Achievements and milestones"><span class="lvl">Lv ${L}</span><b>${cur[1]}</b><span class="bar"><i style="width:${pct}%"></i></span><span class="tiny muted">🏅 ${Object.keys(c.ach).length}/${ACH.length}</span></button>
     ${g.length ? `<div class="goal-l">${g.map(x => `<div class="goal"><span>🎯</span><span class="sp">${esc(x.text)}</span><b>+${x.xp} XP</b></div>`).join('')}</div>` : ''}</div>`;
 }
 function modalTrophies() {
-  const t = G.booker.trophies;
-  const body = `${rankBar()}<div class="tro-g">${TROPHIES.map(([id, ic, n, d]) => `<div class="tro ${t[id] ? 'on' : ''}"><div class="tro-i">${t[id] ? ic : '🔒'}</div><b>${n}</b><span>${d}</span>${t[id] ? `<span class="tiny muted">Week ${t[id]}</span>` : ''}</div>`).join('')}</div>
-    <div class="tiny muted" style="margin-top:10px">Shows and goals earn XP. ${G.booker.done || 0} goals done.</div>`;
-  return modal('Trophies & rank', body, '<button class="btn pri" data-act="closeModal">Close</button>');
+  const c = CAR(), t = UI.carTab || 'ach', got = Object.keys(c.ach).length;
+  const tabs = `<div class="seg-ctl" style="margin:12px 0"><button class="${t === 'ach' ? 'on' : ''}" data-act="carTab" data-id="ach">Achievements <span class="cnt">${got}/${ACH.length}</span></button><button class="${t === 'miles' ? 'on' : ''}" data-act="carTab" data-id="miles">Milestones</button><button class="${t === 'lvl' ? 'on' : ''}" data-act="carTab" data-id="lvl">Ranks</button></div>`;
+  let body = '';
+  if (t === 'ach') {
+    const list = ACH.slice().sort((a, b) => !!c.ach[b[0]] - !!c.ach[a[0]]);
+    body = `<div class="tro-g">${list.map(([id, ic, n, d, xp]) => { const a = c.ach[id]; return `<div class="tro ${a ? 'on' : ''}"><div class="tro-i">${a ? ic : '🔒'}</div><b>${n}</b><span>${d}</span><span class="tiny muted">${a ? `${a.co ? esc(a.co) + ' · ' : ''}week ${a.wk}` : `+${xp} XP`}</span></div>`; }).join('')}</div>`;
+  } else if (t === 'miles') {
+    body = `<div class="list">${MILES.map(([id, ic, name, steps]) => { const v = c.st[id] || 0, tr = c.tier[id] || 0, nx = steps[tr], prev = tr ? steps[tr - 1] : 0; const pct = nx ? clamp((v - prev) / (nx - prev) * 100, 0, 100) : 100;
+      return `<div class="mile"><span class="mile-i">${ic}</span><div class="sp"><div class="row"><b class="sp">${name}</b><span class="tiers">${TIER.map((T, k) => `<i class="t${k}${k < tr ? ' on' : ''}" title="${T}" aria-label="${T} ${k < tr ? 'reached' : 'not yet'}"></i>`).join('')}</span></div>
+        <div class="bar"><i style="width:${pct}%"></i></div><div class="tiny muted">${v.toLocaleString()}${nx ? ` / ${nx.toLocaleString()} for ${TIER[tr]} · +${TIER_XP[tr]} XP` : ' · all three reached'}</div></div></div>`; }).join('')}</div>
+      <div class="tiny muted" style="margin-top:8px">Lifetime totals from every company you run on this device.</div>`;
+  } else {
+    const L = lvlOf(c.xp);
+    body = `<div class="list">${RANKS.map(([x, n, ic], i) => { const lv = lvlOf(x); return `<div class="mile ${c.xp >= x ? '' : 'dim'}"><span class="mile-i">${c.xp >= x ? ic : '🔒'}</span><div class="sp"><b>${n}</b><div class="tiny muted">Level ${lv} · ${x.toLocaleString()} XP</div></div>${rankIx(c.xp) === i ? '<span class="tag">You</span>' : ''}</div>`; }).join('')}</div>
+      <div class="tiny muted" style="margin-top:8px">You're level ${L} of ${MAX_LVL}. Every show earns XP, and great shows, big events, weekly goals, achievements and milestones earn more.</div>`;
+  }
+  return modal('Your booker career', `${rankBar()}${tabs}${body}
+    <div class="tiny muted" style="margin-top:10px">Your level and achievements follow you into every company and save on this device.</div>`, '<button class="btn pri" data-act="closeModal">Close</button>');
 }
 
 // ---- live show night ----
@@ -2723,8 +2859,8 @@ function liveScreen(m) {
     <div class="small muted">${h.attendance.toLocaleString()} in attendance · ${h.fanDelta >= 0 ? '+' : ''}${kfmt(h.fanDelta)} fans${MON() ? ` · ${h.net >= 0 ? '+' : ''}${money(h.net)}` : ''}</div>
     <div class="lv-xp">+${p.showXp || 0} XP for the show</div>
     ${p.goals.length ? `<div class="lv-goals">${p.goals.map(g => `<div class="goal ${g.ok ? 'ok' : 'no'}"><span>${g.ok ? '✅' : '❌'}</span><span class="sp">${esc(g.text)}</span>${g.reward ? `<b>${esc(g.reward)}</b>` : ''}</div>`).join('')}</div>` : ''}
-    ${rk ? `<div class="lv-rank">${rk[2]} RANK UP!<span>You're now a ${rk[1]}</span></div>` : ''}
-    ${p.trophies.length ? `<div class="lv-tro">${p.trophies.map(x => `<div>${x[1]} <b>${esc(x[2])}</b> <span class="muted small">${esc(x[3])}</span></div>`).join('')}</div>` : ''}
+    ${p.lvUp ? `<div class="lv-rank">⭐ LEVEL ${p.lvUp}!<span>${rk ? `Rank up: you're now a ${rk[1]}` : 'Your booker career moves up'}</span></div>` : rk ? `<div class="lv-rank">${rk[2]} RANK UP!<span>You're now a ${rk[1]}</span></div>` : ''}
+    ${p.trophies.length || p.miles?.length ? `<div class="lv-tro">${p.trophies.map(x => `<div>${x[1]} <b>${esc(x[2])}</b> <span class="muted small">${esc(x[3])}${x[4] ? ` · +${x[4]} XP` : ''}</span></div>`).join('')}${(p.miles || []).map(m => `<div>${m.ic} <b>${m.tier}: ${esc(m.name)}</b> <span class="muted small">${m.n.toLocaleString()} · +${m.xp} XP</span></div>`).join('')}</div>` : ''}
     ${G.event && G.event.wk === G.week ? `<div class="lv-tease">📣 Something is happening backstage…</div>` : ''}
     ${G.awards?.length && G.awards[G.awards.length - 1].wk === h.wk ? `<button class="btn block lv-aw" data-act="records" data-id="awards">🏅 See the Year ${G.awards[G.awards.length - 1].yr} awards</button>` : ''}
     <div class="grid2" style="margin-top:14px"><button class="btn" data-act="liveRecap">Full results</button><button class="btn pri" data-act="afterShow">${esc(nextLabel(h))}</button></div>
@@ -3479,7 +3615,7 @@ function viewOffice() {
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
-  <button class="btn block" style="margin-top:8px" data-act="trophies">🏅 Trophies &amp; booker rank</button>
+  <button class="btn block" style="margin-top:8px" data-act="trophies">🏅 Booker career &amp; achievements</button>
   <button class="btn block" style="margin-top:8px" data-act="editTitle" data-id="">+ Create a championship</button>` : ''}`;
 }
 
@@ -4292,10 +4428,11 @@ const A = {
   liveSkip() { liveTimers.forEach(clearTimeout); const l = document.querySelector('.live'); if (l) { l.classList.add('skip'); l.querySelector('.lv-fin')?.scrollIntoView({ block: 'start' }); } },
   liveRecap() { liveTimers.forEach(clearTimeout); openModal({ type: 'recap', wk: UI.modal.wk }); },
   trophies() { openModal({ type: 'trophies' }); },
+  carTab(t) { UI.carTab = t; render(); },
   evPick(i) {
     const e = G.event; if (!e) return; const E = EVENTS[e.key];
     let msg; try { msg = E.pick(+i, e.d); } catch (x) { msg = 'That moment passed.'; }
-    G.event = null; G.booker.events = (G.booker.events || 0) + 1; G.booker.xp += 3;
+    G.event = null; G.booker.events = (G.booker.events || 0) + 1; addXP(3); carBump('events'); saveCareer();
     news(`${E.title.split(' ')[0]} ${msg}`, 'office');
     if (G.booker.events >= 5) award('backstage');
     commit(msg);
@@ -4565,7 +4702,7 @@ const A = {
   undoShow() {
     if (!canUndo(UNDO?.wk)) return toast('That show can no longer be undone.');
     confirmBox('Undo this show?', 'Everything goes back to the moment before the bell. Your card stays booked so you can change it and run it again.', 'Undo', () => {
-      liveTimers.forEach(clearTimeout); G = migrate(JSON.parse(UNDO.json)); UNDO = null; UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; commit('Show undone.');
+      liveTimers.forEach(clearTimeout); G = migrate(JSON.parse(UNDO.json)); if (UNDO.car) { CAREER = cleanCareer(JSON.parse(UNDO.car)); saveCareer(); } UNDO = null; UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; commit('Show undone.');
     }, true);
   },
 
