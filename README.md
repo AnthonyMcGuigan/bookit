@@ -162,6 +162,7 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 
 ## Version 1.4: brands, several weekly shows and one shared calendar
 
+- Company setup (step 1) can add up to 3 more weekly shows, each with a name and night, and turn on the brand split right away.
 - Menu → Weekly shows and brands: a company can run up to 4 weekly shows, each on its own night (like a Monday show and a Friday show).
 - Brand split (optional): each show gets its own roster and its own titles, like separate brands. "Redo the brand draft" shares the roster out best-first, keeping tag teams together. Move a wrestler from their profile; pick each title's show in Weekly shows (or leave it shared).
 - Big events take the main show's slot that week and can use everyone.
