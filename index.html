@@ -4023,13 +4023,13 @@ ${displaySettings()}
 // ---- cloud saves (Supabase): one row per player in cloud1..cloud3, readable only by that player ----
 // ---- BookIt Supporter: an optional subscription through Stripe. The core game stays free. ----
 // Fill in the Payment Links from your Stripe dashboard. Leave them empty and the Supporter page says "opening soon".
-const SUP_LIVE = { month: '', year: '' };
+const SUP_LIVE = { month: 'https://buy.stripe.com/eVq7sN4BU7UZgB1gAGd3i00', year: 'https://buy.stripe.com/14A8wRb0i8Z33Of1FMd3i01' };
 // Stripe test-mode links show only when the game is opened with ?suptest (remembered for this tab), for trying a test card
 const SUP_TEST = { month: 'https://buy.stripe.com/test_9B65kEevJ9qj6cb4x92cg01', year: 'https://buy.stripe.com/test_cNi8wQgDRfOH1VV6Fh2cg02' };
 const supTesting = (() => { try { if (/[?&]suptest\b/.test(location.search)) sessionStorage.setItem('bookit.suptest', '1'); return sessionStorage.getItem('bookit.suptest') === '1'; } catch (e) { return false; } })();
 const SUP_LINKS = supTesting ? SUP_TEST : SUP_LIVE;
 // Stripe customer portal login link, so supporters can cancel or change their card
-const SUP_PORTAL = supTesting ? 'https://billing.stripe.com/p/login/test_8x27sMgDR9qj2ZZaVx2cg00' : '';
+const SUP_PORTAL = supTesting ? 'https://billing.stripe.com/p/login/test_8x27sMgDR9qj2ZZaVx2cg00' : 'https://billing.stripe.com/p/login/eVq7sN4BU7UZgB1gAGd3i00';
 const SUP_PRICE = { month: '$2.99 a month', year: '$24.99 a year' };
 
 const SUP_KEY = 'bookit.supporter';
