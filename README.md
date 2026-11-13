@@ -111,13 +111,22 @@ Office → Rivals. Each rival has a roster, a champion, a weekly show with a rat
 
 After each show the game looks for a moment worth a story and starts at most one: a dethroned champion wants a rematch, a broken win streak wants revenge, an attack on a recent tag partner becomes a betrayal, a draw or an 82+ match leaves unfinished business, and two people who meet 3 times in 4 shows become a feud. It shows up in the news and the results. Switch it off in Menu → "Stories start on their own".
 
+## Navigation (v1.5.1)
+
+- **Office → Setup** holds the company setup: promotion and show names, other companies, shows and brands, big events and match types.
+- **Menu** holds only save slots and backup, Settings (game rules, sound and display), Help, and leaving or deleting the save.
+- Roster tools, Community and Rankings are on the Roster tab. History, awards and trophies are under Office → Titles.
+
 ## Security
 
 - Everything a player can type or import is escaped before it reaches the page. Photos must be small PNG/JPEG/WebP data images and colors must be hex codes.
 - Saves from outside this browser (pasted, loaded from a file, or played from Community) go through `sanitizeGame()`. It rebuilds the save as plain data, keeps ids to letters, numbers, `-` and `_`, strips markup characters, turns numbers back into numbers, and only allows known values for fixed choices like match type. Shared saves are capped at 8 MB unpacked.
 - Community only reads the first 25 items per player. Players can only write their own document, and the owner moderates.
 - The spreadsheet export prefixes cells that start with `= + - @`, so they can't run as formulas.
-- The self-hosted copy ships a Content-Security-Policy (no outside scripts, connections or images). The service worker caches only this site's own good responses.
+- The self-hosted copy ships a Content-Security-Policy (no outside scripts or images, and connections only to this game's own Supabase project). The service worker caches only this site's own good responses.
+- Save and roster files over 8 MB are refused before they are read, so a huge file can't freeze the page.
+- Supabase (`supabase/setup.sql`, v1.5.1): each row is capped at 400 KB of real JSON text (the old cap measured the compressed size), and the server sets the `updated` time so nobody can pin a post to the top of Community with a future date. Re-run `setup.sql` in the SQL Editor once to add these.
+- v1.5.1 security pass: every tab and two levels of buttons were rendered with booby-trapped names, notes, titles, shows, match types and Community posts; nothing ran.
 
 ## Packaging for the app stores (optional, later)
 

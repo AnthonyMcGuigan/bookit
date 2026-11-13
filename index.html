@@ -6,7 +6,7 @@
 <script>/* iOS only: block the zoom-on-focus. iOS Safari still lets people pinch-zoom with this set. */
 if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) document.querySelector('meta[name=viewport]').content = 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover';</script>
 <title>Book It: Wrestling Booking Sim</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://svqfswhnesaglciviprw.supabase.co; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap">
@@ -27,22 +27,22 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 <style>
 :root {
   --bg: #14111c; --bg2: #1d1928; --card: #241f31; --card2: #2d273c; --line: #3a3350;
-  --ink: #f3f0fa; --dim: #a69fbd; --faint: #6f6787;
-  --accent: var(--brand, #ffb547); --accent-ink: var(--brand-ink, #1a1306); --good: #4fd98b; --bad: #ff6470; --warn: #ffcf5a; --info: #6cb6ff;
+  --ink: #f3f0fa; --dim: #a69fbd; --faint: #8a82a3;
+  --accent: var(--brand, #ffb547); --accent-ink: var(--brand-ink, #1a1306); --accent-t: var(--accent); --good: #4fd98b; --bad: #ff6470; --warn: #ffcf5a; --info: #6cb6ff;
   --face: #5bb8ff; --heel: #ff6a7a;
   --r: 14px; color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --bg: #f4f1f8; --bg2: #ebe6f2; --card: #ffffff; --card2: #f5f2fa; --line: #ddd5ea;
-    --ink: #1c1726; --dim: #5f5674; --faint: #9a91ad; --accent: var(--brand-l, #e08a00); --accent-ink: var(--brand-l-ink, #fff);
-    --good: #12924f; --bad: #d33447; --warn: #b07a00; --info: #1f6fc8; --face: #1f78c8; --heel: #d33447; color-scheme: light;
+    --ink: #1c1726; --dim: #5f5674; --faint: #776e8c; --accent: var(--brand-l, #e08a00); --accent-ink: var(--brand-l-ink, #1a1306); --accent-t: color-mix(in srgb, var(--accent) 62%, #000);
+    --good: #0e7f44; --bad: #d33447; --warn: #8f6300; --info: #1f6fc8; --face: #1f78c8; --heel: #d33447; color-scheme: light;
   }
 }
 :root[data-theme="light"] {
   --bg: #f4f1f8; --bg2: #ebe6f2; --card: #ffffff; --card2: #f5f2fa; --line: #ddd5ea;
-  --ink: #1c1726; --dim: #5f5674; --faint: #9a91ad; --accent: var(--brand-l, #e08a00); --accent-ink: var(--brand-l-ink, #fff);
-  --good: #12924f; --bad: #d33447; --warn: #b07a00; --info: #1f6fc8; --face: #1f78c8; --heel: #d33447; color-scheme: light;
+  --ink: #1c1726; --dim: #5f5674; --faint: #776e8c; --accent: var(--brand-l, #e08a00); --accent-ink: var(--brand-l-ink, #1a1306); --accent-t: color-mix(in srgb, var(--accent) 62%, #000);
+  --good: #0e7f44; --bad: #d33447; --warn: #8f6300; --info: #1f6fc8; --face: #1f78c8; --heel: #d33447; color-scheme: light;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -63,7 +63,7 @@ nav.tabs { position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; background
 nav.tabs .in { display: flex; width: 100%; max-width: 720px; }
 nav.tabs button { flex: 1; background: none; border: 0; padding: 6px 0 4px; color: var(--faint); font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
 nav.tabs button .ic { font-size: 20px; line-height: 1; filter: grayscale(1); opacity: .7; }
-nav.tabs button.on { color: var(--accent); }
+nav.tabs button.on { color: var(--accent-t); }
 nav.tabs button.on .ic { filter: none; opacity: 1; }
 nav.tabs .dot { position: absolute; top: 2px; right: calc(50% - 18px); min-width: 16px; height: 16px; border-radius: 8px; background: var(--bad); color: #fff; font-size: 10px; display: grid; place-items: center; padding: 0 4px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin-bottom: 12px; }
@@ -102,7 +102,7 @@ button.item:active { background: var(--card2); }
 .tag.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
 .tag.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 .tag.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
-.tag.gold { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.tag.gold { color: var(--accent-t); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .bar { height: 6px; background: var(--card2); border-radius: 3px; overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
 .statline { display: grid; grid-template-columns: 92px 1fr 30px; gap: 8px; align-items: center; font-size: 13px; margin: 5px 0; }
@@ -113,7 +113,7 @@ button.item:active { background: var(--card2); }
 .news { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; display: flex; gap: 10px; }
 .news:last-child { border-bottom: 0; }
 .news .wk { font-size: 11px; color: var(--faint); font-weight: 700; min-width: 34px; padding-top: 2px; }
-.stars { color: var(--accent); letter-spacing: 1px; font-weight: 700; white-space: nowrap; }
+.stars { color: var(--accent-t); letter-spacing: 1px; font-weight: 700; white-space: nowrap; }
 .seg { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
 .seg .hd { display: flex; align-items: center; gap: 8px; }
 .seg .no { font-size: 11px; font-weight: 800; color: var(--faint); min-width: 22px; }
@@ -139,7 +139,7 @@ label.f > span { display: block; font-size: 12px; font-weight: 700; color: var(-
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 6px 5px 10px; font-size: 13.5px; font-weight: 600; }
 .chip button { border: 0; background: var(--line); width: 22px; height: 22px; border-radius: 50%; font-size: 12px; line-height: 1; display: grid; place-items: center; }
-.chip.add { padding: 6px 12px; color: var(--accent); border-style: dashed; background: none; }
+.chip.add { padding: 6px 12px; color: var(--accent-t); border-style: dashed; background: none; }
 .side { border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
 .side .lbl { font-size: 11px; font-weight: 800; color: var(--faint); text-transform: uppercase; margin-bottom: 6px; display: flex; gap: 6px; }
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
@@ -172,7 +172,7 @@ label.f > span { display: block; font-size: 12px; font-weight: 700; color: var(-
 .help p { margin: 0 0 10px; } .help h3 { margin: 16px 0 6px; font-size: 15px; }
 .hero { text-align: center; padding: 34px 6px 10px; }
 .hero h1 { font-size: 34px; font-weight: 900; letter-spacing: -1px; }
-.hero h1 em { font-style: normal; color: var(--accent); }
+.hero h1 em { font-style: normal; color: var(--accent-t); }
 .res-score { font-size: 46px; font-weight: 900; line-height: 1; }
 .why { font-size: 12px; color: var(--dim); margin-top: 4px; }
 .why .p { color: var(--good); } .why .m { color: var(--bad); }
@@ -197,18 +197,18 @@ details > summary::-webkit-details-marker { display: none; }
 .cal-d { font-size: 9.5px; font-weight: 800; letter-spacing: .08em; color: var(--faint); }
 .cal-n { font-size: 18px; font-weight: 800; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
 .cal-s { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.cal-r { font-size: 11px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
-.cal-now { font-size: 9.5px; font-weight: 900; color: var(--accent); letter-spacing: .04em; }
+.cal-r { font-size: 11px; font-weight: 800; color: var(--accent-t); font-variant-numeric: tabular-nums; }
+.cal-now { font-size: 9.5px; font-weight: 900; color: var(--accent-t); letter-spacing: .04em; }
 .cal-c { font-size: 10px; color: var(--good); font-weight: 700; } .cal-e { font-size: 10px; color: var(--faint); }
 .cal-t.past { background: transparent; }
 .cal-t.big { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 10%, var(--bg2)); }
-.cal-t.big .cal-s { color: var(--accent); }
+.cal-t.big .cal-s { color: var(--accent-t); }
 .cal-t.now { box-shadow: inset 0 0 0 1px var(--accent); }
 .cal-t.sel { background: var(--accent); border-color: var(--accent); }
 .cal-t.sel * { color: var(--accent-ink) !important; }
 .show-h { display: flex; align-items: center; gap: 12px; margin: 0 2px 10px; }
 .show-h h2 { font-size: 19px; font-weight: 850; letter-spacing: -.3px; margin: 2px 0; }
-.show-h.big h2 { color: var(--accent); }
+.show-h.big h2 { color: var(--accent-t); }
 .show-k { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
 .show-score { text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 74px; }
 .show-score b { font-size: 26px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
@@ -216,13 +216,13 @@ details > summary::-webkit-details-marker { display: none; }
 .warnline { font-size: 12.5px; color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
 .mcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 4px; }
 .mcard-h { display: flex; align-items: center; padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); border-bottom: 1px solid var(--line); }
-.link { border: 0; background: none; color: var(--accent); font-weight: 700; font-size: 13px; padding: 4px; text-transform: none; letter-spacing: 0; }
+.link { border: 0; background: none; color: var(--accent-t); font-weight: 700; font-size: 13px; padding: 4px; text-transform: none; letter-spacing: 0; }
 .mrow { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; }
 button.mrow:active { background: var(--card2); }
 .mrow.me { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent); }
 .mrow-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .mpos { font-size: 10.5px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
-.mrow.me .mpos { color: var(--accent); }
+.mrow.me .mpos { color: var(--accent-t); }
 .mrate { font-size: 12px; } .mrate i { font-style: normal; color: var(--faint); font-size: 10px; text-transform: uppercase; font-weight: 700; }
 .mvs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; }
 .mside { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -235,11 +235,11 @@ button.mrow:active { background: var(--card2); }
 .mmulti { font-weight: 700; font-size: 14px; }
 .mchips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 .mchips span { font-size: 11px; color: var(--dim); background: var(--bg2); border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
-.mchips .gold { color: var(--accent); background: none; padding: 0; }
+.mchips .gold { color: var(--accent-t); background: none; padding: 0; }
 .mres { font-size: 12.5px; color: var(--dim); margin-top: 6px; }
 .mrow .ctl { display: flex; gap: 6px; margin-top: 8px; }
 .addrow { display: grid; grid-template-columns: repeat(3, 1fr); }
-.addrow button { border: 0; border-right: 1px solid var(--line); background: none; padding: 12px 4px; font-weight: 700; color: var(--accent); font-size: 14px; }
+.addrow button { border: 0; border-right: 1px solid var(--line); background: none; padding: 12px 4px; font-weight: 700; color: var(--accent-t); font-size: 14px; }
 .addrow button:last-child { border-right: 0; }
 .addrow b { font-weight: 900; }
 .ghost { border-top: 1px dashed var(--line); padding: 9px 12px; font-size: 12px; color: var(--faint); text-align: center; }
@@ -249,14 +249,14 @@ button.mrow:active { background: var(--card2); }
 @media (max-width: 360px) { .cal-n { font-size: 17px; } .mw { font-size: 13px; } }
 /* ----- character builder, roster tools, community ----- */
 .btn.tool { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 56px; font-size: 12px; }
-.btn.tool b { font-size: 18px; line-height: 1; color: var(--accent); }
+.btn.tool b { font-size: 18px; line-height: 1; color: var(--accent-t); }
 .bld-hero { display: flex; gap: 14px; align-items: center; margin-bottom: 10px; }
-.bld-photo { border: 0; background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--accent); }
+.bld-photo { border: 0; background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--accent-t); }
 .bld-photo .av { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--line); }
 .bld-name { font-size: 20px !important; font-weight: 800; margin-bottom: 6px; }
 .bld-nick { font-size: 14px; min-height: 38px !important; }
 .bld-ovr { margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
-.bld-ovr b { font-size: 22px; color: var(--accent); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.bld-ovr b { font-size: 22px; color: var(--accent-t); margin-left: 4px; font-variant-numeric: tabular-nums; }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
 .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); }
 .sw.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
@@ -276,7 +276,7 @@ img.av { display: block; }
 .wz-steps { display: flex; gap: 6px; margin: 4px 0 18px; }
 .wz-steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
 .wz-steps span.done { background: color-mix(in srgb, var(--accent) 55%, var(--line)); } .wz-steps span.on { background: var(--accent); }
-.wz-k { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.wz-k { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-t); margin-bottom: 4px; }
 .wz-h { font-size: 24px; font-weight: 850; letter-spacing: -.4px; margin-bottom: 14px; text-wrap: balance; }
 .wz-preview { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; margin-bottom: 14px; }
 .wz-logo { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; font-weight: 900; font-size: 15px; letter-spacing: .02em; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4); flex: none; }
@@ -393,7 +393,7 @@ nav.tabs .dot { background: var(--rope-r); font-family: system-ui, sans-serif; l
 .cal-now::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--rope-r); animation: live 1.4s ease-in-out infinite; }
 @keyframes live { 50% { opacity: .25; } }
 .cal-t.sel { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 80%, #fff), var(--accent)); box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent); }
-.cal-t.sel::before { background: var(--accent-ink); color: var(--accent); }
+.cal-t.sel::before { background: var(--accent-ink); color: var(--accent-t); }
 .cal-t.sel .cal-now::before { background: var(--accent-ink); }
 /* show header: the event poster */
 .show-h { position: relative; overflow: hidden; margin: 0 0 10px; padding: 14px 14px 12px; border-radius: var(--r); border: 1px solid var(--line);
@@ -504,11 +504,11 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .goal-l { margin-top: 5px; display: grid; gap: 2px; }
 .goal { display: flex; gap: 8px; align-items: center; font-size: 13px; }
 .goals .goal { font-size: 12px; }
-.goal b { color: var(--accent); font-size: 12px; white-space: nowrap; }
+.goal b { color: var(--accent-t); font-size: 12px; white-space: nowrap; }
 .goals .link { margin-top: 6px; }
 .bs { border-radius: 14px; padding: 12px; margin: 0 0 10px; border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line)); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--bg2)), var(--bg2)); animation: bsIn .5s cubic-bezier(.2,1.4,.4,1); }
 @keyframes bsIn { from { transform: scale(.94); opacity: 0; } }
-.bs-k { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+.bs-k { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-t); }
 .bs-t { font-family: var(--f-display); font-size: 20px; text-transform: uppercase; letter-spacing: .02em; margin: 2px 0 4px; }
 .bs-d { font-size: 14px; margin-bottom: 10px; }
 .bs-c { display: grid; gap: 6px; }
@@ -577,10 +577,10 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .road-h { display: flex; gap: 8px; align-items: baseline; }
 .road-k { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
 .road-h b { font-family: var(--f-display); font-weight: 400; text-transform: uppercase; letter-spacing: .03em; font-size: 18px; }
-.road-w { font-size: 12px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+.road-w { font-size: 12px; font-weight: 800; color: var(--accent-t); white-space: nowrap; }
 .road-l { display: grid; gap: 8px; margin: 8px 0 6px; }
 .road-n { font-size: 13px; font-weight: 700; }
-.road-n .vs { color: var(--accent); font-family: var(--f-display); margin: 0 5px; }
+.road-n .vs { color: var(--accent-t); font-family: var(--f-display); margin: 0 5px; }
 .road-b { display: flex; gap: 8px; align-items: center; margin-top: 3px; }
 .road-b .bar { flex: 1; height: 7px; }
 .road-b .bar i { background: linear-gradient(90deg, #ff8a3d, #ffcf5a); }
@@ -620,7 +620,7 @@ svg.i { width: 1.05em; height: 1.05em; vertical-align: -0.16em; fill: none; stro
 .rk { align-items: center; }
 .rk-n { width: 26px; text-align: center; font-weight: 800; font-size: 17px; color: var(--dim); flex: none; }
 .rk.champ { border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line)); margin-bottom: 8px; }
-.rk.champ .rk-n { color: var(--accent); }
+.rk.champ .rk-n { color: var(--accent-t); }
 .mv { font-size: 11px; font-weight: 700; color: var(--dim); margin-left: 4px; }
 .mv.up { color: var(--good); } .mv.dn { color: var(--bad); } .mv.new { color: var(--info); }
 .rec-t { display: flex; align-items: center; gap: 8px; margin: 16px 0 4px; }
@@ -642,7 +642,7 @@ svg.i { width: 1.05em; height: 1.05em; vertical-align: -0.16em; fill: none; stro
 
 /* ----- plan the PPV first ----- */
 .ppv-first { border-radius: 14px; padding: 12px 14px; margin: 0 0 12px; border: 1px solid color-mix(in srgb, var(--gold, #d4a72c) 65%, var(--line)); background: linear-gradient(135deg, color-mix(in srgb, var(--gold, #d4a72c) 20%, var(--bg2)), var(--bg2)); }
-.ppv-k { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.ppv-k { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-t); }
 .ppv-t { font-size: 18px; margin: 4px 0; }
 .ppv-note { font-size: 13px; padding: 10px 12px; margin: 0 0 12px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--gold, #d4a72c) 55%, var(--line)); }
 .road-hot { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px; border-radius: 10px; background: color-mix(in srgb, var(--bad) 10%, transparent); }
@@ -664,12 +664,12 @@ svg.i { width: 1.05em; height: 1.05em; vertical-align: -0.16em; fill: none; stro
 .hs-shelf::-webkit-scrollbar { display: none; }
 .hs-card { flex: 0 0 78%; max-width: 320px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: inherit; cursor: pointer; font: inherit; }
 .hs-card.feat { border-color: color-mix(in srgb, var(--gold, #d4a72c) 60%, var(--line)); background: linear-gradient(160deg, color-mix(in srgb, var(--gold, #d4a72c) 16%, var(--card)), var(--card)); }
-.hs-by { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+.hs-by { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-t); }
 .hs-t { font-size: 17px; font-weight: 800; line-height: 1.2; }
 .hs-d { font-size: 13px; color: var(--dim); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .hs-m { font-size: 12px; font-weight: 600; margin-top: 2px; }
 .hs-s { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hs-go { margin-top: auto; padding-top: 8px; font-weight: 800; color: var(--accent); }
+.hs-go { margin-top: auto; padding-top: 8px; font-weight: 800; color: var(--accent-t); }
 .hs-card.skel { min-height: 150px; cursor: default; }
 .hs-card.skel span { display: block; height: 12px; border-radius: 6px; background: var(--card2); margin-bottom: 8px; animation: hsPulse 1.2s ease-in-out infinite alternate; }
 .hs-card.skel span:nth-child(2) { width: 70%; } .hs-card.skel span:nth-child(3) { width: 45%; }
@@ -680,7 +680,7 @@ svg.i { width: 1.05em; height: 1.05em; vertical-align: -0.16em; fill: none; stro
 .hs-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .hs-opt { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: inherit; cursor: pointer; font: inherit; }
 .hs-opt b { font-size: 15px; }
-.hs-ic { color: var(--accent); font-size: 20px; }
+.hs-ic { color: var(--accent-t); font-size: 20px; }
 
 /* ----- community accounts ----- */
 .cv-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -717,7 +717,7 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 .wk-n { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 650; line-height: 1.1; text-align: left; }
 .wk-n small { display: block; font-size: 10px; font-weight: 500; opacity: .7; }
 .wk-chip.up:not(.on) { border-color: var(--accent); }
-.wk-chip.up .co-st { color: var(--accent); font-weight: 700; font-size: 11px; }
+.wk-chip.up .co-st { color: var(--accent-t); font-weight: 700; font-size: 11px; }
 .wk-strip { margin: 0 0 10px; }
 .wk-h { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .wk-strip .co-chips { position: relative; padding-bottom: 2px; scrollbar-width: none; }
@@ -748,6 +748,15 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 @keyframes spSlam { from { transform: scale(2.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes spFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes spOut { to { opacity: 0; visibility: hidden; } }
+
+/* polish pass: readable form chips and bigger tap areas on small controls (the look stays the same) */
+.form .f-W, .form .f-L { color: #14110c; }
+.link, .chip button, .kpi-alert, .sw, .g-rank { position: relative; }
+.link::before, .chip button::before, .kpi-alert::before, .sw::before { content: ""; position: absolute; inset: -8px -4px; }
+.chip button::before, .sw::before { inset: -8px; }
+.filters button, .chip.add, .seg-ctl.sm button { min-height: 36px; }
+.todo input[type=checkbox] { width: 24px; height: 24px; margin: 0; }
+.g-rank { min-height: 36px; }
 </style>
 </head>
 <body>
@@ -893,6 +902,7 @@ const LAST = ['Archer', 'Bravo', 'Cortez', 'Dagger', 'Ember', 'Frost', 'Gunner',
 const BIG_EVENTS = ['New Year Uprising', 'Cold Blooded', 'Spring Breakdown', 'Iron Will', 'Bloom & Bruise', 'Summer Siege', 'Heatwave', 'Dog Days', 'Fall Fury', 'Harvest of Pain', 'Night of Reckoning', 'Final Bell', 'Last Stand'];
 
 // ---------- persistence ----------
+const MAX_FILE = 8e6; // biggest save or roster file we try to read, so a huge file can't freeze the page
 const SLOTS = 3, KEY = n => 'ringsideBooker.slot' + n, META = 'ringsideBooker.meta';
 const ls = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -2820,7 +2830,7 @@ function viewStart() {
   return `<div class="app home"><div class="hero">${logoSVG()}<h1>Book <em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div>
   <p class="muted">Book the shows. Write the stories. Sign the talent.</p></div>
   ${top ? `<button class="hs-cont" data-act="loadSlot" data-id="${top.n}"><span class="hs-k">Continue</span><span class="hs-ct">${esc(top.info.name)}</span><span class="hs-cd">Week ${top.info.week} · saved ${new Date(top.info.savedAt).toLocaleDateString()}</span><span class="hs-arrow">›</span></button>
-    ${rest.length ? `<div class="list" style="margin-top:8px">${rest.map(s => `<button class="item" data-act="loadSlot" data-id="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent)">${s.n}</div><div class="main"><div class="t">${esc(s.info.name)}</div><div class="d">Week ${s.info.week} · saved ${new Date(s.info.savedAt).toLocaleDateString()}</div></div></button>`).join('')}</div>` : ''}` : ''}
+    ${rest.length ? `<div class="list" style="margin-top:8px">${rest.map(s => `<button class="item" data-act="loadSlot" data-id="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">${esc(s.info.name)}</div><div class="d">Week ${s.info.week} · saved ${new Date(s.info.savedAt).toLocaleDateString()}</div></div></button>`).join('')}</div>` : ''}` : ''}
   <div class="hs-sec"><div><b>Jump into a universe</b><div class="tiny muted">Ready-made saves from the community. Pick one and start booking.</div></div>${st === 'ready' && saves.length ? '<button class="link" data-act="homeComm">See all</button>' : ''}</div>
   ${shelf}
   <div class="hs-sec"><div><b>Or start your own</b></div></div>
@@ -3035,7 +3045,7 @@ function viewRoster() {
     <div class="grid2" style="margin-top:12px"><button class="btn pri" data-act="editTeam" data-id="">+ New team</button><button class="btn pri" data-act="editFaction" data-id="">+ New faction</button></div>
     <div class="sec">Factions</div>
     <div class="small muted" style="margin-bottom:8px">Bigger groups of up to 8. A faction can hold whole tag teams, and any 2 or more members on the same side fight as the faction.</div>
-    <div class="list">${(G.factions || []).map(f => { const ts = f.tms.map(TM).filter(Boolean), solo = f.members.filter(id => !ts.some(t => t.members.includes(id))); return `<button class="item" data-act="editFaction" data-id="${f.id}"><div class="av" style="width:40px;height:40px;font-size:12px;background:var(--card2);color:var(--accent)">👑</div><div class="main"><div class="t">${esc(f.name)} <span class="tiny muted">${f.members.length} members</span></div><div class="d">${[...ts.map(t => '<b>' + esc(t.name) + '</b>'), ...solo.map(id => esc(nameOf(id)) + (id === f.leader ? ' (leader)' : ''))].join(' · ') || 'No members'} · ${teamRec(f)}</div></div></button>`; }).join('') || '<div class="empty">No factions yet.</div>'}</div>`;
+    <div class="list">${(G.factions || []).map(f => { const ts = f.tms.map(TM).filter(Boolean), solo = f.members.filter(id => !ts.some(t => t.members.includes(id))); return `<button class="item" data-act="editFaction" data-id="${f.id}"><div class="av" style="width:40px;height:40px;font-size:12px;background:var(--card2);color:var(--accent-t)">👑</div><div class="main"><div class="t">${esc(f.name)} <span class="tiny muted">${f.members.length} members</span></div><div class="d">${[...ts.map(t => '<b>' + esc(t.name) + '</b>'), ...solo.map(id => esc(nameOf(id)) + (id === f.leader ? ' (leader)' : ''))].join(' · ') || 'No members'} · ${teamRec(f)}</div></div></button>`; }).join('') || '<div class="empty">No factions yet.</div>'}</div>`;
   return `
   <div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>
   <div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search roster" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1">
@@ -3107,8 +3117,8 @@ function viewOffice() {
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn it on in Menu → Settings.</div>`}
   ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
-  <div class="grid2" style="margin-top:12px"><button class="btn" data-act="matchTypes">🤼 Match types</button><button class="btn" data-act="shows">📺 ${manyShows() ? 'Shows &amp; brand split' : 'Shows &amp; brands'}</button></div>
-  <div class="seg-ctl" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button></div>
+  <div class="seg-ctl" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  ${t === 'setup' ? setupView() : ''}
   ${t === 'rivals' ? rivalsView() : ''}
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
@@ -3117,7 +3127,24 @@ function viewOffice() {
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
+  <button class="btn block" style="margin-top:8px" data-act="trophies">🏅 Trophies &amp; booker rank</button>
   <button class="btn block" style="margin-top:8px" data-act="editTitle" data-id="">+ Create a championship</button>` : ''}`;
+}
+
+function setupView() {
+  return `<div class="small muted" style="margin-bottom:8px">How your company is set up. Changes save as you type.</div>
+    <div class="sec" style="margin-top:4px">Company</div>
+    <label class="f"><span>Promotion name</span><input type="text" data-in="promoName" value="${esc(G.promo.name)}" maxlength="40"></label>
+    <button class="btn block" style="margin-bottom:10px" data-act="cos">🏟️ ${multi() ? `Your companies (${G.cos.length + 1})` : 'Run another company in this world'}</button>
+    <div class="sec">Shows</div>
+    <label class="f"><span>${manyShows() ? 'Name of the show you are booking' : 'Weekly show name'}</span><input type="text" data-in="showName" value="${esc(G.promo.show)}" maxlength="40"></label>
+    <button class="btn block" style="margin-bottom:10px" data-act="shows">📺 ${manyShows() ? `Weekly shows and brands (${SHOWS().length})` : 'Add another weekly show or brand'}</button>
+    <div class="sec">Big events</div>
+    <label class="f"><span>Big event every</span><select data-in="bigEvery">${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigEvery === n ? 'selected' : ''}>${n} weeks</option>`).join('')}</select></label>
+    <label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>
+    <div class="sec">Matches</div>
+    <button class="btn block" data-act="matchTypes">🤼 Match types and signature matches</button>
+    <div class="tiny muted" style="margin-top:8px">Game rules, sound and display are in Menu → Settings.</div>`;
 }
 
 // ---------- notes ----------
@@ -3196,7 +3223,7 @@ function renderModal() {
       const i = COMM.items.find(x => x.author + '|' + x.id === m.key), slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) })).filter(x => x.info);
       return modal('Start a company first', `<p style="margin-top:0">Wrestlers from Community join a company you run. Start one, or open a save you already have, and <b>${esc(i?.title || 'this creation')}</b> will be ready to add.</p>
         <p class="small muted">You'll pick how they join: signed to your roster, as free agents, or as a rival promotion.</p>
-        ${slots.length ? `<div class="sec">Your saves</div><div class="list">${slots.map(x => `<button class="item" data-act="needLoad" data-id="${x.n}"><div class="av" style="background:var(--card2);color:var(--accent)">${x.n}</div><div class="main"><div class="t">${esc(x.info.name)}</div><div class="d">Week ${x.info.week}</div></div><span class="muted">›</span></button>`).join('')}</div>` : ''}`,
+        ${slots.length ? `<div class="sec">Your saves</div><div class="list">${slots.map(x => `<button class="item" data-act="needLoad" data-id="${x.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${x.n}</div><div class="main"><div class="t">${esc(x.info.name)}</div><div class="d">Week ${x.info.week}</div></div><span class="muted">›</span></button>`).join('')}</div>` : ''}`,
         `<button class="btn" data-act="cOpen" data-id="${esc(m.key)}">Back</button><button class="btn pri" data-act="needNew">🏟️ New company</button>`);
     }
     case 'editProfile': return modalEditProfile(m);
@@ -3228,16 +3255,10 @@ function modalMenu() {
     <div class="small muted" style="margin-bottom:8px">Auto-saves to slot ${meta.slot} in this browser.</div>
     <div class="list">${slots.map(s => `<div class="item"><div class="av" style="background:${s.n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${s.n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${s.n}</div><div class="main"><div class="t">${s.info ? esc(s.info.name) : 'Empty'}</div><div class="d">${s.info ? `Week ${s.info.week} · ${new Date(s.info.savedAt).toLocaleString()}` : '—'}</div></div>
       ${s.n === meta.slot ? '<span class="tag good">Current</span>' : `${s.info ? `<button class="btn sm" data-act="loadSlot" data-id="${s.n}">Load</button>` : ''}<button class="btn sm" data-act="copyTo" data-id="${s.n}">Save here</button>`}</div>`).join('')}</div>
-    <button class="btn block" style="margin-top:10px" data-act="export">💾 Backup, export &amp; import</button>
-    <div class="sec">Promotion</div>
-    <button class="btn block" style="margin-bottom:10px" data-act="cos">🏟️ ${multi() ? `Your companies (${G.cos.length + 1})` : 'Run another company in this world'}</button>
-    <label class="f"><span>Promotion name</span><input type="text" data-in="promoName" value="${esc(G.promo.name)}" maxlength="40"></label>
-    <button class="btn block" style="margin-bottom:10px" data-act="shows">📺 ${manyShows() ? `Weekly shows and brands (${SHOWS().length})` : 'Add another weekly show or brand'}</button>
-    <label class="f"><span>${manyShows() ? 'Name of the show you are booking' : 'Weekly show name'}</span><input type="text" data-in="showName" value="${esc(G.promo.show)}" maxlength="40"></label>
-    <label class="f"><span>Big event every</span><select data-in="bigEvery">${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigEvery === n ? 'selected' : ''}>${n} weeks</option>`).join('')}</select></label>
-    <label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>
-    <button class="btn block" style="margin-bottom:10px" data-act="matchTypes">🤼 Match types and signature matches</button>
-    <div class="sec">Sandbox options</div>
+    <button class="btn block" style="margin-top:10px" data-act="export">💾 Back up or restore a save</button>
+    <div class="tiny muted" style="margin-top:8px">Company setup (names, shows, big events, match types) is in Office → Setup.</div>
+    <div class="sec">Settings</div>
+    <div class="small muted" style="margin-bottom:8px">Game rules</div>
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
     <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''}><span>Money</span></label>
@@ -3245,13 +3266,15 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
     <label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>
-    <div class="sec">Sound &amp; display</div>
+    <div class="small muted" style="margin:14px 0 8px">Sound &amp; display</div>
     <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound effects</span></label>
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
-    <div class="sec">Game</div>
-    <div class="list"><button class="btn block" data-act="rosterTools">⇅ Roster tools (import / export)</button><button class="btn block" data-act="community">🌐 Community creations</button><button class="btn block" data-act="trophies">🏅 Trophies &amp; rank</button><button class="btn block" data-act="records" data-id="titles">🏆 History, awards &amp; legends</button><button class="btn block" data-act="rankings">📈 Rankings</button><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button><button class="btn block" data-act="quit">🏠 Main menu / new game</button><button class="btn block bad" data-act="deleteSlot">🗑 Delete this save slot</button></div>
+    <div class="sec">Help</div>
+    <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button></div>
+    <div class="sec">Leave</div>
+    <div class="list"><button class="btn block" data-act="quit">🏠 Back to the start screen</button><button class="btn block bad" data-act="deleteSlot">🗑 Delete this save slot</button></div>
   `);
 }
 
@@ -3302,7 +3325,7 @@ function helpHTML() {
   <h3>Teams and tournaments</h3>
   <p>Roster → <b>Teams &amp; factions</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
-  <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Bring a legend back from Menu → History. Aging can be switched off in Settings.</p>
+  <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Bring a legend back from Office → Titles → History &amp; awards. Aging can be switched off in Settings.</p>
   <h3>Changed your mind?</h3>
   <p>Right after a show you can <b>Undo</b> it and book it again. <b>Copy as text</b> shares a card or results anywhere.</p>
   <h3>Contracts</h3>
@@ -3365,7 +3388,7 @@ function modalMatchTypes(m) {
     ${evs.length ? evs.map((n, i) => { const sg = sigFor(n) || {}; return `<div class="card" style="padding:10px 12px;margin-bottom:8px"><b class="small">${esc(n)}</b><div class="row" style="gap:8px;margin-top:6px">
       <select data-sig="mt" data-i="${i}" aria-label="Participants for ${esc(n)}">${so('', sg.mt || '', 'Participants: none')}${mtNames().map(k => so(k, sg.mt || '', k)).join('')}</select>
       <select data-sig="gm" data-i="${i}" aria-label="Gimmick for ${esc(n)}">${so('', sg.gm || '', 'Gimmick: none')}${gmNames().filter(k => k !== 'Standard').map(k => so(k, sg.gm || '', k)).join('')}</select></div></div>`; }).join('')
-      : '<div class="small muted">Name your big events in Menu first.</div>'}`;
+      : '<div class="small muted">Name your big events in Office → Setup first.</div>'}`;
   return modal('Match types', body, foot, { closeAct: 'mtBack' });
 }
 
@@ -3777,7 +3800,7 @@ const A = {
   import() { openModal({ type: 'transfer', importOnly: !G }); },
   importFile() {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
-    inp.onchange = () => { const f = inp.files[0]; if (!f) return; f.text().then(t => {
+    inp.onchange = () => { const f = inp.files[0]; if (!f) return; if (f.size > MAX_FILE) return toast('That file is too big to be a Book It save.'); f.text().then(t => {
       try { const g = sanitizeGame(JSON.parse(t)); G = g; if (!meta.slot) meta.slot = 1; save(); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Loaded into slot ' + meta.slot + '.'); }
       catch (e) { toast('That file is not a Book It save.'); } }); };
     inp.click();
@@ -5005,7 +5028,7 @@ function modalCommunity(m) {
     if (sort === 'following' && !myList('follows').length) body += '<div class="tiny muted" style="margin-bottom:8px">Follow creators from their page to see their new uploads here.</div>';
     body += `<input type="search" data-in="cQ" value="${esc(m.q || '')}" placeholder="Search creations" style="margin-bottom:8px">
       <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['save', '💾 Saves']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
-      <div class="list">${(list.map(i => i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
+      <div class="list">${(list.map(i => i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent-t)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
   } else if (t === 'share' && !G) {
     body += `<div class="empty"><p><b>Start a company first.</b></p><p class="small">You share wrestlers, rosters and saves from a company you run.</p><button class="btn pri" data-act="needNew">🏟️ New company</button></div>`;
   } else if (t === 'share') {
@@ -5125,7 +5148,7 @@ function modalCView(m) {
       ${Array.isArray(u.champs) && u.champs.length ? `<div class="sec">Champions</div><div class="small">${u.champs.filter(Array.isArray).slice(0, 12).map(c => `🏆 <b>${esc(String(c[0]))}</b> ${esc(String(c[1]))}`).join('<br>')}</div>` : ''}
       ${Array.isArray(u.stars) && u.stars.length ? `<div class="sec">Top stars</div><div class="small">${u.stars.slice(0, 12).map(x => esc(String(x))).join(' · ')}</div>` : ''}
       <div class="sec">Play it in a save slot</div>
-      <div class="list">${slots.map(s => `<button class="item" data-act="cPlaySave" data-id="${esc(m.key)}" data-f="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent)">${s.n}</div><div class="main"><div class="t">Slot ${s.n}${s.n === meta.slot && G ? ' (current game)' : ''}</div><div class="d">${s.info ? 'Replaces ' + esc(s.info.name) + ', week ' + s.info.week : 'Empty'}</div></div></button>`).join('')}</div>`;
+      <div class="list">${slots.map(s => `<button class="item" data-act="cPlaySave" data-id="${esc(m.key)}" data-f="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">Slot ${s.n}${s.n === meta.slot && G ? ' (current game)' : ''}</div><div class="d">${s.info ? 'Replaces ' + esc(s.info.name) + ', week ' + s.info.week : 'Empty'}</div></div></button>`).join('')}</div>`;
     return modal(esc(i.title), body, COMM.owner && i.author !== COMM.me ? '<button class="btn bad" data-act="cDel" data-id="' + esc(m.key) + '">Remove</button>' : '');
   }
   const p = cleanPack(i.pack);
@@ -5178,7 +5201,7 @@ const CREATOR_ACTIONS = {
   rtPhotosOff() { confirmBox('Remove private photos?', 'Wrestlers with a private photo go back to their initials. Other photos stay.', 'Remove', () => { for (const w of G.wrestlers) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; } UI.modal = { type: 'rtools', tab: 'photos' }; commit('Removed.'); }, true); },
   rtParse() { const m = UI.modal; m.text = document.getElementById('rtIn').value; const r = parseImport(m.text); m.parsed = r.pack || null; m.error = r.error || ''; render(); rtTop(); },
   rtBack() { const m = UI.modal; m.parsed = null; m.error = ''; render(); rtTop(); },
-  rtFile() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,.txt,.csv,.tsv,application/json,text/*'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; f.text().then(t => { UI.modal.text = t; const r = parseImport(t); UI.modal.parsed = r.pack || null; UI.modal.error = r.error || ''; render(); rtTop(); }); }; inp.click(); },
+  rtFile() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,.txt,.csv,.tsv,application/json,text/*'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; if (f.size > MAX_FILE) return toast('That file is too big to import.'); f.text().then(t => { UI.modal.text = t; const r = parseImport(t); UI.modal.parsed = r.pack || null; UI.modal.error = r.error || ''; render(); rtTop(); }); }; inp.click(); },
   rtMode(k) { UI.modal.mode = k; render(); },
   rtImport() {
     const m = UI.modal;
@@ -5397,7 +5420,7 @@ function applyBrand(color) {
   r.setProperty('--brand', c); r.setProperty('--brand-ink', lumOf(rgb) > 0.6 ? '#1a1306' : '#ffffff');
   // light theme: grey brands become charcoal, pale brands get darkened until they read on a light page
   const sat = (Math.max(...rgb) - Math.min(...rgb)) / 255;
-  if (sat < 0.12) rgb = [43, 37, 51]; else while (lumOf(rgb) > 0.5) rgb = rgb.map(x => x * 0.9);
+  if (sat < 0.12) rgb = [43, 37, 51]; else while (lumOf(rgb) > 0.45) rgb = rgb.map(x => x * 0.9);
   r.setProperty('--brand-l', hex(rgb)); r.setProperty('--brand-l-ink', '#ffffff');
 }
 const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w) && !/^(of|the|and|&)$/i.test(w)).map(w => w[0].toUpperCase()).join('').slice(0, 4) || 'PRO';
@@ -5576,7 +5599,7 @@ function viewWizard() {
       <div class="sec">Big events</div>
       ${z.add ? `<p class="small muted" style="margin-top:0">This world has a big event every ${G.settings.bigEvery} weeks.</p>` : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}
       <label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
-      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order and repeat each year. Leave it empty for Big Event 1, 2, 3. You can change them later in Menu.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>
+      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order and repeat each year. Leave it empty for Big Event 1, 2, 3. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>
       ${ppvList(z.ppv).length ? `<div class="f"><span>Signature matches <span class="muted">(optional)</span></span><div class="tiny muted" style="margin:2px 0 8px">A match fans expect every year at that event, like a 30-person Rumble. It goes on the card for you.</div>
         ${ppvList(z.ppv).map((n, i) => `<div class="row" style="gap:8px;margin-bottom:6px"><span class="sp small clip">${esc(n)}</span><select data-wz="sig" data-i="${i}" style="width:auto;max-width:55%" aria-label="Signature match for ${esc(n)}">${sigOptions(z.sig?.[n] || '')}</select></div>`).join('')}</div>` : ''}
       <div class="wz-nav">${z.add ? `<button class="btn" data-act="wzCancel">${(z.nth || 1) > 1 ? 'Skip the rest' : 'Cancel'}</button>` : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
@@ -5845,13 +5868,13 @@ const SFX = (() => {
 })();
 
 // ---------- crash safety ----------
-const VERSION = '1.5';
+const VERSION = '1.5.1';
 const WHATS_NEW = [
   ['🤼 Participants plus a gimmick', 'Every match is who is in it (singles, tag, handicap, up to six-way, eight-person tag, battle royal, rumble) plus a gimmick on top: ladder, cage, tables, I quit, last man standing, the Cell and more. Mix any of them.'],
   ['👑 Rumbles and battle royals', 'Up to 40 entrants from every show. One tap fills the field, and wrestling earlier that night is fine.'],
-  ['✏️ Make your own', 'Create match types and gimmicks in Menu → Match types, or from any match.'],
+  ['✏️ Make your own', 'Create match types and gimmicks in Office → Setup → Match types, or from any match.'],
   ['⭐ Signature matches', 'Give each big event a signature match, like a yearly Rumble. It goes on the card for you, and fans expect it.'],
-  ['🏟️ Run several companies', 'Start another company in the same world from Menu → Your companies. Each one books its own show, and the week moves on after the last. Shows on the same night fight for viewers, and you can lure stars between your companies.'],
+  ['🏟️ Run several companies', 'Start another company in the same world from Office → Setup. Each one books its own show, and the week moves on after the last. Shows on the same night fight for viewers, and you can lure stars between your companies.'],
   ['🔔 Deeper match booking', 'Nine finishes: clean, submission, roll-up, cheating, run-in, screwjob, DQ, count-out and no contest. Champions keep the belt on a DQ or count-out.'],
   ['⚡ Run-ins', 'Pick who runs in to help the winner. A run-in can start a brand new feud.'],
   ['🔄 Turns in matches', 'Have someone turn heel or face mid-match, even on their own partner.'],

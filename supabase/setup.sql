@@ -47,3 +47,16 @@ grant select on public.docs to anon, authenticated;
 grant insert, update, delete on public.docs to authenticated;
 revoke all on public.admins from anon, authenticated;
 grant execute on function public.is_admin() to anon, authenticated;
+
+-- Hardening (added in v1.5.1, safe to run again):
+-- 1. Cap each row by its real size. pg_column_size measures the compressed size, so a row that
+--    compresses well could be far bigger once every player downloads it. The game itself stays under 240 KB.
+alter table public.docs drop constraint if exists docs_text_size;
+alter table public.docs add constraint docs_text_size check (octet_length(data::text) < 400000) not valid;
+-- 2. The server sets the "updated" time, so nobody can pin their post to the top by sending a future date.
+create or replace function public.docs_touch() returns trigger
+language plpgsql set search_path = ''
+as $$ begin new.updated := now(); return new; end $$;
+drop trigger if exists docs_touch on public.docs;
+create trigger docs_touch before insert or update on public.docs for each row execute function public.docs_touch();
+revoke all on function public.docs_touch() from public, anon, authenticated;
