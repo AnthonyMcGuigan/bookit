@@ -111,6 +111,12 @@ Office → Rivals. Each rival has a roster, a champion, a weekly show with a rat
 
 After each show the game looks for a moment worth a story and starts at most one: a dethroned champion wants a rematch, a broken win streak wants revenge, an attack on a recent tag partner becomes a betrayal, a draw or an 82+ match leaves unfinished business, and two people who meet 3 times in 4 shows become a feud. It shows up in the news and the results. Switch it off in Menu → "Stories start on their own".
 
+## Navigation (v1.5.1)
+
+- **Office → Setup** holds the company setup: promotion and show names, other companies, shows and brands, big events and match types.
+- **Menu** holds only save slots and backup, Settings (game rules, sound and display), Help, and leaving or deleting the save.
+- Roster tools, Community and Rankings are on the Roster tab. History, awards and trophies are under Office → Titles.
+
 ## Security
 
 - Everything a player can type or import is escaped before it reaches the page. Photos must be small PNG/JPEG/WebP data images and colors must be hex codes.

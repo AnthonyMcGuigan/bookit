@@ -3117,8 +3117,8 @@ function viewOffice() {
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn it on in Menu → Settings.</div>`}
   ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
-  <div class="grid2" style="margin-top:12px"><button class="btn" data-act="matchTypes">🤼 Match types</button><button class="btn" data-act="shows">📺 ${manyShows() ? 'Shows &amp; brand split' : 'Shows &amp; brands'}</button></div>
-  <div class="seg-ctl" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button></div>
+  <div class="seg-ctl" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  ${t === 'setup' ? setupView() : ''}
   ${t === 'rivals' ? rivalsView() : ''}
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
@@ -3127,7 +3127,24 @@ function viewOffice() {
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
+  <button class="btn block" style="margin-top:8px" data-act="trophies">🏅 Trophies &amp; booker rank</button>
   <button class="btn block" style="margin-top:8px" data-act="editTitle" data-id="">+ Create a championship</button>` : ''}`;
+}
+
+function setupView() {
+  return `<div class="small muted" style="margin-bottom:8px">How your company is set up. Changes save as you type.</div>
+    <div class="sec" style="margin-top:4px">Company</div>
+    <label class="f"><span>Promotion name</span><input type="text" data-in="promoName" value="${esc(G.promo.name)}" maxlength="40"></label>
+    <button class="btn block" style="margin-bottom:10px" data-act="cos">🏟️ ${multi() ? `Your companies (${G.cos.length + 1})` : 'Run another company in this world'}</button>
+    <div class="sec">Shows</div>
+    <label class="f"><span>${manyShows() ? 'Name of the show you are booking' : 'Weekly show name'}</span><input type="text" data-in="showName" value="${esc(G.promo.show)}" maxlength="40"></label>
+    <button class="btn block" style="margin-bottom:10px" data-act="shows">📺 ${manyShows() ? `Weekly shows and brands (${SHOWS().length})` : 'Add another weekly show or brand'}</button>
+    <div class="sec">Big events</div>
+    <label class="f"><span>Big event every</span><select data-in="bigEvery">${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigEvery === n ? 'selected' : ''}>${n} weeks</option>`).join('')}</select></label>
+    <label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>
+    <div class="sec">Matches</div>
+    <button class="btn block" data-act="matchTypes">🤼 Match types and signature matches</button>
+    <div class="tiny muted" style="margin-top:8px">Game rules, sound and display are in Menu → Settings.</div>`;
 }
 
 // ---------- notes ----------
@@ -3238,16 +3255,10 @@ function modalMenu() {
     <div class="small muted" style="margin-bottom:8px">Auto-saves to slot ${meta.slot} in this browser.</div>
     <div class="list">${slots.map(s => `<div class="item"><div class="av" style="background:${s.n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${s.n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${s.n}</div><div class="main"><div class="t">${s.info ? esc(s.info.name) : 'Empty'}</div><div class="d">${s.info ? `Week ${s.info.week} · ${new Date(s.info.savedAt).toLocaleString()}` : '—'}</div></div>
       ${s.n === meta.slot ? '<span class="tag good">Current</span>' : `${s.info ? `<button class="btn sm" data-act="loadSlot" data-id="${s.n}">Load</button>` : ''}<button class="btn sm" data-act="copyTo" data-id="${s.n}">Save here</button>`}</div>`).join('')}</div>
-    <button class="btn block" style="margin-top:10px" data-act="export">💾 Backup, export &amp; import</button>
-    <div class="sec">Promotion</div>
-    <button class="btn block" style="margin-bottom:10px" data-act="cos">🏟️ ${multi() ? `Your companies (${G.cos.length + 1})` : 'Run another company in this world'}</button>
-    <label class="f"><span>Promotion name</span><input type="text" data-in="promoName" value="${esc(G.promo.name)}" maxlength="40"></label>
-    <button class="btn block" style="margin-bottom:10px" data-act="shows">📺 ${manyShows() ? `Weekly shows and brands (${SHOWS().length})` : 'Add another weekly show or brand'}</button>
-    <label class="f"><span>${manyShows() ? 'Name of the show you are booking' : 'Weekly show name'}</span><input type="text" data-in="showName" value="${esc(G.promo.show)}" maxlength="40"></label>
-    <label class="f"><span>Big event every</span><select data-in="bigEvery">${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigEvery === n ? 'selected' : ''}>${n} weeks</option>`).join('')}</select></label>
-    <label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>
-    <button class="btn block" style="margin-bottom:10px" data-act="matchTypes">🤼 Match types and signature matches</button>
-    <div class="sec">Sandbox options</div>
+    <button class="btn block" style="margin-top:10px" data-act="export">💾 Back up or restore a save</button>
+    <div class="tiny muted" style="margin-top:8px">Company setup (names, shows, big events, match types) is in Office → Setup.</div>
+    <div class="sec">Settings</div>
+    <div class="small muted" style="margin-bottom:8px">Game rules</div>
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
     <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''}><span>Money</span></label>
@@ -3255,13 +3266,15 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
     <label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>
-    <div class="sec">Sound &amp; display</div>
+    <div class="small muted" style="margin:14px 0 8px">Sound &amp; display</div>
     <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound effects</span></label>
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
-    <div class="sec">Game</div>
-    <div class="list"><button class="btn block" data-act="rosterTools">⇅ Roster tools (import / export)</button><button class="btn block" data-act="community">🌐 Community creations</button><button class="btn block" data-act="trophies">🏅 Trophies &amp; rank</button><button class="btn block" data-act="records" data-id="titles">🏆 History, awards &amp; legends</button><button class="btn block" data-act="rankings">📈 Rankings</button><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button><button class="btn block" data-act="quit">🏠 Main menu / new game</button><button class="btn block bad" data-act="deleteSlot">🗑 Delete this save slot</button></div>
+    <div class="sec">Help</div>
+    <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button></div>
+    <div class="sec">Leave</div>
+    <div class="list"><button class="btn block" data-act="quit">🏠 Back to the start screen</button><button class="btn block bad" data-act="deleteSlot">🗑 Delete this save slot</button></div>
   `);
 }
 
@@ -3312,7 +3325,7 @@ function helpHTML() {
   <h3>Teams and tournaments</h3>
   <p>Roster → <b>Teams &amp; factions</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
-  <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Bring a legend back from Menu → History. Aging can be switched off in Settings.</p>
+  <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Bring a legend back from Office → Titles → History &amp; awards. Aging can be switched off in Settings.</p>
   <h3>Changed your mind?</h3>
   <p>Right after a show you can <b>Undo</b> it and book it again. <b>Copy as text</b> shares a card or results anywhere.</p>
   <h3>Contracts</h3>
@@ -3375,7 +3388,7 @@ function modalMatchTypes(m) {
     ${evs.length ? evs.map((n, i) => { const sg = sigFor(n) || {}; return `<div class="card" style="padding:10px 12px;margin-bottom:8px"><b class="small">${esc(n)}</b><div class="row" style="gap:8px;margin-top:6px">
       <select data-sig="mt" data-i="${i}" aria-label="Participants for ${esc(n)}">${so('', sg.mt || '', 'Participants: none')}${mtNames().map(k => so(k, sg.mt || '', k)).join('')}</select>
       <select data-sig="gm" data-i="${i}" aria-label="Gimmick for ${esc(n)}">${so('', sg.gm || '', 'Gimmick: none')}${gmNames().filter(k => k !== 'Standard').map(k => so(k, sg.gm || '', k)).join('')}</select></div></div>`; }).join('')
-      : '<div class="small muted">Name your big events in Menu first.</div>'}`;
+      : '<div class="small muted">Name your big events in Office → Setup first.</div>'}`;
   return modal('Match types', body, foot, { closeAct: 'mtBack' });
 }
 
@@ -5586,7 +5599,7 @@ function viewWizard() {
       <div class="sec">Big events</div>
       ${z.add ? `<p class="small muted" style="margin-top:0">This world has a big event every ${G.settings.bigEvery} weeks.</p>` : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}
       <label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
-      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order and repeat each year. Leave it empty for Big Event 1, 2, 3. You can change them later in Menu.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>
+      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order and repeat each year. Leave it empty for Big Event 1, 2, 3. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>
       ${ppvList(z.ppv).length ? `<div class="f"><span>Signature matches <span class="muted">(optional)</span></span><div class="tiny muted" style="margin:2px 0 8px">A match fans expect every year at that event, like a 30-person Rumble. It goes on the card for you.</div>
         ${ppvList(z.ppv).map((n, i) => `<div class="row" style="gap:8px;margin-bottom:6px"><span class="sp small clip">${esc(n)}</span><select data-wz="sig" data-i="${i}" style="width:auto;max-width:55%" aria-label="Signature match for ${esc(n)}">${sigOptions(z.sig?.[n] || '')}</select></div>`).join('')}</div>` : ''}
       <div class="wz-nav">${z.add ? `<button class="btn" data-act="wzCancel">${(z.nth || 1) > 1 ? 'Skip the rest' : 'Cancel'}</button>` : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
@@ -5859,9 +5872,9 @@ const VERSION = '1.5.1';
 const WHATS_NEW = [
   ['🤼 Participants plus a gimmick', 'Every match is who is in it (singles, tag, handicap, up to six-way, eight-person tag, battle royal, rumble) plus a gimmick on top: ladder, cage, tables, I quit, last man standing, the Cell and more. Mix any of them.'],
   ['👑 Rumbles and battle royals', 'Up to 40 entrants from every show. One tap fills the field, and wrestling earlier that night is fine.'],
-  ['✏️ Make your own', 'Create match types and gimmicks in Menu → Match types, or from any match.'],
+  ['✏️ Make your own', 'Create match types and gimmicks in Office → Setup → Match types, or from any match.'],
   ['⭐ Signature matches', 'Give each big event a signature match, like a yearly Rumble. It goes on the card for you, and fans expect it.'],
-  ['🏟️ Run several companies', 'Start another company in the same world from Menu → Your companies. Each one books its own show, and the week moves on after the last. Shows on the same night fight for viewers, and you can lure stars between your companies.'],
+  ['🏟️ Run several companies', 'Start another company in the same world from Office → Setup. Each one books its own show, and the week moves on after the last. Shows on the same night fight for viewers, and you can lure stars between your companies.'],
   ['🔔 Deeper match booking', 'Nine finishes: clean, submission, roll-up, cheating, run-in, screwjob, DQ, count-out and no contest. Champions keep the belt on a DQ or count-out.'],
   ['⚡ Run-ins', 'Pick who runs in to help the winner. A run-in can start a brand new feud.'],
   ['🔄 Turns in matches', 'Have someone turn heel or face mid-match, even on their own partner.'],
