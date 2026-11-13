@@ -2661,7 +2661,7 @@ function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><sp
 
 function render() {
   if (!G || UI.wiz) { root.innerHTML = iconize(UI.wiz ? viewWizard() : viewStart()); modals.innerHTML = iconize(renderModal()); return; }
-  if (UI.pendingGet && !UI.modal && !UI.wiz) { const k = UI.pendingGet; UI.pendingGet = null; if (COMM.items.some(x => x.author + '|' + x.id === k)) { setTimeout(() => A.cGet(k)); } }
+  if (UI.pendingGet && !UI.modal && !UI.wiz) { const k = UI.pendingGet; UI.pendingGet = null; if (cItem(k).i) { setTimeout(() => A.cGet(k)); } }
   if (G.promo.color !== render.brand) { render.brand = G.promo.color; applyBrand(G.promo.color); }
   if (!UI.selWeek || UI.selWeek < 1) UI.selWeek = G.week;
   if (splitOn()) for (const w of signed()) if (!showById(w.brand)) w.brand = G.showId;
@@ -4574,6 +4574,9 @@ const myList = k => Array.isArray(COMM.body[k]) ? COMM.body[k].filter(x => typeo
 const iLike = key => myList('likes').includes(key);
 const iFollow = id => myList('follows').includes(id);
 function creatorAv(id, s = 40) { const p = COMM.profiles[id] || {}, nm = id === 'featured' ? 'BI' : (p.name || COMM.names[id] || '?'); const ini = nm.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase(); return `<div class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s * .36)}px;background:${p.color || 'var(--card2)'};color:${p.color ? '#fff' : 'var(--accent)'}">${esc(ini)}</div>`; }
+// a key can also point at one wrestler inside a shared roster: author|id|n
+function cItem(key) { const [a, id, n] = String(key || '').split('|'); const i = COMM.items.find(x => x.author === a && x.id === id); return { i, base: a + '|' + id, n: i && /^\d{1,3}$/.test(n || '') ? +n : null }; }
+const packWs = i => i._ws || (i._ws = cleanPack(i.pack)?.wrestlers || []);
 const kindLbl = i => i.kind === 'roster' ? 'Roster · ' + (+i.count || 0) + ' wrestlers' : (+i.count || 1) > 1 ? (+i.count) + ' wrestlers' : 'Wrestler';
 const REPORT_WHY = [['rude', 'Rude or hateful'], ['spam', 'Spam or junk'], ['copied', 'Copied work or real photos'], ['personal', 'Personal details'], ['other', 'Something else']];
 // things this player reported: hidden for them right away
@@ -4756,12 +4759,16 @@ function modalCommunity(m) {
     const q = (m.q || '').toLowerCase(), f = m.f || 'all', sort = m.sort || 'popular';
     const list = COMM.items.filter(i => !isHidden(i) && (f === 'all' || i.kind === f) && (sort !== 'following' || iFollow(i.author)) && (!q || (i.title + ' ' + i.desc + ' ' + authorName(i.author)).toLowerCase().includes(q)))
       .sort((a, b) => sort === 'new' ? b.created - a.created : sort === 'following' ? b.created - a.created : popScore(b) - popScore(a) || b.created - a.created);
+    // Wrestlers also lists everyone inside shared rosters, so players can take just the ones they want
+    const rws = f !== 'wrestler' ? [] : COMM.items.filter(i => i.kind === 'roster' && !isHidden(i) && (sort !== 'following' || iFollow(i.author)))
+      .sort((a, b) => sort === 'popular' ? popScore(b) - popScore(a) || b.created - a.created : b.created - a.created)
+      .flatMap(i => packWs(i).map((w, n) => ({ i, w, n }))).filter(x => !q || (x.w.name + ' ' + (x.w.nick || '') + ' ' + x.i.title + ' ' + authorName(x.i.author)).toLowerCase().includes(q)).slice(0, 400);
     const counts = i => `${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} ${i.kind === 'save' ? 'playing' : 'added'}` : ''}`;
     body += `<div class="seg-ctl sm" style="margin-bottom:8px">${[['popular', 'Popular'], ['new', 'New'], ['following', 'Following']].map(([k, l]) => `<button class="${sort === k ? 'on' : ''}" data-act="cSort" data-id="${k}">${l}</button>`).join('')}</div>`;
     if (sort === 'following' && !myList('follows').length) body += '<div class="tiny muted" style="margin-bottom:8px">Follow creators from their page to see their new uploads here.</div>';
     body += `<input type="search" data-in="cQ" value="${esc(m.q || '')}" placeholder="Search creations" style="margin-bottom:8px">
       <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['save', '💾 Saves']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
-      <div class="list">${list.map(i => i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
+      <div class="list">${(list.map(i => i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
   } else if (t === 'share' && !G) {
     body += `<div class="empty"><p><b>Start a company first.</b></p><p class="small">You share wrestlers, rosters and saves from a company you run.</p><button class="btn pri" data-act="needNew">🏟️ New company</button></div>`;
   } else if (t === 'share') {
@@ -4867,7 +4874,7 @@ function cvHead(i, key, what) {
     <button class="btn sm cv-like ${liked ? 'on' : ''}" data-act="cLike" data-id="${esc(key)}" ${COMM.me ? '' : 'disabled'}>❤️ ${i.nLikes || 0}</button></div>${i.nUses ? `<div class="tiny muted" style="margin:-4px 0 6px">${i.nUses} player${i.nUses > 1 ? 's' : ''} ${i.kind === 'save' ? 'playing this' : 'added this'}</div>` : ''}`;
 }
 function modalCView(m) {
-  const i = COMM.items.find(x => x.author + '|' + x.id === m.key);
+  const { i, base, n } = cItem(m.key);
   if (!i) return modal('Community', '<div class="empty">This creation was removed.</div>');
   if (i.kind === 'save') {
     const u = i.sum || {}, slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
@@ -4886,6 +4893,13 @@ function modalCView(m) {
   }
   const p = cleanPack(i.pack);
   if (!p) return modal(esc(i.title), '<div class="empty">This creation is empty or damaged.</div>');
+  if (n != null) { // one wrestler from a shared roster
+    const w = packWs(i)[n]; if (!w) return modal('Community', '<div class="empty">This wrestler was removed.</div>');
+    const body = `${cvHead(i, base, 'Wrestler')}
+      <div class="list"><div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.align === 'heel' ? 'Heel' : w.align ? 'Face' : '', w.division, w.style].filter(Boolean).join(' · '))}</div><div class="d">${esc(['pop', 'ring', 'mic', 'cha', 'stam'].filter(k => w[k] != null).map(k => ({ pop: 'Pop', ring: 'Ring', mic: 'Mic', cha: 'Charisma', stam: 'Stamina' })[k] + ' ' + w[k]).join(' · '))}</div>${w.finisher ? `<div class="d">Finisher: ${esc(w.finisher)}</div>` : ''}</div></div></div>
+      <button class="btn block" style="margin-top:10px" data-act="cOpen" data-id="${esc(base)}">From the roster “${esc(i.title)}” · see all ${packWs(i).length}</button>`;
+    return modal(esc(w.name), body, `${COMM.me && i.author !== COMM.me && i.author !== 'featured' ? `<button class="btn" data-act="cReport" data-id="${esc(base)}" aria-label="Report this">🚩</button>` : ''}<button class="btn pri" data-act="cGet" data-id="${esc(m.key)}">${G ? '⬇ Add to my game' : '🏟️ Start a company to add this'}</button>`);
+  }
   const body = `${cvHead(i, m.key, kindLbl({ ...i, count: p.wrestlers.length }))}
     ${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
     ${p.titles?.length ? `<div class="tiny muted" style="margin-bottom:6px">Includes ${p.titles.length} championships: ${p.titles.map(t => esc(t.short)).join(', ')}</div>` : ''}
@@ -5068,7 +5082,7 @@ const CREATOR_ACTIONS = {
   privBack() { UI.modal = UI.modal.back || null; render(); },
   needNew() { UI.pendingGet = UI.modal?.key || null; UI.modal = null; A.wzStart(); },
   needLoad(n) { UI.pendingGet = UI.modal?.key || null; A.loadSlot(n); },
-  cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const i = COMM.items.find(x => x.author + '|' + x.id === key); const p = i && cleanPack(i.pack); if (!p) return toast('This creation is damaged.'); markUsed(key); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
+  cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const { i, base, n } = cItem(key); let p = i && cleanPack(i.pack); if (!p) return toast('This creation is damaged.'); if (n != null) { const w = packWs(i)[n]; if (!w) return toast('This wrestler was removed.'); p = { kind: 'wrestler', title: w.name, promo: p.promo, wrestlers: [w], titles: null }; } markUsed(base); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: n != null ? p.title : i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
   async cPublish() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
     m.what = m.what || 'roster'; // the Share tab shows Whole roster selected before anything is tapped
