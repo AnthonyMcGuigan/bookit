@@ -526,6 +526,19 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .tro-i { font-size: 26px; }
 .tro b { font-size: 13px; }
 .lvl { font-family: var(--f-display); font-size: 12px; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; background: linear-gradient(180deg, #ffe99a, #f2c443 55%, #d19a1c); color: #2a1c00; white-space: nowrap; }
+.flair { display: inline-block; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: linear-gradient(180deg, #ffe99a, #f2c443 55%, #d19a1c); color: #2a1c00; margin: 2px 0; white-space: nowrap; width: fit-content; }
+.cv-by .flair { display: block; }
+.belt-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 4px; }
+.bp { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font-size: 11px; font-weight: 700; text-align: center; }
+.bp svg { width: 100%; height: auto; max-height: 40px; }
+.bp.on { border-color: var(--gold); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 45%, transparent); }
+.bp.lock, .chip.lock { opacity: .5; } .bp.lock svg { filter: grayscale(1); }
+.chip.on { border-color: var(--gold); color: var(--ink); background: color-mix(in srgb, var(--gold) 18%, transparent); }
+.belt-spin { animation: beltspin 6s linear infinite; }
+@keyframes beltspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .belt-spin { animation: none; } }
+.lv-co { margin-top: 10px; font-family: var(--f-display); font-size: 20px; letter-spacing: .05em; color: #9fd8ff; }
+.lv-co span { display: block; font-family: inherit; font-size: 13px; color: #fff; letter-spacing: .02em; }
 .mile { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .mile.dim { opacity: .6; }
 .mile-i { font-size: 22px; width: 28px; text-align: center; flex: none; }
@@ -987,6 +1000,11 @@ function migrate(g) {
   if (!Array.isArray(g.bigEvents)) g.bigEvents = BIG_EVENTS.slice();
   g.customMatch = fixCustomMatch(g.customMatch); if (!Array.isArray(g.ppvSig)) g.ppvSig = [];
   g.booker ||= { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0 }; g.event ??= null;
+  // company level: an older save starts at the level its XP already earned, without back pay
+  g.booker.cxp ??= +g.booker.xp || 0; g.booker.coPaid ??= coLvlOf(+g.booker.cxp || 0); g.booker.perks = (Array.isArray(g.booker.perks) ? g.booker.perks : []).filter(k => Object.hasOwn(PERKS, k)).slice(0, 6);
+  if (g.sponsor && (typeof g.sponsor !== 'object' || !(+g.sponsor.pay >= 0))) g.sponsor = null;
+  if (g.sponsor) g.sponsor = { n: String(g.sponsor.n || 'Sponsor').replace(/[<>&"'`]/g, '').slice(0, 30), pay: clamp(+g.sponsor.pay || 0, 0, 1e6), T: clamp(+g.sponsor.T || 60, 1, 100), left: clamp(Math.floor(+g.sponsor.left) || 0, 0, 52), paidWk: +g.sponsor.paidWk || 0 };
+  for (const t of g.titles || []) if (t && t.design && !BELTS.some(b => b[0] === t.design)) delete t.design;
   for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; }
   for (const s of g.stories) { s.notes ??= ''; s.log ||= []; }
   for (const c of [g.card, ...Object.values(g.future || {})]) if (Array.isArray(c)) for (const x of c) if (x && OLD_FIN[x.finish]) x.finish = OLD_FIN[x.finish];
@@ -1049,7 +1067,7 @@ function newGame(opts) {
     fans: 22000, tv: 46000, tvWeeks: 26,
     wrestlers: [], titles: [], stories: [], card: [], future: {}, news: [], history: [], todos: [], notebook: '',
     settings: { injuries: true, finances: opts.finances !== false, contracts: opts.contracts !== false, bigEvery: 4, difficulty: Object.hasOwn(DIFF, String(opts.challenge)) ? opts.challenge : 'normal' }, bigEvents: BIG_EVENTS.slice(),
-    booker: { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0 }, event: null,
+    booker: { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0, cxp: 0, coPaid: 1, perks: [] }, event: null,
     teams: [], factions: [], tourneys: [], awards: [], popAt: {}, rankPrev: {}
   };
   G = g; g.settings.organic = true; g.settings.aging = true;
@@ -2012,7 +2030,7 @@ function applySegment(seg, res, ctx) {
   if (st) {
     let gain = (seg.kind === 'match' ? 6 : seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
-    gain = Math.round(gain);
+    gain = Math.round(gain * (perk('heat') ? 1.15 : 1));
     st.heat = clamp(st.heat + gain, 0, 100); st._touched = G.week;
     st.log.unshift({ wk: G.week, text: `${res.text} (${starStr(res.rating)}, heat +${gain})` });
     notes.push(`🔥 ${st.title} heat +${gain}`);
@@ -2096,10 +2114,11 @@ function runShow(opts = {}) {
   // the main show is the A show; other weekly shows are B shows: smaller crowds, half a TV deal, a bit more to put on
   // with the brand split on, every brand's show is an A show; B shows are the extra nights on a shared roster
   const bShow = !onMain() && !splitOn();
-  const attendance = Math.round(Math.min(big ? 22000 : bShow ? 4000 : 9000, G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype) * rnd(.93, 1.07));
+  const special = G.special === G.week && !big; // a bonus TV special: bigger building, bigger TV money, more new fans
+  const attendance = Math.round(Math.min((big ? 22000 : bShow ? 4000 : 9000) * (special ? 1.5 : 1), G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype * (special ? 1.4 : 1) * (perk('crowd') ? 1.1 : 1)) * rnd(.93, 1.07));
   const fin = {
-    gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (bShow ? 0.5 : 1)), ppv: big ? Math.round(G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
-    merch: Math.round(sum(crew.map(w => w.pop * w.pop)) / 9 * share),
+    gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
+    merch: Math.round(sum(crew.map(w => w.pop * w.pop)) / 9 * share * (perk('merch') ? 1.15 : 1)),
     payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary)) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15))
   };
   for (const k of ['gate', 'tv', 'ppv', 'merch']) fin[k] = Math.round(fin[k] * DF().income);
@@ -2109,6 +2128,7 @@ function runShow(opts = {}) {
   const room = 1 - G.fans / fanCap();
   // more shows a week means each one moves the needle a little less
   let fanDelta = Math.round(G.fans * (overall - 58) / (big ? 500 : 900) * (overall > 58 ? Math.max(0.02, room) * DF().fanUp : DF().fanDown) / Math.sqrt(nS));
+  if (special && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.5);
   if (room < 0 && overall < 80) fanDelta -= Math.round(G.fans * Math.min(0.01, -room * 0.02));
   G.fans = Math.max(1000, G.fans + fanDelta);
   G.promo.prestige = clamp(G.promo.prestige + (overall - G.promo.prestige) * 0.05 / Math.sqrt(nS), 1, 100);
@@ -2126,7 +2146,7 @@ function runShow(opts = {}) {
 
   if (!big) buildHype(results, G.week);
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
-  const rec = { wk: G.week, name: showName(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: G.promo.day ?? 0, sname: G.promo.show };
+  const rec = { wk: G.week, name: showName(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: G.promo.day ?? 0, sname: G.promo.show, ...(special ? { special: true } : {}) };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
   const best = results.slice().sort((a, b) => b.rating - a.rating)[0];
@@ -2163,6 +2183,7 @@ function endOfWeek(card, world = true) {
   for (const w of G.wrestlers) {
     if (!world && !w.contract) continue;
     if (!booked.has(w.id)) w.fatigue = clamp(w.fatigue - 18, 0, 100); else w.fatigue = clamp(w.fatigue - 6, 0, 100);
+    if (w.injury > 1 && w.contract && perk('medic') && Math.random() < 0.35) w.injury--;
     if (w.injury > 0 && !booked.has(w.id)) { w.injury--; if (w.injury === 0 && w.contract) news(`✅ ${w.name} is cleared to compete.`, 'injury'); }
     else if (w.injury > 0) w.injury = Math.max(0, w.injury - 0.5) | 0;
     w.momentum *= 0.92;
@@ -2385,7 +2406,7 @@ function ensureGoals() {
 // The career belongs to the player, not to one company: it lives in its own browser key and carries into every save.
 // Each company still keeps its own G.booker (weekly goals, the trophies it earned) so older saves and shared saves work.
 const CAREER_KEY = 'ringsideBooker.career', MAX_LVL = 50;
-const xpAt = L => L <= 1 ? 0 : Math.round(8 * (L - 1) ** 1.7);           // level 2 after a show, HoF rank ~level 32, level 50 ~4 years
+const xpAt = L => L <= 1 ? 0 : Math.round(13 * (L - 1) ** 1.7);          // level 2 after a show or two, level 50 takes a few years
 const lvlOf = xp => { let L = 1; while (L < MAX_LVL && xp >= xpAt(L + 1)) L++; return L; };
 const ACH = [ // id, icon, name, how, XP
   ['first', '🔔', 'Opening Bell', 'Run your first show', 10],
@@ -2419,7 +2440,7 @@ const ACH = [ // id, icon, name, how, XP
   ['hof', '👑', 'Hall of Famer', 'Reach the top booker rank', 200]
 ];
 // milestones: lifetime totals across every company, with bronze, silver and gold steps
-const TIER = ['Bronze', 'Silver', 'Gold'], TIER_XP = [30, 80, 200];
+const TIER = ['Bronze', 'Silver', 'Gold'], TIER_XP = [25, 60, 150];
 const MILES = [
   ['shows', '📺', 'Shows run', [25, 100, 300]],
   ['ppv', '🎆', 'Big events run', [5, 25, 75]],
@@ -2471,7 +2492,8 @@ function CAR() {
   return CAREER;
 }
 function saveCareer() { if (CAREER) ls.set(CAREER_KEY, JSON.stringify(CAREER)); }
-function addXP(n) { if (!G) return; G.booker.xp += n; CAR().xp += n; }
+// shows, goals and backstage moments also count toward the company level (cxp); achievements and milestones only the booker's
+function addXP(n) { if (!G) return; G.booker.xp += n; G.booker.cxp = (G.booker.cxp || 0) + n; CAR().xp += n; }
 function carBump(k, n = 1) { const c = CAR(); c.st[k] = (c.st[k] || 0) + n; }
 function award(id, list) {
   const a = ACH.find(x => x[0] === id); if (!a) return;
@@ -2488,6 +2510,55 @@ function checkMiles() {
     const v = c.st[id] || 0; let t = c.tier[id] || 0;
     while (t < 3 && v >= steps[t]) { c.xp += TIER_XP[t]; G.booker.xp += TIER_XP[t]; out.push({ ic, name, tier: TIER[t], n: steps[t], xp: TIER_XP[t] }); news(`🏅 ${TIER[t]} milestone: ${name} (${steps[t].toLocaleString()}) · +${TIER_XP[t]} XP`, 'office'); t++; }
     c.tier[id] = t;
+  }
+  return out;
+}
+
+// ---- unlocks ----
+// Booker level (the player, every save) unlocks belt designs and Community flairs.
+// Company level (one promotion) unlocks business: cash bonuses, sponsors, bigger big-event cards, viral moments, TV specials, perks.
+const BELTS = [ // id, name, booker level, look
+  ['classic', 'Classic Gold', 1, { strap: '#22180f', stitch: '#6b4a2a', p: ['#fff3c2', '#f2c443', '#a8740a'], edge: '#7a5408', gem: ['#ffd0d0', '#d62839', '#6d0a15'], ink: '#5a3c00' }],
+  ['silver', 'Silver', 3, { strap: '#1b1d22', stitch: '#4a4f5a', p: ['#ffffff', '#c9d1d9', '#7d8793'], edge: '#5b6470', gem: ['#d6e8ff', '#3c7be0', '#0f2c66'], ink: '#2b313a' }],
+  ['blackgold', 'Black & Gold', 6, { strap: '#0b0b0b', stitch: '#5a4a1a', p: ['#3a3a3a', '#141414', '#000000'], edge: '#f2c443', gem: ['#fff3c2', '#f2c443', '#8a5c05'], ink: '#f2c443' }],
+  ['redstrap', 'Red Strap', 9, { strap: '#7a0e1a', stitch: '#c24a55', p: ['#fff3c2', '#f2c443', '#a8740a'], edge: '#7a5408', gem: ['#ffffff', '#c9d1d9', '#6b7280'], ink: '#5a3c00' }],
+  ['biggem', 'Big Gem', 12, { strap: '#1a0f22', stitch: '#5a3a6b', p: ['#fff3c2', '#f2c443', '#a8740a'], edge: '#7a5408', gem: ['#e8d0ff', '#8b2fd6', '#3a0a6d'], ink: '#5a3c00', big: true }],
+  ['spinner', 'Spinner', 16, { strap: '#101418', stitch: '#3a4652', p: ['#fff3c2', '#f2c443', '#a8740a'], edge: '#7a5408', gem: ['#d0fff0', '#1fbf8f', '#0a5a40'], ink: '#5a3c00', spin: true }],
+  ['platinum', 'Platinum', 20, { strap: '#f0f2f5', stitch: '#aab2bd', p: ['#ffffff', '#e5e9f0', '#9aa5b4'], edge: '#6b7686', gem: ['#ffffff', '#9fd8ff', '#2a7ab8'], ink: '#3a4250' }],
+  ['diamond', 'Diamond', 25, { strap: '#0d1630', stitch: '#3a4f8a', p: ['#ffffff', '#cfe9ff', '#7fb4e6'], edge: '#3a6ea5', gem: ['#ffffff', '#e0f4ff', '#7fc8ff'], ink: '#0d2a52', gems: true }],
+  ['legacy', 'Legacy', 30, { strap: '#3a1f0f', stitch: '#8a5a2a', p: ['#ffe2c2', '#d08a3a', '#7a3f0a'], edge: '#5a2a05', gem: ['#ffd0d0', '#d62839', '#6d0a15'], ink: '#3a1a00', gems: true }],
+  ['hof', 'Hall of Fame', 40, { strap: '#000000', stitch: '#f2c443', p: ['#fff8dc', '#ffd84a', '#c48e14'], edge: '#fff3c2', gem: ['#ffffff', '#ffd0d0', '#d62839'], ink: '#3a2600', big: true, gems: true, spin: true }]
+];
+const beltOf = id => BELTS.find(b => b[0] === id) || BELTS[0];
+const FLAIRS = [['rookie', 'Rookie', 1], ['mainev', 'Main Eventer', 5], ['general', 'Ring General', 10], ['promoter', 'Promoter', 15], ['mind', 'Mastermind', 20], ['king', 'Kingmaker', 25], ['legend', 'Booking Legend', 35], ['hof', 'Hall of Famer', 45]];
+const bookerLvl = () => lvlOf(CAR().xp);
+const CO_MAX = 25, coXpAt = L => L <= 1 ? 0 : Math.round(14 * (L - 1) ** 1.8);
+const coLvlOf = xp => { let L = 1; while (L < CO_MAX && xp >= coXpAt(L + 1)) L++; return L; };
+const coLvl = () => G && G.booker ? coLvlOf(G.booker.cxp || 0) : 1;
+const CO_UNLOCKS = [[3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'Bonus TV specials', 'The network offers one-off specials.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
+const PERKS = {
+  deals: ['💼', 'Contract discount', 'Wrestlers ask 10% less.'],
+  heat: ['🔥', 'Hot storylines', 'Stories gain heat 15% faster.'],
+  medic: ['🩹', 'Medical team', 'Injuries heal faster.'],
+  ppv: ['🎆', 'PPV marketing', '10% more pay-per-view buys.'],
+  merch: ['💰', 'Merch deal', '15% more merchandise money.'],
+  crowd: ['🎟️', 'Street team', '10% bigger crowds at every show.']
+};
+const perk = k => !!(G && G.booker && Array.isArray(G.booker.perks) && G.booker.perks.includes(k));
+const perksDue = () => Math.max(0, Math.min(Object.keys(PERKS).length, Math.floor(coLvl() / 5)) - (G.booker.perks || []).length);
+const bigBonus = () => [4, 10, 16].filter(l => coLvl() >= l).length;
+const SPONSORS = ['Iron Grip Energy', 'Bolt Cola', 'Ringside Rides', 'Turnbuckle Tools', 'Max Rep Gyms', 'Night Owl Coffee', 'Pinfall Pizza', 'Headlock Headphones'];
+// a company level reached: pay the bonus. Returns lines for the show-night screen.
+function coLevelUps() {
+  const b = G.booker, L = coLvl(), out = [];
+  while ((b.coPaid || 1) < L) {
+    b.coPaid = (b.coPaid || 1) + 1; const n = b.coPaid, big = n % 5 === 0;
+    let r;
+    if (MON()) { const m = Math.round((15000 + 5000 * n) * (big ? 3 : 1) / 1000) * 1000; G.money += m; r = `+${money(m)} bonus`; }
+    else { const f = Math.round(G.fans * (big ? 0.03 : 0.01)); G.fans += f; r = `+${kfmt(f)} fans`; }
+    const un = CO_UNLOCKS.filter(u => u[0] === n).map(u => u[2]);
+    news(`🏟️ ${G.promo.name} reached company level ${n}: ${r}${un.length ? ' · Unlocked: ' + un.join(', ') : ''}`, 'office');
+    out.push({ n, r, un });
   }
   return out;
 }
@@ -2542,13 +2613,21 @@ function scoreShow(rec) {
   if ((G.shows || []).length >= 3) award('brands', trophies);
   if (multi()) award('empire', trophies);
   if (h.length >= 52) award('year', trophies);
-  const miles = checkMiles();
+  const miles = checkMiles(), extra = [];
+  // sponsor: paid once a week while the show hits the mark
+  const sp = G.sponsor;
+  if (sp && sp.paidWk !== G.week) {
+    sp.paidWk = G.week;
+    if (rec.rating >= sp.T) { if (MON()) G.money += sp.pay; sp.left--; extra.push(`💼 ${sp.n} paid ${money(sp.pay)}${sp.left > 0 ? ` · ${sp.left} week${sp.left > 1 ? 's' : ''} left` : ' · deal complete'}`); if (sp.left <= 0) { news(`💼 The ${sp.n} deal is complete. They were happy.`, 'office'); G.sponsor = null; } }
+    else { extra.push(`💼 ${sp.n} pulled out: the show rated under ${sp.T}`); news(`💼 ${sp.n} pulled their sponsorship after a ${rec.rating} show.`, 'office'); G.sponsor = null; }
+  }
+  const coUps = coLevelUps();
   const after = rankIx(c.xp), lv = lvlOf(c.xp);
   if (after === RANKS.length - 1) award('hof', trophies);
   if (after > before) news(`${RANKS[after][2]} You're now a ${RANKS[after][1]}!`, 'office');
   if (lv > lvBefore) news(`⭐ Booker level ${lv}!`, 'office');
   saveCareer();
-  return { showXp, goals: got, trophies, miles, rankUp: after > before ? after : null, lvUp: lv > lvBefore ? lv : null };
+  return { showXp, goals: got, trophies, miles, extra, coUps, rankUp: after > before ? after : null, lvUp: lv > lvBefore ? lv : null };
 }
 
 // ---- crowd reactions ----
@@ -2620,6 +2699,38 @@ const crowdSound = r => r.cue?.s || (/Crickets/.test(r.crowd) ? 'crickets' : /BO
 const lastName = w => w.name.split(' ').pop();
 const healthy = () => signed().filter(w => !w.injury);
 const EVENTS = {
+  // ---- company level unlocks ----
+  sponsor: {
+    when() {
+      if (!MON() || coLvl() < 3 || G.sponsor || G.week - (G.booker.lastSponsor || -99) < 6) return null;
+      const last = G.history.slice(-3).map(h => h.rating), T = clamp(Math.round((last.length ? avg(last) : 60) - 4), 50, 80);
+      return { n: pick(SPONSORS), pay: Math.round((G.tv * 0.12 + G.fans * 0.25) * (1 + coLvl() / 25) / 500) * 500, wks: pick([8, 10, 12]), T };
+    },
+    title: '💼 Sponsorship offer', text: d => `${d.n} wants their name on your show: ${money(d.pay)} a week for ${d.wks} weeks, as long as every show rates ${d.T} or better.`,
+    choices: d => [['Sign the deal', `+${money(d.pay)} a week. One show under ${d.T} and they walk.`], ['Turn it down', 'No pressure on the ratings']],
+    pick(i, d) { G.booker.lastSponsor = G.week; if (i) return `You passed on ${d.n}.`; G.sponsor = { n: d.n, pay: d.pay, T: d.T, left: d.wks, paidWk: 0 }; return `${d.n} is on board. Keep every show at ${d.T}+.`; }
+  },
+  special: {
+    when() { if (coLvl() < 8 || isBig(G.week) || G.special === G.week || G.week - (G.booker.lastSpecial || -99) < 8) return null; return { n: pick(['Prime Time Special', 'Holiday Spectacular', 'Saturday Night Special', 'Throwback Night', 'Championship Night']) }; },
+    title: '📺 TV special offer', text: d => `The network wants this week's show as a one-off "${d.n}".`,
+    choices: () => [['Make it a special', 'Bigger crowd, double TV money, more new fans, one extra segment'], ['Keep it a normal week', 'Nothing changes']],
+    pick(i, d) { G.booker.lastSpecial = G.week; if (i) return 'A regular week it is.'; G.special = G.week; G.todos.unshift({ t: `This week is the ${d.n}: book a big card`, done: false }); return `This week's show is the ${d.n}.`; }
+  },
+  viralSeg: {
+    when() {
+      if (coLvl() < 6) return null;
+      const r = G.history.filter(h => h.wk === G.week - 1).flatMap(h => h.results).filter(r => r.rating >= 78).sort((a, b) => b.rating - a.rating)[0];
+      if (!r) return null; const ids = segPeople(r.seg).filter(id => W(id)?.contract).slice(0, 4); return ids.length ? { ids, k: r.seg.kind } : null;
+    },
+    title: '📱 Your show went viral', text: d => `Last week's ${d.k === 'match' ? 'match' : 'segment'} with ${d.ids.map(nameOf).join(', ')} is all over social media.`,
+    choices: () => [[MON() ? 'Push it everywhere' : 'Push it everywhere', MON() ? `Spend ${money(Math.round(G.fans * 0.4 / 1000) * 1000)} on ads for a big fan boost` : 'Big fan boost, they get more popular'], ['Let it ride', 'A smaller boost for free']],
+    pick(i, d) {
+      const room = Math.max(0.15, 1 - G.fans / fanCap()), f = Math.round(G.fans * (i ? 0.008 : 0.025) * room);
+      if (!i && MON()) G.money -= Math.round(G.fans * 0.4 / 1000) * 1000;
+      G.fans += f; d.ids.forEach(id => { const w = W(id); if (w) { addPop(w, i ? 1 : 3); w.momentum = clamp(w.momentum + (i ? 3 : 8), -50, 50); } });
+      return `The clip did numbers: +${kfmt(f)} fans.`;
+    }
+  },
   brawl: {
     when() { const hs = shuffle(healthy()); for (const a of hs) for (const b of hs) if (a !== b && a.align !== b.align && !storiesOf(a.id).some(s => s.a.includes(b.id) || s.b.includes(b.id))) return { a: a.id, b: b.id }; return null; },
     title: '👊 Backstage brawl', text: d => `${nameOf(d.a)} and ${nameOf(d.b)} got into a real fight backstage.`,
@@ -2792,6 +2903,8 @@ Object.assign(EVENTS, {
 function rollEvent() {
   G.event = null;
   if (G.week < 2 || Math.random() > .55) return;
+  // business offers from company level unlocks come up more often than a random backstage moment
+  for (const k of shuffle(['sponsor', 'special', 'viralSeg'])) if (Math.random() < .3) { const d = EVENTS[k].when(); if (d) { G.event = { key: k, d, wk: G.week }; return; } }
   for (const k of shuffle(Object.keys(EVENTS))) { const d = EVENTS[k].when(); if (d) { G.event = { key: k, d, wk: G.week }; return; } }
 }
 function eventCard() {
@@ -2805,11 +2918,12 @@ function goalCard() {
   const g = G.booker.goals, c = CAR();
   const xp = c.xp, cur = RANKS[rankIx(xp)], L = lvlOf(xp), pct = L >= MAX_LVL ? 100 : (xp - xpAt(L)) / (xpAt(L + 1) - xpAt(L)) * 100;
   return `<div class="goals"><button class="g-rank" data-act="trophies" aria-label="Booker level ${L}, ${cur[1]}. Achievements and milestones"><span class="lvl">Lv ${L}</span><b>${cur[1]}</b><span class="bar"><i style="width:${pct}%"></i></span><span class="tiny muted">🏅 ${Object.keys(c.ach).length}/${ACH.length}</span></button>
+    ${perksDue() ? `<button class="btn sm block" style="margin-top:6px" data-act="coPerk">⭐ Company level ${coLvl()}: pick a promotion perk</button>` : ''}${G.special === G.week && !isBig(G.week) ? `<div class="goal"><span>📺</span><span class="sp">TV special this week: bigger crowd, double TV money</span></div>` : ''}${G.sponsor ? `<div class="goal"><span>💼</span><span class="sp">${esc(G.sponsor.n)}: rate ${G.sponsor.T}+ to get paid</span><b>${money(G.sponsor.pay)}</b></div>` : ''}
     ${g.length ? `<div class="goal-l">${g.map(x => `<div class="goal"><span>🎯</span><span class="sp">${esc(x.text)}</span><b>+${x.xp} XP</b></div>`).join('')}</div>` : ''}</div>`;
 }
 function modalTrophies() {
   const c = CAR(), t = UI.carTab || 'ach', got = Object.keys(c.ach).length;
-  const tabs = `<div class="seg-ctl" style="margin:12px 0"><button class="${t === 'ach' ? 'on' : ''}" data-act="carTab" data-id="ach">Achievements <span class="cnt">${got}/${ACH.length}</span></button><button class="${t === 'miles' ? 'on' : ''}" data-act="carTab" data-id="miles">Milestones</button><button class="${t === 'lvl' ? 'on' : ''}" data-act="carTab" data-id="lvl">Ranks</button></div>`;
+  const tabs = `<div class="seg-ctl" style="margin:12px 0"><button class="${t === 'ach' ? 'on' : ''}" data-act="carTab" data-id="ach">Achievements <span class="cnt">${got}/${ACH.length}</span></button><button class="${t === 'miles' ? 'on' : ''}" data-act="carTab" data-id="miles">Milestones</button><button class="${t === 'lvl' ? 'on' : ''}" data-act="carTab" data-id="lvl">Unlocks</button><button class="${t === 'co' ? 'on' : ''}" data-act="carTab" data-id="co">Company${G && perksDue() ? ' <span class="cnt">!</span>' : ''}</button></div>`;
   let body = '';
   if (t === 'ach') {
     const list = ACH.slice().sort((a, b) => !!c.ach[b[0]] - !!c.ach[a[0]]);
@@ -2819,9 +2933,22 @@ function modalTrophies() {
       return `<div class="mile"><span class="mile-i">${ic}</span><div class="sp"><div class="row"><b class="sp">${name}</b><span class="tiers">${TIER.map((T, k) => `<i class="t${k}${k < tr ? ' on' : ''}" title="${T}" aria-label="${T} ${k < tr ? 'reached' : 'not yet'}"></i>`).join('')}</span></div>
         <div class="bar"><i style="width:${pct}%"></i></div><div class="tiny muted">${v.toLocaleString()}${nx ? ` / ${nx.toLocaleString()} for ${TIER[tr]} · +${TIER_XP[tr]} XP` : ' · all three reached'}</div></div></div>`; }).join('')}</div>
       <div class="tiny muted" style="margin-top:8px">Lifetime totals from every company you run on this device.</div>`;
+  } else if (t === 'co') {
+    const L = coLvl(), xp = G.booker.cxp || 0, lo = coXpAt(L), hi = coXpAt(L + 1), pct = L >= CO_MAX ? 100 : (xp - lo) / (hi - lo) * 100, due = perksDue();
+    body = `<div class="rank"><span class="rank-ic">🏟️</span><div class="sp"><div class="rank-n"><span class="lvl">Lv ${L}</span> ${esc(G.promo.name)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="tiny muted">${L < CO_MAX ? `${Math.round(xp - lo).toLocaleString()} / ${(hi - lo).toLocaleString()} XP to company level ${L + 1}` : 'Top company level'}</div></div></div>
+      <div class="tiny muted" style="margin:6px 0 10px">Company level belongs to this promotion only. Every level pays ${MON() ? 'a cash bonus' : 'a fan boost'}, with a bigger one every 5 levels.</div>
+      ${due ? `<div class="sec">Pick a perk</div><div class="list">${Object.entries(PERKS).filter(([k]) => !perk(k)).map(([k, [ic, n, d]]) => `<button class="item" data-act="perkPick" data-id="${k}"><span class="mile-i">${ic}</span><div class="main"><div class="t">${n}</div><div class="d">${d}</div></div><span class="tag">Pick</span></button>`).join('')}</div>` : ''}
+      ${(G.booker.perks || []).length ? `<div class="sec">Your perks</div><div class="list">${G.booker.perks.map(k => `<div class="mile"><span class="mile-i">${PERKS[k][0]}</span><div class="sp"><b>${PERKS[k][1]}</b><div class="tiny muted">${PERKS[k][2]}</div></div></div>`).join('')}</div>` : ''}
+      ${G.sponsor ? `<div class="sec">Sponsor</div><div class="mile"><span class="mile-i">💼</span><div class="sp"><b>${esc(G.sponsor.n)}</b><div class="tiny muted">${money(G.sponsor.pay)} a week · ${G.sponsor.left} weeks left · every show ${G.sponsor.T}+</div></div></div>` : ''}
+      <div class="sec">Company unlocks</div><div class="list">${CO_UNLOCKS.map(([lv, ic, n, d]) => `<div class="mile ${L >= lv ? '' : 'dim'}"><span class="mile-i">${L >= lv ? ic : '🔒'}</span><div class="sp"><b>${n}</b><div class="tiny muted">Level ${lv} · ${d}</div></div>${L >= lv ? '<span class="tag">Unlocked</span>' : ''}</div>`).join('')}</div>`;
   } else {
     const L = lvlOf(c.xp);
-    body = `<div class="list">${RANKS.map(([x, n, ic], i) => { const lv = lvlOf(x); return `<div class="mile ${c.xp >= x ? '' : 'dim'}"><span class="mile-i">${c.xp >= x ? ic : '🔒'}</span><div class="sp"><b>${n}</b><div class="tiny muted">Level ${lv} · ${x.toLocaleString()} XP</div></div>${rankIx(c.xp) === i ? '<span class="tag">You</span>' : ''}</div>`; }).join('')}</div>
+    body = `<div class="sec" style="margin-top:0">Belt designs</div><div class="belt-pick">${BELTS.map(([id, n, lv]) => `<div class="bp ${L >= lv ? '' : 'lock'}">${beltSVG('belt-sm', 'CHAMPION', id)}<span>${L >= lv ? esc(n) : `🔒 Lv ${lv}`}</span></div>`).join('')}</div>
+      <div class="tiny muted" style="margin:4px 0 0">Pick a design for any title in Office → Titles.</div>
+      <div class="sec">Community flairs</div><div class="chips">${FLAIRS.map(([id, n, lv]) => `<span class="chip ${L >= lv ? '' : 'lock'}">${L >= lv ? '' : '🔒 '}${esc(n)} · Lv ${lv}</span>`).join('')}</div>
+      <div class="tiny muted" style="margin:4px 0 0">Set yours in Community → My profile.</div>
+      <div class="sec">Ranks</div>
+      <div class="list">${RANKS.map(([x, n, ic], i) => { const lv = lvlOf(x); return `<div class="mile ${c.xp >= x ? '' : 'dim'}"><span class="mile-i">${c.xp >= x ? ic : '🔒'}</span><div class="sp"><b>${n}</b><div class="tiny muted">Level ${lv} · ${x.toLocaleString()} XP</div></div>${rankIx(c.xp) === i ? '<span class="tag">You</span>' : ''}</div>`; }).join('')}</div>
       <div class="tiny muted" style="margin-top:8px">You're level ${L} of ${MAX_LVL}. Every show earns XP, and great shows, big events, weekly goals, achievements and milestones earn more.</div>`;
   }
   return modal('Your booker career', `${rankBar()}${tabs}${body}
@@ -2859,6 +2986,8 @@ function liveScreen(m) {
     <div class="small muted">${h.attendance.toLocaleString()} in attendance · ${h.fanDelta >= 0 ? '+' : ''}${kfmt(h.fanDelta)} fans${MON() ? ` · ${h.net >= 0 ? '+' : ''}${money(h.net)}` : ''}</div>
     <div class="lv-xp">+${p.showXp || 0} XP for the show</div>
     ${p.goals.length ? `<div class="lv-goals">${p.goals.map(g => `<div class="goal ${g.ok ? 'ok' : 'no'}"><span>${g.ok ? '✅' : '❌'}</span><span class="sp">${esc(g.text)}</span>${g.reward ? `<b>${esc(g.reward)}</b>` : ''}</div>`).join('')}</div>` : ''}
+    ${(p.extra || []).map(x => `<div class="small" style="margin-top:6px">${esc(x)}</div>`).join('')}
+    ${(p.coUps || []).map(u => `<div class="lv-co">🏟️ COMPANY LEVEL ${u.n}<span>${esc(u.r)}${u.un.length ? ' · Unlocked: ' + esc(u.un.join(', ')) : ''}</span></div>`).join('')}
     ${p.lvUp ? `<div class="lv-rank">⭐ LEVEL ${p.lvUp}!<span>${rk ? `Rank up: you're now a ${rk[1]}` : 'Your booker career moves up'}</span></div>` : rk ? `<div class="lv-rank">${rk[2]} RANK UP!<span>You're now a ${rk[1]}</span></div>` : ''}
     ${p.trophies.length || p.miles?.length ? `<div class="lv-tro">${p.trophies.map(x => `<div>${x[1]} <b>${esc(x[2])}</b> <span class="muted small">${esc(x[3])}${x[4] ? ` · +${x[4]} XP` : ''}</span></div>`).join('')}${(p.miles || []).map(m => `<div>${m.ic} <b>${m.tier}: ${esc(m.name)}</b> <span class="muted small">${m.n.toLocaleString()} · +${m.xp} XP</span></div>`).join('')}</div>` : ''}
     ${G.event && G.event.wk === G.week ? `<div class="lv-tease">📣 Something is happening backstage…</div>` : ''}
@@ -2923,7 +3052,7 @@ const CHALLENGES = [['easy', 'Relaxed', 'Fans come easier, injuries are rare and
 const DF = () => { const d = G?.settings?.difficulty; return typeof d === 'string' && Object.hasOwn(DIFF, d) ? DIFF[d] : DIFF.normal; };
 // how many fans a promotion of this standing can hold; growth slows as you near it
 const fanCap = () => Math.round((140000 + G.promo.prestige * 6000) * DF().cap);
-const askFor = (w, wk) => Math.max(500, Math.round(asking(w) * lenMult(wk) * (w.courted ? 1.15 : 1) * DF().ask / 100) * 100);
+const askFor = (w, wk) => Math.max(500, Math.round(asking(w) * lenMult(wk) * (w.courted ? 1.15 : 1) * DF().ask * (perk('deals') ? 0.9 : 1) / 100) * 100);
 function offerChance(w, salary, weeks) {
   const ask = askFor(w, weeks);
   let c = (salary / ask - 0.7) / 0.45;
@@ -2945,7 +3074,7 @@ function chanceLabel(c) { return c >= .85 ? ['Will accept', 'good'] : c >= .6 ? 
 // men's and women's divisions don't mix unless someone is in the Open division
 const sameDiv = (a, b) => !a || !b || !a.division || !b.division || a.division === 'Open' || b.division === 'Open' || a.division === b.division;
 // a show has room for 8 segments (10 at a big event)
-const maxSegs = wk => isBig(wk) ? 10 : 8;
+const maxSegs = wk => isBig(wk) ? 10 + bigBonus() : G && G.special === wk ? 9 : 8;
 const roomLeft = (wk, card) => Math.max(0, maxSegs(wk) - card.length);
 const fullMsg = wk => `The card is full (${maxSegs(wk)} segments). Remove one to add another.`;
 // story matches: settle feuds clean at big shows, keep them going with dirty finishes on weekly shows
@@ -3172,17 +3301,20 @@ function ringSVG(label) {
    <rect x="281" y="76" width="14" height="9" rx="3"/><rect x="281" y="94" width="14" height="9" rx="3"/><rect x="281" y="112" width="14" height="9" rx="3"/></g>
   </svg>`;
 }
-function beltSVG(cls, label) {
+function beltSVG(cls, label, design) {
+  const [id, , , L] = beltOf(design), g = 'bt' + id, gem = L.big ? 16 : 12;
   return `<svg class="${cls || 'belt-art'}" viewBox="0 0 240 100" role="img" aria-label="Championship belt">
-  <defs><linearGradient id="btGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c2"/><stop offset=".45" stop-color="#f2c443"/><stop offset="1" stop-color="#a8740a"/></linearGradient>
-  <radialGradient id="btGem" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#ffd0d0"/><stop offset=".55" stop-color="#d62839"/><stop offset="1" stop-color="#6d0a15"/></radialGradient></defs>
-  <rect x="0" y="32" width="240" height="36" rx="12" fill="#22180f"/><path d="M8 38H232M8 62H232" stroke="#6b4a2a" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <rect x="24" y="36" width="34" height="28" rx="6" fill="url(#btGold)" stroke="#7a5408"/><rect x="182" y="36" width="34" height="28" rx="6" fill="url(#btGold)" stroke="#7a5408"/>
-  <circle cx="41" cy="50" r="5" fill="url(#btGem)"/><circle cx="199" cy="50" r="5" fill="url(#btGem)"/>
-  <path d="M84 6H156L178 28V72L156 94H84L62 72V28Z" fill="url(#btGold)" stroke="#7a5408" stroke-width="2"/>
-  <path d="M90 14H150L168 32V68L150 86H90L72 68V32Z" fill="none" stroke="#fff6cf" stroke-opacity=".6" stroke-width="1.5"/>
-  <circle cx="120" cy="40" r="12" fill="url(#btGem)" stroke="#7a5408" stroke-width="2"/>
-  <text x="120" y="72" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="13" letter-spacing="1.5" fill="#5a3c00">${esc(label || 'CHAMPION')}</text>
+  <defs><linearGradient id="${g}P" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${L.p[0]}"/><stop offset=".45" stop-color="${L.p[1]}"/><stop offset="1" stop-color="${L.p[2]}"/></linearGradient>
+  <radialGradient id="${g}G" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="${L.gem[0]}"/><stop offset=".55" stop-color="${L.gem[1]}"/><stop offset="1" stop-color="${L.gem[2]}"/></radialGradient></defs>
+  <rect x="0" y="32" width="240" height="36" rx="12" fill="${L.strap}"/><path d="M8 38H232M8 62H232" stroke="${L.stitch}" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <rect x="24" y="36" width="34" height="28" rx="6" fill="url(#${g}P)" stroke="${L.edge}"/><rect x="182" y="36" width="34" height="28" rx="6" fill="url(#${g}P)" stroke="${L.edge}"/>
+  <circle cx="41" cy="50" r="5" fill="url(#${g}G)"/><circle cx="199" cy="50" r="5" fill="url(#${g}G)"/>
+  <path d="M84 6H156L178 28V72L156 94H84L62 72V28Z" fill="url(#${g}P)" stroke="${L.edge}" stroke-width="2"/>
+  <path d="M90 14H150L168 32V68L150 86H90L72 68V32Z" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="1.5"/>
+  ${L.spin ? `<g class="belt-spin" style="transform-origin:120px 40px"><circle cx="120" cy="40" r="${gem + 7}" fill="none" stroke="${L.edge}" stroke-width="2" stroke-dasharray="5 4"/></g>` : ''}
+  <circle cx="120" cy="40" r="${gem}" fill="url(#${g}G)" stroke="${L.edge}" stroke-width="2"/>
+  ${L.gems ? `<circle cx="84" cy="50" r="4" fill="url(#${g}G)"/><circle cx="156" cy="50" r="4" fill="url(#${g}G)"/><circle cx="100" cy="20" r="3" fill="url(#${g}G)"/><circle cx="140" cy="20" r="3" fill="url(#${g}G)"/>` : ''}
+  <text x="120" y="${L.big ? 76 : 72}" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="13" letter-spacing="1.5" fill="${L.ink}">${esc(label || 'CHAMPION')}</text>
   </svg>`;
 }
 function ding() {
@@ -3331,7 +3463,7 @@ function viewHome() {
   const last = G.history[G.history.length - 1];
   const nb = nextBig();
   const att = attention();
-  const champs = G.titles.map(t => `<div class="item" style="padding:8px 10px">${beltSVG('belt-sm', (t.short || '').toUpperCase())}<div class="main"><div class="t small">${esc(t.name)}</div><div class="d">${t.holder.length ? nmList(t.holder) + ` · since wk ${t.since} · ${t.defenses} defenses` : '<span class="muted">Vacant</span>'}</div></div><span class="tag gold">${Math.round(t.prestige)}</span></div>`).join('');
+  const champs = G.titles.map(t => `<div class="item" style="padding:8px 10px">${beltSVG('belt-sm', (t.short || '').toUpperCase(), t.design)}<div class="main"><div class="t small">${esc(t.name)}</div><div class="d">${t.holder.length ? nmList(t.holder) + ` · since wk ${t.since} · ${t.defenses} defenses` : '<span class="muted">Vacant</span>'}</div></div><span class="tag gold">${Math.round(t.prestige)}</span></div>`).join('');
   const hot = G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat).slice(0, 3);
   return `
   <div class="card ${isBig(G.week) ? 'big-ev' : ''}">
@@ -3611,7 +3743,7 @@ function viewOffice() {
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
   ${t === 'fa' ? `<div class="small muted" style="margin-bottom:8px">Unsigned talent. Rivals sign them over time.</div><div class="list">${fa.map(w => wItem(w, 'negotiate', CON() ? `asks <b>${money(asking(w))}</b>/wk` : 'tap to sign instantly')).join('') || '<div class="empty">No free agents right now.</div>'}</div><button class="btn block" style="margin-top:12px" data-act="createW">+ Create a wrestler</button>` : ''}
-  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${beltSVG('belt-sm', (ti.short || '').toUpperCase())}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
+  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${beltSVG('belt-sm', (ti.short || '').toUpperCase(), ti.design)}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
@@ -4169,7 +4301,7 @@ function modalRankings(m) {
 function modalRecords(m) {
   const tab = m.tab || 'titles', legends = G.wrestlers.filter(w => w.retired).sort((a, b) => b.retired - a.retired);
   let body = tabsOf([['titles', 'Title history'], ['awards', 'Awards'], ['legends', 'Legends']], tab, 'recTab');
-  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${beltSVG('belt-sm', (t.short || '').toUpperCase())}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
+  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${beltSVG('belt-sm', (t.short || '').toUpperCase(), t.design)}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
   if (tab === 'awards') body += (G.awards || []).slice().reverse().map(a => `<div class="card aw"><div class="review-h">Year ${a.yr} awards · week ${a.wk}</div>${a.list.map(x => `<div class="aw-r"><span class="tiny muted">${esc(x.lbl)}</span><b>${esc(x.nm)}</b><span class="tiny muted">${esc(x.det || '')}</span></div>`).join('') || '<div class="tiny muted">No shows that year.</div>'}</div>`).join('') || `<div class="empty">Awards are handed out at the end of every year (week 52). ${52 - (G.week - 1) % 52} weeks to go.</div>`;
   if (tab === 'legends') body += legends.length ? `<div class="list">${legends.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">Retired week ${w.retired} at ${w.age} · ${recStr(w)} · ${reignsOfW(w.id).length} title reigns</div></div></button>`).join('')}</div>` : '<div class="empty">No one has retired yet. Older wrestlers start to slow down after 34 and may retire from 38.</div>';
   return modal('History', body);
@@ -4225,6 +4357,7 @@ function modalTitle(m) {
     <label class="todo"><input type="checkbox" data-et="tag" ${d.tag ? 'checked' : ''}><span>Tag team title (2 holders)</span></label>
     <label class="f" style="margin-top:10px"><span>Prestige (1–100)</span><input type="number" min="1" max="100" data-et="prestige" value="${Math.round(d.prestige)}"></label>
     <label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${titleDiv(d) === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
+    <div class="f"><span>Belt design</span><div class="belt-pick">${BELTS.map(([id, n, lv]) => { const lock = bookerLvl() < lv, on = (d.design || 'classic') === id; return `<button class="bp ${on ? 'on' : ''} ${lock ? 'lock' : ''}" data-act="beltPick" data-id="${id}" aria-pressed="${on}" aria-label="${esc(n)}${lock ? `, unlocks at booker level ${lv}` : ''}">${beltSVG('belt-sm', (d.short || '').toUpperCase(), id)}<span>${lock ? `🔒 Lv ${lv}` : esc(n)}</span></button>`; }).join('')}</div><span class="tiny muted">New designs unlock as your booker level goes up.</span></div>
     <div class="side"><div class="lbl">Champion${d.tag ? 's' : ''}</div>${chipsFor(d.holder, 'holder', d.tag ? 2 : 1)}</div>
     <div class="side"><div class="lbl">Contenders you pick</div>${chipsFor(d.contenders || [], 'contenders', 3)}<div class="tiny muted" style="margin-top:4px">Your picks go first, in order. The rest rank by record.</div></div>
     ${(() => { const c = contenders(d, 5); return c.length ? `<div class="contend" style="margin-top:4px">${c.map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)}${(d.contenders || []).includes(w.id) ? ' <span class="tag">picked</span>' : ''}</span>`).join('')}</div>` : '<div class="tiny muted">No eligible contenders in this division.</div>'; })()}
@@ -4429,6 +4562,7 @@ const A = {
   liveRecap() { liveTimers.forEach(clearTimeout); openModal({ type: 'recap', wk: UI.modal.wk }); },
   trophies() { openModal({ type: 'trophies' }); },
   carTab(t) { UI.carTab = t; render(); },
+  coPerk() { UI.carTab = 'co'; openModal({ type: 'trophies' }); },
   evPick(i) {
     const e = G.event; if (!e) return; const E = EVENTS[e.key];
     let msg; try { msg = E.pick(+i, e.d); } catch (x) { msg = 'That moment passed.'; }
@@ -5316,7 +5450,7 @@ async function commInit() {
       if (d.id === COMM.me) { COMM.mine = Array.isArray(body.items) ? body.items : []; COMM.body = body; }
       // accounts: a profile, and the likes, plays and follows each player keeps in their own space
       const pr = body.profile && typeof body.profile === 'object' ? body.profile : null;
-      if (pr) COMM.profiles[d.id] = { name: RESERVED_NAME.test(cleanTxt(pr.name, 30)) || isRude(pr.name) ? '' : cleanTxt(pr.name, 30), bio: maskRude(cleanTxt(pr.bio, 160)), color: safeColor(pr.color) || '', since: +pr.since || 0 };
+      if (pr) COMM.profiles[d.id] = { name: RESERVED_NAME.test(cleanTxt(pr.name, 30)) || isRude(pr.name) ? '' : cleanTxt(pr.name, 30), bio: maskRude(cleanTxt(pr.bio, 160)), color: safeColor(pr.color) || '', since: +pr.since || 0, ...cleanFlair(pr) };
       else delete COMM.profiles[d.id];
       for (const [k, bag] of [['likes', likes], ['used', uses]]) for (const key of (Array.isArray(body[k]) ? body[k].slice(0, 300) : [])) if (ITEM_KEY.test(key)) (bag[key] ||= new Set()).add(d.id);
       for (const a of Array.isArray(body.follows) ? body.follows.slice(0, 100) : []) if (AUTHOR_ID.test(a) && a !== d.id) (followers[a] ||= new Set()).add(d.id);
@@ -5338,6 +5472,9 @@ function rerenderComm() {
   const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.closest('.modal')) { COMM.pending = true; return; }
   const sc = document.querySelector('.modal .mb')?.scrollTop; render(); const mb = document.querySelector('.modal .mb'); if (mb && sc) mb.scrollTop = sc;
 }
+// a Community flair: only known ids, and only one the booker level on the profile has reached
+function cleanFlair(pr) { const lvl = clamp(Math.floor(+pr.lvl) || 0, 0, MAX_LVL), f = FLAIRS.find(x => x[0] === pr.flair); return lvl ? { lvl, flair: f && f[2] <= lvl ? f[0] : '' } : {}; }
+function flairTag(id) { const p = COMM.profiles[id]; if (!p || !p.lvl) return ''; const f = FLAIRS.find(x => x[0] === p.flair); return `<span class="flair">Lv ${p.lvl}${f ? ' · ' + esc(f[1]) : ''}</span>`; }
 const authorName = id => id === COMM.me ? 'You' : id === 'featured' ? 'Featured pick' : (COMM.profiles[id]?.name || COMM.names[id] || 'A player');
 const cleanTxt = (v, n) => (typeof v === 'string' ? v : '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff<>`"]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
 // a small rude-word filter: blocks posting, and masks anything that slips through
@@ -5360,7 +5497,7 @@ function knownFields(b) {
   const strs = (a, n, re) => (Array.isArray(a) ? a : []).filter(x => re.test(x)).slice(0, n);
   const items = (Array.isArray(b.items) ? b.items : []).slice(0, 25).filter(it => it && typeof it === 'object' && JSON.stringify(it).length < 200000);
   const out = { items, likes: strs(b.likes, 300, ITEM_KEY), used: strs(b.used, 300, ITEM_KEY), follows: strs(b.follows, 100, AUTHOR_ID) };
-  const pr = b.profile; if (pr && typeof pr === 'object') out.profile = { name: cleanTxt(pr.name, 30), bio: cleanTxt(pr.bio, 160), color: safeColor(pr.color) || '', since: +pr.since || 0 };
+  const pr = b.profile; if (pr && typeof pr === 'object') out.profile = { name: cleanTxt(pr.name, 30), bio: cleanTxt(pr.bio, 160), color: safeColor(pr.color) || '', since: +pr.since || 0, ...cleanFlair(pr) };
   return out;
 }
 const myList = k => Array.isArray(COMM.body[k]) ? COMM.body[k].filter(x => typeof x === 'string') : [];
@@ -5606,7 +5743,7 @@ function modalCommunity(m) {
   } else {
     const mine = COMM.items.filter(i => i.author === COMM.me), pr = COMM.profiles[COMM.me], liked = COMM.items.filter(i => iLike(i.author + '|' + i.id));
     const fans = COMM.followers[COMM.me]?.size || 0, likesGot = sum(mine.map(i => i.nLikes || 0)), usesGot = sum(mine.map(i => i.nUses || 0));
-    body += !COMM.me ? (sbOn() ? '' : '<div class="empty">Open the online version while signed in to have a profile.</div>') : `<div class="card prof"><div class="row" style="gap:12px">${creatorAv(COMM.me, 56)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(pr?.name || COMM.names[COMM.me] || 'Your profile')}</div><div class="small muted">${pr?.bio ? esc(pr.bio) : 'Add a name and a short bio so players know who made your uploads.'}</div></div></div>
+    body += !COMM.me ? (sbOn() ? '' : '<div class="empty">Open the online version while signed in to have a profile.</div>') : `<div class="card prof"><div class="row" style="gap:12px">${creatorAv(COMM.me, 56)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(pr?.name || COMM.names[COMM.me] || 'Your profile')}</div>${flairTag(COMM.me)}<div class="small muted">${pr?.bio ? esc(pr.bio) : 'Add a name and a short bio so players know who made your uploads.'}</div></div></div>
       <div class="grid3 cstats" style="margin-top:10px"><div><b>${mine.length}</b><span>uploads</span></div><div><b>${likesGot}</b><span>likes</span></div><div><b>${fans}</b><span>followers</span></div></div>
       ${usesGot ? `<div class="tiny muted" style="margin-top:6px">Your uploads have been added or played ${usesGot} time${usesGot > 1 ? 's' : ''}.</div>` : ''}
       <button class="btn block" style="margin-top:10px" data-act="cEditProfile">✏️ ${pr ? 'Edit profile' : 'Set up your profile'}</button></div>
@@ -5664,7 +5801,7 @@ function modalInbox(m) {
 function modalCreator(m) {
   const id = m.id, pr = COMM.profiles[id], ups = COMM.items.filter(i => i.author === id).sort((a, b) => b.created - a.created);
   const fans = COMM.followers[id]?.size || 0, likes = sum(ups.map(i => i.nLikes || 0));
-  const body = `<div class="row" style="gap:12px;margin-bottom:10px">${creatorAv(id, 60)}<div class="sp"><div style="font-size:20px;font-weight:800">${esc(authorName(id))}</div>${pr?.bio ? `<div class="small muted">${esc(pr.bio)}</div>` : ''}</div></div>
+  const body = `<div class="row" style="gap:12px;margin-bottom:10px">${creatorAv(id, 60)}<div class="sp"><div style="font-size:20px;font-weight:800">${esc(authorName(id))}</div>${flairTag(id)}${pr?.bio ? `<div class="small muted">${esc(pr.bio)}</div>` : ''}</div></div>
     <div class="grid3 cstats"><div><b>${ups.length}</b><span>uploads</span></div><div><b>${likes}</b><span>likes</span></div><div><b>${fans}</b><span>followers</span></div></div>
     <div class="sec">Uploads</div><div class="list">${ups.map(i => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? 'Save' : kindLbl(i)}${i.nLikes ? ' · ❤️ ' + i.nLikes : ''} · ${new Date(i.created).toLocaleDateString()}</div></div></button>`).join('') || '<div class="empty">Nothing shared yet.</div>'}</div>`;
   const foot = `${COMM.owner && id !== COMM.me && id !== 'featured' ? (pr ? '<button class="btn bad" data-act="cClearProfile" data-id="' + esc(id) + '">Clear profile</button>' : '') + '<button class="btn bad" data-act="cWipe" data-id="' + esc(id) + '">Remove all</button>' : ''}${id !== COMM.me && id !== 'featured' && COMM.me && !COMM.owner ? `<button class="btn" data-act="cReport" data-id="p:${esc(id)}" aria-label="Report this creator">🚩</button>` : ''}${id !== COMM.me && id !== 'featured' && COMM.me ? `<button class="btn ${iFollow(id) ? '' : 'pri'}" data-act="cFollow" data-id="${esc(id)}">${iFollow(id) ? 'Following ✓' : '+ Follow'}</button>` : ''}`;
@@ -5674,13 +5811,14 @@ function modalEditProfile(m) {
   const d = m.draft;
   const body = `<label class="f"><span>Display name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="30" placeholder="e.g. The Booking Genius"></label>
     <label class="f"><span>Bio</span><textarea data-et="bio" maxlength="160" style="min-height:70px" placeholder="What do you like to make? Fantasy rosters, real promotions, dream matches...">${esc(d.bio)}</textarea></label>
+    <div class="f"><span>Flair <span class="muted">· booker level ${bookerLvl()}</span></span><div class="chips">${FLAIRS.map(([id, n, lv]) => { const lock = bookerLvl() < lv; return `<button class="chip ${d.flair === id ? 'on' : ''} ${lock ? 'lock' : ''}" data-act="flairPick" data-id="${id}" aria-pressed="${d.flair === id}">${lock ? `🔒 ${esc(n)} · Lv ${lv}` : esc(n)}</button>`; }).join('')}</div><span class="tiny muted">Shows next to your name with your booker level. More unlock as you level up.</span></div>
     <label class="f"><span>Color</span><div class="swatches">${RIV_COLORS.concat(['#ffb547', '#6b7280']).map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
     <div class="tiny muted">Everyone in Community sees your name, bio and color next to your uploads. Your account is your claude.ai sign-in, so there is no password to remember. Keep it friendly. <button class="link" data-act="privacy">Privacy</button></div>`;
   return modal(COMM.profiles[COMM.me] ? 'Edit profile' : 'Set up your profile', body, `<button class="btn" data-act="cTab" data-id="mine">Cancel</button><button class="btn pri" data-act="cSaveProfile">Save</button>`);
 }
 function cvHead(i, key, what) {
   const liked = iLike(key);
-  return `<div class="cv-head"><button class="cv-by" data-act="cCreator" data-id="${esc(i.author)}">${creatorAv(i.author, 34)}<span><b>${esc(authorName(i.author))}</b><span class="tiny muted">${esc(what)} · ${new Date(i.created).toLocaleDateString()}</span></span><span class="muted">›</span></button>
+  return `<div class="cv-head"><button class="cv-by" data-act="cCreator" data-id="${esc(i.author)}">${creatorAv(i.author, 34)}<span><b>${esc(authorName(i.author))}</b>${flairTag(i.author)}<span class="tiny muted">${esc(what)} · ${new Date(i.created).toLocaleDateString()}</span></span><span class="muted">›</span></button>
     <button class="btn sm cv-like ${liked ? 'on' : ''}" data-act="cLike" data-id="${esc(key)}" ${COMM.me ? '' : 'disabled'}>❤️ ${i.nLikes || 0}</button></div>${i.nUses ? `<div class="tiny muted" style="margin:-4px 0 6px">${i.nUses} player${i.nUses > 1 ? 's' : ''} ${i.kind === 'save' ? 'playing this' : 'added this'}</div>` : ''}`;
 }
 function modalCView(m) {
@@ -5787,6 +5925,9 @@ const CREATOR_ACTIONS = {
   bPx(v, el) { const f = el.dataset.f; PX[f] = (f === 'detail' || f === 'colors' || f === 'zoom') ? +v : v; applyPX(); render(); },
   bColor(c) { UI.modal.draft.color = c; if (PX?.bg === 'color') applyPX(); render(); },
   bSet(v, el) { UI.modal.draft[el.dataset.f] = v; render(); },
+  beltPick(id) { const b = BELTS.find(x => x[0] === id); if (!b) return; if (bookerLvl() < b[2]) return toast(`${b[1]} unlocks at booker level ${b[2]}.`); UI.modal.draft.design = id; render(); },
+  flairPick(id) { const f = FLAIRS.find(x => x[0] === id); if (!f) return; if (bookerLvl() < f[2]) return toast(`${f[1]} unlocks at booker level ${f[2]}.`); UI.modal.draft.flair = id; render(); },
+  perkPick(k) { if (!Object.hasOwn(PERKS, k) || perksDue() <= 0 || perk(k)) return; (G.booker.perks ||= []).push(k); news(`⭐ New promotion perk: ${PERKS[k][1]} (${PERKS[k][2]})`, 'office'); commit(`${PERKS[k][1]} is active.`); },
   bArch(k) {
     const d = UI.modal.draft;
     if (k === 'random') { for (const s of ['pop', 'ring', 'mic', 'cha', 'stam']) d[s] = rint(20, 95); }
@@ -5817,13 +5958,15 @@ const CREATOR_ACTIONS = {
   cCreator(id) { UI.modal = { type: 'creator', id, back: UI.modal }; render(); },
   cLike(key) { if (!COMM.me || !ITEM_KEY.test(key)) return; const l = myList('likes'); commMe({ likes: l.includes(key) ? l.filter(x => x !== key) : [key, ...l].slice(0, 300) }); },
   cFollow(id) { if (!AUTHOR_ID.test(id) || id === COMM.me) return; const f = myList('follows'); commMe({ follows: f.includes(id) ? f.filter(x => x !== id) : [id, ...f].slice(0, 100) }); },
-  cEditProfile() { const p = COMM.profiles[COMM.me] || {}; UI.modal = { type: 'editProfile', draft: { name: p.name || COMM.names[COMM.me] || '', bio: p.bio || '', color: p.color || '' } }; render(); },
+  cEditProfile() { const p = COMM.profiles[COMM.me] || {}; UI.modal = { type: 'editProfile', draft: { name: p.name || COMM.names[COMM.me] || '', bio: p.bio || '', color: p.color || '', flair: p.flair || '' } }; render(); },
   async cSaveProfile() {
     const d = UI.modal.draft, name = cleanTxt(d.name, 30);
     if (!name) return toast('Pick a display name.');
     if (RESERVED_NAME.test(name)) return toast('That name is taken. Pick another.');
     if (isRude(name) || isRude(d.bio)) return toast('Please keep your name and bio friendly.');
-    await commMe({ profile: { name, bio: cleanTxt(d.bio, 160), color: safeColor(d.color) || '', since: COMM.profiles[COMM.me]?.since || Date.now() } });
+    const lvl = bookerLvl(), fl = FLAIRS.find(x => x[0] === d.flair && x[2] <= lvl);
+    await commMe({ profile: { name, bio: cleanTxt(d.bio, 160), color: safeColor(d.color) || '', since: COMM.profiles[COMM.me]?.since || Date.now(), lvl, flair: fl ? fl[0] : '' } });
+    COMM.profiles[COMM.me] = { ...(COMM.profiles[COMM.me] || {}), name, bio: cleanTxt(d.bio, 160), color: safeColor(d.color) || '', lvl, flair: fl ? fl[0] : '' };
     UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Profile saved.');
   },
   cClearProfile(id) { confirmBox('Clear this profile?', 'Their name and bio go back to the default. Their uploads stay.', 'Clear', async () => { try { const cur = knownFields((await cdb.doc('creations/' + id).get()).data()); delete cur.profile; await cdb.doc('creations/' + id).set({ ...cur, updated: Date.now() }); toast('Cleared.'); } catch (e) { toast('Could not clear it.'); } }, true); },
