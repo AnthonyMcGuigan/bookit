@@ -1062,6 +1062,7 @@ function migrate(g) {
   if (!g.rankPrev || typeof g.rankPrev !== 'object' || Array.isArray(g.rankPrev)) g.rankPrev = {};
   for (const t of g.titles || []) if (t.reigns && !(Array.isArray(t.reigns) && t.reigns.every(r => r && Array.isArray(r.rh)))) delete t.reigns;
   if (g.promo) migrateShows(g);
+  cleanTraining(g, false);
   return g;
 }
 
@@ -1084,7 +1085,7 @@ function makeWrestler(name, nick, align, style, tier) {
   if (w.style === 'Technician') w.ring = clamp(w.ring + 6, 0, 99);
   if (w.style === 'Powerhouse') w.stam = clamp(w.stam - 5, 0, 99);
   if (w.style === 'High Flyer') w.stam = clamp(w.stam + 5, 0, 99);
-  return w;
+  return ensureSkills(w);
 }
 // popularity is harder to gain the higher it already is
 function addPop(w, d) { if (d > 0) d *= Math.max(0.08, 1 - w.pop / 105); w.pop = clamp(w.pop + d, 1, 100); }
@@ -1111,7 +1112,7 @@ function newGame(opts) {
     money: { easy: 1500000, normal: 400000, hard: 120000 }[diff], difficulty: diff,
     fans: 22000, tv: 46000, tvWeeks: 26,
     wrestlers: [], titles: [], stories: [], card: [], future: {}, news: [], history: [], todos: [], notebook: '',
-    settings: { injuries: true, finances: opts.finances !== false, contracts: opts.contracts !== false, persona: opts.persona !== false, bigEvery: 4, difficulty: Object.hasOwn(DIFF, String(opts.challenge)) ? opts.challenge : 'normal' }, bigEvents: BIG_EVENTS.slice(),
+    settings: { injuries: true, finances: opts.finances !== false, contracts: opts.contracts !== false, persona: opts.persona !== false, deep: !!opts.deep, bigEvery: 4, difficulty: Object.hasOwn(DIFF, String(opts.challenge)) ? opts.challenge : 'normal' }, bigEvents: BIG_EVENTS.slice(),
     booker: { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0, cxp: 0, coPaid: 1, perks: [] }, event: null,
     teams: [], factions: [], tourneys: [], awards: [], popAt: {}, rankPrev: {}
   };
@@ -1312,7 +1313,7 @@ function buildHype(results, wk) {
     for (const r of results) { const b = buildsFor(r.seg, m); if (b === 2) gain += 6 + r.rating / 9; else if (b === 1) gain += 1.5 + r.rating / 40; }
     if (!gain) { m.hype = Math.max(0, (m.hype || 0) - 4); continue; }
     m.hype = clamp((m.hype || 0) + gain, 0, 100);
-    const label = vsLine(m, sd => sd.map(id => nameOf(id).split(' ').pop()).join(' & '));
+    const label = vsLine(m, sd => sd.map(id => shortOf(id)).join(' & '));
     for (const r of results) if (buildsFor(r.seg, m)) { (r.notes ||= []).push(`📈 ${bigName(big)}: ${label} hype +${Math.round(gain)}`); break; }
   }
 }
@@ -1741,9 +1742,11 @@ function yearEnd(world = true) {
     const all = [...G.wrestlers.filter(w => !w.retired && (world || w.contract)), ...(world ? G.rivalPromos.flatMap(r => r.roster) : [])];
     for (const w of all) {
       w.age = (+w.age || 25) + 1;
-      if (w.age >= 34) { const d = (w.age - 33) * 0.7; w.ring = clamp(Math.round(w.ring - rnd(0, d)), 1, 99); w.stam = clamp(Math.round(w.stam - rnd(0, d * 1.4)), 1, 99); }
-      else if (w.age <= 26) { w.ring = clamp(w.ring + rint(0, 3), 1, 99); w.mic = clamp(w.mic + rint(0, 2), 1, 99); w.cha = clamp(w.cha + rint(0, 2), 1, 99); }
+      if (w.age >= 34) { const d = (w.age - 33) * 0.7; w.ring = clamp(Math.round(w.ring - rnd(0, d)), 1, 99); w.stam = clamp(Math.round(w.stam - rnd(0, d * 1.4)), 1, 99); if (typeof w.air === 'number') w.air = clamp(w.air - rnd(0, d * 1.2), 1, 99); }
+      // your own roster grows through training (trainWeek); everyone else still grows a little by age
+      else if (w.age <= 26 && !w.contract) { w.ring = clamp(w.ring + rint(0, 3), 1, 99); w.mic = clamp(w.mic + rint(0, 2), 1, 99); w.cha = clamp(w.cha + rint(0, 2), 1, 99); }
     }
+    for (const w of trainees()) w.age = (+w.age || 20) + 1;
     for (const w of G.wrestlers.filter(w => !w.retired && w.age >= 38 && (world || w.contract))) if (Math.random() < (w.age - 37) * 0.1 + (w.injury > 4 ? 0.1 : 0)) retire(w);
     for (const r of world ? G.rivalPromos : []) r.roster = r.roster.filter(w => { const go = w.age >= 39 && Math.random() < (w.age - 38) * 0.12; if (go) news(`🎤 ${w.name} retired from ${r.name}.`, 'contract'); return !go; });
     for (const r of G.rivalPromos) setRivalChamp(r);
@@ -1981,6 +1984,7 @@ function simSegment(seg, ctx) {
   if (ctx.main) r += seg.kind === 'match' ? add(3, 'Main event spot') : add(-5, 'Fans wanted a main event match');
   r += BR.placement(seg, people, ctx, add);
   r += BR.soften(why, add, seg, r);
+  if (staffQ('agent')) r += add(agentBonus(seg, ctx), 'Road agent: ' + staffOf('agent').n);
   if (!ctx.proj) { const luck = BR.luck(people); r += add(luck, luck > 0 ? 'Crowd was hot' : 'Crowd was flat'); }
   out.rating = clamp(Math.round(r), 5, 100);
   return out;
@@ -2000,7 +2004,7 @@ function applySegment(seg, res, ctx) {
     const stip = res.stip || {};
     for (const w of ws) {
       w.fatigue = clamp(w.fatigue + (16 + (stip.fat || 0)) * (1.4 - w.stam / 100) * (res.ffa ? 0.5 : 1), 0, 100);
-      if (G.settings.injuries && Math.random() < (0.012 + w.fatigue / 900 + (stip.inj || 0) + (w.injury > 0 ? 0.15 : 0)) * DF().inj) {
+      if (G.settings.injuries && Math.random() < (0.012 + w.fatigue / 900 + (stip.inj || 0) + (w.injury > 0 ? 0.15 : 0)) * DF().inj * injMult(w, ws)) {
         const weeks = rint(1, w.injury > 0 ? 8 : 6); w.injury = Math.max(w.injury, weeks);
         notes.push(`🩹 ${w.name} was injured (${weeks} wk).`); news(`🩹 ${w.name} got hurt and will be out about ${weeks} week${weeks > 1 ? 's' : ''}.`, 'injury');
       }
@@ -2012,6 +2016,7 @@ function applySegment(seg, res, ctx) {
       if (!res.ffa) for (const id of res.losers) { const w = W(id); w.record.l++; w.momentum = clamp(w.momentum + lm, -50, 50); addPop(w, lp); w.morale = clamp(w.morale - (w.momentum < -20 ? 3 : 1), 0, 100); }
     } else if (!res.ffa) ws.forEach(w => w.record.d++);
     notes.push(...bookRecord(seg, res, res.rating));
+    learnFromMatch(ws);
     for (const sd of seg.sides || []) { const ids = sd.filter(id => W(id)), fc = factionOf(ids); if (!fc) continue; if (!res.winners.length) fc.d = (fc.d || 0) + 1; else if (ids.some(id => res.winners.includes(id))) fc.w = (fc.w || 0) + 1; else fc.l = (fc.l || 0) + 1; }
     for (const sd of seg.sides || []) { const ids = sd.filter(id => W(id)), tm = teamOf(ids); if (!tm) continue; if (!res.winners.length) tm.d = (tm.d || 0) + 1; else if (ids.some(id => res.winners.includes(id))) tm.w = (tm.w || 0) + 1; else tm.l = (tm.l || 0) + 1; }
     // titles
@@ -2080,7 +2085,7 @@ function applySegment(seg, res, ctx) {
   if (st) {
     let gain = (seg.kind === 'match' ? 6 : seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
-    gain = Math.round(gain * (perk('heat') ? 1.15 : 1));
+    gain = Math.round(gain * (perk('heat') ? 1.15 : 1) * (1 + staffQ('writer') * 0.04));
     st.heat = clamp(st.heat + gain, 0, 100); st._touched = G.week;
     st.log.unshift({ wk: G.week, text: `${res.text} (${starStr(res.rating)}, heat +${gain})` });
     notes.push(`🔥 ${st.title} heat +${gain}`);
@@ -2354,7 +2359,8 @@ function runShow(opts = {}) {
   const fin = {
     gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
     merch: Math.round(sum(crew.map(w => w.pop * w.pop)) / 9 * share * (perk('merch') ? 1.15 : 1)),
-    payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary)) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15))
+    payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary)) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15)),
+    staff: MON() ? -Math.round(staffCost() / nS) : 0
   };
   for (const k of ['gate', 'tv', 'ppv', 'merch']) fin[k] = Math.round(fin[k] * DF().income);
   const net = sum(Object.values(fin));
@@ -2445,6 +2451,7 @@ function endOfWeek(card, world = true) {
   }
   // contracts (frozen when contracts are off: nobody's deal runs down and nobody walks out)
   endLoans(); mediaWeek();
+  trainWeek();
   for (const w of CON() ? signed().filter(w => !w.loan) : []) {
     w.contract.weeks--;
     const wl = w.contract.weeks;
@@ -2626,7 +2633,7 @@ const GOALS = {
   cold: { mk() { const w = signed().filter(w => !w.injury && (w.momentum < -3 || w.morale < 45)).sort((a, b) => a.momentum - b.momentum)[0]; return w && { id: w.id, text: `Give ${w.name} a win` }; }, ok: (g, rec) => rec.results.some(r => r.seg.kind === 'match' && (r.winners || []).includes(g.id)) },
   story: { mk() { const st = G.stories.filter(s => s.status === 'active' && s.heat < 85).sort((a, b) => b.heat - a.heat)[0]; if (!st) return null; const T = Math.min(100, Math.round(st.heat + 12)); return { id: st.id, T, text: `Heat up "${st.title}" to ${T}` }; }, ok: g => (G.stories.find(s => s.id === g.id)?.heat || 0) >= g.T },
   crowd: { mk() { const last = G.history.at(-1); if (!last) return null; const n = Math.round(last.attendance * (isBig(G.week) && !last.big ? 1.5 : 1.06) / 100) * 100; return { n, text: `Draw ${n.toLocaleString()} fans` }; }, ok: (g, rec) => rec.attendance >= g.n },
-  hype: { mk() { const nb = nextBig(); if (!nb || nb === G.week) return null; const m = ppvMatches(nb).sort((a, b) => (a.hype || 0) - (b.hype || 0))[0]; if (!m) return null; const T = Math.min(100, hypeOf(m) + 12); return { id: m.id, wk: nb, T, text: `Build ${m.sides.map(sd => sd.map(id => nameOf(id).split(' ').pop()).join(' & ')).join(' vs ')} hype to ${T}` }; }, ok: g => (ppvMatches(g.wk).find(x => x.id === g.id)?.hype || 0) >= g.T },
+  hype: { mk() { const nb = nextBig(); if (!nb || nb === G.week) return null; const m = ppvMatches(nb).sort((a, b) => (a.hype || 0) - (b.hype || 0))[0]; if (!m) return null; const T = Math.min(100, hypeOf(m) + 12); return { id: m.id, wk: nb, T, text: `Build ${m.sides.map(sd => sd.map(id => shortOf(id)).join(' & ')).join(' vs ')} hype to ${T}` }; }, ok: g => (ppvMatches(g.wk).find(x => x.id === g.id)?.hype || 0) >= g.T },
   streak: { mk() { const w = signed().filter(w => !w.injury && (w.streak || 0) >= 2).sort((a, b) => b.streak - a.streak)[0]; return w && { id: w.id, n: w.streak + 1, text: `Extend ${w.name}'s win streak to ${w.streak + 1}` }; }, ok: g => (W(g.id)?.streak || 0) >= g.n },
   debut: { mk() { const w = signed().filter(w => w.joined >= G.week - 4 && w.joined > 1 && !G.history.some(h => h.wk >= w.joined && h.results.some(r => segPeople(r.seg).includes(w.id))))[0]; return w && { id: w.id, text: `Debut ${w.name} on the show` }; }, ok: (g, rec) => rec.results.some(r => segPeople(r.seg).includes(g.id)) }
 };
@@ -2773,7 +2780,7 @@ const bookerLvl = () => lvlOf(CAR().xp);
 const CO_MAX = 25, coXpAt = L => L <= 1 ? 0 : Math.round(14 * (L - 1) ** 1.8);
 const coLvlOf = xp => { let L = 1; while (L < CO_MAX && xp >= coXpAt(L + 1)) L++; return L; };
 const coLvl = () => G && G.booker ? coLvlOf(G.booker.cxp || 0) : 1;
-const CO_UNLOCKS = [[3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'Bonus TV specials', 'The network offers one-off specials.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
+const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [3, '💼', 'More staff', 'Hire a PR Agent, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'Bonus TV specials', 'The network offers one-off specials.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
 const PERKS = {
   deals: ['💼', 'Contract discount', 'Wrestlers ask 10% less.'],
   heat: ['🔥', 'Hot storylines', 'Stories gain heat 15% faster.'],
@@ -2905,7 +2912,7 @@ function cueOf(seg, res, ctx = {}) {
 // the crowd line under each result, and the sound that goes with it ({t: text, s: sound})
 function crowdLine(r) {
   const who = (r.winners?.[0] && W(r.winners[0])) || W(segPeople(r.seg)[0]);
-  const last = who ? who.name.split(' ').pop().toUpperCase() : '', nm = who ? who.name.split(' ').pop() : 'them';
+  const last = who ? lastName(who).toUpperCase() : '', nm = who ? lastName(who) : 'them';
   const x = r.rating, c = r.cue || { m: x < 40 ? 'dead' : 'cheer' }, match = r.seg.kind === 'match';
   const L = {
     dead: [['😴 Crowd is checking their phones', 'murmur'], ['🦗 Crickets', 'crickets'], ['🥱 "BORING!" chants', 'boring']],
@@ -2932,7 +2939,9 @@ function crowdLine(r) {
 }
 
 // ---- backstage moments: a surprise between shows, you pick what happens ----
-const lastName = w => w.name.split(' ').pop();
+// the one name a tight spot shows: the wrestler's own short name if set (Moxley), else their last word
+const lastName = w => !w ? '' : (typeof w.short === 'string' && w.short.trim()) || String(w.name || '').split(' ').pop();
+const shortOf = id => W(id) ? lastName(W(id)) : String(nameOf(id) || '').split(' ').pop();
 const healthy = () => signed().filter(w => !w.injury && !w.away);
 const EVENTS = {
   // ---- company level unlocks ----
@@ -3892,7 +3901,7 @@ function matchRow(s, i, n, o) {
     if (!o.past && finOf(s) !== 'Clean') chips.push(esc(finOf(s)));
     if (!o.past && s.turn && W(s.turn)) chips.push('🔄 turn');
     const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat()); if (st) chips.push(`🔥 ${esc(st.title)}`);
-    if (!o.past) chips.push(s.winner >= 0 && s.sides[s.winner]?.length ? `👑 ${esc(s.sides[s.winner].map(id => (W(id)?.name || '').split(' ')[0]).join(' & '))}` : s.winner === -2 ? '🤝 draw' : '🎲 sim decides');
+    if (!o.past) chips.push(s.winner >= 0 && s.sides[s.winner]?.length ? `👑 ${esc(s.sides[s.winner].map(shortOf).join(' & '))}` : s.winner === -2 ? '🤝 draw' : '🎲 sim decides');
   } else {
     chips.push(s.kind === 'promo' ? '🎤 ' + esc(s.ptype) + (PROMO_TONES[s.tone] && s.tone ? ' · ' + esc(PROMO_TONES[s.tone].n) : '') : '🎬 ' + esc(s.atype));
     const st = s.target?.length ? storyBetween(s.who || [], s.target) : storiesTouching(s.who || [])[0]; if (st) chips.push(`🔥 ${esc(st.title)}`);
@@ -4015,10 +4024,11 @@ function viewOffice() {
     <div class="stat"><div class="k">Roster</div><div class="v">${signed().length}</div><div class="s">wrestlers signed</div></div>
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn it on in Menu → Settings.</div>`}
-  ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
-  <div class="seg-ctl tri" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
+  <div class="seg-ctl tri" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
   ${t === 'setup' ? setupView() : ''}
   ${t === 'media' ? mediaView() : ''}
+  ${t === 'staff' ? staffView() : ''}
   ${t === 'rivals' ? rivalsView() : ''}
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
@@ -4088,6 +4098,9 @@ function renderModal() {
     case 'trophies': return modalTrophies();
     case 'phone': return modalPhone();
     case 'media': return modalMedia(m);
+    case 'staff': return modalStaff(m);
+    case 'trainee': return modalTrainee(m);
+    case 'mentor': return modalMentor(m);
     case 'about': return modal('About', `<div class="help" style="text-align:center">${beltSVG('belt-art', verLabel())}
       <p><b>BookIt: Wrestling Booking Sim</b> · version ${VERSION}${BETA ? ' <span class="tag gold">Beta</span>' : ''}</p>
       <p class="small muted">A free, fan-made wrestling booking game. Everything built in is fictional.</p>
@@ -4193,6 +4206,7 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''}><span>Contracts</span></label>
     <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
+    <label class="todo"><input type="checkbox" data-in="deep" ${G.settings.deep ? 'checked' : ''}><span>Deep sim: show every skill (psychology, selling, consistency and more) and potential</span></label>
     <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>Wrestler personalities (texts, demands, memory)</span></label>
     <label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>
 ${displaySettings()}
@@ -4322,6 +4336,8 @@ function helpHTML() {
   <p><b>You're the booker.</b> Book a show each week, run it, and grow your fans. Gold weeks are big events.</p>
   <h3>Each week</h3>
   <p>1. Tap a week on the calendar.<br>2. Add matches, promos and angles, or tap Auto-fill.<br>3. Tap <b>Run</b> and watch the results.<br>4. Check the <b>Briefing</b> and the <b>Office</b>.</p>
+  <h3>Training and staff</h3>
+  <p>Everyone trains every week. Young wrestlers grow fastest, up to their potential, and they learn from better workers they wrestle. Pick a training focus or a veteran mentor on a wrestler's profile. In <b>Office → Staff</b>, hire staff and, from company level 2, open a training school for your own rookies. Turn on <b>Deep sim</b> in Settings to see every skill.</p>
   <h3>Big events</h3>
   <p><b>Plan the big event first.</b> Tap its week on the calendar and book its main matches before the weekly shows. Those matches are announced, and every weekly show that puts both sides together builds hype. More hype means better ratings and more buys.</p>
   <p>Plans can change. If a story gets hotter than expected, the Road to card offers to add it, or you can edit the big event's card any time before the show.</p>
@@ -4441,7 +4457,7 @@ function modalSeg(m) {
     }
     const st = mt.ffa ? storyAmong(entrants(s)) : storyBetween(s.sides[0] || [], s.sides.slice(1).flat());
     if (st) body += `<div class="alert good" style="margin-bottom:12px"><span class="ic">🔥</span><div class="small">${mt.ffa ? 'Rivals inside' : 'Part of'} <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}). ${isBig(G.week) && !mt.ffa ? 'This match will pay off the storyline tonight.' : 'This will build heat.'}</div></div>`;
-    if (!mt.ffa) body += `<label class="f"><span>Winner</span><div class="seg-ctl"><button class="${s.winner === -1 || s.winner == null ? 'on' : ''}" data-act="segWin" data-id="-1">🎲 Sim</button>${s.sides.map((side, i) => `<button class="${s.winner === i ? 'on' : ''}" data-act="segWin" data-id="${i}">${side.length ? esc(side.map(id => W(id)?.name.split(' ')[0]).join(' & ')) : 'Side ' + (i + 1)}</button>`).join('')}<button class="${s.winner === -2 ? 'on' : ''}" data-act="segWin" data-id="-2">🤝 Draw</button></div>${s.sides.flat().length ? `<div class="tiny muted" style="margin-top:4px">${s.sides.map(side => side.map(W).filter(Boolean).map(w => `${esc(w.name.split(' ')[0])} ${recStr(w)}${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''}`).join(' & ')).filter(Boolean).join(' · ')}</div>` : ''}</label>`;
+    if (!mt.ffa) body += `<label class="f"><span>Winner</span><div class="seg-ctl"><button class="${s.winner === -1 || s.winner == null ? 'on' : ''}" data-act="segWin" data-id="-1">🎲 Sim</button>${s.sides.map((side, i) => `<button class="${s.winner === i ? 'on' : ''}" data-act="segWin" data-id="${i}">${side.length ? esc(side.map(shortOf).join(' & ')) : 'Side ' + (i + 1)}</button>`).join('')}<button class="${s.winner === -2 ? 'on' : ''}" data-act="segWin" data-id="-2">🤝 Draw</button></div>${s.sides.flat().length ? `<div class="tiny muted" style="margin-top:4px">${s.sides.map(side => side.map(W).filter(Boolean).map(w => `${esc(lastName(w))} ${recStr(w)}${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''}`).join(' & ')).filter(Boolean).join(' · ')}</div>` : ''}</label>`;
     body += `<label class="f"><span>Gimmick</span><select data-seg="stip">${grp('Gimmicks', Object.keys(STIPS), s.stip)}${grp('Your gimmicks', gmine, s.stip)}</select><div class="tiny muted" style="margin-top:4px">${esc(gm.desc || '')}</div></label>`;
     body += `<button class="link" data-act="matchTypes" style="margin:-4px 0 12px">＋ Make your own match type or gimmick</button>`;
     const fcur = finOf(s), F = FINISHES[fcur];
@@ -4462,7 +4478,7 @@ function modalSeg(m) {
     body += `<div class="side"><div class="lbl">${s.kind === 'promo' ? 'Speaking' : 'Who'}</div>${chipsFor(s.who, 'who', 3)}</div>`;
     if (def.needT || (s.target || []).length) body += `<div class="side"><div class="lbl">Target${def.needT ? '' : ' (optional)'}</div>${chipsFor(s.target, 'target', 3)}</div>`;
     else body += `<button class="btn sm" data-act="pickFor" data-f="target" style="margin-bottom:10px">+ Add a target (optional)</button>`;
-    if ((s.who || []).length && (s.target || []).length) { const e = s.edge ?? -1, nm1 = ids => esc(ids.map(id => W(id)?.name.split(' ')[0]).join(' & '));
+    if ((s.who || []).length && (s.target || []).length) { const e = s.edge ?? -1, nm1 = ids => esc(ids.map(shortOf).join(' & '));
       body += `<label class="f"><span>Who comes out on top?</span><div class="seg-ctl"><button class="${e < 0 ? 'on' : ''}" data-act="segEdge" data-id="-1">🎲 Sim</button><button class="${e === 0 ? 'on' : ''}" data-act="segEdge" data-id="0">${nm1(s.who)}</button><button class="${e === 1 ? 'on' : ''}" data-act="segEdge" data-id="1">${nm1(s.target)}</button><button class="${e === 2 ? 'on' : ''}" data-act="segEdge" data-id="2">🤝 Even</button></div><div class="tiny muted" style="margin-top:4px">Standing tall gives momentum. A heel on top builds heat.</div></label>`; }
     const st = s.target?.length ? storyBetween(s.who, s.target) : storiesTouching(s.who)[0];
     if (st) body += `<div class="alert good"><span class="ic">🔥</span><div class="small">Builds <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}).</div></div>`;
@@ -4518,6 +4534,7 @@ function modalWrestler(m) {
      ${CON() ? `<div class="row small"><span class="muted sp">Contract</span><b>${w.contract ? `${money(w.contract.salary)}/wk · ${lenLabel(w.contract.weeks)} left` : 'Free agent'}</b></div>
      <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Free agent'}</b></div>`}
    </div>
+   ${w.retired ? '' : skillsBlock(w)}
    ${w.contract ? personaBlock(w) : ''}
    ${(() => { const st = STATS(w), ranks = G.titles.filter(t => !t.tag).map(t => [t, contenders(t, 10).findIndex(x => x.id === w.id)]).filter(x => x[1] >= 0);
      return `<div class="sec">Career stats</div><div class="grid3 cstats"><div><b>${st.m}</b><span>matches</span></div><div><b>${st.m ? Math.round(st.sum / st.m) : '–'}</b><span>avg rating</span></div><div><b>${st.best || '–'}</b><span>best match</span></div><div><b>${st.tw}</b><span>title wins</span></div><div><b>${st.def}</b><span>defenses</span></div><div><b>${st.motn}</b><span>match of the night</span></div></div>
@@ -4528,7 +4545,7 @@ function modalWrestler(m) {
        + (tms.length ? `<div class="sec">Teams</div><div class="list">${tms.map(t => `<button class="item" data-act="editTeam" data-id="${t.id}"><div class="main"><div class="t">👥 ${esc(t.name)}</div><div class="d">${t.members.filter(x => x !== w.id).map(x => esc(nameOf(x))).join(' & ')} · ${teamRec(t)}</div></div></button>`).join('')}</div>` : ''); })()}
    ${sts.length ? `<div class="sec">Storylines</div><div class="list">${sts.map(s => `<button class="item" data-act="openStory" data-id="${s.id}"><div class="main"><div class="t">${esc(s.title)}</div>${heatBar(s.heat)}</div></button>`).join('')}</div>` : ''}
    ${recent.length ? `<div class="sec">Recent appearances</div><div class="card" style="padding:4px 14px">${recent.map(x => `<div class="news"><span class="wk">WK ${x.wk}</span><span class="sp">${esc(x.r.text)}</span><span class="stars tiny">${starStr(x.r.rating)}</span></div>`).join('')}</div>` : ''}
-   <div class="sec">Your notes on ${esc(w.name.split(' ')[0])}</div>
+   <div class="sec">Your notes on ${esc(lastName(w))}</div>
    <textarea data-in="wNotes" data-id="${w.id}" placeholder="Plans, gimmick ideas, who they should feud with next...">${esc(w.notes)}</textarea>
    ${w.retired ? `<div class="alert" style="margin-top:12px"><span class="ic">🎤</span><div class="sp small"><b>Retired</b> in week ${w.retired}. Legends can always come back.</div><button class="btn sm" data-act="unretireW" data-id="${w.id}">Bring back</button></div>
    <div class="grid2" style="margin-top:10px"><button class="btn" data-act="editW" data-id="${w.id}">✏️ Edit</button></div>` : `<div class="grid2" style="margin-top:12px">
@@ -4538,7 +4555,7 @@ function modalWrestler(m) {
      <button class="btn" data-act="storyWith" data-id="${w.id}">🔥 New story</button>
    </div>
    ${w.contract ? `<button class="btn block" style="margin-top:8px" data-act="mediaFor" data-id="${w.id}">${w.away ? `${MEDIA[w.away.k]?.ic || '🎬'} Away: ${esc(MEDIA[w.away.k]?.n || 'media')} · back week ${w.away.until}` : '📺 Media appearance'}</button>` : ''}
-   <div class="tiny muted" style="margin-top:8px">“Make heel/face” switches instantly behind the scenes. For a big moment, book a Turn angle on a show instead. <button class="link" data-act="retireW" data-id="${w.id}">Retire ${esc(w.name.split(' ')[0])}</button></div>`}`;
+   <div class="tiny muted" style="margin-top:8px">“Make heel/face” switches instantly behind the scenes. For a big moment, book a Turn angle on a show instead. <button class="link" data-act="retireW" data-id="${w.id}">Retire ${esc(lastName(w))}</button></div>`}`;
   return modal(esc(w.name), body);
 }
 function modalEditW(m) {
@@ -5050,6 +5067,8 @@ const A = {
   saveW() {
     const d = UI.modal.draft; if (!d.name.trim()) return toast('Give them a name.');
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale']) d[k] = clamp(+d[k] || 1, 1, 100);
+    for (const k of SK_ALL) if (d[k] != null) d[k] = clamp(+d[k] || 1, 1, 99);
+    d.short = String(d.short || '').replace(/[<>&"'`]/g, '').trim().slice(0, 20); if (!d.short) delete d.short;
     d.age = clamp(+d.age || 25, 16, 70); d.injury = clamp(+d.injury || 0, 0, 52); d.morale = clamp(+d.morale || 60, 0, 100);
     d.name = d.name.trim().slice(0, 40); d.photo = safePhoto(d.photo); d.color = safeColor(d.color);
     if (UI.modal.isNew) {
@@ -5211,13 +5230,13 @@ const A = {
   // stories
   openStory(id) { openModal({ type: 'story', id }); },
   newStory() { openModal({ type: 'editStory', isNew: true, draft: { id: uid(), title: '', type: 'Feud', a: [], b: [], titleId: null, heat: 10, start: G.week, status: 'active', notes: '', log: [], autoEnd: true } }); },
-  ideaStory(ids) { const [a, b] = ids.split(','); A.newStory(); UI.modal.draft.a = [a]; UI.modal.draft.b = [b]; UI.modal.draft.title = `${nameOf(a).split(' ').pop()} vs ${nameOf(b).split(' ').pop()}`; render(); },
+  ideaStory(ids) { const [a, b] = ids.split(','); A.newStory(); UI.modal.draft.a = [a]; UI.modal.draft.b = [b]; UI.modal.draft.title = `${shortOf(a)} vs ${shortOf(b)}`; render(); },
   storyWith(id) { A.newStory(); UI.modal.draft.a = [id]; render(); },
   editStory(id) { openModal({ type: 'editStory', draft: JSON.parse(JSON.stringify(G.stories.find(s => s.id === id))) }); },
   saveStory() {
     const d = UI.modal.draft;
     if (!d.a.length || !d.b.length) return toast('Each side needs at least one wrestler.');
-    if (!d.title.trim()) d.title = `${nameOf(d.a[0]).split(' ').pop()} vs ${nameOf(d.b[0]).split(' ').pop()}`;
+    if (!d.title.trim()) d.title = `${shortOf(d.a[0])} vs ${shortOf(d.b[0])}`;
     const i = G.stories.findIndex(s => s.id === d.id);
     if (i >= 0) G.stories[i] = d; else { G.stories.push(d); news(`🔥 New storyline: "${d.title}" (${d.a.map(nameOf).join(' & ')} vs ${d.b.map(nameOf).join(' & ')}).`, 'story'); }
     UI.modal = { type: 'story', id: d.id }; commit(i >= 0 ? 'Saved.' : 'Storyline created.');
@@ -5260,7 +5279,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 const safeColor = c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
@@ -5278,6 +5297,8 @@ function cleanW(o) {
   if (al.startsWith('f') || al === 'babyface' || al === 'good') w.align = 'face'; else if (al.startsWith('h') || al === 'bad') w.align = 'heel';
   if (st) w.style = st; if (dv) w.division = dv;
   for (const k of ['ring', 'mic', 'cha', 'pop', 'stam']) { const v = num(o[k], 1, 100); if (v !== undefined) w[k] = v; }
+  for (const k of SK_ALL) { const v = num(o[k], 1, 99); if (v !== undefined) w[k] = v; }
+  const sh = str(o.short, 20).replace(/[<>&"'`]/g, ''); if (sh) w.short = sh;
   const age = num(o.age, 16, 70); if (age !== undefined) w.age = age;
   return w;
 }
@@ -5298,7 +5319,7 @@ function cleanPack(p) {
 }
 
 // ---- reading whatever the player pastes: a share code, a JSON file, or a plain list ----
-const COLS = { name: /^(name|wrestler|ring ?name)$/, nick: /^(nick|nickname|alias)$/, align: /^(align|alignment|role|face\/heel|type)$/, style: /^(style|class)$/, division: /^(division|gender|brand)$/,
+const COLS = { name: /^(name|wrestler|ring ?name)$/, nick: /^(nick|nickname|alias)$/, short: /^(short|short ?name|shorthand)$/, psych: /^(psych|psychology)$/, sell: /^(sell|selling)$/, cons: /^(cons|consistency)$/, safety: /^(safe|safety)$/, tech: /^(tech|technical)$/, brawl: /^(brawl|brawling|hardcore)$/, air: /^(air|aerial|flying)$/, pot: /^(pot|potential)$/, align: /^(align|alignment|role|face\/heel|type)$/, style: /^(style|class)$/, division: /^(division|gender|brand)$/,
   pop: /^(pop|popularity|over|overness)$/, ring: /^(ring|in-ring|inring|workrate|wrestling|skill)$/, mic: /^(mic|promo|mic skills)$/, cha: /^(cha|charisma|star power)$/, stam: /^(stam|stamina)$/, age: /^age$/,
   hometown: /^(hometown|from)$/, height: /^height$/, weight: /^weight$/, finisher: /^(finisher|finishing move)$/, theme: /^(theme|entrance|music)$/ };
 function parseList(text) {
@@ -5349,7 +5370,8 @@ function parseImport(text) {
 // ---- bringing a pack into the game ----
 function fromPack(pw, signIt) {
   const base = makeWrestler(pw.name, pw.nick, pw.align, pw.style, pw.pop != null ? clamp((pw.pop - 15) / 75, 0, 1) : 0.45);
-  const w = Object.assign(base, pw, { id: base.id, joined: G.week });
+  for (const k of SK_ALL) delete base[k];
+  const w = ensureSkills(Object.assign(base, pw, { id: base.id, joined: G.week }));
   if (!w.division) w.division = 'Open';
   if (signIt) w.contract = { salary: asking(w), weeks: rint(52, 130) };
   return w;
@@ -5604,6 +5626,7 @@ function modalBuilder(m) {
    <label class="f"><span>Alignment</span><div class="seg-ctl">${['face', 'heel'].map(a => `<button class="${d.align === a ? 'on' : ''}" data-act="bSet" data-f="align" data-id="${a}">${a === 'face' ? '😇 Face' : '😈 Heel'}</button>`).join('')}</div></label>
    <label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${(d.division || 'Open') === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
    <label class="f"><span>Style</span><select data-ew="style">${STYLES.map(s => `<option ${s === d.style ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+   <label class="f"><span>Short name <span class="muted">· optional, used where only one name fits</span></span><input type="text" data-ew="short" value="${esc(d.short || '')}" maxlength="20" placeholder="${esc(String(d.name || '').trim().split(' ').pop() || 'e.g. Moxley')}"></label>
    <div class="grid2">${txt('hometown', 'Hometown', 'e.g. Detroit, MI')}${txt('age', 'Age', '', 2)}${txt('height', 'Height', `6'2"`, 12)}${txt('weight', 'Weight', '240 lbs', 12)}</div>
    ${txt('finisher', 'Finisher', 'e.g. The Last Call')}${txt('signature', 'Signature move', 'optional')}${txt('theme', 'Entrance theme', 'optional', 60)}
    <label class="f"><span>Bio / gimmick</span><textarea data-ew="bio" maxlength="400" style="min-height:80px" placeholder="Who are they? What do they want?">${esc(d.bio || '')}</textarea></label>
@@ -5611,6 +5634,7 @@ function modalBuilder(m) {
    <div class="sec">Ratings</div>
    <div class="chips" style="margin-bottom:10px">${Object.entries(ARCHETYPES).map(([k, a]) => `<button class="chip" data-act="bArch" data-id="${k}">${a.label}</button>`).join('')}<button class="chip" data-act="bArch" data-id="random">🎲 Random</button></div>
    ${sl('pop', 'Popularity', 'How much fans care')}${sl('ring', 'In-ring', 'Match quality')}${sl('mic', 'Mic', 'Promo quality')}${sl('cha', 'Charisma', 'Star power, angles')}${sl('stam', 'Stamina', 'Slows fatigue')}
+   ${skillsShown() ? `<div class="sec">Skills <span class="muted tiny">· Deep sim</span></div>${SK_KEYS.map(k => sl(k, SKILLS[k][0], SKILLS[k][1])).join('')}${sl('pot', 'Potential', 'How good they can become')}` : ''}
    ${m.isNew ? '' : `<div class="sec">Status</div><div class="grid2"><label class="f"><span>Morale</span><input type="number" min="0" max="100" data-ew="morale" value="${Math.round(d.morale)}"></label><label class="f"><span>Injury (weeks)</span><input type="number" min="0" max="52" data-ew="injury" value="${d.injury}"></label></div>`}
    ${m.isNew ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now (26 weeks at their asking price)</span></label>` : ''}`;
   return modal(m.isNew ? 'Character builder' : 'Edit ' + esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="deleteW">Delete</button>'}<button class="btn" data-act="bShare">Share</button><button class="btn pri" data-act="saveW">Save</button>`);
@@ -6072,6 +6096,7 @@ function sanitizeGame(g) {
   }
   g.mediaLog = (Array.isArray(g.mediaLog) ? g.mediaLog : []).filter(x => x && typeof x === 'object' && Object.hasOwn(MEDIA, x.k) && typeof x.wid === 'string').slice(0, 30)
     .map(x => ({ wk: Math.floor(+x.wk) || 0, wid: x.wid, k: x.k, ...(x.short ? { short: 1 } : {}), ...(x.long ? { long: 1, wks: clamp(Math.floor(+x.wks) || 1, 1, 20) } : {}), ...(x.back ? { back: 1 } : {}), ...(x.bad ? { bad: 1 } : {}), ...(x.d != null ? { d: clamp(+x.d || 0, -50, 50) } : {}) }));
+  cleanTraining(g, true);
   return g;
 }
 
@@ -6336,7 +6361,7 @@ const CREATOR_ACTIONS = {
     else go();
   },
   rtCsv() {
-    const rows = [['Name', 'Nickname', 'Alignment', 'Style', 'Division', 'Pop', 'Ring', 'Mic', 'Charisma', 'Stamina', 'Age', 'Hometown', 'Finisher']].concat(signed().map(w => [w.name, w.nick, w.align, w.style, w.division || '', Math.round(w.pop), w.ring, w.mic, w.cha, w.stam, w.age, w.hometown || '', w.finisher || '']));
+    const rows = [['Name', 'Nickname', 'Short name', 'Alignment', 'Style', 'Division', 'Pop', 'Ring', 'Mic', 'Charisma', 'Stamina', 'Age', 'Hometown', 'Finisher', ...(skillsShown() ? SK_ALL.map(statName) : [])]].concat(signed().map(w => [w.name, w.nick, w.short || '', w.align, w.style, w.division || '', Math.round(w.pop), w.ring, w.mic, w.cha, w.stam, w.age, w.hometown || '', w.finisher || '', ...(skillsShown() ? SK_ALL.map(k => Math.round(ensureSkills(w)[k])) : [])]));
     const t = rows.map(r => r.map(c => { const v = String(c ?? '').replace(/[\t\r\n]/g, ' '); return /^[=+\-@]/.test(v) ? "'" + v : v; }).join('\t')).join('\n');
     try { navigator.clipboard.writeText(t).then(() => toast('Copied. Paste it into any spreadsheet.'), () => toast('Copy was blocked by the browser.')); } catch (e) { toast('Copy was blocked by the browser.'); }
   },
@@ -6559,7 +6584,7 @@ function ensurePers() {
   }
   // the first time it's on, someone reaches out so the player finds their phone
   const top = first && signed().filter(w => !w.loan).sort((a, b) => b.pop - a.pop)[0];
-  if (top) textFrom(top, `Hey, it's ${top.name.split(' ')[0]}. Got your number from the office. I'll text you when something's on my mind.`);
+  if (top) textFrom(top, `Hey, it's ${lastName(top)}. Got your number from the office. I'll text you when something's on my mind.`);
 }
 // trust moves more or less depending on who they are
 function remember(w, v, t) {
@@ -6767,7 +6792,7 @@ const isChamp = w => G.titles.some(t => t.holder.includes(w.id));
 const awayLeft = w => Math.max(1, (w.away?.until || 0) - G.week);
 function mediaRisk(w, k) {
   const M = MEDIA[k], s = +w[M.stat] || 50, p = PER() ? { hot: 1.6, ego: 1.3, loyal: .8, team: .9 }[w.pers] || 1 : 1;
-  return clamp(M.risk * (1.35 - s / 100 * .7) * p, .02, .4);
+  return clamp(M.risk * (1.35 - s / 100 * .7) * p * (1 - staffQ('pr') * 0.06), .02, .4);
 }
 // popularity gains shrink near the top, like addPop, so a slip-up costs about the same as a good spot earns
 const mediaGain = (w, k, m = 1) => MEDIA[k].pop * m * Math.max(0.08, 1 - w.pop / 105);
@@ -6890,7 +6915,7 @@ function modalMedia(m) {
     return modal('Media appearance', body, `<button class="btn" data-act="${m.from === 'w' ? 'mediaFor' : 'mediaType'}" data-id="${m.from === 'w' ? w.id : m.k}">Back</button><button class="btn pri" data-act="mediaGo" ${why || full ? 'disabled' : ''}>${M.long ? 'Send them' : 'Book it'}</button>`);
   }
   if (w) {
-    const body = `<div class="small muted" style="margin-bottom:8px">What should ${esc(w.name.split(' ')[0])} do?</div><div class="list">${Object.entries(MEDIA).map(([k, X]) => { const why = mediaWhyNot(w, k) || (!X.long && mediaUsed() >= MEDIA_SLOTS ? 'No spots left this week' : '');
+    const body = `<div class="small muted" style="margin-bottom:8px">What should ${esc(lastName(w))} do?</div><div class="list">${Object.entries(MEDIA).map(([k, X]) => { const why = mediaWhyNot(w, k) || (!X.long && mediaUsed() >= MEDIA_SLOTS ? 'No spots left this week' : '');
       return `<button class="item" data-act="mediaPickT" data-id="${k}" ${why ? 'style="opacity:.55"' : ''}><span class="mile-i">${X.ic}</span><div class="main"><div class="t">${X.n}</div><div class="d">${why ? esc(why) : X.long ? `Out ${X.wks} weeks · +${Math.round(mediaGain(w, k) * 10) / 10} pop when back` : `+${Math.round(mediaGain(w, k) * 10) / 10} pop · ${Math.round(mediaRisk(w, k) * 100)}% risk`}</div></div></button>`; }).join('')}</div>`;
     return modal('Media appearance', body);
   }
@@ -6913,6 +6938,380 @@ Object.assign(A, {
     UI.modal = null; UI.picker = null; commit(msg);
   }
 });
+// =====================================================================
+//  Deeper skills, training, the training school and staff
+//  Every wrestler carries these plain 1-99 numbers (other code, like the match ratings, reads them):
+//    psych   ring psychology: pacing, telling a story, big-match feel
+//    sell    selling: makes the other side's offence look strong
+//    cons    consistency: steady nights, narrows the random swing
+//    safety  safe worker: fewer injuries for the people they wrestle (used in applySegment via injMult)
+//    tech    technical and submission wrestling
+//    brawl   brawling and hardcore
+//    air     aerial and high-risk (ladders)
+//    pot     potential: the ceiling that training heads toward (stars with Deep sim on; the number with a Scout too)
+//  Training: w.train (FOCUS key, '' = balanced), w.mentor (a veteran's id), w.gx (fractional growth not yet shown)
+//  G.staff {role: {n, q 1-5, pay, wk}}, G.staffPool {wk, list}, G.school {open, wk, trainees[], tryouts[], next}
+//  Growth happens every week in trainWeek() and after matches in learnFromMatch(): young, focused,
+//  well-coached wrestlers grow fastest, and working with better veterans teaches them.
+// =====================================================================
+const SKILLS = {
+  psych: ['Psychology', 'Pacing and storytelling. Lifts main events and story matches.'],
+  sell: ['Selling', 'Makes opponents look strong, so everyone in the match looks better.'],
+  cons: ['Consistency', 'Has fewer off nights. Ratings swing less.'],
+  safety: ['Safety', 'Protects opponents. Fewer injuries in their matches.'],
+  tech: ['Technical', 'Holds, counters and submissions.'],
+  brawl: ['Brawling', 'Strikes, weapons and hardcore matches.'],
+  air: ['Aerial', 'High-risk moves. Ladders and big spots.']
+};
+const SK_KEYS = Object.keys(SKILLS), SK_ALL = [...SK_KEYS, 'pot'];
+// The sim uses every skill from day one; players only see them with Deep sim on (Menu → Settings).
+const skillsShown = () => !!(G && G.settings && G.settings.deep);
+const potShown = () => skillsShown();
+// casual training keeps to the stats everyone can see
+const DEEP_FOCUS = ['psych', 'sell', 'tech', 'brawl', 'air', 'safety'];
+// a style skill that fits the wrestler's style
+const styleSkill = w => ({ Technician: 'tech', Brawler: 'brawl', 'High Flyer': 'air', Powerhouse: 'brawl', Showman: 'sell' })[w.style] || 'tech';
+function ensureSkills(w) {
+  if (!w || typeof w !== 'object') return w;
+  if (SK_ALL.every(k => typeof w[k] === 'number')) return w;
+  const r = +w.ring || 50, age = +w.age || 27, exp = clamp((age - 20) / 15, 0, 1), st = w.style;
+  const j = (b, s) => clamp(Math.round(b + rnd(-s, s)), 5, 99);
+  const set = (k, v) => { if (typeof w[k] !== 'number' || !isFinite(w[k])) w[k] = v; };
+  set('psych', j(r * 0.7 + exp * 22 + 4, 8));
+  set('sell', j(r * 0.72 + 12 + (st === 'Showman' ? 6 : 0), 10));
+  set('cons', j(r * 0.6 + exp * 18 + 14, 10));
+  set('safety', j(r * 0.5 + 32 + (st === 'Technician' ? 6 : st === 'Brawler' ? -6 : 0), 10));
+  set('tech', j(r + (st === 'Technician' ? 10 : st === 'Powerhouse' ? -10 : -4), 7));
+  set('brawl', j(r + (st === 'Brawler' ? 10 : st === 'Powerhouse' ? 6 : st === 'High Flyer' ? -12 : -4), 7));
+  set('air', j(r + (st === 'High Flyer' ? 12 : st === 'Powerhouse' ? -20 : st === 'Brawler' ? -12 : -6), 7));
+  set('pot', clamp(Math.round(Math.max(r, +w.mic || 40, +w.cha || 40) + (age <= 23 ? rnd(10, 32) : age <= 27 ? rnd(4, 18) : age <= 31 ? rnd(1, 8) : rnd(0, 3))), 40, 99));
+  return w;
+}
+// shared saves and imports: keep only sane values
+function cleanSkills(w) {
+  for (const k of SK_ALL) if (w[k] != null) { const v = +w[k]; if (isFinite(v)) w[k] = clamp(Math.round(v * 10) / 10, 1, 99); else delete w[k]; }
+  if (w.train != null && !Object.hasOwn(FOCUS, w.train)) w.train = '';
+  if (w.mentor != null && typeof w.mentor !== 'string') delete w.mentor; else if (w.mentor) w.mentor = w.mentor.slice(0, 20);
+  if (w.gx != null) { const g = {}; if (typeof w.gx === 'object' && !Array.isArray(w.gx)) for (const k of [...SK_KEYS, 'ring', 'mic', 'cha', 'stam']) if (isFinite(+w.gx[k])) g[k] = clamp(+w.gx[k], -1, 1); w.gx = g; }
+  return w;
+}
+// potential as 1-5 stars, the way a scout would put it
+const potStars = w => clamp(Math.ceil(((+w.pot || 50) - 44) / 11), 1, 5);
+const starRow = (n, of = 5) => '★'.repeat(n) + '<span class="muted">' + '☆'.repeat(of - n) + '</span>';
+
+// ---------- training focus ----------
+const FOCUS = {
+  '': ['Balanced', 'A bit of everything.', null],
+  ring: ['Ring work', 'In-ring plus their style skill.', ['ring', '$style']],
+  mic: ['Promos', 'Mic and charisma.', ['mic', 'cha']],
+  psych: ['Psychology', 'Pacing, storytelling, consistency.', ['psych', 'cons']],
+  sell: ['Selling', 'Making opponents look great.', ['sell', 'psych']],
+  tech: ['Technical', 'Holds and submissions.', ['tech', 'ring']],
+  brawl: ['Brawling', 'Strikes and hardcore.', ['brawl', 'ring']],
+  air: ['Aerial', 'High-risk offence.', ['air', 'stam']],
+  safety: ['Safety', 'Protect their opponents.', ['safety', 'cons']],
+  stam: ['Conditioning', 'Stamina for long matches.', ['stam']],
+  rest: ['Rest', 'No training. Recovers fatigue faster.', []]
+};
+const ageGrow = a => a <= 23 ? 1 : a <= 26 ? 0.8 : a <= 29 ? 0.55 : a <= 32 ? 0.35 : 0.15;
+// add a fractional gain; whole points land on the stat (ring, mic, cha, stam stay whole numbers)
+function grow(w, k, d) {
+  if (!(d > 0)) return 0;
+  const cap = k === 'stam' ? 99 : Math.max(+w.pot || 60, k === 'mic' || k === 'cha' ? (+w.pot || 60) + 6 : 0);
+  const cur = +w[k] || 0; if (cur >= cap) return 0;
+  // the closer to their ceiling, the slower it comes
+  d *= clamp((cap - cur) / 25, 0.15, 1.4);
+  if (SK_KEYS.includes(k)) { const was = Math.round(cur); w[k] = Math.min(cap, cur + d); return Math.round(w[k]) - was; }
+  w.gx ||= {}; w.gx[k] = (w.gx[k] || 0) + d;
+  const whole = Math.floor(w.gx[k]); if (whole <= 0) return 0;
+  w.gx[k] -= whole; w[k] = clamp(cur + whole, 1, Math.min(99, cap)); return whole;
+}
+const mentorOf = w => { const m = w.mentor && W(w.mentor); return m && m.contract && !m.retired && m.id !== w.id ? m : null; };
+const isVet = w => (+w.age || 0) >= 30 || (+w.psych || 0) >= 70;
+const menteesOf = id => [...G.wrestlers.filter(x => x.contract && x.mentor === id), ...((G.school && G.school.trainees) || []).filter(x => x.mentor === id)];
+// how fast someone grows this week, 0 to about 2
+function growRate(w, school) {
+  const t = staffQ('trainer'), m = mentorOf(w);
+  let r = ageGrow(+w.age || 27) * (0.55 + t * 0.17) * (school ? 1.35 : 1);
+  if (m) r *= 1.25 + Math.max(0, (m.psych - (w.psych || 0))) / 100;
+  if ((w.morale ?? 60) < 35) r *= 0.6;
+  if (w.injury > 0) r *= 0.3;
+  if (w.away) r *= 0.5;
+  return r;
+}
+// one week of training for one wrestler; returns {key: whole points gained}
+function trainOne(w, school) {
+  ensureSkills(w);
+  const f = FOCUS[w.train || ''] || FOCUS[''], rate = growRate(w, school), got = {};
+  const note = (k, n) => { if (n > 0) got[k] = (got[k] || 0) + n; };
+  if (w.train === 'rest') { w.fatigue = clamp((w.fatigue || 0) - 8, 0, 100); return got; }
+  const keys = f[2] ? f[2].map(k => k === '$style' ? styleSkill(w) : k) : null;
+  if (keys) { keys.forEach((k, i) => note(k, grow(w, k, 0.22 * rate * (i ? 0.6 : 1)))); }
+  // everything else creeps up a little; balanced training spreads it wider
+  for (const k of ['ring', 'psych', 'sell', 'cons', styleSkill(w), 'mic']) if (!keys || !keys.includes(k)) note(k, grow(w, k, (keys ? 0.03 : 0.08) * rate));
+  // a mentor passes on what they know best
+  const m = mentorOf(w);
+  if (m) for (const k of ['psych', 'sell', 'cons']) if ((m[k] || 0) > (w[k] || 0) + 4) note(k, grow(w, k, 0.05 * rate * Math.min(2, (m[k] - w[k]) / 15)));
+  return got;
+}
+// after a match: everyone learns a little from the best worker they shared the ring with
+function learnFromMatch(ws) {
+  if (!Array.isArray(ws) || ws.length < 2 || ws.length > 12) return;
+  for (const w of ws) {
+    if (!w.contract) continue; ensureSkills(w);
+    const a = ageGrow(+w.age || 27) * (0.8 + staffQ('agent') * 0.08);
+    for (const k of ['psych', 'sell', 'cons', 'ring']) {
+      const best = Math.max(...ws.filter(o => o !== w).map(o => +o[k] || 0)), gap = best - (+w[k] || 0);
+      if (gap >= 6) grow(w, k, 0.06 * a * Math.min(2.5, gap / 12));
+    }
+  }
+}
+// injury risk multiplier in a match: safe opponents and a good doctor both help (1 = normal)
+function injMult(w, ws) {
+  const others = (ws || []).filter(o => o && o !== w);
+  const safe = others.length ? avg(others.map(o => +ensureSkills(o).safety || 50)) : 50;
+  return clamp(1.25 - safe / 200, 0.72, 1.25) * (1 - staffQ('doctor') * 0.06);
+}
+// the Road Agent lays out matches: a steady little lift, more in the main event (0 to +3)
+function agentBonus(seg, ctx) {
+  const q = staffQ('agent'); if (!q || !seg || seg.kind !== 'match') return 0;
+  return q * 0.45 + (ctx && (ctx.main || ctx.big) ? q * 0.15 : 0);
+}
+
+// ---------- staff ----------
+const STAFF_ROLES = {
+  trainer: ['🎓', 'Head Trainer', 'Everyone grows faster in training and at the school.', 1],
+  agent: ['🤼', 'Road Agent', 'Lays out matches: better ratings, and wrestlers learn more from each match.', 1],
+  doctor: ['🩹', 'Doctor', 'Fewer injuries, and injured wrestlers come back sooner.', 1],
+  pr: ['📣', 'PR Agent', 'Books short media spots each week by themselves, with fewer slip-ups.', 3],
+  scout: ['🎯', 'Scout', 'Finds better rookies at tryouts. With Deep sim on, shows exact potential.', 3],
+  writer: ['✍️', 'Writer', 'Storylines heat up faster.', 3]
+};
+const STAFF_PAY = [0, 900, 1600, 2600, 4000, 6000];
+const STAFF_BIO = ['Former world champion', 'Ran a famous indie', 'Ex-network producer', 'Thirty years in the business', 'Came up through the dojo system', 'Worked every territory', 'Former tag team specialist', 'Quietly the best in the business', 'Young and full of ideas', 'Old school, hard but fair'];
+const staffOf = role => G && G.staff && G.staff[role] && Object.hasOwn(STAFF_ROLES, role) ? G.staff[role] : null;
+// 0 means nobody is hired; 1-5 stars otherwise
+const staffQ = role => { const s = staffOf(role); return s ? clamp(Math.round(+s.q) || 0, 0, 5) : 0; };
+const roleOpen = role => coLvl() >= STAFF_ROLES[role][3];
+const staffCost = () => !G || !G.staff ? 0 : Object.keys(STAFF_ROLES).reduce((s, r) => s + (staffOf(r) ? +staffOf(r).pay || 0 : 0), 0) + schoolCost();
+function staffPool() {
+  if (!G.staffPool || !Array.isArray(G.staffPool.list) || G.week - (G.staffPool.wk || 0) >= 12) {
+    const list = [];
+    for (const role of Object.keys(STAFF_ROLES)) for (let i = 0; i < 3; i++) {
+      const q = clamp(Math.round(rnd(0.6, 3.2) + (i === 2 ? 1.4 : 0) + (G.promo.prestige - 50) / 60), 1, 5);
+      list.push({ id: uid(), role, n: randomName(), q, pay: Math.round(STAFF_PAY[q] * rnd(0.85, 1.15) / 100) * 100, bio: pick(STAFF_BIO) });
+    }
+    G.staffPool = { wk: G.week, list };
+  }
+  return G.staffPool.list;
+}
+
+// ---------- the training school ----------
+const SCHOOL_OPEN = 2, SCHOOL_COST = 20000, SCHOOL_WEEKLY = 1200, TRAINEE_WEEKLY = 250, TRYOUT_EVERY = 8;
+const schoolCap = () => 4 + (coLvl() >= 12 ? 2 : 0);
+const schoolOpen = () => !!(G && G.school && G.school.open);
+const trainees = () => schoolOpen() ? G.school.trainees : [];
+const schoolCost = () => schoolOpen() && MON() ? SCHOOL_WEEKLY + trainees().length * TRAINEE_WEEKLY : 0;
+function makeTrainee() {
+  const sc = staffQ('scout');
+  const w = makeWrestler(randomName(), '', null, null, rnd(0, 0.12));
+  w.age = rint(18, 23); w.pop = clamp(Math.round(rnd(3, 12)), 1, 30);
+  w.ring = clamp(Math.round(rnd(24, 46) + sc), 15, 60); w.mic = clamp(Math.round(rnd(18, 48)), 10, 70); w.cha = clamp(Math.round(rnd(20, 52)), 10, 70);
+  for (const k of SK_ALL) delete w[k];
+  // the scout finds the gems: a better scout raises the odds of a high ceiling
+  w.pot = clamp(Math.round(52 + rnd(0, 30) + sc * rnd(1, 3.5) + (Math.random() < 0.06 + sc * 0.03 ? 12 : 0)), 50, 99);
+  ensureSkills(w); w.morale = 75; w.joined = 0; w.trainee = 0;
+  return w;
+}
+function schoolTryouts() { const n = 3 + (staffQ('scout') >= 3 ? 1 : 0) + (staffQ('scout') >= 5 ? 1 : 0); G.school.tryouts = Array.from({ length: n }, makeTrainee); G.school.next = G.week + TRYOUT_EVERY; }
+// ready to debut: decent in the ring, or long enough at the school
+const traineeReady = w => w.ring >= 52 || (w.trainee || 0) >= 30;
+function graduate(w) {
+  G.school.trainees = G.school.trainees.filter(x => x !== w);
+  delete w.trainee;
+  w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(w.morale + 10, 0, 100); w.division ||= 'Open';
+  w.contract = { salary: CON() ? Math.max(500, Math.round(asking(w) * 0.6 / 100) * 100) : 0, weeks: 104 };
+  if (splitOn()) w.brand = G.showId;
+  G.wrestlers.push(w);
+  news(`🎓 ${w.name} graduated from the ${G.promo.name} school and signed a 2-year rookie deal.`, 'contract');
+}
+
+// ---------- the week ----------
+// called once a week from endOfWeek, after the company's last show
+function trainWeek() {
+  if (!G) return;
+  const ups = [];
+  for (const w of signed()) {
+    if (w.loan) continue;
+    const got = trainOne(w, false), pts = Object.values(got).reduce((s, x) => s + x, 0);
+    if (pts > 0) ups.push([w, got]);
+    const m = mentorOf(w); if (w.mentor && !m) delete w.mentor;
+    if (m) m.morale = clamp(m.morale + 0.4, 0, 100);
+  }
+  // a doctor gets people back sooner
+  const dq = staffQ('doctor'); if (dq) for (const w of signed()) if (w.injury > 1 && Math.random() < dq * 0.07) w.injury--;
+  // the school: train, pay, and hold tryouts
+  if (schoolOpen()) {
+    const S = G.school;
+    for (const w of S.trainees) { w.trainee = (w.trainee || 0) + 1; const before = traineeReady(w); trainOne(w, true); if (!before && traineeReady(w)) news(`🎓 ${w.name} is ready to debut. Sign them from Office → Staff.`, 'office'); if (w.mentor && !mentorOf(w)) delete w.mentor; }
+    if (G.week >= (S.next || 0)) { schoolTryouts(); news(`🎓 Tryouts at the school: ${S.tryouts.length} hopefuls want a spot.`, 'office'); }
+  }
+  // a nice jump gets a news line, so growth is visible without opening every profile
+  for (const [w, got] of ups) {
+    for (const [k, n] of Object.entries(got)) { w.gt ||= {}; w.gt[k] = (w.gt[k] || 0) + n; }
+    const seen = Object.entries(w.gt || {}).filter(([k]) => skillsShown() || !SK_KEYS.includes(k)), total = seen.reduce((s, x) => s + x[1], 0);
+    if (total >= 4) { const best = seen.sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, n]) => `${statName(k)} +${n}`).join(', '); news(`📈 ${w.name} is improving in training: ${best}.`, 'office'); w.gt = {}; }
+  }
+  prAuto();
+}
+const statName = k => SKILLS[k] ? SKILLS[k][0] : { ring: 'In-ring', mic: 'Mic', cha: 'Charisma', stam: 'Stamina', pot: 'Potential' }[k] || k;
+// the PR Agent fills the short media spots that are left this week
+function prAuto() {
+  const q = staffQ('pr'); if (!q || G.staff.pr.off) return;
+  let n = Math.min(q >= 5 ? 3 : q >= 3 ? 2 : 1, MEDIA_SLOTS - mediaUsed());
+  const short = Object.keys(MEDIA).filter(k => !MEDIA[k].long);
+  const cand = signed().filter(w => !w.away && !w.loan && w.injury === 0 && !mediaIn(w, 4) && !mediaWhyNot(w, 'press')).sort((a, b) => (b.mic + b.cha + (b.pop < 75 ? 30 : 0)) - (a.mic + a.cha + (a.pop < 75 ? 30 : 0)));
+  const done = []; let used = '';
+  for (const w of cand) {
+    if (n <= 0) break;
+    // the best spot for them: the most popularity for the least risk, with a little variety
+    const val = k => mediaGain(w, k) * (1 - 2 * mediaRisk(w, k)) * rnd(0.8, 1.2) * (k === used ? 0.6 : 1);
+    const k = short.slice().sort((a, b) => val(b) - val(a))[0];
+    doMedia(w, k); done.push(`${w.name} (${MEDIA[k].n.replace(/^TV t/, 't').replace(/^P/, 'p').replace(/^F/, 'f')})`); used = k; n--;
+  }
+  if (done.length) news(`📣 ${G.staff.pr.n} booked media spots: ${done.join(', ')}.`, 'office');
+}
+
+// ---------- screens ----------
+function staffView() {
+  const roles = Object.entries(STAFF_ROLES);
+  const sRow = ([role, [ic, n, d, lv]]) => {
+    const s = staffOf(role), open = roleOpen(role);
+    return `<button class="item" data-act="${open ? 'staffRole' : 'staffLocked'}" data-id="${role}" ${open ? '' : 'style="opacity:.6"'}><span class="mile-i">${ic}</span><div class="main"><div class="t">${n}${s ? ` <span class="tiny">${starRow(s.q)}</span>` : ''}</div>
+      <div class="d">${s ? `<b>${esc(s.n)}</b>${MON() ? ` · ${money(s.pay)}/wk` : ''}${role === 'pr' && s.off ? ' · paused' : ''}` : open ? 'Nobody hired · tap to hire' : `🔒 Company level ${lv}`}</div><div class="d">${d}</div></div></button>`;
+  };
+  const S = G.school, cap = schoolCap();
+  const school = coLvl() < SCHOOL_OPEN && !schoolOpen() ? `<div class="card small">🔒 The training school opens at company level ${SCHOOL_OPEN}. Run a show or two.</div>`
+    : !schoolOpen() ? `<div class="card"><div class="small">Train your own rookies. Tryouts every ${TRYOUT_EVERY} weeks, room for ${cap}, and they debut on cheap 2-year deals.${MON() ? ` Opening costs <b>${money(SCHOOL_COST)}</b>, then about <b>${money(SCHOOL_WEEKLY)}</b>/wk plus ${money(TRAINEE_WEEKLY)} per trainee.` : ''}</div><button class="btn pri block" style="margin-top:10px" data-act="schoolOpen">🎓 Open the school</button></div>`
+    : `<div class="small muted" style="margin-bottom:8px">${S.trainees.length}/${cap} trainees · next tryouts week ${S.next}${MON() ? ` · ${money(schoolCost())}/wk` : ''}</div>
+      <div class="list">${S.trainees.map(w => tItem(w, 'trainee')).join('') || '<div class="empty">No trainees yet. Pick from the tryouts.</div>'}</div>
+      ${(S.tryouts || []).length ? `<div class="sec">Tryouts</div><div class="list">${S.tryouts.map(w => tItem(w, 'tryout')).join('')}</div>` : ''}`;
+  const kids = signed().filter(w => w.age <= 26 || w.train || w.mentor).sort((a, b) => a.age - b.age).slice(0, 12);
+  return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week.</div>
+    <div class="list">${roles.map(sRow).join('')}</div>
+    <div class="sec">🎓 Training school</div>${school}
+    <div class="sec">📈 Training</div>
+    <div class="small muted" style="margin-bottom:8px">Everyone trains every week. Young wrestlers grow fastest, up to their potential. Pick a focus or a mentor from their profile.</div>
+    <div class="list">${kids.map(w => wItem(w, 'openW', `Age ${w.age} · ${esc(FOCUS[w.train || ''][0])}${mentorOf(w) ? ' · mentor ' + esc(mentorOf(w).name) : ''}${potShown(w) ? ' · ' + starRow(potStars(w)) : ''}`)).join('') || '<div class="empty">Nobody young on the roster.</div>'}</div>`;
+}
+function tItem(w, kind) {
+  return `<button class="item" data-act="${kind === 'tryout' ? 'tryoutOpen' : 'traineeOpen'}" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)} <span class="muted small">${esc(w.style)} · ${w.age}</span>${kind === 'trainee' && traineeReady(w) ? ' <span class="tag good">Ready</span>' : ''}</div>
+    <div class="d">Ring ${Math.round(w.ring)} · Mic ${Math.round(w.mic)} · Cha ${Math.round(w.cha)}${potShown(w) ? ` · Potential ${starRow(potStars(w))}` : ''}${kind === 'trainee' ? ` · ${w.trainee || 0} wk` : ''}</div></div></button>`;
+}
+// skills card on a wrestler's profile
+function skillsBlock(w) {
+  ensureSkills(w);
+  let h = '';
+  if (skillsShown()) h += `<div class="sec">Skills</div><div class="card">${SK_KEYS.map(k => statLine(SKILLS[k][0], w[k])).join('')}<div class="row small" style="margin-top:6px"><span class="muted sp">Potential</span><span aria-label="${potStars(w)} of 5 stars">${starRow(potStars(w))}</span>${staffQ('scout') ? ` <b style="margin-left:6px">${Math.round(w.pot)}</b>` : ''}</div></div>`;
+  if (!w.contract) return h;
+  const m = mentorOf(w), mine = menteesOf(w.id);
+  return h + `<div class="card" style="margin-top:8px">
+    <div class="row small"><span class="muted sp">Training focus</span><select data-in="trainFocus" data-id="${w.id}" style="width:auto;padding:4px 8px">${focusOpts(w, true)}</select></div>
+    <div class="tiny muted">${esc(FOCUS[w.train || ''][1])} Grows ${growWord(w)} at age ${w.age}.</div>
+    <div class="row small" style="margin-top:6px"><span class="muted sp">Mentor</span><button class="link" data-act="mentorPick" data-id="${w.id}">${m ? esc(m.name) : 'Choose a veteran'}</button></div>
+    ${mine.length ? `<div class="row small"><span class="muted sp">Mentoring</span><b class="clip">${mine.map(x => esc(x.name)).join(', ')}</b></div>` : ''}</div>`;
+}
+const focusOpts = (w, rest) => Object.entries(FOCUS).filter(([k]) => (rest || k !== 'rest') && (skillsShown() || !DEEP_FOCUS.includes(k) || w.train === k)).map(([k, f]) => `<option value="${k}" ${(w.train || '') === k ? 'selected' : ''}>${esc(f[0])}</option>`).join('');
+const growWord = w => { const r = growRate(w, false); return r >= 0.9 ? 'fast' : r >= 0.5 ? 'steadily' : r >= 0.25 ? 'slowly' : 'very slowly'; };
+function modalStaff(m) {
+  const role = m.role, R = STAFF_ROLES[role]; if (!R) return '';
+  const cur = staffOf(role), pool = staffPool().filter(c => c.role === role);
+  const body = `<div class="row" style="gap:8px;margin-bottom:10px"><span class="mile-i">${R[0]}</span><div class="sp small muted">${R[2]}</div></div>
+    ${cur ? `<div class="card"><div class="row"><div class="sp"><b>${esc(cur.n)}</b> <span class="tiny">${starRow(cur.q)}</span><div class="tiny muted">${esc(cur.bio || '')} · since week ${cur.wk}${MON() ? ` · ${money(cur.pay)}/wk` : ''}</div></div><button class="btn sm bad" data-act="staffFire">Let go</button></div>
+      ${role === 'pr' ? `<label class="todo" style="margin-top:8px"><input type="checkbox" data-in="prOn" ${cur.off ? '' : 'checked'}><span>Book media spots for me every week</span></label>` : ''}</div>` : ''}
+    <div class="sec">${cur ? 'Replace with' : 'Candidates'}</div>
+    <div class="list">${pool.map(c => `<button class="item" data-act="staffHire" data-id="${c.id}"><div class="main"><div class="t">${esc(c.n)} <span class="tiny">${starRow(c.q)}</span></div><div class="d">${esc(c.bio)}${MON() ? ` · <b>${money(c.pay)}</b>/wk` : ''}</div></div></button>`).join('')}</div>
+    <div class="tiny muted" style="margin-top:8px">New candidates every 12 weeks. ${MON() ? 'Salaries come out of each show\'s money.' : 'Money is off, so staff are free.'}</div>`;
+  return modal(`${R[0]} ${R[1]}`, body);
+}
+function modalTrainee(m) {
+  const S = G.school, list = m.kind === 'tryout' ? S.tryouts || [] : S.trainees, w = list.find(x => x.id === m.id); if (!w) return '';
+  ensureSkills(w);
+  const shown = skillsShown() ? SK_KEYS : [];
+  const room = S.trainees.length < schoolCap();
+  const body = `<div class="row" style="margin-bottom:10px">${av(w, 48)}<div class="sp"><b>${esc(w.name)}</b><div class="small muted">${esc(w.style)} · ${w.align} · age ${w.age}${m.kind === 'trainee' ? ` · ${w.trainee || 0} weeks in` : ''}</div></div></div>
+    <div class="card">${statLine('In-ring', w.ring)}${statLine('Mic', w.mic)}${statLine('Charisma', w.cha)}${statLine('Stamina', w.stam)}${shown.map(k => statLine(SKILLS[k][0], w[k])).join('')}
+      <div class="row small" style="margin-top:6px"><span class="muted sp">Potential</span>${potShown(w) ? starRow(potStars(w)) : '<span class="muted">Turn on Deep sim to see it</span>'}</div></div>
+    ${m.kind === 'trainee' ? `<div class="card" style="margin-top:8px"><div class="row small"><span class="muted sp">Training focus</span><select data-in="trainFocus" data-id="${w.id}" style="width:auto;padding:4px 8px">${focusOpts(w, false)}</select></div>
+      <div class="row small" style="margin-top:6px"><span class="muted sp">Mentor</span><button class="link" data-act="mentorPick" data-id="${w.id}">${mentorOf(w) ? esc(mentorOf(w).name) : 'Choose a veteran'}</button></div>
+      <div class="tiny muted" style="margin-top:6px">${traineeReady(w) ? 'Ready to debut.' : 'Ready when their in-ring hits 52, or after 30 weeks.'}</div></div>` : ''}`;
+  const foot = m.kind === 'tryout' ? `<button class="btn" data-act="tryoutNo" data-id="${w.id}">Pass</button><button class="btn pri" data-act="tryoutYes" data-id="${w.id}" ${room ? '' : 'disabled'}>${room ? 'Take them on' : 'School is full'}</button>`
+    : `<button class="btn bad" data-act="traineeCut" data-id="${w.id}">Let go</button><button class="btn pri" data-act="traineeSign" data-id="${w.id}">${traineeReady(w) ? 'Sign to the roster' : 'Sign them early'}</button>`;
+  return modal(m.kind === 'tryout' ? 'Tryout' : 'Trainee', body, foot);
+}
+function modalMentor(m) {
+  const w = W(m.id) || trainees().find(x => x.id === m.id); if (!w) return '';
+  const vets = signed().filter(v => v.id !== w.id && isVet(v) && !v.retired).sort((a, b) => (b.psych + b.ring) - (a.psych + a.ring)).slice(0, 25);
+  const body = `<div class="small muted" style="margin-bottom:8px">A veteran passes on psychology, selling and consistency, and ${esc(w.name.split(' ')[0])} grows faster. Each veteran can mentor 2 people.</div>
+    ${mentorOf(w) ? `<button class="btn block" data-act="mentorSet" data-id="" style="margin-bottom:8px">No mentor</button>` : ''}
+    <div class="list">${vets.map(v => { const n = menteesOf(v.id).filter(x => x.id !== w.id).length; return `<button class="item" data-act="mentorSet" data-id="${v.id}" ${n >= 2 ? 'disabled aria-disabled="true" style="opacity:.55"' : ''}>${av(v)}<div class="main"><div class="t">${esc(v.name)}${w.mentor === v.id ? ' <span class="tag good">Now</span>' : ''}</div><div class="d">Age ${v.age} · Ring ${v.ring}${skillsShown() ? ` · Psychology ${Math.round(v.psych)}` : ''}${n ? ` · mentoring ${n}` : ''}</div></div></button>`; }).join('') || '<div class="empty">No veterans (30+) on the roster.</div>'}</div>`;
+  return modal('Choose a mentor', body);
+}
+Object.assign(A, {
+  staffLocked(r) { toast(`${STAFF_ROLES[r]?.[1] || 'This role'} unlocks at company level ${STAFF_ROLES[r]?.[3]}.`); },
+  staffRole(r) { if (STAFF_ROLES[r] && roleOpen(r)) openModal({ type: 'staff', role: r }); },
+  staffHire(id) {
+    const c = staffPool().find(x => x.id === id); if (!c) return;
+    const old = staffOf(c.role); G.staff ||= {};
+    G.staff[c.role] = { n: c.n, q: c.q, pay: c.pay, bio: c.bio, wk: G.week };
+    G.staffPool.list = G.staffPool.list.filter(x => x !== c);
+    if (old) G.staffPool.list.push({ id: uid(), role: c.role, n: old.n, q: old.q, pay: old.pay, bio: old.bio || pick(STAFF_BIO) });
+    news(`💼 ${c.n} joined as ${STAFF_ROLES[c.role][1]}.`, 'office');
+    UI.modal = null; commit(`${c.n} is your new ${STAFF_ROLES[c.role][1]}.`);
+  },
+  staffFire() { const r = UI.modal?.role, s = staffOf(r); if (!s) return; delete G.staff[r]; news(`👋 ${s.n} left as ${STAFF_ROLES[r][1]}.`, 'office'); commit(`${s.n} is gone.`); },
+  schoolOpen() {
+    if (schoolOpen() || coLvl() < SCHOOL_OPEN) return;
+    if (MON() && G.money < SCHOOL_COST) return toast(`You need ${money(SCHOOL_COST)} to open the school.`);
+    if (MON()) G.money -= SCHOOL_COST;
+    G.school = { open: true, wk: G.week, trainees: [], tryouts: [], next: 0 }; schoolTryouts();
+    news(`🎓 ${G.promo.name} opened a training school.`, 'office');
+    commit('School open. Pick your first trainees from the tryouts.');
+  },
+  tryoutOpen(id) { openModal({ type: 'trainee', kind: 'tryout', id }); },
+  traineeOpen(id) { openModal({ type: 'trainee', kind: 'trainee', id }); },
+  tryoutYes(id) { const S = G.school, w = (S.tryouts || []).find(x => x.id === id); if (!w || S.trainees.length >= schoolCap()) return; S.tryouts = S.tryouts.filter(x => x !== w); w.trainee = 0; S.trainees.push(w); UI.modal = null; commit(`${w.name} joined the school.`); },
+  tryoutNo(id) { const S = G.school; S.tryouts = (S.tryouts || []).filter(x => x.id !== id); UI.modal = null; commit(); },
+  traineeCut(id) { const S = G.school, w = S.trainees.find(x => x.id === id); if (!w) return; S.trainees = S.trainees.filter(x => x !== w); UI.modal = null; commit(`${w.name} left the school.`); },
+  traineeSign(id) { const w = G.school.trainees.find(x => x.id === id); if (!w) return; graduate(w); UI.modal = { type: 'wrestler', id: w.id }; commit(`${w.name} is on the roster. Give them a debut!`); },
+  mentorPick(id) { UI.modal = { type: 'mentor', id, back: UI.modal }; render(); },
+  mentorSet(vid) {
+    const m = UI.modal, w = W(m.id) || trainees().find(x => x.id === m.id); if (!w) return;
+    if (vid) { const v = W(vid); if (!v || menteesOf(v.id).filter(x => x.id !== w.id).length >= 2) return; w.mentor = v.id; } else delete w.mentor;
+    UI.modal = m.back || null; commit(vid ? `${W(vid).name} is now mentoring ${w.name}.` : 'Mentor removed.');
+  }
+});
+// loading a save (own or shared): seed skills and keep staff and school data sane
+function cleanTraining(g, shared) {
+  const txt = (v, n) => String(v || '').replace(/[<>&"'`\u0000-\u001f]/g, '').slice(0, n);
+  for (const w of g.wrestlers || []) { ensureSkills(w); cleanSkills(w); if (w.short != null) { w.short = txt(w.short, 20).trim(); if (!w.short) delete w.short; } }
+  for (const r of Array.isArray(g.rivalPromos) ? g.rivalPromos : []) for (const w of Array.isArray(r.roster) ? r.roster : []) if (w && typeof w === 'object') ensureSkills(w);
+  const st = {};
+  if (g.staff && typeof g.staff === 'object') for (const r of Object.keys(STAFF_ROLES)) { const s = g.staff[r]; if (s && typeof s === 'object') st[r] = { n: txt(s.n, 40) || 'Staff', q: clamp(Math.round(+s.q) || 1, 1, 5), pay: clamp(+s.pay || 0, 0, 1e5), bio: txt(s.bio, 60), wk: Math.floor(+s.wk) || 1, ...(s.off ? { off: true } : {}) }; }
+  g.staff = st;
+  if (shared || !g.staffPool || !Array.isArray(g.staffPool.list)) delete g.staffPool;
+  const S = g.school;
+  if (S && typeof S === 'object' && S.open) {
+    const tw = a => (Array.isArray(a) ? a : []).filter(w => w && typeof w === 'object' && w.id && w.name).slice(0, 8).map(w => {
+      w.id = txt(w.id, 20) || uid(); w.name = txt(w.name, 40) || 'Rookie'; w.nick = txt(w.nick, 40); w.align = w.align === 'heel' ? 'heel' : 'face'; w.style = STYLES.includes(w.style) ? w.style : 'Brawler';
+      for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
+      w.age = clamp(+w.age || 20, 16, 40); w.injury = 0; w.momentum = 0; w.contract = null; w.record ||= { w: 0, l: 0, d: 0 }; w.notes = txt(w.notes, 400); w.trainee = clamp(Math.floor(+w.trainee) || 0, 0, 999);
+      delete w.photo; ensureSkills(w); return cleanSkills(w);
+    });
+    g.school = { open: true, wk: Math.floor(+S.wk) || 1, trainees: tw(S.trainees), tryouts: tw(S.tryouts), next: Math.floor(+S.next) || 0 };
+  } else delete g.school;
+  g.settings && (g.settings.deep = !!g.settings.deep);
+}
 // =====================================================================
 //  Welcome sequence: build your company, then draft a roster
 // =====================================================================
@@ -7020,7 +7419,7 @@ function wizToChamps() {
 function wizFinish() {
   const z = UI.wiz, host = z.add && G ? G : null;
   if (!host) meta.slot = z.slot;
-  newGame({ name: z.name.trim() || 'My Wrestling Promotion', show: z.show.trim() || 'Weekly Warfare', difficulty: z.budget, challenge: z.challenge, roster: z.source === 'starter' ? 'starter' : 'empty', finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false });
+  newGame({ name: z.name.trim() || 'My Wrestling Promotion', show: z.show.trim() || 'Weekly Warfare', difficulty: z.budget, challenge: z.challenge, roster: z.source === 'starter' ? 'starter' : 'empty', finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false, deep: !!z.deep });
   if (host) { G.week = host.week; G.settings = host.settings; G.titles.forEach(t => { t.since = t.lastDefense = host.week; }); G.stories.forEach(s => s.start = host.week); }
   G.promo.day = z.day; G.promo.color = z.color; G.rivals = z.rivals || shuffle(RIVALS).slice(0, 2);
   // only the big events this booker named: nothing pre-filled shows up on a company they built
@@ -7129,9 +7528,9 @@ function viewWizard() {
   }
   if (z.step === 'budget') {
     return `<div class="app wz">${wizSteps('budget')}
-      <div class="wz-k">Step 2 · Starting position</div><h2 class="wz-h">How do you want to run ${esc(z.name)}?</h2>
-      ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="sec" style="margin-top:4px">Game rules</div>
-      <div class="list" style="margin-bottom:14px">${[['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.']].map(([k, l, d]) => `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}"><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}</div></div></button>`).join('')}</div>
+      <div class="wz-k">Step 2 · Sim settings</div><h2 class="wz-h">How do you want to run ${esc(z.name)}?</h2>
+      ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="sec" style="margin-top:4px">Sim settings</div>
+      <div class="list" style="margin-bottom:14px">${[['deep', '🧠 Deep sim', 'See every skill (psychology, selling, consistency, safety and more) and each wrestler\'s potential. Turns on money and contracts too. Off: the simple six stats.'], ['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.']].map(([k, l, d]) => `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}"><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}</div></div></button>`).join('')}</div>
       <div class="sec">Challenge</div>
       <div class="seg-ctl" style="margin-bottom:6px">${CHALLENGES.map(([k, l]) => `<button class="${(z.challenge || 'normal') === k ? 'on' : ''}" data-act="wzSet" data-f="challenge" data-id="${k}">${l}</button>`).join('')}</div>
       <p class="muted tiny" style="margin:0 0 14px">${CHALLENGES.find(c => c[0] === (z.challenge || 'normal'))[2]} You can change it later in the menu.</p>`}
@@ -7280,14 +7679,14 @@ const WIZ_ACTIONS = {
   wzStart: wizStart,
   wzCancel() { UI.wiz = null; render(); window.scrollTo(0, 0); },
   wzGo(step) { UI.wiz.step = step; render(); window.scrollTo(0, 0); },
-  wzRule(k) { UI.wiz[k] = !UI.wiz[k]; render(); },
+  wzRule(k) { const z = UI.wiz; z[k] = !z[k]; if (k === 'deep' && z.deep) { z.money = true; z.contracts = true; } render(); },
   wzXDay(v) { const [i, k] = String(v).split(':').map(Number), x = UI.wiz.extra?.[i]; if (x) { x.day = clamp(k || 0, 0, 6); render(); } },
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
   wzPpvIdeas() { const l = shuffle(BIG_EVENTS).slice(0, 12); UI.wiz.ppv = l.join('\n'); if (!Object.values(UI.wiz.sig || {}).some(Boolean)) UI.wiz.sig = { [l[0]]: 'mt:Rumble' }; render(); },
   wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
-  wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false }); tutStart(); UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = null; save(); render(); },
+  wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false, deep: !!z.deep }); tutStart(); UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = null; save(); render(); },
   wzDraft() { if (!UI.wiz.show.trim()) UI.wiz.show = DAYS[UI.wiz.day] + ' Mayhem'; wizBeginDraft(); },
   wzPick(id) { const y = window.scrollY; draftPick(id); if (UI.wiz?.step === 'draft') window.scrollTo(0, y); },
   wzAuto() { draftAuto(false); },
@@ -7392,6 +7791,9 @@ document.addEventListener('change', e => {
     else if (k === 'injuries') { G.settings.injuries = el.checked; commit(); }
     else if (k === 'organic') { G.settings.organic = el.checked; commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
+    else if (k === 'deep') { G.settings.deep = el.checked; commit(el.checked ? 'Deep sim on. Open any wrestler to see their skills.' : 'Deep sim off.'); }
+    else if (k === 'trainFocus') { const w = W(el.dataset.id) || trainees().find(x => x.id === el.dataset.id); if (w && Object.hasOwn(FOCUS, el.value)) { w.train = el.value; commit(`${w.name}: ${FOCUS[w.train][0].toLowerCase()} training.`); } }
+    else if (k === 'prOn') { const s = staffOf('pr'); if (s) { if (el.checked) delete s.off; else s.off = true; commit(); } }
     else if (k === 'persona') { G.settings.persona = el.checked; if (el.checked) ensurePers(); commit(el.checked ? 'Personalities on. Check 📱 for texts from your wrestlers.' : 'Personalities off.'); }
     else if (k === 'wPers') { const w = W(el.dataset.id); if (w && Object.hasOwn(PERS, el.value)) { w.pers = el.value; commit(`${w.name} is now a ${PERS[w.pers].n.toLowerCase()}.`); } }
     else if (k === 'difficulty') { G.settings.difficulty = Object.hasOwn(DIFF, el.value) ? el.value : 'normal'; commit('Challenge set to ' + CHALLENGES.find(c => c[0] === G.settings.difficulty)[1] + '.'); }
@@ -7512,6 +7914,9 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.7';
 const WHATS_NEW = [
+  ['🎓 Training school and staff', 'Office → Staff: hire a Head Trainer, Road Agent, Doctor, PR Agent, Scout and Writer, open a school and train your own rookies, and give anyone a training focus or a veteran mentor. Young wrestlers grow every week, and they learn from better workers in the ring.'],
+  ['🧠 Deep sim', 'Menu → Settings → Deep sim shows every wrestler\'s psychology, selling, consistency, safety, technical, brawling and aerial skills, plus their potential.'],
+  ['✏️ Short names', 'Give anyone a short name (Moxley instead of Jon) in their Edit screen. It is used wherever only one name fits.'],
   ['📺 Media appearances', 'Office → Media: send wrestlers on talk shows, podcasts and fan signings for a popularity boost (with a small chance of a slip-up), or away on movies, media tours and indie runs to come back much bigger. Big offers come as backstage events, and some wrestlers will ask.'],
   ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Rivals), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
   ['🎤 Plan your promos', 'Pick what a promo is about and its tone: fiery, calm, funny, cheap heat or from the heart. The speaker\'s mic skill decides if it lands or falls flat.'],
