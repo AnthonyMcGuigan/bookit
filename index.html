@@ -4366,7 +4366,7 @@ function viewOffice() {
   </div>` : `<div class="grid2">
     <div class="stat"><div class="k">Roster</div><div class="v">${signed().length}</div><div class="s">wrestlers signed</div></div>
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
-  </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn it on in Menu → Settings.</div>`}
+  </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn on Deep sim in Menu → Settings to use it.</div>`}
   ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
   <div class="seg-ctl tri" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
   ${t === 'setup' ? setupView() : ''}
@@ -4546,8 +4546,8 @@ function modalMenu() {
     <div class="sec">Settings</div>
     <div class="small muted" style="margin-bottom:8px">Sim settings</div>
     <label class="todo"><input type="checkbox" data-in="deep" ${G.settings.deep ? 'checked' : ''}><span>🧠 Deep sim: show every skill (psychology, selling, consistency and more) and potential</span></label>
-    <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''}><span>💰 Money: payroll, tickets and TV deals</span></label>
-    <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''}><span>📝 Contracts: deals run out and wrestlers can leave</span></label>
+    <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>💰 Money: payroll, tickets and TV deals${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
+    <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>📝 Contracts: deals run out and wrestlers can leave${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
     <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>💬 Personalities: texts, demands and memory</span></label>
     <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Rivals.</span></span></label>
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
@@ -8311,17 +8311,18 @@ document.addEventListener('change', e => {
     else if (k === 'injuries') { G.settings.injuries = el.checked; commit(); }
     else if (k === 'organic') { G.settings.organic = el.checked; commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
-    else if (k === 'deep') { G.settings.deep = el.checked; if (el.checked) { G.settings.finances = true; if (G.settings.contracts === false) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40); G.settings.contracts = true; } commit(el.checked ? 'Deep sim on, with money and contracts. Open any wrestler to see their skills.' : 'Deep sim off.'); }
+    else if (k === 'deep') { G.settings.deep = el.checked; if (el.checked) { G.settings.finances = true; if (G.settings.contracts === false) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40); G.settings.contracts = true; } else { G.settings.finances = false; G.settings.contracts = false; } commit(el.checked ? 'Deep sim on, with money and contracts. Open any wrestler to see their skills.' : 'Deep sim off. Money and contracts are off too.'); }
     else if (k === 'trainFocus') { const w = W(el.dataset.id) || trainees().find(x => x.id === el.dataset.id); if (w && Object.hasOwn(FOCUS, el.value)) { w.train = el.value; commit(`${w.name}: ${FOCUS[w.train][0].toLowerCase()} training.`); } }
     else if (k === 'prOn') { const s = staffOf('pr'); if (s) { if (el.checked) delete s.off; else s.off = true; commit(); } }
     else if (k === 'persona') { G.settings.persona = el.checked; if (el.checked) ensurePers(); commit(el.checked ? 'Personalities on. Check 📱 for texts from your wrestlers.' : 'Personalities off.'); }
     else if (k === 'wPers') { const w = W(el.dataset.id); if (w && Object.hasOwn(PERS, el.value)) { w.pers = el.value; commit(`${w.name} is now a ${PERS[w.pers].n.toLowerCase()}.`); } }
     else if (k === 'difficulty') { G.settings.difficulty = Object.hasOwn(DIFF, el.value) ? el.value : 'normal'; commit('Challenge set to ' + CHALLENGES.find(c => c[0] === G.settings.difficulty)[1] + '.'); }
-    else if (k === 'finances') { G.settings.finances = el.checked; commit(); }
+    else if (k === 'finances') { if (!G.settings.deep) return render(); G.settings.finances = el.checked; commit(); }
     else if (k === 'cNotes') { UI.modal.notes = el.checked; }
     else if (k === 'cMine') { UI.modal.mine = el.checked; render(); }
     else if (k === 'sandbox') { G.settings.sandbox = el.checked; commit(el.checked ? 'Sandbox on. Build your world in Office → Rivals.' : 'Sandbox off.'); }
     else if (k === 'contracts') {
+      if (!G.settings.deep) return render();
       G.settings.contracts = el.checked;
       // deals were frozen while contracts were off; give anyone with almost nothing left a fresh runway
       if (el.checked) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40);
