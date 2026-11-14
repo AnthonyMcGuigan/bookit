@@ -1480,7 +1480,7 @@ function tSeg(T, r, i) {
 // The company being booked lives in G as always. The player's other companies wait in G.cos as snapshots
 // holding their own roster, titles, stories, money and history. Free agents, retired legends, AI rivals,
 // settings and the calendar are shared. Every company runs one show a week; the week moves on after the last one.
-const SHARED_KEYS = new Set(['v', 'created', 'week', 'settings', 'wrestlers', 'rivalPromos', 'rivals', 'cos', 'savedAt', 'customMatch']);
+const SHARED_KEYS = new Set(['v', 'created', 'week', 'settings', 'wrestlers', 'rivalPromos', 'rivals', 'wlog', 'wseed', 'wseedN', 'cos', 'savedAt', 'customMatch']);
 const MAX_COS = 4;
 const multi = () => !!(G && Array.isArray(G.cos) && G.cos.length);
 const waitingCos = () => (G.cos || []).filter(c => (c.ranWk || 0) < G.week);
@@ -2459,7 +2459,7 @@ function endOfWeek(card, world = true) {
     if (wl === 4) news(`📝 ${w.name}'s contract ends in 4 weeks.${w.courted ? ` ${w.courted} is circling.` : ''}`, 'contract');
     // the last 8 weeks: rival promotions call the bigger names
     if (wl > 0 && wl <= 8 && !w.courted && Math.random() < 0.04 + w.pop / 900 + (PER() && w.pers === 'money' ? 0.04 : 0)) {
-      ensureRivals(); w.courted = G.rivals?.length ? pick(G.rivals) : 'A rival promotion';
+      w.courted = courtFor(w);
       news(`🗞️ ${w.courted} is talking to ${w.name}, whose deal ends in ${wl} weeks. Their price just went up.`, 'contract');
     }
     if (wl <= 0) {
@@ -2473,9 +2473,7 @@ function endOfWeek(card, world = true) {
     }
     else if (w.morale < 15 && Math.random() < 0.15) { news(`😠 ${w.name} is miserable and demanded their release. You let them walk.`, 'contract'); leaveCompany(w, 'demanded release'); }
   }
-  // the rest of the wrestling world moves on
-  const fa = world ? freeAgents() : [];
-  if (fa.length && Math.random() < 0.12) { const w = pick(fa.filter(x => x.pop < 70).length ? fa.filter(x => x.pop < 70) : fa); const to = goRival(w); news(`🗞️ Free agent ${w.name} signed with ${to}.`, 'contract'); }
+  // the rest of the wrestling world moves on: AI companies book, sign, raid, grow and fold
   rivalWeek(world);
   for (const T of G.tourneys || []) if (!T.done) tWalkovers(T);
   if (G.week % 52 === 0) yearEnd(world);
@@ -2491,46 +2489,185 @@ function endOfWeek(card, world = true) {
   if (G.settings.finances && G.money < 0) news('💸 You are in the red. Cut payroll or run bigger events.', 'office');
 }
 
-// ---------- rival promotions: real companies with rosters, champions and weekly shows ----------
+// ---------- the living world: rival promotions that book real shows, build stars, sign talent, grow, shrink, open and fold ----------
+// Every AI company has a booking style, a bank balance, its own championships, feuds and the stars it is building.
+// Each week it books a card, runs it, pays its roster, fills the holes in its roster from free agents and other companies,
+// and moves up or down a tier. Broke companies close or get bought. New ones open, sometimes when a star walks out.
 const RIV_COLORS = ['#ff5a5f', '#4c8dff', '#2fbf71', '#a463f2', '#22b8cf', '#e84393', '#d35400'];
 const RIV_SHOWS = ['Friday Night Fallout', 'Saturday Slam', 'Thursday Throwdown', 'Sunday Showdown', 'Wednesday War', 'Tuesday Turmoil'];
+const RIV_PPVS = ['Night of Glory', 'Iron Will', 'Overdrive', 'Rust and Ruin', 'Neon Nights', 'Point of No Return', 'Gold Rush', 'Flashpoint', 'Shattered', 'Uprising', 'High Tide', 'Burning Bridges', 'Thunder Road', 'Glass Jaw', 'Last Call'];
+const RIV_PLACES = ['Copper City', 'Blackwater', 'Red River', 'Summit', 'Harborline', 'Iron Valley', 'Crescent Bay', 'Prairie', 'Granite State', 'Sunset Strip', 'Midnight', 'Old Town', 'Riverside', 'Northside', 'Big Sky', 'Southern Cross'];
+const RIV_KINDS = ['Pro Wrestling', 'Wrestling Alliance', 'Championship Wrestling', 'Grappling Federation', 'Wrestling Club', 'Pro', 'Fight League'];
+const MAX_RIV = 7;
 const RV = id => (G.rivalPromos || []).find(r => r.id === id);
+// sandbox: the booker can edit and move anyone in the world, for building a world to play or share
+const SANDBOX = () => !!G?.settings?.sandbox;
+// name, fans needed, roster size they aim for, how popular their top star should be, how much they pay
+const TIERS = [['Indie', 0, 10, 50, 0.35], ['Regional', 15000, 14, 60, 0.55], ['National', 45000, 20, 70, 0.8], ['Global', 120000, 28, 80, 1]];
+const tierIx = r => { let i = 0; TIERS.forEach((t, k) => { if ((r.fans || 0) >= t[1]) i = k; }); return i; };
+const tierOf = r => TIERS[tierIx(r)][0];
+const RPHIL = {
+  stars: { n: 'Star-maker', ic: '🌱', d: 'Builds young talent and pushes new names to the top.' },
+  vets: { n: 'Big names', ic: '💎', d: 'Spends on established stars and leans on them.' },
+  work: { n: 'Workrate', ic: '🤼', d: 'Great wrestling first. Ring skill is what counts.' },
+  ent: { n: 'Entertainment', ic: '🎤', d: 'Big characters, promos and drama.' },
+  hard: { n: 'Hardcore', ic: '🩸', d: 'Wild brawls and weapons. Crowds love it, bodies break.' }
+};
+const philOf = r => RPHIL[r.phil] || RPHIL.vets;
+// how much a company with this style wants this wrestler, about 0 to 100
+function worth(r, w) {
+  const p = w.pop, rg = w.ring, cha = w.cha, mic = w.mic, st = w.stam;
+  switch (r.phil) {
+    case 'stars': return rg * 0.4 + cha * 0.2 + p * 0.2 + Math.max(0, 29 - (+w.age || 28)) * 2.2 + (p < 60 ? 6 : 0);
+    case 'work': return rg * 0.62 + st * 0.13 + p * 0.25 + (w.style === 'Technician' ? 6 : w.style === 'High Flyer' ? 4 : 0);
+    case 'ent': return cha * 0.35 + mic * 0.3 + p * 0.35 + (w.style === 'Showman' ? 8 : 0);
+    case 'hard': return rg * 0.3 + st * 0.25 + p * 0.45 + (w.style === 'Brawler' || w.style === 'Powerhouse' ? 8 : 0);
+    default: return p * 0.6 + cha * 0.2 + rg * 0.2 + (+w.age >= 30 ? 4 : 0);
+  }
+}
+// how well a wrestler performs for this company's crowd
+function perfR(r, w) {
+  const p = w.pop, rg = w.ring;
+  const v = r.phil === 'work' ? rg * 0.62 + w.stam * 0.1 + p * 0.28 : r.phil === 'ent' ? w.cha * 0.3 + w.mic * 0.2 + p * 0.3 + rg * 0.2 : r.phil === 'hard' ? rg * 0.3 + w.stam * 0.2 + p * 0.35 + 6 : rg * 0.4 + p * 0.4 + w.cha * 0.2;
+  return v - (w.fatigue || 0) * 0.1;
+}
+const rSalFor = (r, w) => Math.max(300, Math.round(asking(w) * TIERS[tierIx(r)][4] / 100) * 100);
+const payrollR = r => sum(r.roster.map(w => w.rSal || 0));
+const incomeR = r => Math.round((r.fans || 0) * [1.5, 1.25, 1.05, 0.9][tierIx(r)] * (0.55 + (r.last || 55) / 110));
+const rW = (r, id) => id ? r.roster.find(w => w.id === id) : null;
+const isWomen = w => w.division === "Women's";
+const fitsT = (r, t, w) => t.div === "Women's" ? isWomen(w) : !(r.titles || []).some(x => x.div === "Women's") || !isWomen(w);
+const rivBig = (r, wk) => (wk + (r.off || 0)) % 4 === 0;
+const rivNext = r => { for (let k = G.week; k < G.week + 8; k++) if (rivBig(r, k)) return k; return G.week + 4; };
+const ppvName = (r, wk) => (r.ppvs?.length ? r.ppvs[Math.floor(wk / 4) % r.ppvs.length] : 'Big Event');
+function wnews(text, r, loud) {
+  G.wlog ||= []; G.wlog.unshift({ wk: G.week, t: text, ...(r ? { r: r.id } : {}) }); if (G.wlog.length > 80) G.wlog.length = 80;
+  if (r) { r.log ||= []; r.log.unshift({ wk: G.week, t: text }); if (r.log.length > 14) r.log.length = 14; }
+  if (loud) news(text, 'office');
+}
 function makeRival(name, o = {}) {
   name = String(name || 'Rival Promotion').slice(0, 40);
-  return { id: uid(), name, short: (o.short || abbr(name)).slice(0, 5), color: safeColor(o.color) || pick(RIV_COLORS), prestige: clamp(o.prestige ?? rint(30, 60), 1, 100), fans: o.fans ?? rint(8000, 30000), show: o.show || pick(RIV_SHOWS), roster: [], champId: null, last: 0, hist: [], custom: !!o.custom };
+  const r = { id: uid(), name, short: (o.short || abbr(name)).slice(0, 5), color: safeColor(o.color) || pick(RIV_COLORS), prestige: clamp(o.prestige ?? rint(30, 60), 1, 100), fans: o.fans ?? rint(8000, 30000), show: o.show || pick(RIV_SHOWS), roster: [], champId: null, last: 0, hist: [], custom: !!o.custom, born: G?.week || 1 };
+  if (o.phil && RPHIL[o.phil]) r.phil = o.phil;
+  return liven(r);
 }
-function rivWrestler(w, r) { w.contract = null; delete w.courted; delete w._ask; w.rival = r.id; w.rWeeks = rint(26, 156); w.division ||= 'Open'; return w; }
-function setRivalChamp(r) { if (!r.roster.some(w => w.id === r.champId)) r.champId = r.roster.slice().sort((a, b) => b.pop - a.pop)[0]?.id || null; }
+// bring an AI company up to date: older saves, imports and shared worlds all pass through here
+function liven(r) {
+  if (r.lv === 2) return r;
+  r.phil = RPHIL[r.phil] ? r.phil : pick(Object.keys(RPHIL));
+  r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
+  r.money = isFinite(+r.money) && r.money != null ? +r.money : Math.round(r.fans * rnd(3, 7));
+  r.off ??= rint(0, 3); r.red = +r.red || 0;
+  r.ppvs = Array.isArray(r.ppvs) && r.ppvs.length ? r.ppvs.map(x => String(x).slice(0, 40)).slice(0, 12) : shuffle(RIV_PPVS).slice(0, 4);
+  r.feuds = (Array.isArray(r.feuds) ? r.feuds : []).filter(f => f && f.a && f.b);
+  r.push = (Array.isArray(r.push) ? r.push : []).filter(p => p && p.id);
+  r.log = Array.isArray(r.log) ? r.log.slice(0, 14) : [];
+  r.titles = (Array.isArray(r.titles) ? r.titles : []).filter(t => t && t.id).map(t => ({ ...t, holder: Array.isArray(t.holder) ? t.holder.slice(0, 1) : [], reigns: Array.isArray(t.reigns) ? t.reigns.slice(-20) : [] }));
+  if (r.safe === undefined) r.safe = !!r.custom;
+  for (const w of r.roster) { w.rival = r.id; w.rSal ||= rSalFor(r, w); w.record ||= { w: 0, l: 0, d: 0 }; }
+  r.lv = 2;
+  if (!r.titles.length) {
+    r.titles.push({ id: uid(), name: `${r.short} World Championship`, short: 'World', div: '', mid: false, holder: r.champId && rW(r, r.champId) ? [r.champId] : [], since: G?.week || 1, d: 0, reigns: [] });
+  }
+  rivTitles(r);
+  return r;
+}
+// a company adds a second title and a women's title once it has the roster for them
+function rivTitles(r) {
+  if (r.tset) return;
+  const has = s => r.titles.some(t => t.short === s);
+  if (!has('TV') && r.roster.length >= 10) r.titles.push({ id: uid(), name: `${r.short} Television Championship`, short: 'TV', div: '', mid: true, holder: [], since: G.week, d: 0, reigns: [] });
+  if (!has("Women's") && r.roster.filter(isWomen).length >= 4) r.titles.push({ id: uid(), name: `${r.short} Women's Championship`, short: "Women's", div: "Women's", mid: false, holder: [], since: G.week, d: 0, reigns: [] });
+}
+function crownR(r, t, w, why) {
+  const cur = t.reigns.at(-1); if (cur && !cur.to) { cur.to = Math.max(cur.from, G.week); cur.d = t.d || 0; }
+  t.holder = w ? [w.id] : []; t.since = G.week; t.d = 0;
+  const first = !t.reigns.length;
+  if (w) t.reigns.push({ nm: w.name, from: G.week, to: 0, d: 0 });
+  if (t.reigns.length > 20) t.reigns.splice(0, t.reigns.length - 20);
+  if (!t.mid && !t.div) r.champId = w ? w.id : null;
+  if (w && why && !(first && G.week <= 1)) wnews(`🏆 ${r.name}: ${w.name} ${why} the ${t.name}.`, r, !first && !t.mid && r.fans >= 15000);
+}
+// titles always have a holder while the company has someone who can hold them
+function setRivalChamp(r) {
+  liven(r); rivTitles(r);
+  for (const t of r.titles) {
+    const h = rW(r, t.holder[0]);
+    if (h && !(h.injury > 6)) continue;
+    if (h) wnews(`🚑 ${h.name} is hurt and gave up the ${t.name}.`, r);
+    const used = new Set(r.titles.filter(x => x !== t).flatMap(x => x.holder));
+    const c = r.roster.filter(w => !w.injury && fitsT(r, t, w) && !used.has(w.id)).sort((a, b) => (b.pop + pushB(r, b)) - (a.pop + pushB(r, a)))[0];
+    if (c) crownR(r, t, c, t.holder.length || t.reigns.length ? 'won a tournament for' : 'became the first holder of');
+    else if (t.holder.length) crownR(r, t, null);
+  }
+  r.champId = r.titles.find(t => !t.mid && !t.div)?.holder[0] || null;
+}
+const pushB = (r, w) => r.push?.some(p => p.id === w.id) ? 22 : 0;
+function rivWrestler(w, r) { w.contract = null; delete w.courted; delete w._ask; delete w.loan; delete w.loanUntil; w.rival = r.id; w.rWeeks = rint(26, 156); w.division ||= 'Open'; w.rSal = rSalFor(r, w); w.record ||= { w: 0, l: 0, d: 0 }; return w; }
+// a wrestler leaves an AI company: for a free agent pool, another company, or your roster
+function outOfRival(w, r) { r.roster = r.roster.filter(x => x !== w); delete w.rival; delete w.rWeeks; delete w.rSal; r.feuds = r.feuds.filter(f => f.a !== w.id && f.b !== w.id); r.push = r.push.filter(p => p.id !== w.id); setRivalChamp(r); }
 function fillRival(r, n) { for (let i = 0; i < n; i++) r.roster.push(rivWrestler(makeWrestler(randomName(), '', null, null, rnd(0.1, 0.8)), r)); setRivalChamp(r); }
 const syncRivals = () => { G.rivals = (G.rivalPromos || []).map(r => r.name); };
 function ensureRivals() {
-  if (Array.isArray(G.rivalPromos)) return;
-  G.rivalPromos = (G.rivals?.length ? G.rivals : shuffle(RIVALS).slice(0, 2)).map(n => { const r = makeRival(n); fillRival(r, rint(10, 16)); return r; });
+  if (!Array.isArray(G.rivalPromos)) {
+    G.rivalPromos = (G.rivals?.length ? G.rivals : shuffle(RIVALS).slice(0, 2)).map(n => { const r = makeRival(n); fillRival(r, rint(10, 16)); return r; });
+    syncRivals();
+  }
+  for (const r of G.rivalPromos) if (r.lv !== 2) { liven(r); setRivalChamp(r); }
+  if (!G.wseed) { G.wseed = 1; if (G.week <= 2) seedWorld(); }
+}
+// a new game's world: besides the two rivals, a bigger national company to chase and a scrappy indie
+function seedWorld() {
+  const mk = (fans, pres, n, lo, hi) => {
+    const r = makeRival(rivalName(), { fans, prestige: pres }); r.money = Math.round(fans * rnd(4, 7));
+    for (let i = 0; i < n; i++) r.roster.push(rivWrestler(makeWrestler(randomName(), '', null, null, rnd(lo, hi)), r));
+    for (const w of r.roster.slice(0, Math.round(n / 4))) w.division = "Women's";
+    G.rivalPromos.push(r); setRivalChamp(r); return r;
+  };
+  const want = clamp(+G.wseedN || 4, 1, MAX_RIV);
+  while (G.rivalPromos.length > want && G.rivalPromos.length > 1) { const r = G.rivalPromos.pop(); for (const w of r.roster) { delete w.rival; delete w.rWeeks; delete w.rSal; w.contract = null; G.wrestlers.push(w); } }
+  const kinds = [[50000, 70000, 58, 68, 20, 0.3, 0.95], [4000, 8000, 22, 32, 9, 0.05, 0.55], [16000, 30000, 40, 52, 14, 0.15, 0.8], [5000, 10000, 25, 38, 10, 0.05, 0.6]];
+  for (let i = 0; G.rivalPromos.length < want; i++) { const k = kinds[i % kinds.length]; mk(rint(k[0], k[1]), rint(k[2], k[3]), k[4], k[5], k[6]); }
   syncRivals();
 }
-// the promotion a wrestler leaves for: named one if it exists, otherwise a big promotion with room
-// a rival books a real card each week: a title main event and a few matches. Results move their wrestlers.
-function rivalCard(r, sup) {
-  const pool = r.roster.filter(w => !w.injury).sort((a, b) => (b.pop + (b.momentum || 0)) - (a.pop + (a.momentum || 0)));
-  if (pool.length < 2) { r.card = { wk: G.week, segs: [] }; return; }
-  const champ = pool.find(w => w.id === r.champId), used = new Set(), segs = [];
-  const take = w => { used.add(w.id); return w; };
-  const rate = (a, b, t) => Math.round(clamp((overall(a) + overall(b)) / 2 * 0.6 + r.last * 0.4 + (t ? 3 : 0) + rnd(-6, 6), 20, 98));
-  const bout = (a, b, t) => {
-    const pa = a.pop + (a.momentum || 0) + rnd(0, 40) + (t && a.id === r.champId ? 12 : 0), pb = b.pop + (b.momentum || 0) + rnd(0, 40) + (t && b.id === r.champId ? 12 : 0);
-    const win = pa >= pb ? a : b, lose = win === a ? b : a;
-    win.momentum = clamp((win.momentum || 0) + 3, -50, 50); lose.momentum = clamp((lose.momentum || 0) - 2, -50, 50); win.pop = clamp(win.pop + 0.3, 1, 100);
-    if (t && win.id !== r.champId) { r.champId = win.id; news(`🏆 ${r.name}: ${win.name} beat ${lose.name} for their top title.`, 'office'); }
-    return { an: a.name, bn: b.name, a: a.id, b: b.id, won: win.id, title: !!t, rating: rate(a, b, t) };
-  };
-  if (champ) { const ch = pool.find(w => w !== champ && w.align !== champ.align) || pool.find(w => w !== champ); if (ch) segs.push(bout(take(champ), take(ch), true)); }
-  const rest = pool.filter(w => !used.has(w.id)).slice(0, sup ? 10 : 8);
-  for (let i = 0; i + 1 < rest.length && segs.length < (sup ? 5 : 4); i += 2) segs.unshift(bout(rest[i], rest[i + 1], false));
-  r.card = { wk: G.week, sup: !!sup, segs };
+// what a company is missing, most pressing first
+function rivalNeeds(r) {
+  const T = TIERS[tierIx(r)], ros = r.roster, top = ros.slice().sort((a, b) => b.pop - a.pop), n = [];
+  if (ros.length < T[2] - 2) n.push({ k: 'size', l: 'more wrestlers', f: () => true });
+  if ((top[0]?.pop || 0) < T[3] - 4) n.push({ k: 'star', l: 'a top star', f: w => w.pop >= T[3] - 12 });
+  if (!top.slice(0, 4).some(w => w.align === 'heel')) n.push({ k: 'heel', l: 'a top heel', f: w => w.align === 'heel' && w.pop >= (top[3]?.pop || 30) });
+  if (!top.slice(0, 4).some(w => w.align === 'face')) n.push({ k: 'face', l: 'a top face', f: w => w.align === 'face' && w.pop >= (top[3]?.pop || 30) });
+  const wn = ros.filter(isWomen).length; if (wn && wn < 4 || (!wn && ros.length >= 14)) n.push({ k: 'women', l: "women's wrestlers", f: isWomen });
+  if (r.phil === 'stars' && ros.filter(w => +w.age <= 26).length < 3) n.push({ k: 'young', l: 'young talent', f: w => +w.age <= 26 });
+  return n;
+}
+// how much this company would like this wrestler right now
+function wantR(r, w, needs = rivalNeeds(r)) { return worth(r, w) + (needs.some(n => n.f(w)) ? 18 : 0) + (needs[0]?.f(w) ? 8 : 0); }
+// can they pay for them? big names won't sign with a company far below their level
+function canSignR(r, w) {
+  const sal = rSalFor(r, w), T = TIERS[tierIx(r)];
+  if (w.cutBy === r.id && G.week - (w.cutWk || 0) < 30) return false;
+  return (payrollR(r) + sal < incomeR(r) * 0.9 || r.money > sal * 60 || (r.roster.length < T[2] - 2 && r.money > sal * 30)) && w.pop <= r.prestige + 32 && r.roster.length < Math.min(34, T[2] + 5);
+}
+// a rival promotion that would come calling for one of your wrestlers
+function courtFor(w) {
+  ensureRivals();
+  const rs = G.rivalPromos.filter(r => w.pop <= r.prestige + 32 && r.roster.length < 34);
+  const r = rs.map(r => [r, wantR(r, w) + (r.money > 0 ? 10 : -20) + rnd(0, 15)]).sort((a, b) => b[1] - a[1])[0]?.[0];
+  return r ? r.name : (G.rivals?.length ? pick(G.rivals) : 'A rival promotion');
+}
+// the promotion a wrestler leaves for: named one if it exists, otherwise the one that wants them most
+function goRival(w, name) {
+  ensureRivals();
+  const rs = G.rivalPromos.filter(r => r.roster.length < 40);
+  const r = rs.find(x => x.name === name) || rs.map(r => [r, wantR(r, w) - r.roster.length * 0.8 + (r.money > 0 ? 8 : -12) + rnd(0, 18)]).sort((a, b) => b[1] - a[1])[0]?.[0];
+  G.wrestlers = G.wrestlers.filter(x => x !== w);
+  if (r) { r.roster.push(rivWrestler(w, r)); rivTitles(r); setRivalChamp(r); }
+  return r ? r.name : 'a rival promotion';
 }
 // a rival wrestler joins your roster: trades and invasions
 function fromRival(w, r, contract) {
-  r.roster = r.roster.filter(x => x !== w); delete w.rival; delete w.rWeeks; setRivalChamp(r);
+  outOfRival(w, r);
   w.contract = contract; w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(Math.max(w.morale || 60, 60), 0, 100);
   if (splitOn()) w.brand = G.showId;
   G.wrestlers.push(w);
@@ -2542,34 +2679,220 @@ function endLoans() {
     if (r) { G.wrestlers = G.wrestlers.filter(x => x !== w); r.roster.push(rivWrestler(w, r)); setRivalChamp(r); news(`🚪 ${w.name} went back to ${r.name}.`, 'contract'); }
   }
 }
-function goRival(w, name) {
-  ensureRivals();
-  const rs = G.rivalPromos, r = rs.find(x => x.name === name) || rs.slice().sort((a, b) => (b.prestige - b.roster.length * 1.5 + rnd(0, 25)) - (a.prestige - a.roster.length * 1.5 + rnd(0, 25)))[0];
-  G.wrestlers = G.wrestlers.filter(x => x !== w);
-  if (r) { r.roster.push(rivWrestler(w, r)); setRivalChamp(r); }
-  return r ? r.name : 'a rival promotion';
+// one match on an AI company's card. Pushed stars and champions are protected, hot feuds draw better.
+function rBout(r, a, b, o = {}) {
+  const t = o.t, ch = t ? rW(r, t.holder[0]) : null;
+  const sc = w => w.pop * 0.5 + (w.momentum || 0) * 0.5 + pushB(r, w) + (w === ch ? (o.big ? 8 : 16) + (G.week - (t.since || 0) < 12 ? 12 : 0) : 0) + rnd(0, 38);
+  const win = sc(a) >= sc(b) ? a : b, lose = win === a ? b : a;
+  const heat = o.feud ? o.feud.heat : 0;
+  const rating = Math.round(clamp((perfR(r, a) + perfR(r, b)) / 2 * 0.8 + heat / 6 + (t ? 3 : 0) + (o.big ? 4 : 0) + r.prestige * 0.12 + 4 + rnd(-6, 6), 15, 98));
+  const gain = [0.5, 0.7, 0.9, 1.1][tierIx(r)] * (0.4 + (rating - 50) / 60 + (pushB(r, win) ? 0.5 : 0) + (o.big ? 0.3 : 0));
+  addPop(win, Math.max(0.05, gain)); lose.pop = clamp(lose.pop - (o.squash ? 0.25 : 0.05), 1, 100);
+  win.momentum = clamp((win.momentum || 0) + 3, -50, 50); lose.momentum = clamp((lose.momentum || 0) - 2, -50, 50);
+  win.record ||= { w: 0, l: 0, d: 0 }; lose.record ||= { w: 0, l: 0, d: 0 }; win.record.w++; lose.record.l++;
+  win.fatigue = clamp((win.fatigue || 0) + 8, 0, 60); lose.fatigue = clamp((lose.fatigue || 0) + 8, 0, 60);
+  if (Math.random() < (r.phil === 'hard' ? 0.03 : 0.012) * DF().inj) { const hurt = Math.random() < 0.6 ? lose : win; hurt.injury = rint(2, 10); if (hurt.pop >= 55) wnews(`🚑 ${hurt.name} was hurt at ${r.name} and is out for about ${hurt.injury} weeks.`, r); }
+  if (t) { if (win === ch) t.d = (t.d || 0) + 1; else {
+    crownR(r, t, win, `beat ${lose.name} for`);
+    // one belt at a time: a new champion gives up any other title they held
+    for (const x of r.titles) if (x !== t && x.holder[0] === win.id) { crownR(r, x, null); wnews(`${win.name} gave up the ${x.name} after winning the ${t.name}.`, r); }
+  } }
+  return { an: a.name, bn: b.name, a: a.id, b: b.id, won: win.id, title: !!t, ...(t ? { tn: t.short } : {}), ...(o.feud ? { f: 1 } : {}), rating, imp: (t ? (t.mid || t.div ? 30 : 60) : 0) + (o.feud ? 20 + heat / 5 : 0) + (a.pop + b.pop) / 10 };
+}
+// the card an AI company books this week: title defenses, feuds, its pushed stars and the rest of the roster
+function rivalCard(r, sup) {
+  liven(r);
+  const big = sup || rivBig(r, G.week), segs = [], used = new Set();
+  const free = w => w && !used.has(w.id) && !w.injury && r.roster.includes(w);
+  const take = (...ws) => ws.forEach(w => used.add(w.id));
+  const slots = [3, 4, 5, 6][tierIx(r)] + (big ? 2 : 0);
+  if (r.roster.filter(w => !w.injury).length < 2) { r.card = { wk: G.week, segs: [] }; return; }
+  // feuds: they meet now and then on weekly shows and settle it at the big one
+  for (const f of r.feuds) {
+    const a = rW(r, f.a), b = rW(r, f.b); if (!free(a) || !free(b)) continue;
+    const t = f.tid ? r.titles.find(x => x.id === f.tid && x.holder.length && [a.id, b.id].includes(x.holder[0])) : null;
+    if (big) { take(a, b); segs.push(rBout(r, a, b, { t, feud: f, big })); f.done = 1; }
+    else { f.heat = clamp(f.heat + rnd(4, 10) * (r.phil === 'ent' ? 1.25 : 1), 0, 100); if (Math.random() < 0.3) { take(a, b); segs.push(rBout(r, a, b, { feud: f })); } }
+  }
+  // title defenses: every title at a big event, now and then on a weekly show
+  for (const t of r.titles) {
+    const c = rW(r, t.holder[0]); if (!free(c) || segs.length >= slots) continue;
+    if (!big && Math.random() > (t.mid ? 0.35 : 0.15)) continue;
+    const ch = r.roster.filter(w => free(w) && w !== c && fitsT(r, t, w) && !r.titles.some(x => x !== t && x.holder.includes(w.id))).sort((x, y) => (y.pop + pushB(r, y) + (y.align !== c.align ? 6 : 0) + (y.momentum || 0) / 2 + rnd(0, 12)) - (x.pop + pushB(r, x) + (x.align !== c.align ? 6 : 0) + (x.momentum || 0) / 2 + rnd(0, 12)))[0];
+    if (ch) { take(c, ch); segs.push(rBout(r, c, ch, { t, big })); }
+  }
+  // the stars they're building get wins over the lower card
+  for (const p of r.push) {
+    const w = rW(r, p.id); if (!free(w) || segs.length >= slots) continue;
+    const opp = r.roster.filter(x => free(x) && x !== w && sameDiv(x, w) && x.pop < w.pop + 5).sort((a, b) => a.pop - b.pop)[rint(0, 2)];
+    if (opp) { take(w, opp); segs.push(rBout(r, w, opp, { squash: true })); }
+  }
+  // everyone else, paired by division and level
+  const rest = r.roster.filter(free).sort((a, b) => b.pop - a.pop + rnd(-10, 10));
+  while (segs.length < slots && rest.length >= 2) {
+    const a = rest.shift(), i = rest.findIndex(x => sameDiv(x, a)); if (i < 0) continue;
+    const b = rest.splice(i, 1)[0]; take(a, b); segs.push(rBout(r, a, b, {}));
+  }
+  segs.sort((a, b) => a.imp - b.imp);
+  segs.forEach(s => delete s.imp);
+  r.card = { wk: G.week, sup: !!sup, big: !!big, name: big ? ppvName(r, G.week) : r.show, segs };
+}
+// feuds and pushes: who this company is building, and who they're building them against
+function rivalPlan(r) {
+  const T = tierIx(r);
+  for (const f of r.feuds.filter(f => f.done)) {
+    // a hot title feud sometimes gets a rematch at the next big show
+    if (f.tid && f.heat >= 60 && !f.re && Math.random() < 0.3) { f.done = 0; f.re = 1; f.heat *= 0.5; continue; }
+    if (f.heat >= 55 && Math.random() < 0.5) wnews(`🔥 ${r.name}: ${nameOf(f.a)} and ${nameOf(f.b)} settled their feud at ${ppvName(r, G.week)}.`, r);
+  }
+  r.feuds = r.feuds.filter(f => !f.done && rW(r, f.a) && rW(r, f.b) && G.week - (f.start || 0) < 16);
+  // the stars they push: the style decides who
+  const pickPush = () => {
+    const inPush = new Set(r.push.map(p => p.id)), top = r.roster.slice().sort((a, b) => b.pop - a.pop), topPop = top[0]?.pop || 50;
+    const ok = r.roster.filter(w => !inPush.has(w.id) && !w.injury && w.pop < topPop - 2);
+    const sc = w => r.phil === 'stars' ? worth(r, w) + Math.max(0, 28 - w.age) * 3 : r.phil === 'vets' ? w.pop * 1.2 + w.cha * 0.3 : worth(r, w) + (w.momentum || 0) / 3;
+    return ok.sort((a, b) => sc(b) - sc(a) + rnd(-6, 6))[0];
+  };
+  for (const p of r.push.slice()) {
+    const w = rW(r, p.id), top = r.roster.slice().sort((a, b) => b.pop - a.pop).slice(0, 3);
+    if (!w) { r.push = r.push.filter(x => x !== p); continue; }
+    if (top.includes(w) && w.pop >= (p.p0 || 0) + 6) { r.push = r.push.filter(x => x !== p); wnews(`⭐ ${r.name} made ${w.name} a star: Pop ${Math.round(p.p0 || 0)} to ${Math.round(w.pop)}.`, r, w.pop >= 65); }
+    else if (G.week - p.wk >= 30) r.push = r.push.filter(x => x !== p);
+  }
+  const want = [1, 2, 2, 3][T] + (r.phil === 'stars' ? 1 : 0);
+  while (r.push.length < want) { const w = pickPush(); if (!w) break; r.push.push({ id: w.id, wk: G.week, p0: Math.round(w.pop) }); if (w.pop >= 35) wnews(`📣 ${r.name} is getting behind ${w.name}.`, r); }
+  // new feuds, starting with a challenger for the top title
+  const nf = [1, 2, 3, 3][T], busy = () => new Set(r.feuds.flatMap(f => [f.a, f.b]));
+  for (const t of r.titles.filter(t => t.holder.length)) {
+    if (r.feuds.length >= nf) break;
+    const c = rW(r, t.holder[0]); if (!c || busy().has(c.id) || c.injury) continue;
+    const ch = r.roster.filter(w => w !== c && !busy().has(w.id) && !w.injury && fitsT(r, t, w) && !r.titles.some(x => x.holder.includes(w.id))).sort((a, b) => (b.pop + pushB(r, b) + (b.align !== c.align ? 8 : 0) + (b.momentum || 0) / 2) - (a.pop + pushB(r, a) + (a.align !== c.align ? 8 : 0) + (a.momentum || 0) / 2))[0];
+    if (ch && Math.random() < 0.6) r.feuds.push({ id: uid(), a: ch.id, b: c.id, tid: t.id, heat: rint(10, 25), start: G.week });
+  }
+  while (r.feuds.length < nf) {
+    const b = busy(), pool = r.roster.filter(w => !b.has(w.id) && !w.injury);
+    const a = pool.sort((x, y) => (y.pop + pushB(r, y)) - (x.pop + pushB(r, x)) + rnd(-12, 12))[0]; if (!a) break;
+    const o = pool.filter(w => w !== a && sameDiv(w, a) && w.align !== a.align).sort((x, y) => Math.abs(x.pop - a.pop) - Math.abs(y.pop - a.pop))[0]; if (!o) break;
+    r.feuds.push({ id: uid(), a: a.id, b: o.id, heat: rint(5, 20), start: G.week });
+  }
+}
+// signings, raids and releases: AI companies fill the holes in their roster
+function rivalMoves(r) {
+  const needs = rivalNeeds(r), agg = DF().rival;
+  // free agents first
+  if (needs.length && Math.random() < 0.3 + 0.15 * agg) {
+    const pool = freeAgents().filter(w => canSignR(r, w)), list = needs.length ? pool.filter(w => needs.some(n => n.f(w))) : pool;
+    const w = (list.length ? list : pool).sort((a, b) => wantR(r, b, needs) - wantR(r, a, needs))[0];
+    if (w && wantR(r, w, needs) > 35) {
+      G.wrestlers = G.wrestlers.filter(x => x !== w); r.roster.push(rivWrestler(w, r)); rivTitles(r); setRivalChamp(r);
+      const n = needs.find(n => n.f(w));
+      wnews(`🖊️ ${r.name} signed free agent ${w.name}${n ? `. They needed ${n.l}` : ''}.`, r, w.pop >= 55);
+    }
+  }
+  // a rich company that needs a star goes shopping at a smaller rival
+  const nStar = needs.find(n => n.k === 'star' || n.k === 'heel' || n.k === 'face');
+  if (nStar && r.money > payrollR(r) * 12 && Math.random() < 0.07 * agg) {
+    const from = G.rivalPromos.filter(x => x !== r && x.prestige < r.prestige - 3 && !x.safe && !x.manual);
+    const cand = from.flatMap(x => x.roster.filter(w => nStar.f(w) && w.pop <= r.prestige + 32 && x.champId !== w.id).map(w => [x, w])).sort((a, b) => worth(r, b[1]) - worth(r, a[1]))[0];
+    if (cand) {
+      const [x, w] = cand; const fee = Math.round(rSalFor(r, w) * 20 / 1000) * 1000;
+      outOfRival(w, x); x.money += fee; r.money -= fee; r.roster.push(rivWrestler(w, r)); setRivalChamp(r);
+      wnews(`💰 ${r.name} raided ${x.name}: ${w.name} jumped ship for a bigger deal.`, r, w.pop >= 50);
+      x.log.unshift({ wk: G.week, t: `${w.name} left for ${r.name}.` });
+    }
+  }
+  // cuts when the money runs out or the roster is bloated
+  const over = r.roster.length > TIERS[tierIx(r)][2] + 8, broke = r.money < 0 && payrollR(r) > incomeR(r);
+  if ((over || broke) && r.roster.length > 6 && Math.random() < 0.4) {
+    const keep = new Set([...r.titles.flatMap(t => t.holder), ...r.push.map(p => p.id)]);
+    const w = r.roster.filter(w => !keep.has(w.id)).sort((a, b) => (worth(r, a) - (broke ? a.rSal / 300 : 0)) - (worth(r, b) - (broke ? b.rSal / 300 : 0)))[0];
+    if (w) { outOfRival(w, r); w.morale = 55; w.contract = null; w.cutBy = r.id; w.cutWk = G.week; G.wrestlers.push(w); wnews(`✂️ ${r.name} released ${w.name}${broke ? ' to save money' : ''}. They're a free agent.`, r, w.pop >= 50); }
+  }
+}
+// money, fans and tier: companies grow when their shows are good, shrink when they're not
+function rivalBooks(r, big) {
+  const t0 = tierOf(r);
+  r.money += incomeR(r) * (big ? 1.6 : 1) - payrollR(r);
+  const par = [52, 57, 62, 67][tierIx(r)];
+  r.fans = Math.max(500, Math.round(r.fans * (1 + (r.last - par) / 1500 + (big ? (r.last - par) / 2500 : 0))));
+  r.red = r.money < 0 ? r.red + 1 : 0;
+  const t1 = tierOf(r);
+  if (t1 !== t0) wnews(TIERS.findIndex(t => t[0] === t1) > TIERS.findIndex(t => t[0] === t0) ? `📈 ${r.name} has grown into a ${t1.toLowerCase()} promotion.` : `📉 ${r.name} has shrunk to a ${t1.toLowerCase()} promotion.`, r, true);
+}
+function closeRival(r, why) {
+  const buyer = G.rivalPromos.filter(x => x !== r && x.money > payrollR(r) * 10 && x.roster.length < 30).sort((a, b) => b.money - a.money)[0];
+  G.rivalPromos = G.rivalPromos.filter(x => x !== r);
+  const ros = r.roster.slice();
+  if (buyer && Math.random() < 0.5) {
+    const keep = ros.sort((a, b) => worth(buyer, b) - worth(buyer, a)).slice(0, 6);
+    for (const w of ros) { delete w.rival; delete w.rWeeks; delete w.rSal; if (keep.includes(w)) buyer.roster.push(rivWrestler(w, buyer)); else { w.contract = null; G.wrestlers.push(w); } }
+    buyer.money -= payrollR(r) * 4; buyer.fans += Math.round(r.fans * 0.4); rivTitles(buyer); setRivalChamp(buyer);
+    wnews(`🤝 ${buyer.name} bought ${r.name}${why ? ' (' + why + ')' : ''}. ${keep.map(w => w.name).slice(0, 3).join(', ')}${keep.length > 3 ? ' and more' : ''} moved over. Everyone else is a free agent.`, buyer, true);
+  } else {
+    for (const w of ros) { delete w.rival; delete w.rWeeks; delete w.rSal; w.contract = null; G.wrestlers.push(w); }
+    const best = ros.sort((a, b) => b.pop - a.pop).slice(0, 3).map(w => w.name);
+    wnews(`🏚️ ${r.name} closed its doors${why ? ' (' + why + ')' : ''}. ${ros.length} wrestlers are free agents${best.length ? ', including ' + best.join(', ') : ''}.`, null, true);
+  }
+  syncRivals();
+}
+function rivalName() {
+  const taken = new Set([...(G.rivalPromos || []).map(r => r.name), G.promo?.name, ...(G.cos || []).map(c => c.promo?.name)]);
+  for (let i = 0; i < 40; i++) { const n = pick(RIV_PLACES) + ' ' + pick(RIV_KINDS); if (!taken.has(n)) return n; }
+  return 'New Era Wrestling ' + uid().slice(0, 2).toUpperCase();
+}
+// a new company opens: sometimes a star walks out of a big one and takes friends, sometimes it's a fresh indie
+function openRival() {
+  const big = G.rivalPromos.filter(r => r.roster.length >= 12 && !r.safe && !r.manual).sort((a, b) => b.fans - a.fans)[0];
+  const star = big && big.roster.filter(w => w.pop >= 55 && w.id !== big.champId && !pushB(big, w) && w.age >= 28).sort((a, b) => b.pop - a.pop)[0];
+  const r = makeRival(rivalName(), { fans: rint(4000, 12000), prestige: rint(25, 40) });
+  r.money = rint(150000, 400000);
+  if (star && Math.random() < 0.45) {
+    const pals = big.roster.filter(w => w !== star && w.id !== big.champId && Math.abs(w.age - star.age) <= 6 && Math.random() < 0.35).slice(0, 3);
+    for (const w of [star, ...pals]) { outOfRival(w, big); r.roster.push(rivWrestler(w, r)); }
+    r.prestige = clamp(r.prestige + 10, 1, 100); r.fans += Math.round(big.fans * 0.04); big.fans = Math.round(big.fans * 0.96);
+    wnews(`🚪 ${star.name} walked out of ${big.name} and opened ${r.name}${pals.length ? `, taking ${pals.map(w => w.name).join(', ')}` : ''}.`, r, true);
+  } else wnews(`🏟️ A new promotion, ${r.name}, opened its doors. Its first show is ${r.show}.`, r, true);
+  const fa = freeAgents().filter(w => w.pop < 55).sort((a, b) => worth(r, b) - worth(r, a)).slice(0, Math.max(0, 8 - r.roster.length));
+  for (const w of fa) { G.wrestlers = G.wrestlers.filter(x => x !== w); r.roster.push(rivWrestler(w, r)); }
+  if (r.roster.length < 9) fillRival(r, 9 - r.roster.length);
+  G.rivalPromos.push(r); rivTitles(r); setRivalChamp(r); syncRivals();
 }
 function rivalWeek(world = true) {
   ensureRivals();
-  for (const r of world ? G.rivalPromos : []) {
+  for (const r of world ? G.rivalPromos.slice() : []) {
+    liven(r);
     for (const w of r.roster.slice()) {
-      w.pop = clamp(w.pop + rnd(-0.6, 0.8), 1, 100); w.fatigue = 0; if (w.injury) w.injury--;
+      w.pop = clamp(w.pop + rnd(-0.45, 0.4), 1, 100); w.fatigue = Math.max(0, (w.fatigue || 0) - 10); if (w.injury) w.injury--; w.momentum = (w.momentum || 0) * 0.92;
       if (--w.rWeeks <= 0) {
-        if (Math.random() < 0.6) w.rWeeks = rint(52, 156);
-        else { r.roster = r.roster.filter(x => x !== w); delete w.rival; delete w.rWeeks; w.morale = 60; w.contract = null; G.wrestlers.push(w); news(`📇 ${w.name}'s deal with ${r.name} ended. They're a free agent.`, 'contract'); }
+        // they keep the people they want if they can afford them; the rest test free agency
+        const keepIt = r.manual ? 1 : (worth(r, w) >= 45 || pushB(r, w) || r.titles.some(t => t.holder.includes(w.id))) && r.money > 0 ? 0.8 : 0.35;
+        if (Math.random() < keepIt) { w.rWeeks = rint(52, 156); w.rSal = rSalFor(r, w); }
+        else {
+          outOfRival(w, r); w.morale = 60; w.contract = null;
+          const to = G.rivalPromos.filter(x => x !== r && !x.manual && canSignR(x, w) && wantR(x, w) > 50).sort((a, b) => wantR(b, w) - wantR(a, w))[0];
+          if (to && Math.random() < 0.5) { to.roster.push(rivWrestler(w, to)); setRivalChamp(to); wnews(`✍️ ${w.name}'s deal with ${r.name} ended, and they signed with ${to.name}.`, to, w.pop >= 50); r.log.unshift({ wk: G.week, t: `${w.name} left for ${to.name}.` }); }
+          else { G.wrestlers.push(w); wnews(`📇 ${w.name}'s deal with ${r.name} ended. They're a free agent.`, r, w.pop >= 45); }
+        }
       }
     }
-    const top = r.roster.slice().sort((a, b) => b.pop - a.pop).slice(0, 8);
-    const sup = r.counter === G.week;
-    r.last = top.length ? Math.round(clamp(avg(top.map(w => (w.pop + overall(w)) / 2)) * 0.55 + r.prestige * 0.25 + 15 + rnd(-6, 6) + (sup ? 8 : 0), 30, 97)) : 30;
-    rivalCard(r, sup);
-    r.hist = [...(r.hist || []).slice(-11), r.last];
-    r.fans = Math.max(1000, Math.round(r.fans * (1 + (r.last - 60) / 2500)));
-    r.prestige = clamp(r.prestige + (r.last - r.prestige) * 0.03, 1, 100);
     setRivalChamp(r);
+    const sup = r.counter === G.week, big = sup || rivBig(r, G.week);
+    rivalCard(r, sup);
+    // the show's rating: the card, their biggest stars and the company's standing
+    const segs = r.card.segs, top = r.roster.slice().sort((a, b) => b.pop - a.pop).slice(0, 6);
+    const card = segs.length ? sum(segs.map((s, i) => s.rating * (i === segs.length - 1 ? 2 : 1))) / (segs.length + 1) : 30;
+    const stars = top.length ? avg(top.map(w => (w.pop + overall(w)) / 2)) : 30;
+    r.last = segs.length ? Math.round(clamp(card * 0.45 + stars * 0.3 + r.prestige * 0.15 + 4 + rnd(-4, 4) + (sup ? 8 : 0), 25, 97)) : 30;
+    r.hist = [...(r.hist || []).slice(-11), r.last];
+    rivalBooks(r, big);
+    r.prestige = clamp(r.prestige + (r.last - r.prestige) * 0.03, 1, 100);
     if (r.counter && r.counter < G.week) delete r.counter;
-    if (r.roster.length < 30 && Math.random() < 0.1) { const fa = freeAgents().filter(w => w.pop < r.prestige + 20); if (fa.length) { const w = pick(fa); goRival(w, r.name); news(`🗞️ Free agent ${w.name} signed with ${r.name}.`, 'contract'); } }
+    rivalPlan(r); if (!r.manual) rivalMoves(r); rivTitles(r); setRivalChamp(r);
+    if (!r.safe && G.rivalPromos.includes(r) && (r.red >= 14 || (r.roster.length < 4 && G.week - (r.born || 0) > 8))) closeRival(r, r.red >= 14 ? 'out of money' : 'no roster left');
   }
+  // the world refills: new companies open when there's room, faster when it's thin
+  const n = G.rivalPromos.length;
+  if (world && n < MAX_RIV && Math.random() < (n < 2 ? 0.1 : n < 4 ? 0.035 : n < 6 ? 0.01 : 0.004)) openRival();
   // counter-programming: the biggest rival loads up a show against your next big event
   if (world && bigWk(G.week + 2) && !G.rivalPromos.some(r => r.counter === G.week + 2) && Math.random() < 0.5) {
     const r = G.rivalPromos.filter(r => r.roster.length >= 6).sort((a, b) => b.prestige - a.prestige)[0];
@@ -2580,7 +2903,7 @@ function rivalWeek(world = true) {
   if (last && best && last.wk === G.week) {
     const x2 = best.counter === G.week ? 2 : 1;
     if (x2 > 1 && last.rating > best.last + 3) news(`📈 Your ${last.name} beat ${best.name}'s loaded ${best.show}, ${last.rating} to ${best.last}.`, 'office');
-    if (best.last > last.rating + 3) { const loss = Math.round(G.fans * 0.001 * x2 * Math.min(4, (best.last - last.rating) / 4) * DF().rival); G.fans = Math.max(1000, G.fans - loss); best.fans += loss; if (Math.random() < 0.5 || best.last > last.rating + 10) news(`📉 ${best.name}'s ${best.show} (${best.last}) beat your show (${last.rating}). About ${kfmt(loss)} fans watched them instead.`, 'office'); }
+    if (best.last > last.rating + 3) { const loss = Math.round(G.fans * 0.001 * x2 * Math.min(4, (best.last - last.rating) / 4) * DF().rival); G.fans = Math.max(1000, G.fans - loss); best.fans += loss; if (Math.random() < 0.5 || best.last > last.rating + 10) news(`📉 ${best.name}'s ${best.card?.name || best.show} (${best.last}) beat your show (${last.rating}). About ${kfmt(loss)} fans watched them instead.`, 'office'); }
     else if (last.rating > best.last + 3) { const gain = Math.round(x2 * Math.min(best.fans * 0.004, G.fans * 0.002) * Math.max(0.1, 1 - G.fans / fanCap())); best.fans = Math.max(1000, best.fans - gain); G.fans += gain; if (Math.random() < 0.4) news(`📈 You won the week: ${last.rating} to ${best.name}'s ${best.last}.`, 'office'); }
   }
 }
@@ -3031,7 +3354,7 @@ const EVENTS = {
       w.morale = clamp(w.morale + 3, 0, 100); return `${w.name} is fine and appreciated your trust.`; }
   },
   raid: {
-    when() { if (!CON() || !MON() || !G.rivals?.length) return null; const w = pick(signed().filter(w => w.pop >= 35 && w.pop < 72 && w.contract.weeks > 8 && !G.titles.some(t => t.holder.includes(w.id)))); return w && { a: w.id, r: pick(G.rivals), amt: Math.round(w.contract.salary * w.contract.weeks * .45 / 1000) * 1000 }; },
+    when() { if (!CON() || !MON() || !G.rivals?.length) return null; const w = pick(signed().filter(w => w.pop >= 35 && w.pop < 72 && w.contract.weeks > 8 && !G.titles.some(t => t.holder.includes(w.id)))); return w && { a: w.id, r: courtFor(w), amt: Math.round(w.contract.salary * w.contract.weeks * .45 / 1000) * 1000 }; },
     title: '💼 Buyout offer', text: d => `${d.r} wants ${nameOf(d.a)} and is offering ${money(d.amt)} to buy out their contract.`,
     choices: () => [['Take the money', 'Cash now, one less wrestler'], ['Refuse', 'They feel valued']],
     pick(i, d) { const w = W(d.a); if (!w?.contract) return 'The offer fell through.';
@@ -3980,33 +4303,85 @@ function rivAv(r, s = 40) { return `<div class="av" style="width:${s}px;height:$
 function rivalsView() {
   ensureRivals();
   const last = G.history.at(-1), rs = G.rivalPromos;
-  const war = last ? [{ name: G.promo.name, r: last.rating, me: 1 }, ...rs.filter(r => r.last).map(r => ({ name: r.name, r: r.last }))].sort((a, b) => b.r - a.r) : [];
-  return `${war.length > 1 ? `<div class="card" style="margin-bottom:10px"><div class="sec" style="margin-top:0">Last week's ratings</div>${war.map((x, i) => `<div class="row small"><span class="sp">${i + 1}. ${x.me ? `<b>${esc(x.name)} (you)</b>` : esc(x.name)}</span><b>${x.r}</b></div>`).join('')}</div>` : ''}
-  <div class="list">${rs.map(r => { const c = rivalW(r.champId); return `<button class="item" data-act="openRival" data-id="${r.id}">${rivAv(r)}<div class="main"><div class="t">${esc(r.name)}</div><div class="d">${r.roster.length} wrestlers · ${kfmt(r.fans)} fans · prestige ${Math.round(r.prestige)}${c ? ' · champ ' + esc(c.name) : ''}</div></div></button>`; }).join('') || '<div class="empty">No rival promotions right now.</div>'}</div>
+  const me = { name: G.promo.name, fans: G.fans, r: last?.rating || 0, tier: tierOf({ fans: G.fans }), me: 1 };
+  const all = [me, ...rs.map(r => ({ name: r.name, fans: r.fans, r: r.last, tier: tierOf(r), id: r.id }))].sort((a, b) => b.fans - a.fans);
+  const wl = (G.wlog || []).slice(0, 5);
+  return `${SANDBOX() ? `<div class="alert good" style="margin-bottom:10px"><span class="ic">🛠️</span><div class="small"><b>Sandbox is on.</b> Edit any company, its titles and roster, build wrestlers and move anyone anywhere. Then share the world: players who start in it play normally. Switch it off in Menu → Settings.</div></div>` : ''}<div class="card" style="margin-bottom:10px"><div class="sec" style="margin-top:0">🌍 The wrestling world</div>
+    <div class="row tiny muted" style="padding-bottom:4px"><span class="sp">Company</span><span style="width:64px;text-align:right">Fans</span><span style="width:44px;text-align:right">Show</span></div>
+    ${all.map((x, i) => `<div class="row small" style="padding:3px 0"><span class="sp clip">${i + 1}. ${x.me ? `<b>${esc(x.name)} (you)</b>` : esc(x.name)} <span class="tag">${x.tier}</span></span><span style="width:64px;text-align:right">${kfmt(x.fans)}</span><b style="width:44px;text-align:right">${x.r || '–'}</b></div>`).join('')}
+    ${wl.length ? `<div class="sec">Around the world</div>${wl.map(x => `<div class="small" style="padding:3px 0">${esc(x.t)} <span class="tiny muted">wk ${x.wk}</span></div>`).join('')}<button class="btn sm block" style="margin-top:8px" data-act="worldNews">All world news</button>` : ''}</div>
+  <div class="list">${rs.map(r => { const c = rivalW(r.champId), ph = philOf(r); return `<button class="item" data-act="openRival" data-id="${r.id}">${rivAv(r)}<div class="main"><div class="t">${esc(r.name)} <span class="tag">${tierOf(r)}</span></div><div class="d">${ph.ic} ${ph.n} · ${r.roster.length} wrestlers · ${kfmt(r.fans)} fans${c ? ' · champ ' + esc(c.name) : ''}</div></div></button>`; }).join('') || '<div class="empty">No rival promotions right now.</div>'}</div>
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newRival">+ Create a rival</button><button class="btn" data-act="community">From Community</button></div>
-  <div class="tiny muted" style="margin-top:8px">Rivals run weekly shows, sign free agents and compete for your fans. To add one from Community or a share code, pick "Make it a rival promotion" when you import.</div>`;
+  <button class="btn block" style="margin-top:8px" data-act="shareWorld">🌍 Share this world</button>
+  <div class="tiny muted" style="margin-top:8px">Rival companies book their own shows, build stars, sign free agents, raid each other and can grow, shrink or close. New companies open over time. To add one from Community or a share code, pick "Make it a rival promotion" when you import.</div>`;
 }
+const moneyMood = r => r.money < 0 ? ['bad', 'In trouble'] : r.money < payrollR(r) * 6 ? ['warn', 'Tight'] : r.money < payrollR(r) * 20 ? ['', 'Steady'] : ['good', 'Rich'];
 function modalRival(m) {
   const r = RV(m.id); if (!r) return modal('Rival', '<div class="empty">This promotion is gone.</div>');
-  const c = rivalW(r.champId);
-  const body = `<div class="row" style="gap:10px;margin-bottom:10px">${rivAv(r, 52)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(r.name)}</div><div class="small muted">${esc(r.show)} · ${kfmt(r.fans)} fans · prestige ${Math.round(r.prestige)}</div></div></div>
+  liven(r);
+  const ph = philOf(r), mood = moneyMood(r), nb = rivNext(r), needs = rivalNeeds(r);
+  const tOf = w => r.titles.find(t => t.holder.includes(w.id));
+  const body = `<div class="row" style="gap:10px;margin-bottom:10px">${rivAv(r, 52)}<div class="sp"><div style="font-size:18px;font-weight:800">${esc(r.name)}</div><div class="small muted">${tierOf(r)} · ${esc(r.show)} · ${kfmt(r.fans)} fans · prestige ${Math.round(r.prestige)}</div></div></div>
+    <div class="card" style="margin-bottom:10px"><div class="row small"><span class="sp muted">Booking style</span><b>${ph.ic} ${ph.n}</b></div><div class="tiny muted" style="margin:-2px 0 6px">${ph.d}</div>
+      <div class="row small"><span class="sp muted">Money</span><b style="${mood[0] ? `color:var(--${mood[0]})` : ''}">${mood[1]}${MON() ? ` · ${money(Math.round(r.money / 1000) * 1000)}` : ''}</b></div>
+      ${MON() ? `<div class="row small"><span class="sp muted">Payroll</span><b>${money(payrollR(r))}/wk</b></div>` : ''}
+      <div class="row small"><span class="sp muted">Next big show</span><b>${esc(ppvName(r, nb))} · week ${nb}</b></div>
+      ${needs.length ? `<div class="row small"><span class="sp muted">Looking for</span><b style="text-align:right">${needs.slice(0, 3).map(n => esc(n.l)).join(', ')}</b></div>` : ''}</div>
     ${r.hist?.length ? `<div class="small" style="margin-bottom:6px">Recent shows: ${r.hist.slice(-6).map(x => `<b>${x}</b>`).join(' · ')}</div>` : ''}
-    ${c ? `<div class="small" style="margin-bottom:6px">🏆 Champion: <b>${esc(c.name)}</b></div>` : ''}
     ${r.counter && r.counter >= G.week ? `<div class="alert warn"><span class="ic">📺</span><div class="small">Loaded show against <b>${esc(bigName(r.counter))}</b> in week ${r.counter}. Beat them that night or lose twice the fans.</div></div>` : ''}
-    ${r.card?.segs?.length ? `<div class="sec">Last show${r.card.sup ? ' (loaded)' : ''} · week ${r.card.wk}</div><div class="card" style="padding:4px 12px">${r.card.segs.map((x, i, a) => `<div class="row small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><span class="sp">${i === a.length - 1 ? '<b>Main event</b> · ' : ''}${x.title ? '🏆 ' : ''}<b>${esc(x.won === x.a ? x.an : x.bn)}</b> beat ${esc(x.won === x.a ? x.bn : x.an)}</span><span class="muted">${starStr(x.rating)}</span></div>`).join('')}</div>` : ''}
+    <div class="sec">Championships</div><div class="card" style="padding:4px 12px">${r.titles.map((t, i) => { const h = rW(r, t.holder[0]), past = [...(t.past || []), ...t.reigns.slice(0, h ? -1 : undefined).map(x => x.nm)].slice(-3).reverse().map(esc); return `<div class="small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><div class="row"><span class="sp">🏆 ${esc(t.name)}</span><b>${h ? esc(h.name) : 'Vacant'}</b></div>${h ? `<div class="tiny muted">${lenLabel(Math.max(1, G.week - (t.since || G.week)))} · ${t.d || 0} defense${t.d === 1 ? '' : 's'}${past.length ? ' · before: ' + past.join(', ') : ''}</div>` : ''}</div>`; }).join('')}</div>
+    ${r.feuds.length ? `<div class="sec">Feuds</div><div class="card" style="padding:4px 12px">${r.feuds.map((f, i) => { const t = f.tid && r.titles.find(x => x.id === f.tid); return `<div class="small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><div class="row"><span class="sp"><b>${esc(nameOf(f.a))}</b> vs <b>${esc(nameOf(f.b))}</b>${t ? ` <span class="tag gold">${esc(t.short)}</span>` : ''}</span><span class="muted">🔥 ${Math.round(f.heat)}</span></div><div class="bar" style="margin-top:4px"><i style="width:${clamp(f.heat, 0, 100)}%"></i></div></div>`; }).join('')}<div class="tiny muted" style="padding:2px 0 6px">They settle feuds at ${esc(ppvName(r, nb))}.</div></div>` : ''}
+    ${r.push.length ? `<div class="sec">Stars they're building</div><div class="small">${r.push.map(p => { const w = rW(r, p.id); return w ? `⭐ <b>${esc(w.name)}</b> <span class="muted">Pop ${Math.round(p.p0 || w.pop)} → ${Math.round(w.pop)}</span>` : ''; }).filter(Boolean).join('<br>')}</div>` : ''}
+    ${r.card?.segs?.length ? `<div class="sec">${esc(r.card.name || 'Last show')}${r.card.big ? ' (big event)' : r.card.sup ? ' (loaded)' : ''} · week ${r.card.wk}</div><div class="card" style="padding:4px 12px">${r.card.segs.map((x, i, a) => `<div class="row small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><span class="sp">${i === a.length - 1 ? '<b>Main event</b> · ' : ''}${x.title ? `🏆 ${x.tn ? esc(x.tn) + ' · ' : ''}` : x.f ? '🔥 ' : ''}<b>${esc(x.won === x.a ? x.an : x.bn)}</b> beat ${esc(x.won === x.a ? x.bn : x.an)}</span><span class="muted">${starStr(x.rating)}</span></div>`).join('')}</div>` : ''}
+    ${r.log?.length ? `<div class="sec">Recent moves</div>${r.log.slice(0, 6).map(x => `<div class="small" style="padding:2px 0">${esc(x.t)} <span class="tiny muted">wk ${x.wk}</span></div>`).join('')}` : ''}
     <div class="sec">Roster (${r.roster.length})</div>
-    <div class="list">${r.roster.slice().sort((a, b) => b.pop - a.pop).map(w => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align === 'heel' ? 'heel' : 'face'}">${esc(w.name)}</span>${w.id === r.champId ? ' <span class="tag gold">Champ</span>' : ''}</div><div class="d">${esc(w.style)} · Pop ${Math.round(w.pop)} · OVR ${overall(w)} · ${lenLabel(Math.max(1, w.rWeeks || 1))} left</div></div><button class="btn sm" data-act="poach" data-id="${w.id}">Sign</button></div>`).join('') || '<div class="empty">Nobody signed yet.</div>'}</div>`;
-  return modal(esc(r.name), body, `<button class="btn" data-act="rivalCode" data-id="${r.id}">Share code</button><button class="btn pri" data-act="editRival" data-id="${r.id}">Edit</button>`);
+    <div class="list">${r.roster.slice().sort((a, b) => b.pop - a.pop).map(w => { const t = tOf(w); return `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align === 'heel' ? 'heel' : 'face'}">${esc(w.name)}</span>${t ? ` <span class="tag gold">${esc(t.short)} champ</span>` : ''}${pushB(r, w) ? ' <span class="tag">⭐ Push</span>' : ''}${w.injury ? ' <span class="tag">🚑 Hurt</span>' : ''}</div><div class="d">${esc(w.style)} · Pop ${Math.round(w.pop)} · OVR ${overall(w)} · ${lenLabel(Math.max(1, w.rWeeks || 1))} left</div></div><button class="btn sm" data-act="poach" data-id="${w.id}">${SANDBOX() ? 'Take' : 'Sign'}</button></div>`; }).join('') || '<div class="empty">Nobody signed yet.</div>'}</div>`;
+  return modal(esc(r.name), body, `<button class="btn" data-act="rivalCode" data-id="${r.id}">Share code</button>${SANDBOX() ? `<button class="btn" data-act="rivRoster" data-id="${r.id}">👥 Roster</button>` : ''}<button class="btn pri" data-act="editRival" data-id="${r.id}">Edit</button>`);
+}
+function modalWorldNews() {
+  const wl = G.wlog || [];
+  let wk = null;
+  const body = wl.length ? wl.map(x => { const h = x.wk !== wk ? `<div class="sec">Week ${x.wk}</div>` : ''; wk = x.wk; return h + `<div class="small" style="padding:3px 0">${esc(x.t)}</div>`; }).join('') : '<div class="empty">Nothing yet. Run a few shows and the rest of the world will make news.</div>';
+  return modal('🌍 World news', body);
 }
 function modalEditRival(m) {
-  const d = m.draft;
+  const d = m.draft, r = d.id && RV(d.id);
+  const opts = (sel) => `<option value="">Vacant</option>${(r ? r.roster : []).slice().sort((a, b) => b.pop - a.pop).map(w => `<option value="${w.id}" ${sel === w.id ? 'selected' : ''}>${esc(w.name)} (Pop ${Math.round(w.pop)})</option>`).join('')}`;
   const body = `<label class="f"><span>Name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="40" placeholder="Northern Lights Wrestling"></label>
     <div class="grid2"><label class="f"><span>Short name</span><input type="text" data-et="short" value="${esc(d.short)}" maxlength="5" placeholder="NLW"></label>
     <label class="f"><span>Prestige (1–100)</span><input type="number" min="1" max="100" data-et="prestige" value="${esc(d.prestige)}"></label></div>
     <label class="f"><span>Weekly show</span><input type="text" data-et="show" value="${esc(d.show)}" maxlength="40" placeholder="Friday Night Fallout"></label>
+    <div class="grid2"><label class="f"><span>Fans</span><input type="number" min="500" max="5000000" step="1000" data-et="fans" value="${esc(d.fans)}"></label>
+    ${MON() ? `<label class="f"><span>Money</span><input type="number" step="10000" data-et="money" value="${esc(d.money)}"></label>` : '<div></div>'}</div>
+    <div class="tiny muted" style="margin:-6px 0 12px">Size: <b>${tierOf({ fans: +d.fans || 0 })}</b>. ${TIERS.map(t => `${t[0]} from ${kfmt(t[1])}`).join(' · ')} fans.</div>
+    <label class="f"><span>Booking style</span><div class="list">${Object.entries(RPHIL).map(([k, p]) => `<button class="pick ${d.phil === k ? 'sel' : ''}" data-act="bSet" data-f="phil" data-id="${k}"><span class="ck">${d.phil === k ? '✓' : ''}</span><div><b>${p.ic} ${p.n}</b><div class="tiny muted">${p.d}</div></div></button>`).join('')}</div></label>
     <label class="f"><span>Color</span><div class="swatches">${RIV_COLORS.concat(['#c9d64a', '#d0d0d0']).map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
-    ${m.isNew ? `<label class="f"><span>Starting roster</span><div class="seg-ctl">${[['0', 'Empty'], ['8', '8'], ['14', '14'], ['20', '20']].map(([k, l]) => `<button class="${String(d.size) === k ? 'on' : ''}" data-act="bSet" data-f="size" data-id="${k}">${l}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">New wrestlers are made up for them. Use Import to bring in a real roster.</div></label>` : ''}`;
+    <label class="f"><span>Big events, one per line</span><textarea data-et="ppvs" maxlength="600" style="min-height:80px" placeholder="Night of Glory">${esc(d.ppvs || '')}</textarea><div class="tiny muted" style="margin-top:4px">They run one a month, in this order.</div></label>
+    ${r ? `<div class="sec">Championships</div>
+    ${(d.titles || []).map((t, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px"><div class="row" style="gap:8px;margin-bottom:6px"><input type="text" data-tt="name" data-i="${i}" value="${esc(t.name)}" maxlength="50" aria-label="Title name" style="flex:1"><button class="btn sm" data-act="rtDel" data-id="${i}" aria-label="Remove this title">✕</button></div>
+      <div class="grid2"><select data-tt="holder" data-i="${i}" aria-label="Champion">${opts(t.holder)}</select><select data-tt="kind" data-i="${i}" aria-label="Kind of title"><option value="main" ${!t.mid && !t.div ? 'selected' : ''}>Top title</option><option value="mid" ${t.mid ? 'selected' : ''}>Secondary</option><option value="women" ${t.div ? 'selected' : ''}>Women's</option></select></div></div>`).join('')}
+    ${(d.titles || []).length < 4 ? '<button class="btn block" data-act="rtAdd" style="margin-bottom:12px">＋ Add a championship</button>' : ''}
+    <div class="sec">Roster</div><button class="btn block" data-act="rivRoster" data-id="${r.id}" style="margin-bottom:12px">👥 Manage roster (${r.roster.length})</button>` : ''}
+    <label class="todo"><input type="checkbox" data-et="auto" ${d.auto ? 'checked' : ''}><span>AI handles signings and releases<br><span class="tiny muted">Off: their roster only changes when you change it. Contracts roll over and other companies leave them alone.</span></span></label>
+    <label class="todo"><input type="checkbox" data-et="canClose" ${d.canClose ? 'checked' : ''}><span>Can close down<br><span class="tiny muted">If it runs out of money, it closes or gets bought. Off: it always stays open.</span></span></label>
+    ${m.isNew ? `<label class="f"><span>Starting roster</span><div class="seg-ctl">${[['0', 'Empty'], ['8', '8'], ['14', '14'], ['20', '20']].map(([k, l]) => `<button class="${String(d.size) === k ? 'on' : ''}" data-act="bSet" data-f="size" data-id="${k}">${l}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">New wrestlers are made up for them. Add free agents or import a real roster after.</div></label>` : ''}`;
   return modal(m.isNew ? 'New rival promotion' : 'Edit rival', body, `${m.isNew ? '' : '<button class="btn bad" data-act="delRival">Close it down</button>'}<button class="btn pri" data-act="saveRival">Save</button>`);
+}
+// hand-pick who works for an AI company: free agents in, anyone out, or a few new faces
+function modalRivalRoster(m) {
+  const r = RV(m.id); if (!r) return modal('Roster', '<div class="empty">This promotion is gone.</div>');
+  const q = (m.q || '').toLowerCase(), fa = freeAgents().filter(w => !q || w.name.toLowerCase().includes(q)).sort((a, b) => b.pop - a.pop).slice(0, 60);
+  const sb = SANDBOX(), dest = [['me', G.promo.name + ' (you)'], ...G.rivalPromos.filter(x => x !== r).map(x => [x.id, x.name])];
+  const row = (w, act, lbl) => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align === 'heel' ? 'heel' : 'face'}">${esc(w.name)}</span></div><div class="d">${esc(w.style)} · ${esc(w.division || 'Open')} · Pop ${Math.round(w.pop)} · OVR ${overall(w)}</div>
+    ${sb && act === 'rrOut' ? `<div class="row" style="gap:6px;margin-top:6px"><button class="btn sm" data-act="rrEdit" data-id="${w.id}">✏️ Edit</button><select data-rr="${w.id}" aria-label="Move ${esc(w.name)}" style="flex:1;min-height:34px;padding:4px 8px"><option value="">Move to…</option>${dest.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('')}</select></div>` : ''}</div><button class="btn sm" data-act="${act}" data-id="${w.id}">${lbl}</button></div>`;
+  const body = `<div class="sec" style="margin-top:0">${esc(r.name)} (${r.roster.length})</div>
+    <div class="list">${r.roster.slice().sort((a, b) => b.pop - a.pop).map(w => row(w, 'rrOut', 'Release')).join('') || '<div class="empty">Nobody yet.</div>'}</div>
+    <div class="grid2" style="margin:10px 0"><button class="btn" data-act="rrGen" data-id="3">＋ 3 new wrestlers</button>${sb ? '<button class="btn" data-act="rrBuild">🛠️ Build a wrestler</button>' : '<button class="btn" data-act="rrGen" data-id="1">＋ 1 new wrestler</button>'}</div>
+    <div class="sec">Free agents</div>
+    <input type="search" data-in="rrQ" aria-label="Search free agents" value="${esc(m.q || '')}" placeholder="Search free agents" style="margin-bottom:8px">
+    <div class="list">${fa.map(w => row(w, 'rrIn', 'Add')).join('') || '<div class="empty">No free agents match.</div>'}</div>
+    <div class="tiny muted" style="margin-top:8px">To bring in your own creations, build them in Roster, release them to free agency, then add them here. Or import a roster and pick "Make it a rival promotion".</div>`;
+  return modal('👥 Roster', body, `<button class="btn pri" data-act="editRival" data-id="${r.id}">Done</button>`);
 }
 function viewOffice() {
   const last = G.history[G.history.length - 1];
@@ -4160,6 +4535,8 @@ function renderModal() {
       <button class="btn pri block" data-act="pasteSave" style="margin-top:8px">Load pasted save</button>`);
     case 'rival': return modalRival(m);
     case 'editRival': return modalEditRival(m);
+    case 'worldNews': return modalWorldNews(m);
+    case 'rivalRoster': return modalRivalRoster(m);
     case 'confirm': return modal(esc(m.title), `<p>${esc(m.text)}</p>`, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri ${m.danger ? 'bad' : ''}" data-act="confirmYes">${esc(m.yes || 'Yes')}</button>`);
   }
   return '';
@@ -4208,6 +4585,7 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
     <label class="todo"><input type="checkbox" data-in="deep" ${G.settings.deep ? 'checked' : ''}><span>Deep sim: show every skill (psychology, selling, consistency and more) and potential</span></label>
     <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>Wrestler personalities (texts, demands, memory)</span></label>
+    <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Rivals.</span></span></label>
     <label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>
 ${displaySettings()}
     <div class="sec">Help</div>
@@ -4766,8 +5144,24 @@ const A = {
   help() { openModal({ type: 'help' }); },
   closeModal,
   openRival(id) { openModal({ type: 'rival', id }); },
-  newRival() { openModal({ type: 'editRival', isNew: true, draft: { name: '', short: '', show: '', color: pick(RIV_COLORS), prestige: 45, size: '14' } }); },
-  editRival(id) { const r = RV(id); if (r) openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige) } }); },
+  newRival() { openModal({ type: 'editRival', isNew: true, draft: { name: '', short: '', show: '', color: pick(RIV_COLORS), prestige: 45, size: '14', phil: pick(Object.keys(RPHIL)), canClose: false, auto: true, fans: 15000, money: 300000, ppvs: shuffle(RIV_PPVS).slice(0, 4).join('\n') } }); },
+  editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: t.holder[0] || '', mid: !!t.mid, div: t.div || '' })) } }); } },
+  rtAdd() { const d = UI.modal.draft; d.titles ||= []; if (d.titles.length >= 4) return; d.titles.push({ id: uid(), name: `${(d.short || abbr(d.name)).trim()} ${d.titles.some(t => !t.mid && !t.div) ? 'Television' : 'World'} Championship`, holder: '', mid: d.titles.some(t => !t.mid && !t.div), div: '', isNew: true }); render(); },
+  rtDel(i) { UI.modal.draft.titles.splice(+i, 1); render(); },
+  rivRoster(id) { openModal({ type: 'rivalRoster', id }); },
+  rrOut(id) { const r = RV(UI.modal.id), w = r?.roster.find(x => x.id === id); if (!w) return; outOfRival(w, r); w.contract = null; w.morale = 60; G.wrestlers.push(w); wnews(`✂️ ${r.name} released ${w.name}.`, r); commit(); },
+  rrIn(id) { const r = RV(UI.modal.id), w = freeAgents().find(x => x.id === id); if (!r || !w) return; G.wrestlers = G.wrestlers.filter(x => x !== w); r.roster.push(rivWrestler(w, r)); setRivalChamp(r); wnews(`🖊️ ${r.name} signed ${w.name}.`, r); commit(); },
+  rrEdit(id) { const r = RV(UI.modal.id), w = r?.roster.find(x => x.id === id); if (w) openModal({ type: 'editW', rid: r.id, draft: JSON.parse(JSON.stringify(w)) }); },
+  rrBuild() { const r = RV(UI.modal.id); if (!r) return; const w = rivWrestler(makeWrestler('New Wrestler', '', 'face', 'Showman', 0.45), r); r.roster.push(w); openModal({ type: 'editW', rid: r.id, draft: JSON.parse(JSON.stringify(w)) }); },
+  rrMove(id, to) {
+    const r = RV(UI.modal.id), w = r?.roster.find(x => x.id === id); if (!w || !to) return;
+    outOfRival(w, r);
+    if (to === 'me') { w.contract = { salary: CON() ? askFor(w, 52) : 0, weeks: 52 }; w.joined = G.week; w.lastBooked = G.week; w.morale = 70; if (splitOn()) w.brand = G.showId; G.wrestlers.push(w); }
+    else { const x = RV(to); if (!x) { w.contract = null; G.wrestlers.push(w); } else { x.roster.push(rivWrestler(w, x)); setRivalChamp(x); } }
+    commit(`${w.name} moved.`);
+  },
+  rrGen(n) { const r = RV(UI.modal.id); if (!r) return; fillRival(r, clamp(+n || 1, 1, 10)); commit(`Added ${n} new wrestler${+n > 1 ? 's' : ''}.`); },
+  worldNews() { openModal({ type: 'worldNews' }); },
   saveRival() {
     const d = UI.modal.draft, name = String(d.name || '').trim().slice(0, 40); if (!name) return toast('Give it a name.');
     ensureRivals();
@@ -4775,18 +5169,35 @@ const A = {
     if (!r) { r = makeRival(name, { custom: true }); G.rivalPromos.push(r); fillRival(r, +d.size || 0); news(`🏢 ${name} opened as a rival promotion.`, 'office'); }
     r.name = name; r.short = (String(d.short || '').trim() || abbr(name)).slice(0, 5); r.show = String(d.show || '').trim().slice(0, 40) || r.show;
     r.color = safeColor(d.color) || r.color; r.prestige = clamp(+d.prestige || 40, 1, 100);
+    if (RPHIL[d.phil]) r.phil = d.phil; r.safe = !d.canClose; r.manual = d.auto === false;
+    r.fans = clamp(Math.round(+d.fans) || r.fans, 500, 5e6); if (MON() && d.money !== '' && isFinite(+d.money)) r.money = clamp(Math.round(+d.money), -1e7, 1e9);
+    const pp = String(d.ppvs || '').split('\n').map(x => x.replace(/[<>`"]/g, '').trim().slice(0, 40)).filter(Boolean).slice(0, 12); if (pp.length) r.ppvs = pp;
+    if (Array.isArray(d.titles) && d.id) {
+      // titles as the player set them: kept reigns for existing belts, quiet crowning for changed champions
+      r.tset = 1;
+      r.titles = d.titles.slice(0, 4).map(x => {
+        const t = r.titles.find(y => y.id === x.id) || { id: x.id, holder: [], since: G.week, d: 0, reigns: [] };
+        t.name = String(x.name || '').replace(/[<>`"]/g, '').trim().slice(0, 50) || 'Championship'; t.mid = !!x.mid; t.div = x.div ? "Women's" : '';
+        t.short = t.div ? "Women's" : t.mid ? (t.short && t.short !== 'World' && t.short !== "Women's" ? t.short : 'TV') : 'World';
+        const w = x.holder ? rW(r, x.holder) : null;
+        if ((w?.id || '') !== (t.holder[0] || '')) crownR(r, t, w && fitsT(r, t, w) ? w : null);
+        return t;
+      });
+      setRivalChamp(r);
+    }
     syncRivals(); UI.modal = { type: 'rival', id: r.id }; commit('Saved.');
   },
   delRival() {
     const r = RV(UI.modal.draft.id); if (!r) return;
     confirmBox('Close ' + r.name + '?', 'Their wrestlers become free agents.', 'Close it', () => {
-      for (const w of r.roster) { delete w.rival; delete w.rWeeks; w.contract = null; G.wrestlers.push(w); }
+      for (const w of r.roster) { delete w.rival; delete w.rWeeks; delete w.rSal; w.contract = null; G.wrestlers.push(w); }
       G.rivalPromos = G.rivalPromos.filter(x => x !== r); syncRivals();
       news(`🏚️ ${r.name} closed. ${r.roster.length} wrestlers are free agents.`, 'office'); commit();
     }, true);
   },
   poach(id) {
     const r = (G.rivalPromos || []).find(x => x.roster.some(w => w.id === id)), w = r?.roster.find(x => x.id === id); if (!w) return;
+    if (SANDBOX()) { UI.modal = { type: 'rivalRoster', id: r.id }; A.rrMove(id, 'me'); UI.modal = { type: 'rival', id: r.id }; return render(); }
     if (w.poachWk && G.week - w.poachWk < 4) return toast(`${w.name} said no recently. Try again in ${4 - (G.week - w.poachWk)} week${4 - (G.week - w.poachWk) > 1 ? 's' : ''}.`);
     const cost = MON() ? Math.round(askFor(w, 52) * Math.min(w.rWeeks || 26, 52) * 0.3 / 1000) * 1000 : 0;
     const odds = clamp(0.35 + (G.promo.prestige - r.prestige) / 120 + (r.champId === w.id ? -0.15 : 0) + (w.pop < 45 ? 0.1 : 0), 0.08, 0.85);
@@ -4795,7 +5206,7 @@ const A = {
       if (cost && G.money < cost) return commit('Not enough money for the buyout.');
       w.poachWk = G.week;
       if (Math.random() < odds) {
-        r.roster = r.roster.filter(x => x !== w); delete w.rival; delete w.rWeeks;
+        outOfRival(w, r);
         w.contract = { salary: CON() ? askFor(w, 52) : 0, weeks: 52 }; w.joined = G.week; w.lastBooked = G.week; w.morale = 70; G.wrestlers.push(w);
         if (cost) G.money -= cost; setRivalChamp(r);
         news(`✍️ You signed ${w.name} away from ${r.name}${cost ? ' for a ' + money(cost) + ' buyout' : ''}.`, 'contract'); commit(`${w.name} signed!`);
@@ -5077,11 +5488,13 @@ const A = {
       G.wrestlers.push(w); news(`🆕 ${w.name} was created${signNow ? ' and signed' : ' as a free agent'}.`, 'contract');
       UI.modal = { type: 'wrestler', id: w.id };
       delete w._ageSet;
-    } else { const i = G.wrestlers.findIndex(x => x.id === d.id); G.wrestlers[i] = d; UI.modal = { type: 'wrestler', id: d.id }; }
+    } else if (UI.modal.rid) { const r = RV(UI.modal.rid), i = r ? r.roster.findIndex(x => x.id === d.id) : -1; if (i >= 0) { r.roster[i] = d; setRivalChamp(r); } UI.modal = { type: 'rivalRoster', id: UI.modal.rid }; }
+    else { const i = G.wrestlers.findIndex(x => x.id === d.id); G.wrestlers[i] = d; UI.modal = { type: 'wrestler', id: d.id }; }
     commit('Saved.');
   },
   deleteW() {
-    const d = UI.modal.draft;
+    const d = UI.modal.draft, rid = UI.modal.rid;
+    if (rid) return confirmBox('Delete ' + d.name + '?', 'They will be removed from the game.', 'Delete', () => { const r = RV(rid), w = r?.roster.find(x => x.id === d.id); if (w) outOfRival(w, r); UI.modal = { type: 'rivalRoster', id: rid }; commit('Deleted.'); }, true);
     confirmBox('Delete ' + d.name + '?', 'They will be removed from the game.', 'Delete', () => {
       const w = W(d.id); if (w.contract) leaveCompany(w, 'removed');
       G.wrestlers = G.wrestlers.filter(x => x.id !== d.id);
@@ -5857,7 +6270,7 @@ async function commInit() {
       const body = d.data() || {};
       for (const it of Array.isArray(body.items) ? body.items.slice(0, 25) : []) {
         if (!it || typeof it !== 'object') continue;
-        if (it.kind === 'save') { if (typeof it.save === 'string' && it.save.length < 200000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: 'save', count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {} }); continue; }
+        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 200000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {} }); continue; }
         if (!it.pack) continue;
         items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack });
       }
@@ -5924,7 +6337,7 @@ function creatorAv(id, s = 40) { const p = COMM.profiles[id] || {}, nm = id === 
 // a key can also point at one wrestler inside a shared roster: author|id|n
 function cItem(key) { const [a, id, n] = String(key || '').split('|'); const i = COMM.items.find(x => x.author === a && x.id === id); return { i, base: a + '|' + id, n: i && /^\d{1,3}$/.test(n || '') ? +n : null }; }
 const packWs = i => i._ws || (i._ws = cleanPack(i.pack)?.wrestlers || []);
-const kindLbl = i => i.kind === 'roster' ? 'Roster · ' + (+i.count || 0) + ' wrestlers' : (+i.count || 1) > 1 ? (+i.count) + ' wrestlers' : 'Wrestler';
+const kindLbl = i => i.kind === 'world' ? `🌍 World · ${Array.isArray(i.sum?.cos) ? i.sum.cos.length : 0} companies · ${+i.sum?.n || 0} wrestlers` : i.kind === 'roster' ? 'Roster · ' + (+i.count || 0) + ' wrestlers' : (+i.count || 1) > 1 ? (+i.count) + ' wrestlers' : 'Wrestler';
 const REPORT_WHY = [['rude', 'Rude or hateful'], ['spam', 'Spam or junk'], ['copied', 'Copied work or real photos'], ['personal', 'Personal details'], ['other', 'Something else']];
 // things this player reported: hidden for them right away
 const hiddenForMe = () => Array.isArray(meta.hide) ? meta.hide : [];
@@ -5974,6 +6387,89 @@ function shareableSave(g, keepNotes) {
   delete c.cos; delete c.coId; delete c.ranWk; delete c.curWk;
   delete c.savedAt; return c;
 }
+// ---------- shared worlds: a fresh starting universe (companies, rosters, titles, history) others can start a new game in ----------
+// A shared save is someone's game in progress. A world is the setting only: every company in it becomes an AI promotion,
+// the calendar starts at week 1, and the new player either opens their own company or takes one over.
+const WORLD_V = 1;
+function worldW(w) {
+  const x = JSON.parse(JSON.stringify(w));
+  for (const k of ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem']) delete x[k];
+  if (w.photoLocal || String(x.photo || '').length > 6000) x.photo = '';
+  x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
+  return x;
+}
+// one company as it will start in the world: its people, belts and the names of past champions, nothing in progress
+function worldCo(r) {
+  liven(r);
+  const c = { id: r.id, name: r.name, short: r.short, color: r.color, prestige: Math.round(r.prestige), fans: Math.round(r.fans), show: r.show, phil: r.phil, ppvs: r.ppvs, money: Math.max(50000, Math.round(r.money)), custom: !!r.custom, safe: !!r.safe, roster: r.roster.map(worldW), hist: [], last: 0 };
+  c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, 1), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
+  return c;
+}
+// a company the player runs, written as an AI company for the world
+function coAsRival(g) {
+  const ros = (g === G ? signed() : (g.roster || []).filter(w => w.contract)).filter(w => !w.loan);
+  const r = { id: uid(), name: g.promo.name, short: abbr(g.promo.name), color: g.promo.color, prestige: clamp(+g.promo.prestige || 40, 1, 100), fans: +g.fans || 20000, show: g.promo.show, roster: [], champId: null, last: 0, hist: [], custom: true, born: 1, money: MON() ? +g.money || 0 : (+g.fans || 20000) * 5 };
+  const a = k => avg(ros.map(w => +w[k] || 0));
+  r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
+  for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; r.roster.push(x); }
+  const sing = (g.titles || []).filter(t => !t.tag);
+  r.titles = sing.slice(0, 3).map((t, i) => ({ id: t.id, name: t.name, short: t.short, div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
+  if (r.titles.length && r.titles.every(t => t.mid || t.div)) r.titles[0].mid = false;
+  r.titles.forEach(t => { const cur = t.reigns.at(-1); if (cur && !cur.to && t.holder.length) { t.past = t.reigns.slice(0, -1).map(x => x.nm); t.reigns = [{ nm: cur.nm, from: 1, to: 0, d: 0 }]; } else { t.past = t.reigns.map(x => x.nm); t.reigns = []; } });
+  return liven(r);
+}
+function makeWorld(withMine) {
+  ensureRivals();
+  const cos = [...(withMine ? [G, ...(G.cos || [])].map(coAsRival) : []), ...G.rivalPromos].map(worldCo);
+  const fa = freeAgents().sort((a, b) => b.pop - a.pop).slice(0, 60).map(worldW);
+  return { wv: WORLD_V, cos, fa, every: G.settings.bigEvery };
+}
+function worldSummary(wd) {
+  return { cos: wd.cos.slice(0, 10).map(c => [String(c.name).slice(0, 40), tierOf(c), c.roster.length, String(c.roster.find(w => w.id === c.titles?.find(t => !t.mid && !t.div)?.holder[0])?.name || '').slice(0, 40)]), fa: wd.fa.length, n: sum(wd.cos.map(c => c.roster.length)) + wd.fa.length };
+}
+// a world from outside is untrusted: run it through the same deep clean as a save, then rebuild the AI companies
+function cleanWorld(raw) {
+  if (!raw || raw.wv !== WORLD_V || !Array.isArray(raw.cos)) throw 0;
+  const fa = { id: 'fa', name: 'Free agents', roster: Array.isArray(raw.fa) ? raw.fa.slice(0, 80) : [] };
+  const g = scrubGame({ v: 1, promo: { name: 'World', show: 'Show' }, wrestlers: [], rivalPromos: [...raw.cos.slice(0, 10), fa] });
+  const out = g.rivalPromos.filter(r => r.id !== 'fa').slice(0, 10), free = g.rivalPromos.find(r => r.id === 'fa')?.roster || [];
+  const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156); return w; };
+  const cos = out.map(r => {
+    r.name = String(r.name).slice(0, 40); r.short = String(r.short).slice(0, 5); r.show = String(r.show).slice(0, 40); r.color = safeColor(r.color) || pick(RIV_COLORS);
+    r.roster = r.roster.slice(0, 60).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
+    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 4).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, 1), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
+    for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
+    r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12);
+    return r;
+  });
+  if (!cos.length) throw 0;
+  return { cos, fa: free.slice(0, 80).map(fixW), every: [3, 4, 5, 6, 8].includes(+raw.every) ? +raw.every : 4 };
+}
+// start a new game in a world: the AI companies and free agents arrive, and a company taken over becomes yours
+function applyWorld(z) {
+  const wd = z.world, cos = JSON.parse(JSON.stringify(wd.cos)), take = z.take && cos.find(c => c.id === z.take);
+  G.wseed = 1;
+  const taken = new Set([...cos.flatMap(c => c.roster), ...wd.fa].map(w => w.name));
+  if (take) {
+    G.wrestlers = [];
+    for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156) }; delete x.rival; delete x.rWeeks; delete x.rSal; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
+    const tag = G.titles.find(t => t.tag);
+    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: false, prestige: t.mid ? 50 : t.div ? 55 : 70, holder: t.holder.filter(id => W(id)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}) }));
+    if (tag) G.titles.push({ ...tag, holder: [] });
+    G.titles.forEach(t => ensureReigns(t));
+    G.promo.prestige = take.prestige; G.fans = Math.max(5000, take.fans);
+    cos.splice(cos.indexOf(take), 1);
+  } else {
+    // a brand-new company starts with nobody signed when it came for the world's free agents
+    if (z.source !== 'starter') G.wrestlers = [];
+    for (const w of G.wrestlers) if (taken.has(w.name)) { let n; do n = randomName(); while (taken.has(n)); w.name = n; w.nick = ''; taken.add(n); }
+  }
+  for (const w of wd.fa) G.wrestlers.push({ ...w, contract: null });
+  G.rivalPromos = cos.map(c => { liven(c); setRivalChamp(c); return c; });
+  G.settings.bigEvery = wd.every || G.settings.bigEvery; syncRivals();
+  G.wlog = [{ wk: 1, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} free agents.` }];
+  news(take ? `🌍 You took over ${take.name} in the world "${wd.title || 'Shared world'}". Its roster and titles are yours.` : `🌍 ${G.promo.name} opened in the world "${wd.title || 'Shared world'}". Sign free agents in the Office.`, 'office');
+}
 function saveSummary(g) {
   const sg = (g.wrestlers || []).filter(w => w.contract);
   return {
@@ -6005,7 +6501,7 @@ function fixCustomMatch(c) {
 function scrubGame(raw) {
   const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES), topic: Object.keys(PROMO_TOPICS), tone: Object.keys(PROMO_TONES) };
   const idMap = new Map(), fixId = v => { v = String(v); if (SAFE_ID.test(v)) return v; if (!idMap.has(v)) idMap.set(v, uid()); return idMap.get(v); };
-  const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|coId|brand|bid|showId|loan)$/;
+  const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|coId|brand|bid|showId|loan|cutBy)$/;
   let budget = 400000;
   const clean = (v, k, depth, inId) => {
     if (--budget < 0 || depth > 14) return undefined;
@@ -6133,19 +6629,34 @@ function modalCommunity(m) {
     const rws = f !== 'wrestler' ? [] : COMM.items.filter(i => i.kind === 'roster' && !isHidden(i) && (sort !== 'following' || iFollow(i.author)))
       .sort((a, b) => sort === 'popular' ? popScore(b) - popScore(a) || b.created - a.created : b.created - a.created)
       .flatMap(i => packWs(i).map((w, n) => ({ i, w, n }))).filter(x => !q || (x.w.name + ' ' + (x.w.nick || '') + ' ' + x.i.title + ' ' + authorName(x.i.author)).toLowerCase().includes(q)).slice(0, 400);
-    const counts = i => `${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} ${i.kind === 'save' ? 'playing' : 'added'}` : ''}`;
+    const counts = i => `${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} ${i.kind === 'save' || i.kind === 'world' ? 'playing' : 'added'}` : ''}`;
     body += `<div class="seg-ctl sm" style="margin-bottom:8px">${[['popular', 'Popular'], ['new', 'New'], ['following', 'Following']].map(([k, l]) => `<button class="${sort === k ? 'on' : ''}" data-act="cSort" data-id="${k}">${l}</button>`).join('')}</div>`;
     if (sort === 'following' && !myList('follows').length) body += '<div class="tiny muted" style="margin-bottom:8px">Follow creators from their page to see their new uploads here.</div>';
     body += `<input type="search" data-in="cQ" aria-label="Search creations" value="${esc(m.q || '')}" placeholder="Search creations" style="margin-bottom:8px">
-      <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['save', '💾 Saves']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
-      <div class="list">${(list.map(i => i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent-t)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
+      <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['world', '🌍 Worlds'], ['save', '💾 Saves']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
+      <div class="list">${(list.map(i => i.kind === 'world' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">🌍</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>` : i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent-t)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
   } else if (t === 'share' && !G) {
     body += `<div class="empty"><p><b>Start a company first.</b></p><p class="small">You share wrestlers, rosters and saves from a company you run.</p><button class="btn pri" data-act="needNew">🏟️ New company</button></div>`;
   } else if (t === 'share') {
     const sel = m.sel || [];
     const what = m.what || 'roster';
     const cnt = what === 'roster' ? signed().length : sel.length;
-    const whatCtl = `<label class="f"><span>What to share</span><div class="seg-ctl"><button class="${what === 'roster' ? 'on' : ''}" data-act="cWhat" data-id="roster">Whole roster</button><button class="${what === 'pick' ? 'on' : ''}" data-act="cWhat" data-id="pick">Pick wrestlers</button><button class="${what === 'save' ? 'on' : ''}" data-act="cWhat" data-id="save">💾 Save file</button></div></label>`;
+    const whatCtl = `<label class="f"><span>What to share</span><div class="seg-ctl"><button class="${what === 'roster' ? 'on' : ''}" data-act="cWhat" data-id="roster">Whole roster</button><button class="${what === 'pick' ? 'on' : ''}" data-act="cWhat" data-id="pick">Pick wrestlers</button><button class="${what === 'world' ? 'on' : ''}" data-act="cWhat" data-id="world">🌍 World</button><button class="${what === 'save' ? 'on' : ''}" data-act="cWhat" data-id="save">💾 Save</button></div></label>`;
+    if (what === 'world') {
+      const mineW = COMM.mine.filter(x => x.kind === 'world').length, mineCo = m.mine !== false;
+      ensureRivals();
+      const cos = [...(mineCo ? [G, ...(G.cos || [])].map(c => ({ name: c.promo.name, n: (c === G ? signed() : (c.roster || []).filter(w => w.contract)).length, you: 1 })) : []), ...G.rivalPromos.map(r => ({ name: r.name, n: r.roster.length, tier: tierOf(r) }))];
+      body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:6px">A world is the setting, not your game. Others start a new game in it at week 1, with every company run by the AI. They can open their own company or take one over.</div>
+        ${cos.map(c => `<div class="row small"><span class="sp">${esc(c.name)}${c.you ? ' <span class="tag gold">yours</span>' : c.tier ? ` <span class="tag">${c.tier}</span>` : ''}</span><b>${c.n} wrestlers</b></div>`).join('')}
+        <div class="row small"><span class="sp muted">Free agents</span><b>${Math.min(60, freeAgents().length)}</b></div>
+        <div class="tiny muted" style="margin-top:6px">Rosters, championships and past champions go in. Shows, stories in progress, money and notes don't.</div></div>
+        <label class="todo"><input type="checkbox" data-in="cMine" ${mineCo ? 'checked' : ''}><span>Include ${multi() ? 'my companies' : 'my company'} as ${multi() ? 'AI companies' : 'an AI company'}</span></label>
+        <label class="f"><span>Title</span><input type="text" data-in="cTitle" value="${esc(m.title || '')}" maxlength="60" placeholder="${esc(G.promo.name + ' universe')}"></label>
+        <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="What kind of world is it? Who's on top? Which company would you take over?">${esc(m.desc || '')}</textarea></label>
+        <div class="tiny muted" style="margin:6px 0 10px">You can have ${saveShareMax()} worlds shared at once${mineW ? ` (you have ${mineW})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
+        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishWorld" ${mineW >= saveShareMax() || cos.length < 2 ? 'disabled' : ''}>${mineW >= saveShareMax() ? 'Remove an old world in My uploads first' : cos.length < 2 ? 'A world needs at least 2 companies' : '🌍 Share this world'}</button>`}`;
+      return modal('🌐 Community', body);
+    }
     if (what === 'save') {
       const mineSaves = COMM.mine.filter(x => x.kind === 'save').length;
       body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="row small"><span class="sp muted">Game</span><b>${esc(G.promo.name)}</b></div><div class="row small"><span class="sp muted">Progress</span><b>Week ${G.week} · ${signed().length} wrestlers · ${kfmt(G.fans)} fans</b></div><div class="tiny muted" style="margin-top:6px">Others get a copy of your game to play from here. Yours doesn't change.</div></div>
@@ -6171,7 +6682,7 @@ function modalCommunity(m) {
       ${usesGot ? `<div class="tiny muted" style="margin-top:6px">Your uploads have been added or played ${usesGot} time${usesGot > 1 ? 's' : ''}.</div>` : ''}
       <button class="btn block" style="margin-top:10px" data-act="cEditProfile">✏️ ${pr ? 'Edit profile' : 'Set up your profile'}</button></div>
       <div class="sec">Your uploads</div>`;
-    body += `<div class="list">${mine.map(i => `<div class="item"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? '💾 Save · week ' + (+i.sum?.week || 1) : kindLbl(i)} · ${new Date(i.created).toLocaleDateString()}</div></div><button class="btn sm bad" data-act="cDel" data-id="${esc(i.author + '|' + i.id)}">Delete</button></div>`).join('') || '<div class="empty">You haven\'t shared anything yet.</div>'}</div>`;
+    body += `<div class="list">${mine.map(i => `<div class="item"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? '💾 Save · week ' + (+i.sum?.week || 1) : kindLbl({ ...i, sum: i.sum || {} })} · ${new Date(i.created).toLocaleDateString()}</div></div><button class="btn sm bad" data-act="cDel" data-id="${esc(i.author + '|' + i.id)}">Delete</button></div>`).join('') || '<div class="empty">You haven\'t shared anything yet.</div>'}</div>`;
     if (liked.length) body += `<div class="sec">Liked (${liked.length})</div><div class="list">${liked.map(i => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">by ${esc(authorName(i.author))} · ❤️ ${i.nLikes}</div></div></button>`).join('')}</div>`;
     body += sbAccountCard();
   }
@@ -6275,11 +6786,24 @@ function modalEditProfile(m) {
 function cvHead(i, key, what) {
   const liked = iLike(key);
   return `<div class="cv-head"><button class="cv-by" data-act="cCreator" data-id="${esc(i.author)}">${creatorAv(i.author, 34)}<span><b>${esc(authorName(i.author))}</b>${flairTag(i.author)}<span class="tiny muted">${esc(what)} · ${new Date(i.created).toLocaleDateString()}</span></span><span class="muted">›</span></button>
-    <button class="btn sm cv-like ${liked ? 'on' : ''}" data-act="cLike" data-id="${esc(key)}" ${COMM.me ? '' : 'disabled'}>❤️ ${i.nLikes || 0}</button></div>${i.nUses ? `<div class="tiny muted" style="margin:-4px 0 6px">${i.nUses} player${i.nUses > 1 ? 's' : ''} ${i.kind === 'save' ? 'playing this' : 'added this'}</div>` : ''}`;
+    <button class="btn sm cv-like ${liked ? 'on' : ''}" data-act="cLike" data-id="${esc(key)}" ${COMM.me ? '' : 'disabled'}>❤️ ${i.nLikes || 0}</button></div>${i.nUses ? `<div class="tiny muted" style="margin:-4px 0 6px">${i.nUses} player${i.nUses > 1 ? 's' : ''} ${i.kind === 'save' || i.kind === 'world' ? 'playing this' : 'added this'}</div>` : ''}`;
 }
 function modalCView(m) {
   const { i, base, n } = cItem(m.key);
   if (!i) return modal('Community', '<div class="empty">This creation was removed.</div>');
+  if (i.kind === 'world') {
+    const u = i.sum || {}, slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) })), cos = Array.isArray(u.cos) ? u.cos.filter(Array.isArray).slice(0, 10) : [];
+    const free = slots.find(s => !s.info)?.n || meta.slot || 1;
+    const body = `${cvHead(i, m.key, '🌍 World')}
+      ${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
+      <div class="card">${cos.map(c => `<div class="row small"><span class="sp">${esc(String(c[0]))} <span class="tag">${esc(String(c[1]))}</span></span><b>${+c[2] || 0} wrestlers</b></div>${c[3] ? `<div class="tiny muted" style="margin:-2px 0 4px">🏆 ${esc(String(c[3]))}</div>` : ''}`).join('')}
+        <div class="row small"><span class="sp muted">Free agents</span><b>${+u.fa || 0}</b></div></div>
+      <label class="f" style="margin-top:12px"><span>Save to</span><select id="cw-slot">${slots.map(s => `<option value="${s.n}" ${s.n === free ? 'selected' : ''}>Slot ${s.n}${s.info ? ' (replaces ' + esc(s.info.name) + ')' : ' (empty)'}</option>`).join('')}</select></label>
+      <div class="sec">How do you want to play?</div>
+      <div class="list"><button class="item" data-act="cWorldGo" data-id="${esc(m.key)}" data-f=""><div class="av" style="background:var(--card2);color:var(--accent-t)">🏟️</div><div class="main"><div class="t">Start my own company</div><div class="d">A new promotion joins this world. Sign its free agents or use the starter roster.</div></div></button>
+        ${cos.map((c, k) => `<button class="item" data-act="cWorldGo" data-id="${esc(m.key)}" data-f="${k + 1}"><div class="av" style="background:var(--card2);color:var(--accent-t)">🔑</div><div class="main"><div class="t">Take over ${esc(String(c[0]))}</div><div class="d">Its ${+c[2] || 0} wrestlers and titles become yours.</div></div></button>`).join('')}</div>`;
+    return modal(esc(i.title), body, `${COMM.owner && i.author !== COMM.me ? '<button class="btn bad" data-act="cDel" data-id="' + esc(m.key) + '">Remove</button>' : ''}${COMM.me && i.author !== COMM.me && i.author !== 'featured' ? `<button class="btn" data-act="cReport" data-id="${esc(m.key)}" aria-label="Report this">🚩</button>` : ''}`);
+  }
   if (i.kind === 'save') {
     const u = i.sum || {}, slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
     const body = `${cvHead(i, m.key, '💾 Save file')}
@@ -6526,6 +7050,39 @@ const CREATOR_ACTIONS = {
       await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30));
       UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Save shared with the community.');
     } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+  },
+  shareWorld() { if (G) openModal({ type: 'community', tab: 'share', what: 'world' }); },
+  async cPublishWorld() {
+    const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
+    if (isRude(m.title) || isRude(m.desc)) return toast('Please remove the rude words first.');
+    if (typeof CompressionStream === 'undefined') return toast('This browser can\'t pack worlds. Try an up-to-date browser.');
+    if (COMM.mine.filter(x => x.kind === 'world').length >= saveShareMax()) return toast('Remove an old world first.');
+    try {
+      const wd = makeWorld(m.mine !== false);
+      if (wd.cos.some(c => isRude(c.name) || c.roster.some(w => isRude(w.name)))) return toast('Please rename anything rude in the world first.');
+      const data = await gz(JSON.stringify(wd));
+      const item = { id: uid(), title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe', desc: (m.desc || '').trim().slice(0, 300), kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: Date.now(), sum: worldSummary(wd), save: data };
+      await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30));
+      UI.modal = { type: 'community', tab: 'mine' }; render(); toast('World shared with the community.');
+    } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+  },
+  cWorldGo(key, el) {
+    const k = +el.dataset.f || 0, n = +(document.getElementById('cw-slot')?.value || meta.slot || 1), i = COMM.items.find(x => x.author + '|' + x.id === key); if (!i) return toast('This world was removed.');
+    const info = slotInfo(n);
+    const go = async () => {
+      if (typeof DecompressionStream === 'undefined') return toast('This browser can\'t open shared worlds. Try an up-to-date browser.');
+      let wd; try { wd = cleanWorld(JSON.parse(await ungz(i.save))); } catch (e) { return toast('This world is damaged and can\'t be opened.'); }
+      wd.title = i.title;
+      const take = k ? wd.cos[k - 1] : null;
+      if (G) save();
+      markUsed(key); UI.modal = null;
+      wizStart(false);
+      const z = UI.wiz; Object.assign(z, { step: 'company', world: wd, take: take?.id || null, slot: n, source: 'world', count: 1, nth: 1, every: wd.every });
+      if (take) { z.name = take.name; z.show = take.show; z.color = safeColor(take.color) || z.color; }
+      render(); window.scrollTo(0, 0);
+    };
+    if (info) confirmBox(`Replace slot ${n}?`, `${info.name} (week ${info.week}) in slot ${n} will be replaced by your new game in this world. Back it up first from Menu if you want to keep it.`, 'Replace and start', go, true);
+    else go();
   },
   cPlaySave(key, el) {
     const n = +el.dataset.f, i = COMM.items.find(x => x.author + '|' + x.id === key); if (!i) return toast('This save was removed.');
@@ -7441,6 +7998,8 @@ function wizFinish() {
     G.rivalPromos.forEach(r => { if (r.roster.length < 10) fillRival(r, 10 - r.roster.length); setRivalChamp(r); });
     news(`📝 Draft complete: ${z.mine.length} wrestlers signed. Rivals ${G.rivals.join(' and ')} drafted the rest.`, 'contract');
   }
+  if (!host) { G.settings.sandbox = !!z.sandbox; G.wseedN = +z.rivN || 4; }
+  if (z.world) applyWorld(z);
   news(`🎉 ${G.promo.name} is open for business. ${G.promo.show} airs ${DAYS[G.promo.day]}s.`, 'office');
   G.todos = [
     { t: `Book and run your first ${G.promo.show}. Tap + Match, or Auto-fill and tweak it`, done: false, auto: 'firstShow' },
@@ -7462,7 +8021,7 @@ function wizFinish() {
   if (host) joinWorld(host);
   { const u = nextUp(); if (u && u.c === G && !u.on) goUnit(u); }
   if (!z.add) tutStart();
-  UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : 'book'; UI.selWeek = G.week; UI.calMonth = null;
+  UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : z.world && !z.take && z.source === 'world' ? 'office' : 'book'; if (UI.tab === 'office') UI.faTab = 'fa'; UI.selWeek = G.week; UI.calMonth = null;
   UI.modal = z.source === 'import' ? { type: 'rtools', tab: 'import', mode: 'replace' } : null;
   applyBrand(G.promo.color); save(); render(); window.scrollTo(0, 0);
   // several companies chosen at the start: go straight on to setting up the next one
@@ -7530,7 +8089,10 @@ function viewWizard() {
     return `<div class="app wz">${wizSteps('budget')}
       <div class="wz-k">Step 2 · Sim settings</div><h2 class="wz-h">How do you want to run ${esc(z.name)}?</h2>
       ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="sec" style="margin-top:4px">Sim settings</div>
-      <div class="list" style="margin-bottom:14px">${[['deep', '🧠 Deep sim', 'See every skill (psychology, selling, consistency, safety and more) and each wrestler\'s potential. Turns on money and contracts too. Off: the simple six stats.'], ['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.']].map(([k, l, d]) => `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}"><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}</div></div></button>`).join('')}</div>
+      <div class="list" style="margin-bottom:14px">${[['deep', '🧠 Deep sim', 'See every skill (psychology, selling, consistency, safety and more) and each wrestler\'s potential. Turns on money and contracts too. Off: the simple six stats.'], ['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.'], ['sandbox', '🛠️ Sandbox', 'Build the whole world: edit every company, title and roster, and move anyone anywhere. Share it when it\'s ready. Switch it on or off any time.']].map(([k, l, d]) => `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}"><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}</div></div></button>`).join('')}</div>
+      ${z.world ? '' : `<div class="sec">Rival companies</div>
+      <div class="seg-ctl" style="margin-bottom:6px">${[2, 3, 4, 5, 6].map(n => `<button class="${(z.rivN || 4) === n ? 'on' : ''}" data-act="wzSet" data-f="rivN" data-id="${n}">${n}</button>`).join('')}</div>
+      <p class="muted tiny" style="margin:0 0 14px">How many AI companies share your world at the start. More open and close over time. Edit any of them in Office → Rivals.</p>`}
       <div class="sec">Challenge</div>
       <div class="seg-ctl" style="margin-bottom:6px">${CHALLENGES.map(([k, l]) => `<button class="${(z.challenge || 'normal') === k ? 'on' : ''}" data-act="wzSet" data-f="challenge" data-id="${k}">${l}</button>`).join('')}</div>
       <p class="muted tiny" style="margin:0 0 14px">${CHALLENGES.find(c => c[0] === (z.challenge || 'normal'))[2]} You can change it later in the menu.</p>`}
@@ -7538,6 +8100,14 @@ function viewWizard() {
       <p class="muted small" style="margin-top:0">This sets your bank balance${z.contracts ? ' and the weekly payroll you can spend in the draft' : ''}.</p>
       <div class="list">${Object.entries(BUDGETS).sort((a, b) => a[1].money - b[1].money).map(([k, b]) => `<button class="pick wz-opt ${z.budget === k ? 'sel' : ''}" data-act="wzSet" data-f="budget" data-id="${k}"><span class="ck">${z.budget === k ? '✓' : ''}</span><div><b>${b.label}</b> <span class="muted small">· ${money(b.money)} bank · ${money(b.cap)}/wk payroll</span><div class="small muted">${b.desc}</div></div></button>`).join('')}</div>` : `<div class="tip">Sandbox mode: no money to manage. ${z.contracts ? 'Contracts still matter, but you can pay whatever it takes.' : 'Just book the shows you want.'}</div>`}
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="company">Back</button><button class="btn pri" data-act="wzGo" data-id="roster">Next</button></div></div>`;
+  }
+  if (z.step === 'roster' && z.world) {
+    const tk = z.take && z.world.cos.find(c => c.id === z.take);
+    return `<div class="app wz">${wizSteps('roster')}
+      <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">${tk ? `Taking over ${esc(tk.name)}` : 'Where does your talent come from?'}</h2>
+      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(tk.roster.find(w => w.id === t.holder[0])?.name || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>`
+      : `<div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
+      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button><button class="btn pri" data-act="wzFinish">Open for business</button></div></div>`;
   }
   if (z.step === 'roster') {
     return `<div class="app wz">${wizSteps('roster')}
@@ -7684,7 +8254,7 @@ const WIZ_ACTIONS = {
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
   wzPpvIdeas() { const l = shuffle(BIG_EVENTS).slice(0, 12); UI.wiz.ppv = l.join('\n'); if (!Object.values(UI.wiz.sig || {}).some(Boolean)) UI.wiz.sig = { [l[0]]: 'mt:Rumble' }; render(); },
-  wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' ? +v : v; if (f === 'color') applyBrand(v); render(); },
+  wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' || f === 'rivN' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
   wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false, deep: !!z.deep }); tutStart(); UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = null; save(); render(); },
   wzDraft() { if (!UI.wiz.show.trim()) UI.wiz.show = DAYS[UI.wiz.day] + ' Mayhem'; wizBeginDraft(); },
@@ -7729,6 +8299,7 @@ document.addEventListener('input', e => {
     if (k === 'rosterQ') { UI.rosterQ = v; debRender(el, e); }
     else if (k === 'pickQ') { UI.picker.q = v; debRender(el, e); }
     else if (k === 'cQ') { UI.modal.q = v; debRender(el, e); }
+    else if (k === 'rrQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'mediaQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'cTitle') UI.modal.title = v;
     else if (k === 'cDesc') UI.modal.desc = v;
@@ -7750,6 +8321,7 @@ document.addEventListener('input', e => {
   }
   if (el.dataset.es != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
   if (el.dataset.et != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.et] = el.value; }
+  if (el.dataset.tt === 'name' && UI.modal?.draft?.titles?.[+el.dataset.i]) UI.modal.draft.titles[+el.dataset.i].name = el.value;
 });
 document.addEventListener('change', e => {
   const el = e.target;
@@ -7799,6 +8371,8 @@ document.addEventListener('change', e => {
     else if (k === 'difficulty') { G.settings.difficulty = Object.hasOwn(DIFF, el.value) ? el.value : 'normal'; commit('Challenge set to ' + CHALLENGES.find(c => c[0] === G.settings.difficulty)[1] + '.'); }
     else if (k === 'finances') { G.settings.finances = el.checked; commit(); }
     else if (k === 'cNotes') { UI.modal.notes = el.checked; }
+    else if (k === 'cMine') { UI.modal.mine = el.checked; render(); }
+    else if (k === 'sandbox') { G.settings.sandbox = el.checked; commit(el.checked ? 'Sandbox on. Build your world in Office → Rivals.' : 'Sandbox off.'); }
     else if (k === 'contracts') {
       G.settings.contracts = el.checked;
       // deals were frozen while contracts were off; give anyone with almost nothing left a fresh runway
@@ -7814,7 +8388,9 @@ document.addEventListener('change', e => {
   }
   if (el.dataset.ew != null) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
   if (el.dataset.es != null) { if (el.type === 'checkbox') UI.modal.draft.autoEnd = el.checked; else if (el.dataset.es === 'titleId') UI.modal.draft.titleId = el.value || null; else UI.modal.draft[el.dataset.es] = el.value; }
-  if (el.dataset.et != null) { UI.modal.draft[el.dataset.et] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox') { if (!UI.modal.draft.tag) UI.modal.draft.holder = UI.modal.draft.holder.slice(0, 1); render(); } }
+  if (el.dataset.rr && el.tagName === 'SELECT') { A.rrMove(el.dataset.rr, el.value); return; }
+  if (el.dataset.tt && el.tagName === 'SELECT' && UI.modal?.draft?.titles?.[+el.dataset.i]) { const t = UI.modal.draft.titles[+el.dataset.i]; if (el.dataset.tt === 'holder') t.holder = el.value; else { t.mid = el.value === 'mid'; t.div = el.value === 'women' ? "Women's" : ''; if (/ (World|Television|Women's) Championship$/.test(t.name)) t.name = t.name.replace(/(World|Television|Women's) Championship$/, t.div ? "Women's Championship" : t.mid ? 'Television Championship' : 'World Championship'); } render(); return; }
+  if (el.dataset.et != null) { UI.modal.draft[el.dataset.et] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox') { if (!UI.modal.draft.tag && Array.isArray(UI.modal.draft.holder)) UI.modal.draft.holder = UI.modal.draft.holder.slice(0, 1); render(); } }
   if (el.dataset.act === 'todoCk') A.todoCk(el.dataset.id);
 });
 document.addEventListener('focusout', () => setTimeout(() => { if (COMM.pending && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) { COMM.pending = false; rerenderComm(); } }, 50));
