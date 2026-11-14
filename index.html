@@ -463,6 +463,30 @@ nav.tabs .dot { background: var(--rope-r); font-family: system-ui, sans-serif; l
 .ring-art { width: min(300px, 82vw); height: auto; display: block; margin: 0 auto 6px; filter: drop-shadow(0 18px 30px rgba(0,0,0,.45)); }
 .belt-art { width: min(240px, 70vw); height: auto; display: block; margin: 6px auto 10px; filter: drop-shadow(0 10px 24px rgba(246,197,68,.28)); }
 .belt-sm { width: 64px; height: auto; flex: none; }
+.belt-sm { width: 88px; }
+/* championship designer */
+.bd-prev { position: sticky; top: -14px; z-index: 2; margin: -4px -4px 8px; padding: 8px 4px; border-radius: 16px; background: radial-gradient(circle at 50% 45%, var(--card2), var(--bg) 72%); }
+.bd-belt { display: block; width: 100%; max-width: 440px; height: auto; margin: 0 auto; filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)); }
+.bd-tools { gap: 6px; flex-wrap: wrap; justify-content: flex-start; margin-bottom: 8px; }
+.bd-tools .chip { padding: 6px 12px; min-height: 36px; }
+.bd-tools .chip[disabled] { opacity: .45; cursor: default; }
+.bd-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); margin: 4px -4px 4px; padding: 0 4px; }
+.bd-tabs::-webkit-scrollbar { display: none; }
+.bd-tabs button { flex: 1 0 auto; background: none; border: 0; border-bottom: 2px solid transparent; padding: 9px 6px; min-height: 42px; font-weight: 700; font-size: 13.5px; color: var(--dim); white-space: nowrap; }
+.bd-tabs button.on { color: var(--accent-t); border-bottom-color: var(--accent); }
+.seg-ctl.bd-many button { flex: 1 0 calc(33.3% - 3px); min-width: 0; }
+.bd-lab { font-size: 12.5px; font-weight: 700; color: var(--dim); margin: 12px 0 6px; }
+.bd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+.bd-tpls { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); margin-bottom: 8px; }
+.bd-tile { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 4px 6px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card2); font-size: 11.5px; font-weight: 600; color: var(--dim); }
+.bd-tile.on { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 12%, var(--card2)); }
+.bd-mini { width: 100%; height: auto; display: block; }
+.bd-metal { display: block; width: 100%; height: 30px; border-radius: 8px; }
+.bd-pane .swatches .sw { width: 34px; height: 34px; }
+.wz-title { padding: 10px 12px; margin: 0; }
+.wz-belt { flex: none; width: 104px; padding: 0; border: 0; background: none; }
+.belt-th { width: 100%; height: auto; display: block; }
+.wz-add { margin-top: 10px; border-style: dashed !important; color: var(--accent-t); font-weight: 700; }
 /* wizard + draft */
 .wz-h { font-family: var(--f-display); font-weight: 400; font-size: 30px; letter-spacing: .02em; text-transform: uppercase; line-height: 1.02; }
 .wz-k { font-size: 13px; }
@@ -1598,6 +1622,8 @@ function nextLabel(h) {
 // the week moves on once every company has run; the next card for each company is picked up when it's opened
 function advanceWeek() {
   G.week++; G.curWk = G.week;
+  // a title with a defense rule loses prestige every week it goes past its deadline
+  for (const t of G.titles || []) { const ev = titleEvery(t); if (!ev || !t.holder.length) continue; const late = G.week - t.lastDefense - ev; if (late > 0) { t.prestige = clamp((t.prestige || 30) - 1.5, 5, 100); if (late === 1) news(`🏆 The ${t.name} is overdue for a defense. It loses prestige every week until it's defended.`, 'title'); } }
   G.card = (G.future[G.week] || []).filter(s => { removeGone(s); return segPeople(s).length; });
   delete G.future[G.week];
   UI.selWeek = G.week; UI.calMonth = null;
@@ -2023,7 +2049,7 @@ function applySegment(seg, res, ctx) {
     const t = res.title;
     if (t) {
       const holderWon = t.holder.some(h => res.winners.includes(h));
-      if (res.winners.length && !holderWon && !(res.fin?.keep && t.holder.some(h => res.losers.includes(h)))) {
+      if (res.winners.length && !holderWon && !(res.fin?.keep && !t.dq && t.holder.some(h => res.losers.includes(h)))) {
         const old = t.holder.map(nameOf).join(' & ');
         const newH = t.tag ? res.winners.slice(0, 2) : [res.winners[0]];
         crown(t, newH); t.holder = newH; t.since = G.week; t.defenses = 0; t.lastDefense = G.week;
@@ -3762,7 +3788,7 @@ function attention() {
   }
   for (const w of signed().filter(w => w.morale < 35)) a.push({ lv: 'warn', ic: '😠', t: `${w.name} is unhappy (${Math.round(w.morale)})`, d: G.week - w.lastBooked >= 2 ? 'Not booked. Put them on the card.' : CON() ? 'Losing or underpaid. Try a win or a raise.' : 'Losing streak. Give them a win.', wid: w.id });
   for (const st of G.stories.filter(s => s.status === 'active' && s.heat < 25 && G.week - s.start > 1)) a.push({ lv: 'warn', ic: '🧊', t: `"${st.title}" is cooling off`, d: 'Heat drops every week the story is not on the card.', sid: st.id });
-  for (const t of G.titles.filter(t => t.holder.length && G.week - t.lastDefense >= 5)) a.push({ lv: 'info', ic: '🏆', t: `${t.short} title hasn't been defended in ${G.week - t.lastDefense} weeks`, d: 'Regular defenses keep the belt prestigious.', go: 'book' });
+  for (const t of G.titles.filter(t => t.holder.length && G.week - t.lastDefense >= (titleEvery(t) ? titleEvery(t) - 1 : 5))) { const ev = titleEvery(t), left = t.lastDefense + ev - G.week; a.push(ev ? { lv: left < 0 ? 'bad' : 'warn', ic: '🏆', t: left < 0 ? `${t.short} title is ${-left} week${left === -1 ? '' : 's'} overdue for a defense` : `${t.short} title must be defended ${left ? 'by next week' : 'this week'}`, d: `It has to be defended every ${ev} weeks${left < 0 ? ' and is losing prestige' : ''}.`, go: 'book' } : { lv: 'info', ic: '🏆', t: `${t.short} title hasn't been defended in ${G.week - t.lastDefense} weeks`, d: 'Regular defenses keep the belt prestigious.', go: 'book' }); }
   for (const t of G.titles.filter(t => !t.holder.length)) a.push({ lv: 'warn', ic: '🏆', t: `${t.name} is vacant`, d: 'Book a title match to crown a champion.', go: 'book' });
   const active = G.stories.filter(s => s.status === 'active');
   if (active.length < 2) { const idea = storyIdea(); if (idea) a.push({ lv: 'info', ic: '💡', t: `Story idea: ${nameOf(idea[0])} vs ${nameOf(idea[1])}`, d: active.length ? 'Only one story running. Two or three is better.' : 'No stories running. Tap to start this one.', idea: idea.join(',') }); }
@@ -3904,6 +3930,129 @@ function beltSVG(cls, label) {
   <text x="120" y="72" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="13" letter-spacing="1.5" fill="#5a3c00">${esc(label || 'CHAMPION')}</text>
   </svg>`;
 }
+// ---------- championship belt designer: a belt is a small spec (t.belt), drawn as SVG ----------
+const BMETAL = { // hi, mid, lo, edge, text on it
+  gold: ['Gold', '#fff3c2', '#f2c443', '#a8740a', '#5e4004', '#4a3200'],
+  silver: ['Silver', '#ffffff', '#d3d9e0', '#7f8a96', '#3e464f', '#262b31'],
+  bronze: ['Bronze', '#ffd9b0', '#cf8f4f', '#7a4a1c', '#45280c', '#3a2008'],
+  rose: ['Rose gold', '#ffe4dc', '#eaa999', '#a5625a', '#5e3430', '#4d2522'],
+  black: ['Black chrome', '#6a6a78', '#2a2a32', '#0c0c10', '#000000', '#f2c443'],
+  copper: ['Copper', '#ffd2b8', '#d9774a', '#8a3a18', '#4a1d0a', '#3d1606']
+};
+const BPLATE = { // name, path (viewBox 320 x 130, centred on 160, 65)
+  classic: ['Classic', 'M112 8H208L236 36V94L208 122H112L84 94V36Z'],
+  winged: ['Winged', 'M120 8H200L218 26L256 30L282 46L264 56L280 72L258 84L218 88L200 122H120L102 88L62 84L40 72L56 56L38 46L64 30L102 26Z'],
+  shield: ['Shield', 'M98 8H222V58Q222 100 160 126Q98 100 98 58Z'],
+  round: ['Round', 'M160 4A61 61 0 1 1 159.9 4Z'],
+  crest: ['Crown', 'M100 34L118 26L132 4L148 22L160 0L172 22L188 4L202 26L220 34V92L192 122H128L100 92Z'],
+  hex: ['Hex', 'M118 6H202L240 65L202 124H118L80 65Z'],
+  wide: ['Big plate', 'M80 14H240Q256 14 256 30V100Q256 116 240 116H80Q64 116 64 100V30Q64 14 80 14Z']
+};
+const BEMBLEM = { gem: 'Gem', globe: 'Globe', star: 'Star', crown: 'Crown', bell: 'Bell', logo: 'Initials', wings: 'Wings', none: 'None' };
+const BSTRAP = { leather: 'Stitched', snake: 'Snakeskin', studs: 'Studded', plain: 'Plain' };
+const BCARVE = { none: 'Smooth', lines: 'Brushed', sunburst: 'Sunburst', scroll: 'Scrollwork', dots: 'Hammered' };
+const BFONT = { block: ['Block', 'Anton, Impact, sans-serif', 1.5], tall: ['Condensed', '"Barlow Condensed", "Arial Narrow", sans-serif', 1], serif: ['Classic serif', 'Georgia, "Times New Roman", serif', .5] };
+const BSTRAPS = ['#1a1a1f', '#3b2416', '#6e1420', '#14306b', '#0f4a2c', '#4a1b5e', '#e9e4da', '#b8862b', '#c22a2a', '#1d7fb8'];
+const BGEMS = ['#d62839', '#2f6fe0', '#1f9e5a', '#8a3fd1', '#f2f2f2', '#f2b01e', '#111111', '#ff6aa8'];
+const BENAMEL = ['#9b1020', '#123a7a', '#0c5a35', '#1a1a1f', '#5a1a7a', '#f2f2f2', '#b8862b'];
+let beltN = 0;
+function beltDefault(t, i) {
+  if (i == null) return { plate: 'classic', metal: 'gold', trim: '', strap: '#1a1a1f', tex: 'leather', sides: 2, side: 'rect', emblem: 'gem', gem: '#d62839', ring: 0, carve: 'none', top: '', line: String(t?.short || 'Champion').toUpperCase().slice(0, 18), font: 'block', enamel: '#9b1020', banner: 0, sub: '' };
+  const k = String(t?.short || t?.name || '');
+  const tag = !!t?.tag, women = /women/i.test(t?.name || '') || t?.division === "Women's";
+  const p = [['classic', 'gold', '#1a1a1f', '#d62839'], ['shield', 'silver', '#14306b', '#2f6fe0'], ['winged', 'gold', '#6e1420', '#f2f2f2'], ['round', 'bronze', '#3b2416', '#1f9e5a']][(i ?? 0) % 4];
+  return { plate: women ? 'crest' : tag ? 'winged' : p[0], metal: women ? 'rose' : p[1], trim: '', strap: women ? '#e9e4da' : p[2], tex: 'leather', sides: tag ? 4 : 2, side: 'rect',
+    emblem: tag ? 'star' : 'globe', gem: women ? '#ff6aa8' : p[3], ring: 0, carve: 'sunburst', top: '', line: (k || 'Champion').toUpperCase().slice(0, 16), font: 'block', enamel: '#9b1020', banner: 1, sub: '' };
+}
+function beltClean(b, t) {
+  const d = beltDefault(t || {}), o = b && typeof b === 'object' ? b : {};
+  const col = (v, f) => /^#[0-9a-f]{6}$/i.test(String(v)) ? String(v) : f;
+  const one = (v, m, f) => Object.hasOwn(m, String(v)) ? String(v) : f;
+  return { plate: one(o.plate, BPLATE, d.plate), metal: one(o.metal, BMETAL, d.metal), trim: o.trim && Object.hasOwn(BMETAL, o.trim) ? o.trim : '', strap: col(o.strap, d.strap), tex: one(o.tex, BSTRAP, d.tex),
+    sides: [0, 2, 4, 6].includes(+o.sides) ? +o.sides : d.sides, side: ['rect', 'round', 'shield'].includes(o.side) ? o.side : 'rect', emblem: one(o.emblem, BEMBLEM, d.emblem), gem: col(o.gem, d.gem),
+    ring: o.ring ? 1 : 0, carve: one(o.carve, BCARVE, d.carve), top: String(o.top ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 18), line: String(o.line ?? d.line).replace(/[<>`"]/g, '').toUpperCase().slice(0, 18),
+    font: one(o.font, BFONT, 'block'), enamel: col(o.enamel, d.enamel), banner: o.banner == null ? d.banner : o.banner ? 1 : 0, sub: String(o.sub ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 4) };
+}
+// the emblem in the middle of the plate, centred on (cx, cy) at radius r
+function beltEmblem(b, cx, cy, r, M, id, abbrTxt) {
+  const e = M[4], g = `url(#${id}g)`;
+  switch (b.emblem) {
+    case 'gem': return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${g}" stroke="${e}" stroke-width="2"/><path d="M${cx - r * .55} ${cy - r * .1}L${cx} ${cy - r * .62}L${cx + r * .55} ${cy - r * .1}L${cx} ${cy + r * .6}Z" fill="#fff" opacity=".22"/>`;
+    case 'globe': return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${g}" stroke="${e}" stroke-width="2"/><g fill="none" stroke="${M[1]}" stroke-width="1.4" opacity=".85"><ellipse cx="${cx}" cy="${cy}" rx="${r * .45}" ry="${r}"/><path d="M${cx - r} ${cy}H${cx + r}M${cx - r * .86} ${cy - r * .5}H${cx + r * .86}M${cx - r * .86} ${cy + r * .5}H${cx + r * .86}M${cx} ${cy - r}V${cy + r}"/></g>`;
+    case 'star': { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .45 : r * 1.12; p.push(`${(cx + q * Math.cos(a)).toFixed(1)} ${(cy + q * Math.sin(a)).toFixed(1)}`); } return `<path d="M${p.join('L')}Z" fill="${g}" stroke="${e}" stroke-width="2" stroke-linejoin="round"/>`; }
+    case 'crown': return `<path d="M${cx - r} ${cy + r * .6}L${cx - r * 1.05} ${cy - r * .55}L${cx - r * .5} ${cy - r * .05}L${cx} ${cy - r * .9}L${cx + r * .5} ${cy - r * .05}L${cx + r * 1.05} ${cy - r * .55}L${cx + r} ${cy + r * .6}Z" fill="url(#${id}m)" stroke="${e}" stroke-width="2" stroke-linejoin="round"/>${[-1, 0, 1].map(k => `<circle cx="${cx + k * r * .55}" cy="${cy + r * .3}" r="${r * .17}" fill="${g}"/>`).join('')}`;
+    case 'bell': return `<path d="M${cx - r * .85} ${cy + r * .6}Q${cx - r * .85} ${cy - r * .95} ${cx} ${cy - r * .95}Q${cx + r * .85} ${cy - r * .95} ${cx + r * .85} ${cy + r * .6}H${cx + r}V${cy + r * .78}H${cx - r}V${cy + r * .6}Z" fill="url(#${id}m)" stroke="${e}" stroke-width="2"/><circle cx="${cx}" cy="${cy + r * .95}" r="${r * .2}" fill="${g}"/>`;
+    case 'logo': return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${b.enamel}" stroke="${e}" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${r * .82}" fill="none" stroke="${M[1]}" stroke-width="1.2"/><text x="${cx}" y="${cy + r * .32}" text-anchor="middle" font-family="${BFONT[b.font][1]}" font-size="${r * (String(b.sub || abbrTxt).length > 3 ? .62 : .85)}" fill="${M[1]}">${esc(b.sub || abbrTxt || 'BK')}</text>`;
+    case 'wings': return `<path d="M${cx} ${cy + r * .3}C${cx - r * .4} ${cy - r * .4} ${cx - r * 1.2} ${cy - r * .7} ${cx - r * 1.6} ${cy - r * .5}C${cx - r * 1.3} ${cy - r * .2} ${cx - r * 1.5} ${cy + r * .05} ${cx - r * 1.2} ${cy + r * .1}C${cx - r * 1.3} ${cy + r * .35} ${cx - r * .7} ${cy + r * .5} ${cx} ${cy + r * .55}C${cx + r * .7} ${cy + r * .5} ${cx + r * 1.3} ${cy + r * .35} ${cx + r * 1.2} ${cy + r * .1}C${cx + r * 1.5} ${cy + r * .05} ${cx + r * 1.3} ${cy - r * .2} ${cx + r * 1.6} ${cy - r * .5}C${cx + r * 1.2} ${cy - r * .7} ${cx + r * .4} ${cy - r * .4} ${cx} ${cy + r * .3}Z" fill="url(#${id}m)" stroke="${e}" stroke-width="1.6"/><circle cx="${cx}" cy="${cy}" r="${r * .42}" fill="${g}" stroke="${e}" stroke-width="1.5"/>`;
+  }
+  return '';
+}
+function beltSide(b, x, M, T, id) {
+  const y = 65, sh = (w, h) => b.side === 'round' ? `<circle cx="${x}" cy="${y}" r="${h / 2}"` : b.side === 'shield' ? `<path d="M${x - w / 2} ${y - h / 2}H${x + w / 2}V${y}Q${x + w / 2} ${y + h * .4} ${x} ${y + h / 2 + 2}Q${x - w / 2} ${y + h * .4} ${x - w / 2} ${y}Z"` : `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${w / 5}"`;
+  return `${sh(30, 38)} fill="url(#${id}t)" stroke="${T[4]}" stroke-width="1.6"/>${sh(23, 30)} fill="url(#${id}m)"/><circle cx="${x}" cy="${y}" r="5" fill="url(#${id}g)" stroke="${T[4]}" stroke-width="1"/>`;
+}
+function beltRender(raw, opt = {}) {
+  const b = beltClean(raw, opt.title), id = 'bz' + (++beltN), M = BMETAL[b.metal], T = BMETAL[b.trim || b.metal];
+  const P = BPLATE[b.plate][1], F = BFONT[b.font];
+  const sx = { 0: [], 2: [44, 276], 4: [30, 70, 250, 290], 6: [22, 52, 82, 238, 268, 298] }[b.sides];
+  const strap = `<rect x="2" y="40" width="316" height="50" rx="16" fill="${b.strap}"/><rect x="2" y="40" width="316" height="50" rx="16" fill="url(#${id}s)"/>
+    ${b.tex === 'leather' ? `<path d="M10 47H310M10 83H310" stroke="#fff" stroke-opacity=".28" stroke-width="1.3" stroke-dasharray="5 4"/>` : ''}
+    ${b.tex === 'studs' ? [46, 84].map(y => Array.from({ length: 30 }, (_, i) => `<circle cx="${12 + i * 10.3}" cy="${y}" r="2.2" fill="url(#${id}t)"/>`).join('')).join('') : ''}
+    ${b.tex === 'snake' ? `<rect x="2" y="40" width="316" height="50" rx="16" fill="url(#${id}k)"/>` : ''}`;
+  const carve = { lines: `<g stroke="${M[3]}" stroke-opacity=".35" stroke-width="1">${Array.from({ length: 30 }, (_, i) => `<path d="M30 ${6 + i * 4.2}H290"/>`).join('')}</g>`,
+    sunburst: `<g stroke="${M[1]}" stroke-opacity=".45" stroke-width="2">${Array.from({ length: 36 }, (_, i) => { const a = i * Math.PI / 18; return `<path d="M160 52L${(160 + 200 * Math.cos(a)).toFixed(0)} ${(52 + 200 * Math.sin(a)).toFixed(0)}"/>`; }).join('')}</g>`,
+    scroll: `<g fill="none" stroke="${M[3]}" stroke-opacity=".5" stroke-width="1.3">${Array.from({ length: 12 }, (_, i) => { const x = 40 + (i % 6) * 48, y = i < 6 ? 22 : 104; return `<path d="M${x} ${y}c6-10 18-10 18 0s-12 8-12 2 6-4 6 0M${x + 24} ${y}c6 10 18 10 18 0s-12-8-12-2 6 4 6 0"/>`; }).join('')}</g>`,
+    dots: `<g fill="${M[3]}" fill-opacity=".3">${Array.from({ length: 160 }, (_, i) => `<circle cx="${40 + (i % 20) * 12 + (Math.floor(i / 20) % 2) * 6}" cy="${4 + Math.floor(i / 20) * 16}" r="1.4"/>`).join('')}</g>`, none: '' }[b.carve];
+  const hasBanner = b.banner && b.line, ty = b.plate === 'shield' ? 92 : 98, top = b.top;
+  const emY = top ? 58 : 52, emR = b.plate === 'wide' ? 20 : 17;
+  const ringGems = b.ring ? Array.from({ length: 10 }, (_, i) => { const a = i * Math.PI / 5; return `<circle cx="${(160 + (emR + 9) * Math.cos(a)).toFixed(1)}" cy="${(emY + (emR + 9) * Math.sin(a)).toFixed(1)}" r="2.6" fill="url(#${id}g)" stroke="${M[4]}" stroke-width=".8"/>`; }).join('') : '';
+  const fs = s => Math.min(15, 210 / Math.max(6, s.length) * (b.font === 'tall' ? 1.35 : 1));
+  return `<svg class="${opt.cls || 'belt-art'}" viewBox="${opt.vb || '0 0 320 130'}" role="img" aria-label="${esc(opt.label || 'Championship belt')}">
+  <defs><linearGradient id="${id}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${M[1]}"/><stop offset=".45" stop-color="${M[2]}"/><stop offset="1" stop-color="${M[3]}"/></linearGradient>
+  <linearGradient id="${id}t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${T[1]}"/><stop offset=".5" stop-color="${T[2]}"/><stop offset="1" stop-color="${T[3]}"/></linearGradient>
+  <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient>
+  <radialGradient id="${id}g" cx=".35" cy=".35" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".35" stop-color="${b.gem}"/><stop offset="1" stop-color="${b.gem}" stop-opacity=".95"/><stop offset="1" stop-color="#000"/></radialGradient>
+  <pattern id="${id}k" width="10" height="8" patternUnits="userSpaceOnUse"><path d="M0 4L5 0L10 4L5 8Z" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M2 4L5 2L8 4" stroke="#fff" stroke-opacity=".12" fill="none"/></pattern>
+  <clipPath id="${id}c"><path d="${P}"/></clipPath></defs>
+  ${strap}
+  ${sx.map(x => beltSide(b, x, M, T, id)).join('')}
+  <path d="${P}" fill="#000" opacity=".35" transform="translate(0 3)"/>
+  <path d="${P}" fill="url(#${id}t)" stroke="${T[4]}" stroke-width="2"/>
+  <g clip-path="url(#${id}c)"><path d="${P}" fill="url(#${id}m)" transform="translate(160 65) scale(.9) translate(-160 -65)"/>${carve}</g>
+  <path d="${P}" fill="none" stroke="${T[1]}" stroke-opacity=".7" stroke-width="1.3" transform="translate(160 65) scale(.9) translate(-160 -65)"/>
+  ${top ? `<text x="160" y="${b.plate === 'crest' ? 40 : 30}" text-anchor="middle" font-family="${F[1]}" font-size="${Math.min(11, fs(top) * .8)}" letter-spacing="${F[2]}" fill="${M[5]}" font-weight="700">${esc(top)}</text>` : ''}
+  ${ringGems}${beltEmblem(b, 160, emY, emR, M, id, opt.abbr)}
+  ${hasBanner ? `<path d="M${102} ${ty - 11}H218L226 ${ty}L218 ${ty + 11}H102L94 ${ty}Z" fill="${b.enamel}" stroke="${T[4]}" stroke-width="1.5"/><text x="160" y="${ty + fs(b.line) * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${fs(b.line)}" letter-spacing="${F[2]}" fill="${inkOn(b.enamel) === '#ffffff' ? (b.metal === 'black' ? M[5] : M[1]) : '#1a1306'}" font-weight="700">${esc(b.line)}</text>`
+    : b.line ? `<text x="160" y="${ty + 5}" text-anchor="middle" font-family="${F[1]}" font-size="${fs(b.line)}" letter-spacing="${F[2]}" fill="${M[5]}" font-weight="700">${esc(b.line)}</text>` : ''}
+  </svg>`;
+}
+
+// finished belts to start from; the designer's Templates row and the quick-add titles use them
+const BTPL = [
+  ['World', { plate: 'classic', metal: 'gold', strap: '#1a1a1f', emblem: 'globe', gem: '#d62839', carve: 'sunburst', sides: 2, enamel: '#9b1020' }],
+  ['Heavyweight', { plate: 'winged', metal: 'gold', strap: '#6e1420', emblem: 'wings', gem: '#f2f2f2', carve: 'scroll', sides: 4, enamel: '#123a7a' }],
+  ['National', { plate: 'shield', metal: 'silver', strap: '#14306b', emblem: 'star', gem: '#2f6fe0', carve: 'lines', sides: 2, side: 'shield', enamel: '#123a7a', font: 'tall' }],
+  ["Women's", { plate: 'crest', metal: 'rose', strap: '#e9e4da', emblem: 'crown', gem: '#ff6aa8', carve: 'dots', ring: 1, sides: 2, side: 'round', enamel: '#5a1a7a' }],
+  ['Television', { plate: 'round', metal: 'black', trim: 'gold', strap: '#1a1a1f', tex: 'studs', emblem: 'logo', gem: '#f2b01e', carve: 'none', sides: 4, enamel: '#1a1a1f' }],
+  ['Hardcore', { plate: 'hex', metal: 'bronze', strap: '#0f4a2c', tex: 'snake', emblem: 'gem', gem: '#1f9e5a', carve: 'sunburst', sides: 6, enamel: '#0c5a35', font: 'serif' }],
+  ['Tag team', { plate: 'wide', metal: 'copper', strap: '#3b2416', emblem: 'bell', gem: '#d62839', carve: 'scroll', sides: 4, enamel: '#9b1020' }],
+  ['Cruiserweight', { plate: 'winged', metal: 'silver', trim: 'gold', strap: '#4a1b5e', emblem: 'star', gem: '#8a3fd1', carve: 'sunburst', sides: 2, ring: 1, enamel: '#1a1a1f', font: 'tall' }],
+  ['Classic', { plate: 'classic', metal: 'gold', strap: '#1a1a1f', emblem: 'gem', gem: '#d62839', carve: 'none', sides: 2, banner: 0 }]
+];
+// a template's look with this title's own words kept
+const beltFromTpl = (i, cur) => { const c = beltClean(cur), x = BTPL[i]?.[1] || {}; return beltClean({ ...beltDefault(), trim: '', tex: 'leather', side: 'rect', ring: 0, font: 'block', banner: 1, ...x, top: c.top, line: c.line, sub: c.sub }); };
+function beltSurprise(cur) {
+  const c = beltClean(cur), p = a => a[Math.floor(Math.random() * a.length)], k = o => p(Object.keys(o));
+  return beltClean({ plate: k(BPLATE), metal: k(BMETAL), trim: Math.random() < .3 ? k(BMETAL) : '', strap: p(BSTRAPS), tex: k(BSTRAP), sides: p([0, 2, 2, 4, 4, 6]), side: p(['rect', 'round', 'shield']), emblem: p(Object.keys(BEMBLEM).filter(x => x !== 'none')),
+    gem: p(BGEMS), ring: Math.random() < .35 ? 1 : 0, carve: k(BCARVE), font: k(BFONT), enamel: p(BENAMEL), banner: Math.random() < .8 ? 1 : 0, top: c.top, line: c.line, sub: c.sub });
+}
+// a title's belt as drawn everywhere in the game (titles with no design keep the classic gold belt)
+const titleBelt = (t, cls) => beltRender(t.belt, { title: t, cls, label: (t.name || 'Championship') + ' belt', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BookIt') });
+// title rules: level and how often it must be defended
+const TLEVELS = [['top', 'Top title'], ['mid', 'Secondary'], ['spec', 'Specialty']];
+const titleTier = t => TLEVELS.some(x => x[0] === t.tier) ? t.tier : (t.prestige || 0) >= 65 && !t.tag ? 'top' : 'mid';
+const tierName = t => TLEVELS.find(x => x[0] === titleTier(t))[1];
+const titleEvery = t => [4, 8, 12].includes(+t.every) ? +t.every : 0;
 // a booker's profile symbol: a bold belt badge unlocked by booker level (championships keep their own belt art)
 function symSVG(id, label, cls) {
   const b = BELTS.find(x => x[0] === id); if (!b) return '';
@@ -3963,7 +4112,9 @@ function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><sp
 
 function render() {
   const fk = focusKey(document.activeElement);
-  if (!G || UI.wiz) { root.innerHTML = iconize('<main tabindex="-1">' + (UI.wiz ? viewWizard() : viewStart()) + '</main>'); modals.innerHTML = iconize(renderModal()); a11yAfter(fk); MUSIC.sync(); return; }
+  if (!G || UI.wiz) { const mo = modals.querySelector('.modal-bg .mb'), ko = lastModalKey, so = mo ? mo.scrollTop : 0;
+    root.innerHTML = iconize('<main tabindex="-1">' + (UI.wiz ? viewWizard() : viewStart()) + '</main>'); modals.innerHTML = iconize(renderModal());
+    const mn = modals.querySelector('.modal-bg .mb'); if (mn && so && ko === lastModalKey) mn.scrollTop = so; bdTabView(); a11yAfter(fk); MUSIC.sync(); return; }
   if (UI.pendingGet && !UI.modal && !UI.wiz) { const k = UI.pendingGet; UI.pendingGet = null; if (cItem(k).i) { setTimeout(() => A.cGet(k)); } }
   if (G.promo.color !== render.brand) { render.brand = G.promo.color; applyBrand(G.promo.color); }
   if (!UI.selWeek || UI.selWeek < 1) UI.selWeek = G.week;
@@ -3993,7 +4144,7 @@ function render() {
   // the week strip: keep the show being booked in view
   const chip = root.querySelector('.wk-chip.on'), strip = chip?.parentElement;
   if (chip && strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, chip.offsetLeft - strip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2);
-  tutMark();
+  tutMark(); bdTabView();
   a11yAfter(fk);
   MUSIC.sync();
 }
@@ -4074,7 +4225,7 @@ function viewHome() {
   const last = G.history[G.history.length - 1];
   const nb = nextBig();
   const att = attention();
-  const champs = G.titles.map(t => `<div class="item" style="padding:8px 10px">${beltSVG('belt-sm', (t.short || '').toUpperCase())}<div class="main"><div class="t small">${esc(t.name)}</div><div class="d">${t.holder.length ? nmList(t.holder) + ` · since wk ${t.since} · ${t.defenses} defenses` : '<span class="muted">Vacant</span>'}</div></div><span class="tag gold">${Math.round(t.prestige)}</span></div>`).join('');
+  const champs = G.titles.map(t => `<div class="item" style="padding:8px 10px">${titleBelt(t, 'belt-sm')}<div class="main"><div class="t small">${esc(t.name)}</div><div class="d">${t.holder.length ? nmList(t.holder) + ` · since wk ${t.since} · ${t.defenses} defenses` : '<span class="muted">Vacant</span>'}</div></div><span class="tag gold">${Math.round(t.prestige)}</span></div>`).join('');
   const hot = G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat).slice(0, 3);
   return `
   <div class="card ${isBig(G.week) ? 'big-ev' : ''}">
@@ -4408,7 +4559,7 @@ function viewOffice() {
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
   ${t === 'fa' ? `<div class="small muted" style="margin-bottom:8px">Unsigned talent. Rivals sign them over time.</div><div class="list">${fa.map(w => wItem(w, 'negotiate', CON() ? `asks <b>${money(asking(w))}</b>/wk` : 'tap to sign instantly')).join('') || '<div class="empty">No free agents right now.</div>'}</div><button class="btn block" style="margin-top:12px" data-act="createW">+ Create a wrestler</button>` : ''}
-  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${beltSVG('belt-sm', (ti.short || '').toUpperCase())}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
+  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleBelt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
@@ -5049,7 +5200,7 @@ function modalRankings(m) {
 function modalRecords(m) {
   const tab = m.tab || 'titles', legends = G.wrestlers.filter(w => w.retired).sort((a, b) => b.retired - a.retired);
   let body = tabsOf([['titles', 'Title history'], ['awards', 'Awards'], ['legends', 'Legends']], tab, 'recTab');
-  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${beltSVG('belt-sm', (t.short || '').toUpperCase())}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
+  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${titleBelt(t, 'belt-sm')}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
   if (tab === 'awards') body += (G.awards || []).slice().reverse().map(a => `<div class="card aw"><div class="review-h">Year ${a.yr} awards · week ${a.wk}</div>${a.list.map(x => `<div class="aw-r"><span class="tiny muted">${esc(x.lbl)}</span><b>${esc(x.nm)}</b><span class="tiny muted">${esc(x.det || '')}</span></div>`).join('') || '<div class="tiny muted">No shows that year.</div>'}</div>`).join('') || `<div class="empty">Awards are handed out at the end of every year (week 52). ${52 - (G.week - 1) % 52} weeks to go.</div>`;
   if (tab === 'legends') body += legends.length ? `<div class="list">${legends.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">Retired week ${w.retired} at ${w.age} · ${recStr(w)} · ${reignsOfW(w.id).length} title reigns</div></div></button>`).join('')}</div>` : '<div class="empty">No one has retired yet. Older wrestlers start to slow down after 34 and may retire from 38.</div>';
   return modal('History', body);
@@ -5098,18 +5249,60 @@ function plainText(h) { return new DOMParser().parseFromString(String(h), 'text/
 function copyText(t, okMsg) { try { navigator.clipboard.writeText(t).then(() => toast(okMsg || 'Copied.'), () => toast('Copy was blocked by the browser.')); } catch (e) { toast('Copy was blocked by the browser.'); } }
 const segLine = s => { const who = s.kind === 'match' ? vsLine(s, sideLabel) : (s.who || []).map(nameOf).join(' & ') + ((s.target || []).length ? ' → ' + s.target.map(nameOf).join(' & ') : ''); return `${plainText(segTitle(s)).replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]\uFE0F?\s*/gu, '')}: ${who}`; };
 const canUndo = wk => !!UNDO && UNDO.created === G.created && UNDO.wk === wk && UNDO.bid === G.showId && UNDO.co === G.coId && G.history.at(-1)?.wk === wk && G.history.at(-1)?.bid === G.showId;
-function modalTitle(m) {
-  const d = m.draft;
-  const body = `<label class="f"><span>Name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="50"></label>
+// the championship designer: a live belt on top, every part one tap away in tabs, and the title's rules
+const BD_TABS = [['shape', 'Shape'], ['metal', 'Metal'], ['strap', 'Strap'], ['plates', 'Plates'], ['centre', 'Centre'], ['text', 'Text'], ['rules', 'Rules']];
+function bdOpt(f, v, label, inner, cls) { const b = UI.modal.draft.belt, on = String(b[f]) === String(v); return `<button class="${cls || 'bd-tile'} ${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}" aria-label="${esc(label)}">${inner || ''}${cls === 'sw' ? '' : `<span>${esc(label)}</span>`}</button>`; }
+const bdSeg = (f, list) => `<div class="seg-ctl ${list.length > 4 ? 'bd-many' : ''}">${list.map(([v, l]) => { const on = String(UI.modal.draft.belt[f]) === String(v); return `<button class="${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`; }).join('')}</div>`;
+const bdSw = (f, list) => `<div class="swatches">${list.map(c => bdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}</div>`;
+function bdPane(m) {
+  const d = m.draft, b = d.belt, mini = x => beltRender({ ...b, sides: 0, top: '', line: '', banner: 0, ...x }, { cls: 'bd-mini', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') });
+  switch (m.tab) {
+    case 'shape': return `<div class="bd-lab">Centre plate</div><div class="bd-grid">${Object.entries(BPLATE).map(([k, [l]]) => bdOpt('plate', k, l, mini({ plate: k, emblem: 'none', carve: 'none' }))).join('')}</div>
+      <div class="bd-lab">Engraving</div>${bdSeg('carve', Object.entries(BCARVE))}`;
+    case 'metal': return `<div class="bd-lab">Plate metal</div><div class="bd-grid">${Object.entries(BMETAL).map(([k, M]) => bdOpt('metal', k, M[0], `<i class="bd-metal" style="background:linear-gradient(${M[1]},${M[2]},${M[3]})"></i>`)).join('')}</div>
+      <div class="bd-lab">Trim (the outer edge and side plates)</div>${bdSeg('trim', [['', 'Same'], ...Object.entries(BMETAL).filter(([k]) => k !== b.metal).map(([k, M]) => [k, M[0]])])}`;
+    case 'strap': return `<div class="bd-lab">Strap colour</div>${bdSw('strap', BSTRAPS)}<div class="bd-lab">Strap style</div>${bdSeg('tex', Object.entries(BSTRAP))}`;
+    case 'plates': return `<div class="bd-lab">Side plates</div>${bdSeg('sides', [[0, 'None'], [2, '2'], [4, '4'], [6, '6']])}
+      ${b.sides ? `<div class="bd-lab">Side plate shape</div>${bdSeg('side', [['rect', 'Square'], ['round', 'Round'], ['shield', 'Shield']])}` : ''}
+      <div class="bd-lab">Gem colour</div>${bdSw('gem', BGEMS)}<div class="tiny muted">Used on the side plates and the centre piece.</div>`;
+    case 'centre': return `<div class="bd-lab">Centre piece</div><div class="bd-grid">${Object.entries(BEMBLEM).map(([k, l]) => bdOpt('emblem', k, l, beltRender({ ...b, emblem: k, ring: 0, top: '' }, { cls: 'bd-mini', vb: '118 14 84 76', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') }))).join('')}</div>
+      ${b.emblem === 'logo' ? `<label class="f" style="margin-top:10px"><span>Initials <span class="muted">(blank uses the company's)</span></span><input type="text" data-bt="sub" value="${esc(b.sub)}" maxlength="4" placeholder="${esc(abbr(UI.wiz?.name || G?.promo?.name || 'BK'))}"></label>` : ''}
+      <div class="bd-lab">Gem colour</div>${bdSw('gem', BGEMS)}
+      <label class="todo" style="margin-top:8px"><input type="checkbox" data-bt="ring" ${b.ring ? 'checked' : ''}><span>Ring of gems around the centre</span></label>`;
+    case 'text': return `<label class="f"><span>Top line <span class="muted">(optional)</span></span><input type="text" data-bt="top" value="${esc(b.top)}" maxlength="18" placeholder="e.g. ${esc(String(UI.wiz?.name || G?.promo?.name || 'Thunder Valley').toUpperCase().slice(0, 18))}"></label>
+      <label class="f"><span>Nameplate</span><input type="text" data-bt="line" value="${esc(b.line)}" maxlength="18" placeholder="e.g. WORLD CHAMPION"></label>
+      <div class="bd-lab">Nameplate style</div>${bdSeg('banner', [[1, 'Enamel banner'], [0, 'Engraved']])}
+      ${b.banner ? `<div class="bd-lab">Enamel colour</div>${bdSw('enamel', BENAMEL)}` : ''}
+      <div class="bd-lab">Lettering</div>${bdSeg('font', Object.entries(BFONT).map(([k, v]) => [k, v[0]]))}`;
+  }
+  // rules: the title itself
+  const wiz = m.wiz != null, tr = titleTier(d), ev = titleEvery(d);
+  return `<label class="f"><span>Name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="50"></label>
     <label class="f"><span>Short name</span><input type="text" data-et="short" value="${esc(d.short)}" maxlength="16"></label>
-    <label class="todo"><input type="checkbox" data-et="tag" ${d.tag ? 'checked' : ''}><span>Tag team title (2 holders)</span></label>
+    <div class="bd-lab">Level</div><div class="seg-ctl">${TLEVELS.map(([k, l]) => `<button class="${tr === k ? 'on' : ''}" data-act="trTier" data-id="${k}" aria-pressed="${tr === k}">${l}</button>`).join('')}</div>
+    <div class="tiny muted" style="margin-top:4px">${tr === 'top' ? 'The belt everyone chases. Title matches on big events matter most.' : tr === 'mid' ? 'A step below the top title, a proving ground for rising stars.' : 'A title with its own flavour, like hardcore or cruiserweight.'}</div>
+    <div class="bd-lab">Division</div><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${(wiz ? d.division || 'Open' : titleDiv(d)) === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div>
+    <div class="bd-lab">Holders</div><div class="seg-ctl">${[['one', 'Singles'], ['tag', 'Tag team (2)']].map(([k, l]) => `<button class="${(k === 'tag') === !!d.tag ? 'on' : ''}" data-act="trTag" data-id="${k}">${l}</button>`).join('')}</div>
+    <div class="bd-lab">Must be defended every</div><div class="seg-ctl">${[[0, 'Any time'], [4, '4 wk'], [8, '8 wk'], [12, '12 wk']].map(([k, l]) => `<button class="${ev === k ? 'on' : ''}" data-act="trEvery" data-id="${k}" aria-pressed="${ev === k}">${l}</button>`).join('')}</div>
+    <div class="tiny muted" style="margin-top:4px">${ev ? `Miss it and the belt loses prestige each week until it's defended.` : 'No deadline. The Briefing still nudges you after 5 weeks.'}</div>
+    <label class="todo" style="margin-top:10px"><input type="checkbox" data-et="dq" ${d.dq ? 'checked' : ''}><span>Belt changes hands on a DQ or count-out<br><span class="tiny muted">Off: the champion keeps it, like most titles.</span></span></label>
     <label class="f" style="margin-top:10px"><span>Prestige (1–100)</span><input type="number" min="1" max="100" data-et="prestige" value="${Math.round(d.prestige)}"></label>
-    <label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${titleDiv(d) === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
-    <div class="side"><div class="lbl">Champion${d.tag ? 's' : ''}</div>${chipsFor(d.holder, 'holder', d.tag ? 2 : 1)}</div>
+    ${wiz ? '' : `<div class="side"><div class="lbl">Champion${d.tag ? 's' : ''}</div>${chipsFor(d.holder, 'holder', d.tag ? 2 : 1)}</div>
     <div class="side"><div class="lbl">Contenders you pick</div>${chipsFor(d.contenders || [], 'contenders', 3)}<div class="tiny muted" style="margin-top:4px">Your picks go first, in order. The rest rank by record.</div></div>
     ${(() => { const c = contenders(d, 5); return c.length ? `<div class="contend" style="margin-top:4px">${c.map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)}${(d.contenders || []).includes(w.id) ? ' <span class="tag">picked</span>' : ''}</span>`).join('')}</div>` : '<div class="tiny muted">No eligible contenders in this division.</div>'; })()}
-    ${m.isNew ? '' : lineage(G.titles.find(t => t.id === d.id) || d)}`;
-  return modal(m.isNew ? 'New championship' : 'Edit championship', body, `${m.isNew ? '' : '<button class="btn bad" data-act="delTitle">Retire title</button>'}<button class="btn pri" data-act="saveTitle">Save</button>`);
+    ${m.isNew ? '' : lineage(G.titles.find(t => t.id === d.id) || d)}`}`;
+}
+const bdTabView = () => { const on = modals.querySelector('.bd-tabs .on'); if (on && on.parentElement.scrollWidth > on.parentElement.clientWidth) on.parentElement.scrollLeft = Math.max(0, on.offsetLeft - 40); };
+const bdKeep = m => { (m.undo ||= []).push(JSON.parse(JSON.stringify(m.draft.belt))); if (m.undo.length > 40) m.undo.shift(); };
+function modalTitle(m) {
+  const d = m.draft; d.belt = beltClean(d.belt, d); m.tab ||= 'shape';
+  const body = `<div class="bd-prev" aria-live="off">${titleBelt(d, 'bd-belt')}</div>
+    <div class="row bd-tools"><button class="chip ${m.tpl ? 'on' : ''}" data-act="bdTpl" data-id="open" aria-expanded="${!!m.tpl}">Templates</button><button class="chip" data-act="bdRand">🎲 Surprise me</button><button class="chip" data-act="bdUndo" ${m.undo?.length ? '' : 'disabled'}>↶ Undo</button></div>
+    ${m.tpl ? `<div class="bd-grid bd-tpls">${BTPL.map(([n, x], i) => `<button class="bd-tile" data-act="bdTpl" data-id="${i}" aria-label="${esc(n)} template">${beltRender({ ...x, top: '', line: '' }, { cls: 'bd-mini', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') })}<span>${esc(n)}</span></button>`).join('')}</div>` : ''}
+    <div class="bd-tabs" role="tablist" aria-label="Belt parts">${BD_TABS.map(([k, l]) => `<button role="tab" class="${m.tab === k ? 'on' : ''}" aria-selected="${m.tab === k}" data-act="bdTab" data-id="${k}">${l}</button>`).join('')}</div>
+    <div class="bd-pane" role="tabpanel">${bdPane(m)}</div>`;
+  const canDel = m.wiz != null ? m.wiz >= 0 && (UI.wiz?.titles?.length || 0) > 1 : !m.isNew;
+  return modal(m.isNew ? 'New championship' : esc(d.name || 'Championship'), body, `${canDel ? '<button class="btn bad" data-act="delTitle">' + (m.wiz != null ? 'Remove' : 'Retire title') + '</button>' : ''}<button class="btn pri" data-act="saveTitle">Save title</button>`, { cls: 'bd-modal' });
 }
 
 // =====================================================================
@@ -5629,16 +5822,28 @@ const A = {
 
 
   // titles
-  editTitle(id) { const t = G.titles.find(x => x.id === id); openModal({ type: 'title', isNew: !t, draft: t ? JSON.parse(JSON.stringify(t)) : { id: uid(), name: 'New Championship', short: 'New', tag: false, division: 'Open', contenders: [], prestige: 30, holder: [], since: G.week, defenses: 0, lastDefense: G.week } }); },
+  editTitle(id) { const t = G.titles.find(x => x.id === id); openModal({ type: 'title', isNew: !t, tab: t ? 'rules' : 'shape', draft: t ? JSON.parse(JSON.stringify(t)) : { id: uid(), name: 'New Championship', short: 'New', tag: false, tier: 'mid', division: 'Open', contenders: [], prestige: 40, holder: [], since: G.week, defenses: 0, lastDefense: G.week, belt: beltFromTpl(8, { line: 'NEW' }) } }); },
   saveTitle() {
-    const d = UI.modal.draft; d.prestige = clamp(+d.prestige || 30, 1, 100); if (!d.tag) d.holder = d.holder.slice(0, 1);
+    const m = UI.modal, d = m.draft; d.prestige = clamp(+d.prestige || 30, 1, 100); if (!d.tag) d.holder = d.holder.slice(0, 1);
+    d.name = String(d.name || '').trim().slice(0, 50) || 'Championship'; d.short = String(d.short || '').trim().slice(0, 16) || abbr(d.name);
+    d.belt = beltClean(d.belt, d); d.tier = titleTier(d); d.every = titleEvery(d); d.dq = !!d.dq;
+    if (m.wiz != null) { const z = UI.wiz; if (!z) return closeModal(); d.division ||= 'Open'; if (m.wiz >= 0 && z.titles[m.wiz]) z.titles[m.wiz] = d; else z.titles.push(d); UI.modal = null; render(); return; }
     d.division = titleDiv(d); d.contenders = (d.contenders || []).filter(id => !d.holder.includes(id));
     const i = G.titles.findIndex(t => t.id === d.id);
     if (i >= 0) { if (G.titles[i].holder.join() !== d.holder.join()) { crown(d, d.holder); d.since = G.week; d.defenses = 0; news(`🏆 ${d.holder.map(nameOf).join(' & ') || 'Nobody'} now hold${d.holder.length === 1 ? 's' : ''} the ${d.name} (booker's decision).`, 'title'); } G.titles[i] = d; }
     else { d.reigns = []; if (d.holder.length) crown(d, d.holder); G.titles.push(d); news(`🏆 The ${d.name} was introduced.`, 'title'); }
     UI.modal = null; commit('Saved.');
   },
-  delTitle() { const d = UI.modal.draft; confirmBox('Retire ' + d.name + '?', 'The title will be removed.', 'Retire', () => { G.titles = G.titles.filter(t => t.id !== d.id); news(`🏆 The ${d.name} was retired.`, 'title'); commit(); }, true); },
+  delTitle() { const m = UI.modal, d = m.draft; if (m.wiz != null) { const z = UI.wiz; if (z && z.titles.length > 1) z.titles.splice(m.wiz, 1); UI.modal = null; return render(); } confirmBox('Retire ' + d.name + '?', 'The title will be removed.', 'Retire', () => { G.titles = G.titles.filter(t => t.id !== d.id); news(`🏆 The ${d.name} was retired.`, 'title'); commit(); }, true); },
+  // the belt designer
+  bdTab(v) { UI.modal.tab = v; UI.modal.tpl = false; render(); },
+  bdSet(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f; bdKeep(m); d.belt = beltClean({ ...d.belt, [f]: ['sides', 'ring', 'banner'].includes(f) ? +v : v }, d); render(); },
+  bdTpl(v) { const m = UI.modal; if (v === 'open') { m.tpl = !m.tpl; return render(); } bdKeep(m); m.draft.belt = beltFromTpl(+v, m.draft.belt); m.tpl = false; render(); },
+  bdRand() { const m = UI.modal; bdKeep(m); m.draft.belt = beltSurprise(m.draft.belt); render(); },
+  bdUndo() { const m = UI.modal; if (m.undo?.length) { m.draft.belt = m.undo.pop(); render(); } },
+  trTier(v) { const m = UI.modal, d = m.draft; d.tier = v; if (m.isNew) d.prestige = { top: 65, mid: 45, spec: 30 }[v] || 40; render(); },
+  trTag(v) { const d = UI.modal.draft; d.tag = v === 'tag'; if (!d.tag && Array.isArray(d.holder)) d.holder = d.holder.slice(0, 1); render(); },
+  trEvery(v) { UI.modal.draft.every = +v || 0; render(); },
 
   // stories
   openStory(id) { openModal({ type: 'story', id }); },
@@ -7906,7 +8111,7 @@ const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w
 
 function wizStart(add, chain) {
   add = add === true && !!G;
-  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
+  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft', titles: wizTitles() };
   render(); window.scrollTo(0, 0);
 }
 function wizPool() {
@@ -7963,21 +8168,52 @@ function draftAuto(all) {
   } while (all && z.mine.length < draftRounds());
   render();
 }
+// titles a new company starts with, and the extra ones a booker can add with one tap
+const WZ_TITLE = (name, short, tier, division, tag, tpl, line, prestige) => ({ id: uid(), name, short, tier, division, tag, prestige, every: 0, dq: false, holder: [], belt: beltFromTpl(tpl, { line }) });
+const wizTitles = () => [WZ_TITLE('World Heavyweight Championship', 'World', 'top', 'Open', false, 0, 'WORLD CHAMPION', 70), WZ_TITLE('National Championship', 'National', 'mid', 'Open', false, 2, 'NATIONAL', 50), WZ_TITLE('Tag Team Championship', 'Tag', 'mid', 'Open', true, 6, 'TAG TEAM', 45)];
+const WZ_MORE = [["Women's Championship", "Women's", 'top', "Women's", false, 3, "WOMEN'S", 65], ['Television Championship', 'TV', 'mid', 'Open', false, 4, 'TELEVISION', 45], ['Continental Championship', 'Continental', 'mid', 'Open', false, 1, 'CONTINENTAL', 50],
+  ['Cruiserweight Championship', 'Cruiser', 'spec', 'Open', false, 7, 'CRUISERWEIGHT', 35], ['Hardcore Championship', 'Hardcore', 'spec', 'Open', false, 5, 'HARDCORE', 30], ["Women's Tag Team Championship", "Women's Tag", 'mid', "Women's", true, 6, "WOMEN'S TAG", 40], ['Tag Team Championship', 'Tag', 'mid', 'Open', true, 6, 'TAG TEAM', 45]];
+const MAX_TITLES = 10;
+const wzTopIx = z => { const i = z.titles.findIndex(t => titleTier(t) === 'top' && !t.tag); return i >= 0 ? i : z.titles.findIndex(t => !t.tag); };
 function wizToChamps() {
   const z = UI.wiz;
-  const mine = z.mine.slice().sort((a, b) => overall(b) - overall(a));
-  const heels = mine.filter(w => w.align === 'heel'), faces = mine.filter(w => w.align === 'face');
-  z.champs = { World: [(heels[0] || mine[0])?.id].filter(Boolean), National: [(faces[1] || faces[0] || mine[2] || mine[1])?.id].filter(Boolean), Tag: [heels[2]?.id, heels[3]?.id].filter(Boolean) };
-  if (z.champs.Tag.length < 2) z.champs.Tag = mine.slice(-2).map(w => w.id);
-  const top = mine.find(w => w.align === 'face' && !Object.values(z.champs).flat().includes(w.id));
-  z.story = top && z.champs.World[0] ? { a: top.id, b: z.champs.World[0], title: 'Road to the Gold', on: true } : null;
-  z.step = 'champs'; render(); window.scrollTo(0, 0);
+  const mine = z.mine.slice().sort((a, b) => overall(b) - overall(a)), ok = id => z.mine.some(w => w.id === id);
+  z.titles.forEach(t => t.holder = t.holder.filter(ok));
+  const used = new Set(z.titles.flatMap(t => t.holder)), free = f => mine.filter(w => !used.has(w.id) && (!f || f(w)));
+  const take = w => { if (w) used.add(w.id); return w?.id; };
+  // the top title goes to a heel (someone to chase), the rest alternate down the card
+  const order = z.titles.map((t, i) => i).sort((a, b) => (z.titles[b].prestige || 0) - (z.titles[a].prestige || 0));
+  for (const i of order) {
+    const t = z.titles[i]; if (t.holder.length) continue;
+    if (t.tag) { const h = free(w => w.align === 'heel'); const two = h.length >= 2 ? h.slice(1, 3).length === 2 ? h.slice(1, 3) : h.slice(0, 2) : free().slice(-2); if (two.length === 2) t.holder = two.map(take); }
+    else if (i === wzTopIx(z)) t.holder = [take(free(w => w.align === 'heel')[0] || free()[0])].filter(Boolean);
+    else t.holder = [take(free(w => w.align === 'face')[0] || free()[0])].filter(Boolean);
+  }
+  const ti = wzTopIx(z), champ = z.titles[ti]?.holder[0];
+  const top = mine.find(w => w.align === 'face' && !used.has(w.id));
+  z.story = top && champ ? { a: top.id, b: champ, ti, title: 'Road to the Gold', on: z.story?.on ?? true } : null;
+  z.step = 'titles'; render(); window.scrollTo(0, 0);
+}
+// the starter roster's champions carry over to the titles the booker made, and the rest are filled by popularity
+function starterChamps(old, nt) {
+  const used = new Set(), ok = (t, w) => w && w.contract && !used.has(w.id) && (!t.division || t.division === 'Open' || (t.division === "Women's") === (w.division === "Women's"));
+  const pool = signed().sort((a, b) => b.pop - a.pop);
+  const singles = nt.filter(t => !t.tag), tags = nt.filter(t => t.tag), oldS = old.filter(t => !t.tag), oldT = old.find(t => t.tag);
+  singles.forEach((t, i) => { const w = W(oldS[i]?.holder[0]); const pk = ok(t, w) ? w : pool.find(x => ok(t, x)); if (pk) { t.holder = [pk.id]; used.add(pk.id); } });
+  tags.forEach((t, i) => { let ids = i === 0 && oldT ? oldT.holder.filter(id => ok(t, W(id))) : []; if (ids.length < 2) ids = pool.filter(x => ok(t, x) && x.align === 'heel').slice(0, 2).map(x => x.id); if (ids.length === 2) { t.holder = ids; ids.forEach(id => used.add(id)); } });
 }
 function wizFinish() {
   const z = UI.wiz, host = z.add && G ? G : null;
   if (!host) meta.slot = z.slot;
   newGame({ name: z.name.trim() || 'My Wrestling Promotion', show: z.show.trim() || 'Weekly Warfare', difficulty: z.budget, challenge: z.challenge, roster: z.source === 'starter' ? 'starter' : 'empty', finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false, deep: !!z.deep });
   if (host) { G.week = host.week; G.settings = host.settings; G.titles.forEach(t => { t.since = t.lastDefense = host.week; }); G.stories.forEach(s => s.start = host.week); }
+  // the championships made in the setup's Titles step
+  if (z.titles?.length && !(z.world && z.take)) {
+    const old = G.titles;
+    G.titles = z.titles.slice(0, MAX_TITLES).map(x => ({ id: uid(), name: String(x.name || 'Championship').slice(0, 50), short: String(x.short || 'Title').slice(0, 16), tag: !!x.tag, tier: titleTier(x), ...(x.division && x.division !== 'Open' ? { division: x.division } : {}),
+      prestige: clamp(+x.prestige || 40, 1, 100), every: titleEvery(x), dq: !!x.dq, belt: beltClean(x.belt, x), holder: [], since: G.week, defenses: 0, lastDefense: G.week }));
+    if (z.source === 'starter') { starterChamps(old, G.titles); const was = old[0]?.holder[0]; for (const st of G.stories) if (st.titleId) { const t = G.titles.find(t => !t.tag && t.holder.includes(was)); st.titleId = t?.id || null; if (!t) st.type = 'Feud'; } }
+  }
   G.promo.day = z.day; G.promo.color = z.color; G.rivals = z.rivals || shuffle(RIVALS).slice(0, 2);
   // only the big events this booker named: nothing pre-filled shows up on a company they built
   G.bigEvents = ppvList(z.ppv); G.ppvSig = sigsFromWiz(z); G.sigSeeded = []; if (!host && [3, 4, 5, 6, 8].includes(+z.every)) G.settings.bigEvery = +z.every;
@@ -7988,9 +8224,8 @@ function wizFinish() {
     z.mine.forEach((w, i) => { delete w._ask; w.contract = { salary: asking(w), weeks: i < 6 ? rint(104, 156) : rint(52, 130) }; G.wrestlers.push(w); });
     // anyone nobody drafted is still out there as a free agent
     for (const w of z.pool.filter(x => !z.mine.includes(x) && !z.rivalTook[x.id])) { delete w._ask; G.wrestlers.push(w); }
-    const tByShort = s => G.titles.find(t => t.short === s);
-    for (const [k, ids] of Object.entries(z.champs || {})) { const t = tByShort(k); if (t) t.holder = ids.filter(id => W(id)).slice(0, t.tag ? 2 : 1); }
-    if (z.story?.on && W(z.story.a) && W(z.story.b)) G.stories.push({ id: uid(), title: z.story.title || 'Road to the Gold', type: 'Title Chase', a: [z.story.a], b: [z.story.b], titleId: tByShort('World')?.id || null, heat: 25, start: 1, status: 'active', notes: 'Your first story. Pay it off at the first big event.', log: [] });
+    (z.titles || []).slice(0, MAX_TITLES).forEach((x, i) => { const t = G.titles[i]; if (t) t.holder = x.holder.filter(id => W(id)).slice(0, t.tag ? 2 : 1); });
+    if (z.story?.on && W(z.story.a) && W(z.story.b)) G.stories.push({ id: uid(), title: z.story.title || 'Road to the Gold', type: 'Title Chase', a: [z.story.a], b: [z.story.b], titleId: G.titles[z.story.ti]?.holder.includes(z.story.b) ? G.titles[z.story.ti].id : null, heat: 25, start: 1, status: 'active', notes: 'Your first story. Pay it off at the first big event.', log: [] });
     // two short deals give a new booker an early renewal decision, but never a champion or a top pick
     G.wrestlers.filter(w => w.contract && !z.mine.slice(0, 6).includes(w) && !G.titles.some(t => t.holder.includes(w.id))).sort(() => Math.random() - .5).slice(0, 2).forEach((w, i) => w.contract.weeks = 14 + i * 6);
     G.rivalPromos = G.rivals.map(n => makeRival(n));
@@ -8045,7 +8280,7 @@ function joinWorld(host) {
 }
 function wizSteps(cur) {
   const z = UI.wiz;
-  const steps = z.source === 'draft' ? ['company', 'budget', 'roster', 'draft', 'champs'] : ['company', 'budget', 'roster'];
+  const steps = z.source === 'draft' ? ['company', 'budget', 'roster', 'draft', 'titles'] : z.world && z.take ? ['company', 'budget', 'roster'] : ['company', 'budget', 'roster', 'titles'];
   const i = steps.indexOf(cur);
   return `<div class="wz-steps">${steps.map((s, j) => `<span class="${j < i ? 'done' : j === i ? 'on' : ''}"></span>`).join('')}</div>${(z.count || 1) > 1 ? `<div class="tiny muted" style="margin:-6px 0 8px;font-weight:700;letter-spacing:.04em">COMPANY ${z.nth || 1} OF ${z.count}</div>` : ''}`;
 }
@@ -8107,13 +8342,13 @@ function viewWizard() {
       <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">${tk ? `Taking over ${esc(tk.name)}` : 'Where does your talent come from?'}</h2>
       ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(tk.roster.find(w => w.id === t.holder[0])?.name || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>`
       : `<div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
-      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button><button class="btn pri" data-act="wzFinish">Open for business</button></div></div>`;
+      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button>${tk ? '<button class="btn pri" data-act="wzFinish">Open for business</button>' : '<button class="btn pri" data-act="wzGo" data-id="titles">Next</button>'}</div></div>`;
   }
   if (z.step === 'roster') {
     return `<div class="app wz">${wizSteps('roster')}
       <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">Where does your talent come from?</h2>
       <div class="list">${[['draft', '🎯 Hold a roster draft', `Draft ${draftRounds()} wrestlers from a talent pool, taking turns with two rival promotions. Recommended.`], ['import', '📦 Build or import my own', 'Start empty. Build, import or grab a roster from Community.'], ['starter', '⚡ Use the starter roster', 'Skip the draft. 24 wrestlers, champions and stories ready.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>
-      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button><button class="btn pri" data-act="${z.source === 'draft' ? 'wzDraft' : 'wzFinish'}">${z.source === 'draft' ? 'Go to the draft' : 'Open for business'}</button></div></div>`;
+      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button>${z.source === 'draft' ? '<button class="btn pri" data-act="wzDraft">Go to the draft</button>' : '<button class="btn pri" data-act="wzGo" data-id="titles">Next</button>'}</div></div>`;
   }
   if (z.step === 'draft') {
     const cap = draftCap(), pay = draftPayroll();
@@ -8141,17 +8376,23 @@ function viewWizard() {
         <button class="btn pri block" style="margin-top:8px" data-act="wzChamps" ${done ? '' : 'disabled'}>${done ? `Finish draft with ${z.mine.length} wrestlers` : `Draft at least ${draftMin()} to continue (${z.mine.length}/${draftMin()})`}</button></div>
     </div>`;
   }
-  if (z.step === 'champs') {
-    const mine = z.mine.slice().sort((a, b) => overall(b) - overall(a));
-    const sel = (key, i) => `<select data-wz="champ" data-k="${key}" data-i="${i}"><option value="">Vacant</option>${mine.map(w => `<option value="${w.id}" ${z.champs[key][i] === w.id ? 'selected' : ''}>${esc(w.name)} (${overall(w)}, ${w.align})</option>`).join('')}</select>`;
-    return `<div class="app wz">${wizSteps('champs')}
-      <div class="wz-k">Step 4 · Champions &amp; first story</div><h2 class="wz-h">Crown your first champions</h2>
-      <p class="muted small" style="margin-top:0">A heel champion gives fans someone to chase. Change it anytime in Office.</p>
-      <label class="f"><span>🏆 World Heavyweight Champion</span>${sel('World', 0)}</label>
-      <label class="f"><span>🏆 National Champion</span>${sel('National', 0)}</label>
-      <label class="f"><span>🏆 Tag Team Champions</span><div class="grid2">${sel('Tag', 0)}${sel('Tag', 1)}</div></label>
-      ${z.story ? `<div class="card wz-story"><label class="todo" style="border:0;padding:0"><input type="checkbox" data-wz="storyOn" ${z.story.on ? 'checked' : ''}><span><b>Start your first storyline</b><br><span class="small muted">${esc(W2(z.story.a)?.name)} chases ${esc(W2(z.story.b)?.name)} for the World title, paying off at ${esc(BIG_EVENTS[0])} in week 4.</span></span></label></div>` : ''}
-      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="draft">Back to draft</button><button class="btn pri" data-act="wzFinish">Open for business 🎉</button></div></div>`;
+  if (z.step === 'titles') {
+    const draft = z.source === 'draft', mine = draft ? z.mine.slice().sort((a, b) => overall(b) - overall(a)) : [];
+    const sel = (t, k, i) => `<select data-wz="champ" data-k="${k}" data-i="${i}" aria-label="${esc(t.name)} champion${t.tag ? ' ' + (i + 1) : ''}"><option value="">Vacant</option>${mine.map(w => `<option value="${w.id}" ${t.holder[i] === w.id ? 'selected' : ''}>${esc(w.name)} (${overall(w)}, ${w.align})</option>`).join('')}</select>`;
+    const more = WZ_MORE.filter(x => !z.titles.some(t => t.name.toLowerCase() === x[0].toLowerCase())).slice(0, 6);
+    const st = z.story, stT = st && z.titles[st.ti];
+    return `<div class="app wz">${wizSteps('titles')}
+      <div class="wz-k">Step ${draft ? 5 : 4} · Championships</div><h2 class="wz-h">Create your titles</h2>
+      <p class="muted small" style="margin-top:0">Name them, design the belts${draft ? ' and crown your first champions' : ''}. Start from these or build your own. Tap a belt to design it.</p>
+      <div class="list">${z.titles.map((t, k) => `<div class="card wz-title"><div class="row" style="gap:10px;align-items:center"><button class="wz-belt" data-act="wzTitle" data-id="${k}" aria-label="Design the ${esc(t.name)} belt">${titleBelt(t, 'belt-th')}</button>
+        <div class="sp" style="min-width:0"><b class="small">${esc(t.name)}</b><div class="tiny muted">${tierName(t)} · ${esc(t.division || 'Open')} · ${t.tag ? 'Tag team' : 'Singles'}${titleEvery(t) ? ` · every ${titleEvery(t)} wk` : ''}</div></div>
+        <button class="btn sm" data-act="wzTitle" data-id="${k}">Design</button></div>
+        ${draft ? `<label class="f" style="margin:8px 0 0"><span class="tiny">🏆 Champion${t.tag ? 's' : ''}</span>${t.tag ? `<div class="grid2">${sel(t, k, 0)}${sel(t, k, 1)}</div>` : sel(t, k, 0)}</label>` : ''}</div>`).join('')}</div>
+      ${z.titles.length < MAX_TITLES ? `<button class="btn block wz-add" data-act="wzNewTitle">＋ Add a championship</button>
+      ${more.length ? `<div class="chips" style="margin:8px 0 4px">${more.map(x => `<button class="chip" data-act="wzMoreTitle" data-id="${esc(x[0])}">＋ ${esc(x[0].replace(' Championship', ''))}</button>`).join('')}</div>` : ''}` : ''}
+      <p class="tiny muted">${draft ? 'A heel champion gives fans someone to chase.' : z.source === 'starter' ? 'Champions are picked from the starter roster.' : 'Titles start vacant. Crown champions once you have a roster.'} Change titles and belts anytime in Office → Titles.</p>
+      ${draft && st && stT ? `<div class="card wz-story"><label class="todo" style="border:0;padding:0"><input type="checkbox" data-wz="storyOn" ${st.on ? 'checked' : ''}><span><b>Start your first storyline</b><br><span class="small muted">${esc(W2(st.a)?.name)} chases ${esc(W2(st.b)?.name)} for the ${esc(stT.name)}, paying off at your first big event.</span></span></label></div>` : ''}
+      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="${draft ? 'draft' : 'roster'}">${draft ? 'Back to draft' : 'Back'}</button><button class="btn pri" data-act="wzFinish">Open for business 🎉</button></div></div>`;
   }
   return '';
 }
@@ -8262,6 +8503,9 @@ const WIZ_ACTIONS = {
   wzAuto() { draftAuto(false); },
   wzAutoAll() { draftAuto(true); },
   wzChamps() { wizToChamps(); },
+  wzTitle(k) { const z = UI.wiz, t = z.titles[+k]; if (t) openModal({ type: 'title', wiz: +k, tab: 'shape', draft: JSON.parse(JSON.stringify(t)) }); },
+  wzNewTitle() { const z = UI.wiz; if (z.titles.length >= MAX_TITLES) return; openModal({ type: 'title', wiz: -1, isNew: true, tab: 'shape', draft: { id: uid(), name: 'New Championship', short: 'New', tier: 'mid', division: 'Open', tag: false, prestige: 40, every: 0, dq: false, holder: [], belt: beltFromTpl(8, { line: 'NEW' }) } }); },
+  wzMoreTitle(n) { const z = UI.wiz, x = WZ_MORE.find(y => y[0] === n); if (!x || z.titles.length >= MAX_TITLES) return; z.titles.push(WZ_TITLE(...x)); render(); },
   wzFinish() {
     const z = UI.wiz; if (!z.show.trim()) z.show = DAYS[z.day] + ' Mayhem';
     if (!z.add && slotInfo(z.slot)) confirmBox('Replace slot ' + z.slot + '?', 'The save already in this slot will be replaced by ' + (z.name || 'your new company') + '.', 'Replace', wizFinish, true);
@@ -8321,6 +8565,7 @@ document.addEventListener('input', e => {
   }
   if (el.dataset.es != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
   if (el.dataset.et != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.et] = el.value; }
+  if (el.dataset.bt != null && el.type !== 'checkbox' && UI.modal?.draft?.belt) { const d = UI.modal.draft; d.belt = beltClean({ ...d.belt, [el.dataset.bt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = titleBelt(d, 'bd-belt'); }
   if (el.dataset.tt === 'name' && UI.modal?.draft?.titles?.[+el.dataset.i]) UI.modal.draft.titles[+el.dataset.i].name = el.value;
 });
 document.addEventListener('change', e => {
@@ -8329,7 +8574,7 @@ document.addEventListener('change', e => {
     const z = UI.wiz, k = el.dataset.wz;
     if (k === 'slot') z.slot = +el.value;
     else if (k === 'sort') { z.sort = el.value; render(); }
-    else if (k === 'champ') { const arr = z.champs[el.dataset.k]; arr[+el.dataset.i] = el.value || undefined; z.champs[el.dataset.k] = arr.filter(Boolean); render(); }
+    else if (k === 'champ') { const t = z.titles[+el.dataset.k]; if (!t) return; const arr = t.holder.slice(); arr[+el.dataset.i] = el.value || undefined; t.holder = arr.filter(Boolean); const ti = wzTopIx(z); if (z.story && +el.dataset.k === ti && t.holder[0]) z.story.b = t.holder[0]; render(); }
     else if (k === 'storyOn') z.story.on = el.checked;
     else if (k === 'xDay') { const x = z.extra?.[+el.dataset.i]; if (x) x.day = clamp(+el.value || 0, 0, 6); }
     else if (k === 'xSplit') { z.split = el.checked; render(); }
@@ -8390,6 +8635,7 @@ document.addEventListener('change', e => {
   if (el.dataset.es != null) { if (el.type === 'checkbox') UI.modal.draft.autoEnd = el.checked; else if (el.dataset.es === 'titleId') UI.modal.draft.titleId = el.value || null; else UI.modal.draft[el.dataset.es] = el.value; }
   if (el.dataset.rr && el.tagName === 'SELECT') { A.rrMove(el.dataset.rr, el.value); return; }
   if (el.dataset.tt && el.tagName === 'SELECT' && UI.modal?.draft?.titles?.[+el.dataset.i]) { const t = UI.modal.draft.titles[+el.dataset.i]; if (el.dataset.tt === 'holder') t.holder = el.value; else { t.mid = el.value === 'mid'; t.div = el.value === 'women' ? "Women's" : ''; if (/ (World|Television|Women's) Championship$/.test(t.name)) t.name = t.name.replace(/(World|Television|Women's) Championship$/, t.div ? "Women's Championship" : t.mid ? 'Television Championship' : 'World Championship'); } render(); return; }
+  if (el.dataset.bt === 'ring' && UI.modal?.draft?.belt) { const m = UI.modal; bdKeep(m); m.draft.belt = beltClean({ ...m.draft.belt, ring: el.checked ? 1 : 0 }, m.draft); render(); return; }
   if (el.dataset.et != null) { UI.modal.draft[el.dataset.et] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox') { if (!UI.modal.draft.tag && Array.isArray(UI.modal.draft.holder)) UI.modal.draft.holder = UI.modal.draft.holder.slice(0, 1); render(); } }
   if (el.dataset.act === 'todoCk') A.todoCk(el.dataset.id);
 });
@@ -8488,8 +8734,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.7';
+const VERSION = '1.8';
 const WHATS_NEW = [
+  ['🏆 Design your championships', 'New companies get a Championships step: name your titles, crown champions and design every belt. The belt designer lets you pick the plate shape, metal and trim, strap colour and style, side plates, gems, the centre piece, engraving and lettering, or start from a template. Each title also has a level, a division and rules, like a defense deadline or the belt changing hands on a DQ. Edit any title in Office → Titles.'],
   ['🎓 Training school and staff', 'Office → Staff: hire a Head Trainer, Road Agent, Doctor, PR Agent, Scout and Writer, open a school and train your own rookies, and give anyone a training focus or a veteran mentor. Young wrestlers grow every week, and they learn from better workers in the ring.'],
   ['🧠 Deep sim', 'Menu → Settings → Deep sim shows every wrestler\'s psychology, selling, consistency, safety, technical, brawling and aerial skills, plus their potential.'],
   ['✏️ Short names', 'Give anyone a short name (Moxley instead of Jon) in their Edit screen. It is used wherever only one name fits.'],
