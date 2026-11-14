@@ -606,6 +606,11 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .lv-k { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.6); font-weight: 700; }
 .lv-w { font-weight: 800; font-size: 16px; margin: 4px 0 2px; }
 .lv-w .vs { color: #ffb547; font-family: var(--f-display); margin: 0 6px; }
+.lv-faces { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0 6px; }
+.lv-side { display: flex; gap: 6px; }
+.lv-face { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; max-width: 84px; text-align: center; }
+.lv-face .av { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.lv-faces > .vs { color: #ffb547; font-family: var(--f-display); font-size: 22px; }
 .lv-o { margin-top: 6px; }
 .lv-txt { font-size: 14px; color: rgba(255,255,255,.85); margin-bottom: 4px; }
 .lv-st { font-size: 20px; color: #ffcf5a; animation: starPop .5s cubic-bezier(.2,1.8,.4,1) both; animation-delay: var(--d); }
@@ -782,6 +787,7 @@ html[data-nw] .seg-ctl button { font-size: 12.5px; letter-spacing: .01em; paddin
 html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw="2"] .stat { padding: 8px 8px; } html[data-nw="2"] .stat .v { font-size: 18px; } html[data-nw="2"] .seg-ctl button { font-size: 11.5px; letter-spacing: 0; padding: 7px 2px; } html[data-nw="2"] .cal-t { font-size: 10px; letter-spacing: 0; }
 @media (max-width: 300px) { .cal-now { font-size: 8.5px; letter-spacing: 0; } .stat { padding: 8px 8px; } .stat .v { font-size: 18px; } .seg-ctl button { font-size: 11.5px; letter-spacing: 0; padding: 7px 2px; } .cal-t { font-size: 10px; letter-spacing: 0; } }
 .seg-ctl.tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg-ctl.quad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .seg-ctl.wrap button { font-size: 12px; letter-spacing: .02em; line-height: 1.15; padding: 6px 2px; }
 .seg-ctl.wrap .cnt { display: block; margin: 2px auto 0; width: max-content; }
 .seg-ctl .cnt, .filters .cnt { display: inline-block; min-width: 1.6em; padding: 0 .35em; border-radius: 99px; background: color-mix(in srgb, currentColor 10%, transparent); font-size: .85em; line-height: 1.4; letter-spacing: 0; }
@@ -1048,7 +1054,7 @@ function migrate(g) {
   g.customMatch = fixCustomMatch(g.customMatch); if (!Array.isArray(g.ppvSig)) g.ppvSig = [];
   g.booker ||= { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0 }; g.event ??= null;
   // company level: an older save starts at the level its XP already earned, without back pay
-  g.booker.cxp ??= +g.booker.xp || 0; g.booker.coPaid ??= coLvlOf(+g.booker.cxp || 0); g.booker.perks = (Array.isArray(g.booker.perks) ? g.booker.perks : []).filter(k => Object.hasOwn(PERKS, k)).slice(0, 6);
+  g.booker.cxp ??= +g.booker.xp || 0; g.booker.coPaid ??= coLvlOf(+g.booker.cxp || 0); g.booker.perks = (Array.isArray(g.booker.perks) ? g.booker.perks : []).map(k => ({ medic: 'fans', heat: 'tv' })[k] || k).filter(k => Object.hasOwn(PERKS, k)).slice(0, 6);
   if (g.sponsor && (typeof g.sponsor !== 'object' || !(+g.sponsor.pay >= 0))) g.sponsor = null;
   if (g.sponsor) g.sponsor = { n: String(g.sponsor.n || 'Sponsor').replace(/[<>&"'`]/g, '').slice(0, 30), pay: clamp(+g.sponsor.pay || 0, 0, 1e6), T: clamp(+g.sponsor.T || 60, 1, 100), left: clamp(Math.floor(+g.sponsor.left) || 0, 0, 52), paidWk: +g.sponsor.paidWk || 0 };
   for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; }
@@ -1219,6 +1225,15 @@ function fillEntrants(d, wk = UI.selWeek ?? G.week) {
   return ids.length - have.length;
 }
 const nextBig = () => { let w = G.week; while (!bigWk(w)) w++; return w; };
+// every company has one big one: the biggest show of its year (the last named event unless the booker picks another)
+const bigOne = () => { const l = G.bigEvents || []; return l.includes(G.bigOne) ? G.bigOne : l.length ? l[l.length - 1] : ''; };
+function bigOneWeek(from = 1) {
+  const n = bigOne();
+  if (n) for (let w = from; w < from + 156; w++) if (bigWk(w) && bigName(w) === n) return w;
+  let last = 0; for (let w = from; w < from + 52; w++) if (bigWk(w)) last = w;
+  return last || from;
+}
+const isBigOne = wk => bigWk(wk) && !!bigOne() && bigName(wk) === bigOne();
 const titlesOf = id => G.titles.filter(t => t.holder.includes(id));
 const storiesOf = id => G.stories.filter(s => s.status === 'active' && (s.a.includes(id) || s.b.includes(id)));
 const segPeople = s => s.kind === 'match' ? s.sides.flat() : [...(s.who || []), ...(s.target || [])];
@@ -1342,7 +1357,7 @@ function roadCard() {
   if (!ms.length && !tutOn()) return '';
   const label = m => isFFA(m) ? `${entrants(m).length}-person ${esc(m.mtype)}` : m.sides.filter(sd => sd.length).map(sd => sd.map(nm).join(' & ')).join(' <span class="vs">VS</span> ');
   const t = m => m.title && G.titles.find(x => x.id === m.title);
-  return `<div class="road"><div class="road-h"><span class="road-k">Road to</span><b>🎆 ${esc(name)}</b><span class="sp"></span><span class="road-w">${left === 1 ? 'Next week' : left + ' weeks'}</span></div>
+  return `<div class="road"><div class="road-h"><span class="road-k">Road to</span><b>🎆 ${esc(name)}</b>${isBigOne(big) ? ' <span class="tag gold">The big one</span>' : ''}<span class="sp"></span><span class="road-w">${left === 1 ? 'Next week' : left + ' weeks'}</span></div>
     ${ms.length ? `<div class="road-l">${ms.map(m => `<div class="road-m"><div class="road-n">${t(m) ? belt(t(m).short) + ' ' : ''}${label(m)}</div><div class="road-b"><div class="bar"><i style="width:${hypeOf(m)}%"></i></div><b>${hypeOf(m)}</b><button class="btn sm" data-act="roadFaceoff" data-id="${m.id}" title="Add a face-off to this week's show">+ Face-off</button></div></div>`).join('')}</div>
       <div class="tiny muted">Put both sides on this week's show to build hype. Ignored matches cool off.</div>
       ${hotForPPV(big).map(st => `<div class="road-hot"><div class="small sp">🔥 <b>${esc(st.title)}</b> is hotter than your card (heat ${Math.round(st.heat)}).</div><button class="btn sm" data-act="ppvAddStory" data-id="${st.id}">Add it</button></div>`).join('')}
@@ -2088,7 +2103,7 @@ function applySegment(seg, res, ctx) {
   if (st) {
     let gain = (seg.kind === 'match' ? 6 : seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
-    gain = Math.round(gain * (perk('heat') ? 1.15 : 1) * (1 + staffQ('writer') * 0.04));
+    gain = Math.round(gain * (1 + staffQ('writer') * 0.04));
     st.heat = clamp(st.heat + gain, 0, 100); st._touched = G.week;
     st.log.unshift({ wk: G.week, text: `${res.text} (${starStr(res.rating)}, heat +${gain})` });
     notes.push(`🔥 ${st.title} heat +${gain}`);
@@ -2373,6 +2388,7 @@ function runShow(opts = {}) {
   // more shows a week means each one moves the needle a little less
   let fanDelta = Math.round(G.fans * (overall - 58) / (big ? 500 : 900) * (overall > 58 ? Math.max(0.02, room) * DF().fanUp : DF().fanDown) / Math.sqrt(nS));
   if (special && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.5);
+  if (perk('fans') && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.1);
   if (room < 0 && overall < 80) fanDelta -= Math.round(G.fans * Math.min(0.01, -room * 0.02));
   G.fans = Math.max(1000, G.fans + fanDelta);
   G.promo.prestige = clamp(G.promo.prestige + (overall - G.promo.prestige) * 0.05 / Math.sqrt(nS), 1, 100);
@@ -2429,7 +2445,6 @@ function endOfWeek(card, world = true) {
   for (const w of G.wrestlers) {
     if (!world && !w.contract) continue;
     if (!booked.has(w.id)) w.fatigue = clamp(w.fatigue - 18, 0, 100); else w.fatigue = clamp(w.fatigue - 6, 0, 100);
-    if (w.injury > 1 && w.contract && perk('medic') && Math.random() < 0.35) w.injury--;
     if (w.injury > 0 && !booked.has(w.id)) { w.injury--; if (w.injury === 0 && w.contract) news(`✅ ${w.name} is cleared to compete.`, 'injury'); }
     else if (w.injury > 0) w.injury = Math.max(0, w.injury - 0.5) | 0;
     w.momentum *= 0.92;
@@ -2485,7 +2500,7 @@ function endOfWeek(card, world = true) {
   G.tvWeeks--;
   if (G.tvWeeks <= 0) {
     const recent = avg(G.history.slice(-12).map(h => h.rating));
-    const old = G.tv; G.tv = Math.round((30000 * Math.pow(G.fans / 22000, 0.65) * (0.6 + recent / 100)) / 1000) * 1000; G.tvWeeks = 26;
+    const old = G.tv; G.tv = Math.round((30000 * Math.pow(G.fans / 22000, 0.65) * (0.6 + recent / 100) * (perk('tv') ? 1.1 : 1)) / 1000) * 1000; G.tvWeeks = 26;
     if (MON()) news(`📡 New TV deal: ${money(G.tv)} per week (was ${money(old)}), based on fans and recent show quality.`, 'office');
   }
   personaWeek(booked);
@@ -2562,6 +2577,7 @@ function liven(r) {
   r.money = isFinite(+r.money) && r.money != null ? +r.money : Math.round(r.fans * rnd(3, 7));
   r.off ??= rint(0, 3); r.red = +r.red || 0;
   r.ppvs = Array.isArray(r.ppvs) && r.ppvs.length ? r.ppvs.map(x => String(x).slice(0, 40)).slice(0, 12) : shuffle(RIV_PPVS).slice(0, 4);
+  if (!r.ppvs.includes(r.bigOne)) r.bigOne = r.ppvs[0];
   r.feuds = (Array.isArray(r.feuds) ? r.feuds : []).filter(f => f && f.a && f.b);
   r.push = (Array.isArray(r.push) ? r.push : []).filter(p => p && p.id);
   r.log = Array.isArray(r.log) ? r.log.slice(0, 14) : [];
@@ -3107,8 +3123,8 @@ const coLvl = () => G && G.booker ? coLvlOf(G.booker.cxp || 0) : 1;
 const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [3, '💼', 'More staff', 'Hire a PR Agent, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'Bonus TV specials', 'The network offers one-off specials.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
 const PERKS = {
   deals: ['💼', 'Contract discount', 'Wrestlers ask 10% less.'],
-  heat: ['🔥', 'Hot storylines', 'Stories gain heat 15% faster.'],
-  medic: ['🩹', 'Medical team', 'Injuries heal faster.'],
+  tv: ['📺', 'Network friends', 'TV deals renew 10% bigger.'],
+  fans: ['📣', 'Fan club', 'Good shows win 10% more new fans.'],
   ppv: ['🎆', 'PPV marketing', '10% more pay-per-view buys.'],
   merch: ['💰', 'Merch deal', '15% more merchandise money.'],
   crowd: ['🎟️', 'Street team', '10% bigger crowds at every show.']
@@ -3556,7 +3572,7 @@ function liveScreen(m) {
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
     <div class="lv-seg ${main ? 'main' : ''}" style="--d:${t0(d0)}" data-lv="${i}">
       <div class="lv-k">${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${segTitle(r.seg)}</div>
-      <div class="lv-w">${segWho(r.seg)}</div>
+      ${main ? lvFaces(r.seg) : ''}<div class="lv-w">${segWho(r.seg)}</div>
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -3587,6 +3603,14 @@ function liveScreen(m) {
     <div class="lv-body">${segs}${fin}</div></div>`;
 }
 const t0 = x => Math.round(x * 100) / 100 + 's';
+// the main event shows the wrestlers' photos when they have them (photos never leave this device)
+function lvFaces(seg) {
+  const sides = (seg.kind === 'match' ? seg.sides : [seg.who || [], seg.target || []]).map(sd => (sd || []).map(W).filter(Boolean)).filter(sd => sd.length);
+  if (!sides.flat().some(w => safePhoto(w.photo))) return '';
+  const face = w => `<div class="lv-face">${av(w, 72)}<span>${esc(shortOf(w.id))}</span></div>`;
+  if (sides.length > 4) return `<div class="lv-faces">${sides.flat().filter(w => safePhoto(w.photo)).slice(0, 6).map(face).join('')}</div>`;
+  return `<div class="lv-faces">${sides.map(sd => `<div class="lv-side">${sd.slice(0, 4).map(face).join('')}</div>`).join('<span class="vs">VS</span>')}</div>`;
+}
 function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
   const box = document.querySelector('.live .lv-body'); if (!box || box.closest('.skip')) return;
@@ -4019,24 +4043,24 @@ function viewStart() {
   setTimeout(commInit);
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) })).filter(s => s.info).sort((a, b) => (b.info.savedAt || 0) - (a.info.savedAt || 0));
   const top = slots[0], rest = slots.slice(1);
-  const st = COMM.status, saves = COMM.items.filter(i => i.kind === 'save' && !isHidden(i)).sort((a, b) => popScore(b) - popScore(a) || b.created - a.created).slice(0, 8);
+  const st = COMM.status, saves = COMM.items.filter(i => i.kind === 'world' && !isHidden(i)).sort((a, b) => popScore(b) - popScore(a) || b.created - a.created).slice(0, 8);
   const shelf = st === 'off' || st === 'error'
-    ? `<div class="hs-off"><div class="small"><b>${hosted() ? 'Community saves are loading or offline.' : 'Community saves aren\'t in this version.'}</b> Got a save someone shared with you? Paste it in.</div><button class="btn sm" data-act="import">Paste a save</button></div>`
-    : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared saves yet. Be the first: play a few weeks, then share yours from Community.</div></div>`
+    ? `<div class="hs-off"><div class="small"><b>${hosted() ? 'Community worlds are loading or offline.' : 'Community worlds aren\'t in this version.'}</b> Got a save someone shared with you? Paste it in.</div><button class="btn sm" data-act="import">Paste a save</button></div>`
+    : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared worlds yet. Be the first: build your world, then share it from Office → Rivals.</div></div>`
     : `<div class="hs-shelf">${saves.length ? saves.map(i => { const u = i.sum || {}, key = esc(i.author + '|' + i.id), champs = Array.isArray(u.champs) ? u.champs.length : 0;
         return `<button class="hs-card ${i.author === 'featured' ? 'feat' : ''}" data-act="cOpen" data-id="${key}">
           <span class="hs-by">${i.author === 'featured' ? '⭐ Featured' : 'by ' + esc(authorName(i.author))}</span>
           <span class="hs-t">${esc(i.title)}</span>
           <span class="hs-d">${esc(i.desc || String(u.promo || ''))}</span>
-          <span class="hs-m">${+u.roster || i.count || 0} wrestlers · week ${+u.week || 1}${champs ? ` · ${champs} champions` : ''}${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} playing` : ''}</span>
-          ${Array.isArray(u.stars) && u.stars.length ? `<span class="hs-s">${u.stars.slice(0, 3).map(x => esc(String(x))).join(' · ')}</span>` : ''}
+          <span class="hs-m">${Array.isArray(u.cos) ? u.cos.length : 0} companies · ${+u.n || i.count || 0} wrestlers${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} playing` : ''}</span>
+          ${Array.isArray(u.cos) && u.cos.length ? `<span class="hs-s">${u.cos.slice(0, 3).map(c => esc(String(c[0] || ''))).join(' · ')}</span>` : ''}
           <span class="hs-go">Play this ›</span></button>`; }).join('')
       : [0, 1].map(() => '<div class="hs-card skel"><span></span><span></span><span></span></div>').join('')}</div>`;
   return `<div class="app home"><div class="home-menu">${musicBtn()}<button class="iconbtn" data-act="menu" aria-label="Menu">☰</button></div><div class="hero">${logoSVG()}<h1>Book<em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div>
   <p class="muted">Book the shows. Write the stories. Sign the talent.</p></div>
   ${top ? `<button class="hs-cont" data-act="loadSlot" data-id="${top.n}"><span class="hs-k">Continue</span><span class="hs-ct">${esc(top.info.name)}</span><span class="hs-cd">Week ${top.info.week} · saved ${new Date(top.info.savedAt).toLocaleDateString()}</span><span class="hs-arrow">›</span></button>
     ${rest.length ? `<div class="list" style="margin-top:8px">${rest.map(s => `<button class="item" data-act="loadSlot" data-id="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">${esc(s.info.name)}</div><div class="d">Week ${s.info.week} · saved ${new Date(s.info.savedAt).toLocaleDateString()}</div></div></button>`).join('')}</div>` : ''}` : ''}
-  <div class="hs-sec"><div><b>Jump into a universe</b><div class="tiny muted">Ready-made saves from the community. Pick one and start booking.</div></div>${st === 'ready' && saves.length ? '<button class="link" data-act="homeComm">See all</button>' : ''}</div>
+  <div class="hs-sec"><div><b>Jump into a universe</b><div class="tiny muted">Worlds from the community. Run your own company or take one over, starting the month before its big one.</div></div>${st === 'ready' && saves.length ? '<button class="link" data-act="homeComm">See all</button>' : ''}</div>
   ${shelf}
   <div class="hs-sec"><div><b>Or start your own</b></div></div>
   <div class="hs-two">
@@ -4324,7 +4348,7 @@ function modalEditRival(m) {
     <div class="tiny muted" style="margin:-6px 0 12px">Size: <b>${tierOf({ fans: +d.fans || 0 })}</b>. ${TIERS.map(t => `${t[0]} from ${kfmt(t[1])}`).join(' · ')} fans.</div>
     <label class="f"><span>Booking style</span><div class="list">${Object.entries(RPHIL).map(([k, p]) => `<button class="pick ${d.phil === k ? 'sel' : ''}" data-act="bSet" data-f="phil" data-id="${k}"><span class="ck">${d.phil === k ? '✓' : ''}</span><div><b>${p.ic} ${p.n}</b><div class="tiny muted">${p.d}</div></div></button>`).join('')}</div></label>
     <label class="f"><span>Color</span><div class="swatches">${RIV_COLORS.concat(['#c9d64a', '#d0d0d0']).map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
-    <label class="f"><span>Big events, one per line</span><textarea data-et="ppvs" maxlength="600" style="min-height:80px" placeholder="Night of Glory">${esc(d.ppvs || '')}</textarea><div class="tiny muted" style="margin-top:4px">They run one a month, in this order.</div></label>
+    <label class="f"><span>Big events, one per line</span><textarea data-et="ppvs" maxlength="600" style="min-height:80px" placeholder="Night of Glory">${esc(d.ppvs || '')}</textarea><div class="tiny muted" style="margin-top:4px">They run one a month, in this order.${d.bigOne ? ` Their big one, the biggest show of their year, is <b>${esc(d.bigOne)}</b>.` : ''}</div></label>
     ${r ? `<div class="sec">Championships</div>
     ${(d.titles || []).map((t, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px"><div class="row" style="gap:8px;margin-bottom:6px"><input type="text" data-tt="name" data-i="${i}" value="${esc(t.name)}" maxlength="50" aria-label="Title name" style="flex:1"><button class="btn sm" data-act="rtDel" data-id="${i}" aria-label="Remove this title">✕</button></div>
       <div class="grid2"><select data-tt="holder" data-i="${i}" aria-label="Champion">${opts(t.holder)}</select><select data-tt="kind" data-i="${i}" aria-label="Kind of title"><option value="main" ${!t.mid && !t.div ? 'selected' : ''}>Top title</option><option value="mid" ${t.mid ? 'selected' : ''}>Secondary</option><option value="women" ${t.div ? 'selected' : ''}>Women's</option></select></div></div>`).join('')}
@@ -4351,14 +4375,8 @@ function modalRivalRoster(m) {
     <div class="tiny muted" style="margin-top:8px">To bring in your own creations, build them in Roster, release them to free agency, then add them here. Or import a roster and pick "Make it a rival promotion".</div>`;
   return modal('👥 Roster', body, `<button class="btn pri" data-act="editRival" data-id="${r.id}">Done</button>`);
 }
-function viewOffice() {
-  const last = G.history[G.history.length - 1];
-  const payroll = sum(signed().map(w => w.contract.salary));
-  const t = UI.faTab;
-  const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
-  const fa = freeAgents().sort((a, b) => b.pop - a.pop);
-  return `
-  ${MON() ? `<div class="grid2">
+function moneyView(last, payroll) {
+  return `  ${MON() ? `<div class="grid2">
     <div class="stat"><div class="k">Bank</div><div class="v" style="color:${G.money < 0 ? 'var(--bad)' : 'inherit'}">${money(G.money)}</div><div class="s">cash on hand</div></div>
     <div class="stat"><div class="k">Payroll</div><div class="v">${CON() ? money(payroll) : '$0'}</div><div class="s">${CON() ? 'per week' : 'contracts off'} · ${signed().length} wrestlers</div></div>
     <div class="stat"><div class="k">TV deal</div><div class="v">${money(G.tv)}</div><div class="s">per week · renews in ${G.tvWeeks} wk</div></div>
@@ -4367,8 +4385,17 @@ function viewOffice() {
     <div class="stat"><div class="k">Roster</div><div class="v">${signed().length}</div><div class="s">wrestlers signed</div></div>
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn on Deep sim in Menu → Settings to use it.</div>`}
-  ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
-  <div class="seg-ctl tri" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  ${last && MON() ? `<details class="card" style="margin-top:12px" open><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}`;
+}
+function viewOffice() {
+  const last = G.history[G.history.length - 1];
+  const payroll = sum(signed().map(w => w.contract.salary));
+  const t = UI.faTab;
+  const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
+  const fa = freeAgents().sort((a, b) => b.pop - a.pop);
+  return `
+  <div class="seg-ctl quad wrap" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'setup' ? setupView() : ''}
   ${t === 'media' ? mediaView() : ''}
   ${t === 'staff' ? staffView() : ''}
@@ -4395,6 +4422,7 @@ function setupView() {
     <div class="sec">Big events</div>
     <label class="f"><span>Big event every</span><select data-in="bigEvery">${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigEvery === n ? 'selected' : ''}>${n} weeks</option>`).join('')}</select></label>
     <label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>
+    ${G.bigEvents.length > 1 ? `<label class="f"><span>The big one: your biggest event of the year</span><select data-in="bigOne">${G.bigEvents.map(n => `<option ${n === bigOne() ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : ''}
     <div class="sec">Matches</div>
     <button class="btn block" data-act="matchTypes">🤼 Match types and signature matches</button>
     <div class="tiny muted" style="margin-top:8px">Sim settings, sound and display are in Menu → Settings.</div>`;
@@ -4550,11 +4578,11 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>📝 Contracts: deals run out and wrestlers can leave${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
     <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>💬 Personalities: texts, demands and memory</span></label>
     <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Rivals.</span></span></label>
+    ${MON() && SANDBOX() ? `<div class="card" style="margin:4px 0 10px;padding:10px 12px"><label class="f" style="margin:0"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label><div class="tiny" style="color:var(--warn);margin-top:6px">⚠️ Changing your bank balance can throw off the game's balance. Money stops being a challenge.</div></div>` : ''}
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
     <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
-    ${MON() ? `<label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>` : ''}
 ${displaySettings()}
     <div class="sec">Help</div>
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button></div>
@@ -4605,7 +4633,7 @@ async function supResume() {
   try { localStorage.removeItem('bookit.supIntent'); } catch (e) {}
   UI.modal = { type: 'support', plan: SUP_PLANS[x.plan] ? x.plan : 'year' }; render();
 }
-const SUP_PERKS = [['☁️', '6 cloud save slots', 'Three more than the free three.'], ['🌐', 'More Community space', 'Up to 10 shared saves and more room for rosters and photos.'], ['⭐', 'Supporter badge', 'A gold badge next to your name in Community.'], ['🧪', 'Early access', 'Try new features before everyone else.']];
+const SUP_PERKS = [['☁️', '6 cloud save slots', 'Three more than the free three.'], ['🌐', 'More Community space', 'Up to 10 shared worlds and more room for rosters and photos.'], ['⭐', 'Supporter badge', 'A gold badge next to your name in Community.'], ['🧪', 'Early access', 'Try new features before everyone else.']];
 const CLOUD_SLOTS = [1, 2, 3, 4, 5, 6], CLOUD_FREE = 3;
 const cloudErr = e => e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'This save is too big for the cloud. Use Back up instead.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
 async function cloudPush(n) {
@@ -5101,7 +5129,7 @@ const A = {
   closeModal,
   openRival(id) { openModal({ type: 'rival', id }); },
   newRival() { openModal({ type: 'editRival', isNew: true, draft: { name: '', short: '', show: '', color: pick(RIV_COLORS), prestige: 45, size: '14', phil: pick(Object.keys(RPHIL)), canClose: false, auto: true, fans: 15000, money: 300000, ppvs: shuffle(RIV_PPVS).slice(0, 4).join('\n') } }); },
-  editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: t.holder[0] || '', mid: !!t.mid, div: t.div || '' })) } }); } },
+  editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), bigOne: r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '', titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: t.holder[0] || '', mid: !!t.mid, div: t.div || '' })) } }); } },
   rtAdd() { const d = UI.modal.draft; d.titles ||= []; if (d.titles.length >= 4) return; d.titles.push({ id: uid(), name: `${(d.short || abbr(d.name)).trim()} ${d.titles.some(t => !t.mid && !t.div) ? 'Television' : 'World'} Championship`, holder: '', mid: d.titles.some(t => !t.mid && !t.div), div: '', isNew: true }); render(); },
   rtDel(i) { UI.modal.draft.titles.splice(+i, 1); render(); },
   rivRoster(id) { openModal({ type: 'rivalRoster', id }); },
@@ -5127,7 +5155,7 @@ const A = {
     r.color = safeColor(d.color) || r.color; r.prestige = clamp(+d.prestige || 40, 1, 100);
     if (RPHIL[d.phil]) r.phil = d.phil; r.safe = !d.canClose; r.manual = d.auto === false;
     r.fans = clamp(Math.round(+d.fans) || r.fans, 500, 5e6); if (MON() && d.money !== '' && isFinite(+d.money)) r.money = clamp(Math.round(+d.money), -1e7, 1e9);
-    const pp = String(d.ppvs || '').split('\n').map(x => x.replace(/[<>`"]/g, '').trim().slice(0, 40)).filter(Boolean).slice(0, 12); if (pp.length) r.ppvs = pp;
+    const pp = String(d.ppvs || '').split('\n').map(x => x.replace(/[<>`"]/g, '').trim().slice(0, 40)).filter(Boolean).slice(0, 12); if (pp.length) { r.ppvs = pp; if (!pp.includes(r.bigOne)) r.bigOne = pp[0]; }
     if (Array.isArray(d.titles) && d.id) {
       // titles as the player set them: kept reigns for existing belts, quiet crowning for changed champions
       r.tset = 1;
@@ -5212,7 +5240,7 @@ const A = {
       catch (e) { toast('That file is not a BookIt save.'); } }); };
     inp.click();
   },
-  setMoney() { const v = +document.getElementById('setMoney').value; if (isFinite(v)) { G.money = v; commit('Bank balance set.'); } },
+  setMoney() { if (!SANDBOX()) return; const v = +document.getElementById('setMoney').value; if (isFinite(v)) { G.money = v; commit('Bank balance set.'); } },
 
   // booking
   addSig() { const wk = UI.selWeek, sg = sigOf(wk); if (!sg) return; const card = BK(); if (!roomLeft(wk, card)) return toast(fullMsg(wk)); card.push(sigSeg(sg, wk)); commit(`The ${sigName(sg)} is on the card.`); },
@@ -6346,14 +6374,15 @@ function worldW(w) {
 // one company as it will start in the world: its people, belts and the names of past champions, nothing in progress
 function worldCo(r) {
   liven(r);
-  const c = { id: r.id, name: r.name, short: r.short, color: r.color, prestige: Math.round(r.prestige), fans: Math.round(r.fans), show: r.show, phil: r.phil, ppvs: r.ppvs, money: Math.max(50000, Math.round(r.money)), custom: !!r.custom, safe: !!r.safe, roster: r.roster.map(worldW), hist: [], last: 0 };
+  const c = { id: r.id, name: r.name, short: r.short, color: r.color, prestige: Math.round(r.prestige), fans: Math.round(r.fans), show: r.show, phil: r.phil, ppvs: r.ppvs, bigOne: r.ppvs?.includes(r.bigOne) ? r.bigOne : r.ppvs?.[0] || '', money: Math.max(50000, Math.round(r.money)), custom: !!r.custom, safe: !!r.safe, roster: r.roster.map(worldW), hist: [], last: 0 };
   c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, 1), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
   return c;
 }
 // a company the player runs, written as an AI company for the world
 function coAsRival(g) {
   const ros = (g === G ? signed() : (g.roster || []).filter(w => w.contract)).filter(w => !w.loan);
-  const r = { id: uid(), name: g.promo.name, short: abbr(g.promo.name), color: g.promo.color, prestige: clamp(+g.promo.prestige || 40, 1, 100), fans: +g.fans || 20000, show: g.promo.show, roster: [], champId: null, last: 0, hist: [], custom: true, born: 1, money: MON() ? +g.money || 0 : (+g.fans || 20000) * 5 };
+  const r = { id: uid(), name: g.promo.name, short: abbr(g.promo.name), color: g.promo.color, prestige: clamp(+g.promo.prestige || 40, 1, 100), fans: +g.fans || 20000, show: g.promo.show, roster: [], champId: null, last: 0, hist: [], custom: true, born: 1, money: MON() ? +g.money || 0 : (+g.fans || 20000) * 5, ppvs: (g.bigEvents || []).slice(0, 12) };
+  if (r.ppvs.length) r.bigOne = g === G ? bigOne() : r.ppvs.includes(g.bigOne) ? g.bigOne : r.ppvs[r.ppvs.length - 1];
   const a = k => avg(ros.map(w => +w[k] || 0));
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
   for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; r.roster.push(x); }
@@ -6384,13 +6413,24 @@ function cleanWorld(raw) {
     r.roster = r.roster.slice(0, 60).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
     r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 4).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, 1), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
     for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
-    r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12);
+    r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
     return r;
   });
   if (!cos.length) throw 0;
   return { cos, fa: free.slice(0, 80).map(fixW), every: [3, 4, 5, 6, 8].includes(+raw.every) ? +raw.every : 4 };
 }
 // start a new game in a world: the AI companies and free agents arrive, and a company taken over becomes yours
+// a shared world opens at the start of the month leading to the company's big one, so there's a big show to build to right away
+function startBeforeBigOne() {
+  const B = bigOneWeek(1), som = wk => weeksInMonth(monthKey(Math.max(1, wk)))[0] || 1;
+  let S = som(B); if (B - S < 2) S = som(B - 2); S = clamp(S, 1, B);
+  if (S <= 1) return;
+  G.week = S;
+  for (const t of G.titles) { t.since = t.lastDefense = S; for (const r of t.reigns || []) if (!r.to) r.from = S; }
+  for (const st of G.stories) st.start = S;
+  for (const w of G.wrestlers) { if (w.joined != null) w.joined = Math.max(+w.joined || 0, S); if (w.lastBooked != null) w.lastBooked = Math.max(+w.lastBooked || 0, S - 1); }
+  for (const r of G.rivalPromos || []) { r.born = Math.min(+r.born || S, S); r.last = Math.max(+r.last || 0, S - 1); }
+}
 function applyWorld(z) {
   const wd = z.world, cos = JSON.parse(JSON.stringify(wd.cos)), take = z.take && cos.find(c => c.id === z.take);
   G.wseed = 1;
@@ -6403,6 +6443,7 @@ function applyWorld(z) {
     if (tag) G.titles.push({ ...tag, holder: [] });
     G.titles.forEach(t => ensureReigns(t));
     G.promo.prestige = take.prestige; G.fans = Math.max(5000, take.fans);
+    if (Array.isArray(take.ppvs) && take.ppvs.length) { G.bigEvents = ppvList(take.ppvs.join('\n')); G.bigOne = take.bigOne; G.ppvSig = []; }
     cos.splice(cos.indexOf(take), 1);
   } else {
     // a brand-new company starts with nobody signed when it came for the world's free agents
@@ -6412,7 +6453,8 @@ function applyWorld(z) {
   for (const w of wd.fa) G.wrestlers.push({ ...w, contract: null });
   G.rivalPromos = cos.map(c => { liven(c); setRivalChamp(c); return c; });
   G.settings.bigEvery = wd.every || G.settings.bigEvery; syncRivals();
-  G.wlog = [{ wk: 1, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} free agents.` }];
+  startBeforeBigOne();
+  G.wlog = [{ wk: G.week, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} free agents.` }];
   news(take ? `🌍 You took over ${take.name} in the world "${wd.title || 'Shared world'}". Its roster and titles are yours.` : `🌍 ${G.promo.name} opened in the world "${wd.title || 'Shared world'}". Sign free agents in the Office.`, 'office');
 }
 function saveSummary(g) {
@@ -6578,7 +6620,7 @@ function modalCommunity(m) {
     body += `<div class="seg-ctl sm" style="margin-bottom:8px">${[['popular', 'Popular'], ['new', 'New'], ['following', 'Following']].map(([k, l]) => `<button class="${sort === k ? 'on' : ''}" data-act="cSort" data-id="${k}">${l}</button>`).join('')}</div>`;
     if (sort === 'following' && !myList('follows').length) body += '<div class="tiny muted" style="margin-bottom:8px">Follow creators from their page to see their new uploads here.</div>';
     body += `<input type="search" data-in="cQ" aria-label="Search creations" value="${esc(m.q || '')}" placeholder="Search creations" style="margin-bottom:8px">
-      <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['world', '🌍 Worlds'], ['save', '💾 Saves']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
+      <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['world', '🌍 Worlds']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
       <div class="list">${(list.map(i => i.kind === 'world' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">🌍</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>` : i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent-t)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
   } else if (t === 'share' && !G) {
     body += `<div class="empty"><p><b>Start a company first.</b></p><p class="small">You share wrestlers, rosters and saves from a company you run.</p><button class="btn pri" data-act="needNew">🏟️ New company</button></div>`;
@@ -6586,12 +6628,12 @@ function modalCommunity(m) {
     const sel = m.sel || [];
     const what = m.what || 'roster';
     const cnt = what === 'roster' ? signed().length : sel.length;
-    const whatCtl = `<label class="f"><span>What to share</span><div class="seg-ctl"><button class="${what === 'roster' ? 'on' : ''}" data-act="cWhat" data-id="roster">Whole roster</button><button class="${what === 'pick' ? 'on' : ''}" data-act="cWhat" data-id="pick">Pick wrestlers</button><button class="${what === 'world' ? 'on' : ''}" data-act="cWhat" data-id="world">🌍 World</button><button class="${what === 'save' ? 'on' : ''}" data-act="cWhat" data-id="save">💾 Save</button></div></label>`;
+    const whatCtl = `<label class="f"><span>What to share</span><div class="seg-ctl"><button class="${what === 'roster' ? 'on' : ''}" data-act="cWhat" data-id="roster">Whole roster</button><button class="${what === 'pick' ? 'on' : ''}" data-act="cWhat" data-id="pick">Pick wrestlers</button><button class="${what === 'world' ? 'on' : ''}" data-act="cWhat" data-id="world">🌍 World</button></div></label>`;
     if (what === 'world') {
       const mineW = COMM.mine.filter(x => x.kind === 'world').length, mineCo = m.mine !== false;
       ensureRivals();
       const cos = [...(mineCo ? [G, ...(G.cos || [])].map(c => ({ name: c.promo.name, n: (c === G ? signed() : (c.roster || []).filter(w => w.contract)).length, you: 1 })) : []), ...G.rivalPromos.map(r => ({ name: r.name, n: r.roster.length, tier: tierOf(r) }))];
-      body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:6px">A world is the setting, not your game. Others start a new game in it at week 1, with every company run by the AI. They can open their own company or take one over.</div>
+      body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:6px">A world is the setting, not your game. Others start a new game in it, with every company run by the AI. They can open their own company or take one over, and they start the month before that company's big one.</div>
         ${cos.map(c => `<div class="row small"><span class="sp">${esc(c.name)}${c.you ? ' <span class="tag gold">yours</span>' : c.tier ? ` <span class="tag">${c.tier}</span>` : ''}</span><b>${c.n} wrestlers</b></div>`).join('')}
         <div class="row small"><span class="sp muted">Free agents</span><b>${Math.min(60, freeAgents().length)}</b></div>
         <div class="tiny muted" style="margin-top:6px">Rosters, championships and past champions go in. Shows, stories in progress, money and notes don't.</div></div>
@@ -6600,16 +6642,6 @@ function modalCommunity(m) {
         <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="What kind of world is it? Who's on top? Which company would you take over?">${esc(m.desc || '')}</textarea></label>
         <div class="tiny muted" style="margin:6px 0 10px">You can have ${saveShareMax()} worlds shared at once${mineW ? ` (you have ${mineW})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
         ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishWorld" ${mineW >= saveShareMax() || cos.length < 2 ? 'disabled' : ''}>${mineW >= saveShareMax() ? 'Remove an old world in My uploads first' : cos.length < 2 ? 'A world needs at least 2 companies' : '🌍 Share this world'}</button>`}`;
-      return modal('🌐 Community', body);
-    }
-    if (what === 'save') {
-      const mineSaves = COMM.mine.filter(x => x.kind === 'save').length;
-      body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="row small"><span class="sp muted">Game</span><b>${esc(G.promo.name)}</b></div><div class="row small"><span class="sp muted">Progress</span><b>Week ${G.week} · ${signed().length} wrestlers · ${kfmt(G.fans)} fans</b></div><div class="tiny muted" style="margin-top:6px">Others get a copy of your game to play from here. Yours doesn't change.</div></div>
-        <label class="f"><span>Title</span><input type="text" data-in="cTitle" value="${esc(m.title || '')}" maxlength="60" placeholder="${esc(G.promo.name + ' · week ' + G.week)}"></label>
-        <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="What's going on in this universe? Who are the champions? What's the big storyline?">${esc(m.desc || '')}</textarea></label>
-        <label class="todo"><input type="checkbox" data-in="cNotes" ${m.notes ? 'checked' : ''}><span>Include my notes (notebook, to-dos, wrestler and story notes)</span></label>
-        <div class="tiny muted" style="margin:6px 0 10px">You can have ${saveShareMax()} saves shared at once${mineSaves ? ` (you have ${mineSaves})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
-        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishSave" ${mineSaves >= saveShareMax() ? 'disabled' : ''}>${mineSaves >= saveShareMax() ? 'Remove an old save in My uploads first' : '💾 Share this save'}</button>`}`;
       return modal('🌐 Community', body);
     }
     body += whatCtl + ``;
@@ -6935,7 +6967,7 @@ const CREATOR_ACTIONS = {
     }, true);
   },
   cF(f) { UI.modal.f = f; render(); },
-  cWhat(w) { UI.modal.what = w; render(); },
+  cWhat(w) { UI.modal.what = ['roster', 'pick', 'world'].includes(w) ? w : 'roster'; render(); },
   cOpen(key) { UI.modal = { type: 'cview', key, back: UI.modal }; render(); },
   cReport(target) { if (!COMM.me) return; UI.modal = { type: 'report', target, back: UI.modal }; render(); },
   repWhy(k) { UI.modal.why = k; render(); },
@@ -6982,18 +7014,6 @@ const CREATOR_ACTIONS = {
     const item = { id: uid(), title: pack.title, desc: (m.desc || '').trim().slice(0, 300), kind: m.what === 'roster' ? 'roster' : 'wrestler', count: ws.length, created: Date.now(), pack };
     try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.'); }
     catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
-  },
-  async cPublishSave() {
-    const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
-    if (isRude(m.title) || isRude(m.desc) || isRude(G.promo.name) || isRude(G.promo.show)) return toast('Please remove the rude words first.');
-    if (typeof CompressionStream === 'undefined') return toast('This browser can\'t pack save files. Try an up-to-date browser.');
-    if (COMM.mine.filter(x => x.kind === 'save').length >= saveShareMax()) return toast('Remove an old save first.');
-    try {
-      const data = await gz(JSON.stringify(shareableSave(G, !!m.notes)));
-      const item = { id: uid(), title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' · week ' + G.week, desc: (m.desc || '').trim().slice(0, 300), kind: 'save', count: signed().length, created: Date.now(), sum: saveSummary(G), save: data };
-      await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30));
-      UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Save shared with the community.');
-    } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   shareWorld() { if (G) openModal({ type: 'community', tab: 'share', what: 'world' }); },
   async cPublishWorld() {
@@ -8050,8 +8070,9 @@ function viewWizard() {
     const tk = z.take && z.world.cos.find(c => c.id === z.take);
     return `<div class="app wz">${wizSteps('roster')}
       <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">${tk ? `Taking over ${esc(tk.name)}` : 'Where does your talent come from?'}</h2>
-      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(tk.roster.find(w => w.id === t.holder[0])?.name || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>`
-      : `<div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
+      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(tk.roster.find(w => w.id === t.holder[0])?.name || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>
+      <div class="tip small" style="margin-top:10px">📅 You start at the beginning of the month leading to ${tk.bigOne ? `<b>${esc(tk.bigOne)}</b>, their big one` : 'their big one, the biggest show of their year'}.</div>`
+      : `<div class="tip small" style="margin-bottom:10px">📅 You start at the beginning of the month leading to your big one: ${ppvList(z.ppv).length ? `<b>${esc(ppvList(z.ppv).at(-1))}</b>, the last big event you named` : 'your last big event of the year'}. Pick a different big one later in Office → Setup.</div><div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button><button class="btn pri" data-act="wzFinish">Open for business</button></div></div>`;
   }
   if (z.step === 'roster') {
@@ -8260,6 +8281,7 @@ document.addEventListener('input', e => {
     else if (k === 'showName') { G.promo.show = v || 'Weekly Show'; curShow().name = G.promo.show; debSave(); }
     else if (k === 'shName') { const x = showById(el.dataset.id); if (x) { const n = v.trim().slice(0, 40) || 'Weekly Show'; if (x.id === G.showId) G.promo.show = n; x.name = n; debSave(); } }
     else if (k === 'bigEvents') { G.bigEvents = ppvList(v); debSave(); }
+    else if (k === 'bigOne') { if (G.bigEvents.includes(el.value)) { G.bigOne = el.value; commit(`${el.value} is now your big one.`); } }
   }
   if (el.dataset.ew != null && el.type !== 'checkbox') {
     const d = UI.modal.draft, k = el.dataset.ew;
