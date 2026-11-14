@@ -1356,7 +1356,7 @@ const recStr = w => `${w.record?.w || 0}–${w.record?.l || 0}${w.record?.d ? '�
 function streakTag(w) { const k = w.streak || 0; return k >= 3 ? `<span class="tag good">🔥 W${k}</span>` : k <= -4 ? `<span class="tag bad">🥶 L${-k}</span>` : ''; }
 function formChips(w) { const f = formOf(w).slice(0, 5); return f.length ? `<span class="form">${f.map(x => `<i class="f-${x}">${x}</i>`).join('')}</span>` : '<span class="muted">no matches yet</span>'; }
 // contenders: popularity, recent form, overall record and streak all count
-const contenderScore = w => w.pop * 0.5 + recentWins(w, 10) * 3.5 + winPct(w) * 18 + Math.max(-6, Math.min(12, (w.streak || 0) * 2)) + (w.momentum || 0) * 0.2;
+const contenderScore = w => BR.rank(w);
 // a title's division: set by the booker, or guessed from its name and champion
 function titleDiv(t) {
   if (t.division) return t.division;
@@ -1420,7 +1420,7 @@ function ranking(div, n = 10) {
   const c = divChamp(div);
   return signed().filter(w => (w.division || 'Open') === div && w.id !== c?.w.id).sort((a, b) => contenderScore(b) - contenderScore(a)).slice(0, n);
 }
-const teamScore = t => (t.w || 0) * 3 - (t.l || 0) + avg(liveMembers(t).map(w => w.pop)) / 8;
+const teamScore = t => BR.team(t);
 function rankedTeams() { return (G.teams || []).filter(t => liveMembers(t).length >= 2).sort((a, b) => teamScore(b) - teamScore(a)); }
 function rankSnap() { const o = {}; for (const d of rankDivs()) ranking(d).forEach((w, i) => o[w.id] = i + 1); rankedTeams().slice(0, 10).forEach((t, i) => o[t.id] = i + 1); return o; }
 function rankMove(id, now) {
@@ -1758,6 +1758,7 @@ function retire(w) {
 }
 function bookRecord(seg, res, rating) {
   if (seg.kind !== 'match') return [];
+  BR.record(seg, res, rating);
   const notes = [], ws = segPeople(seg).map(W).filter(Boolean);
   for (const w of ws) { const st = STATS(w); st.m++; st.sum += rating; st.best = Math.max(st.best, rating); }
   if (!res.winners.length) { if (!res.ffa) for (const w of ws) { formOf(w).unshift('D'); w.streak = 0; } }
@@ -1792,8 +1793,8 @@ function simSegment(seg, ctx) {
     const stip = GM(seg.stip), mt = MT(seg.mtype), ffa = !!mt.ffa, fk = finOf(seg), fin = FINISHES[fk];
     // a big free-for-all is carried by its stars, not dragged down by the opening entrants
     const core = ffa ? people.slice().sort((a, b) => b.pop - a.pop).slice(0, 8) : people;
-    r = avg(core.map(w => w.ring)) * 0.55 + avg(core.map(w => w.pop)) * 0.22 + avg(core.map(w => w.cha)) * 0.08 + 4;
-    why.push([Math.round(r), ffa ? 'Base: the biggest stars in the match' : 'Base: in-ring skill, popularity, charisma']);
+    r = (ffa ? avg(core.map(w => w.ring)) : BR.quality(core)) * 0.55 + (ffa ? avg(core.map(w => w.pop)) : BR.power(core)) * 0.22 + avg(core.map(w => w.cha)) * 0.08 + 4;
+    why.push([Math.round(r), ffa ? 'Base: the biggest stars in the match' : 'Base: in-ring work, star power, charisma']);
     if (ffa) {
       r += add(Math.min(6, people.length / 5) + (mt.rumble ? 2 : 0) + (mt.rumble && ctx.big ? 3 : 0), `${people.length}-person ${seg.mtype}: surprise entrants and big eliminations`);
       if (people.length < mt.def * 0.6) r += add(-5, `Too few entrants for a ${seg.mtype}`);
@@ -1803,23 +1804,24 @@ function simSegment(seg, ctx) {
       // chemistry between opponents
       let ch = []; for (let i = 0; i < sides.length; i++) for (let j = i + 1; j < sides.length; j++) for (const a of sides[i]) for (const b of sides[j]) ch.push(chem(a, b));
       r += add(avg(ch), avg(ch) >= 0 ? 'Good in-ring chemistry' : 'Styles clashed');
+      const lc = BR.learned(sides); if (lc) r += add(lc, lc > 0 ? 'Proven chemistry from past matches' : 'Their past matches together fell flat');
     }
     if (mt.sizes) { const big2 = sides.find(sd => sd.length > 1), solo = sides.find(sd => sd.length === 1); if (big2 && solo) r += add(solo[0].align === 'face' && big2[0].align === 'heel' ? 3 : -1, solo[0].align === 'face' ? 'Underdog face against the odds' : 'Heel picks on a lone opponent'); }
     // face vs heel
     const al = sides.map(s => s[0].align);
-    if (sides.length === 2) r += al[0] !== al[1] ? add(4, 'Face vs heel') : add(-3, 'Same alignment, crowd unsure who to cheer');
+    { const ro = BR.roles(sides, sides.length === 2 && storyBetween(sides[0].map(w => w.id), sides[1].map(w => w.id))); if (ro) r += add(ro[0], ro[1]); }
     for (const sd of sides) if (sd.length >= 2) { const ids = sd.map(w => w.id), tm = teamOf(ids), fc = factionOf(ids);
       if (tm) r += add(3 + Math.min(4, (tm.w || 0) / 4) + (fc ? 1 : 0), 'Established team: ' + tm.name + (fc ? ' (' + fc.name + ')' : ''));
       else if (fc) r += add(2 + Math.min(3, (fc.w || 0) / 5), 'Faction together: ' + fc.name); }
     if (sides.length === 2) { const f0 = sides[0].length && factionsOfW(sides[0][0].id), f1 = sides[1].length && factionsOfW(sides[1][0].id); if (f0 && f1 && f0.length && f1.length && !f0.some(f => f1.includes(f)) && sides.every(sd => sd.length >= 2 && factionOf(sd.map(w => w.id)))) r += add(3, 'Faction war'); }
     const TT = seg.tid && TN(seg.tid);
     if (TT) r += add(TT.rounds[seg.tr]?.length === 1 ? 6 : 3, TT.name + (TT.rounds[seg.tr]?.length === 1 ? ' final' : ' tournament match'));
-    if (stip.style) { const fit = core.filter(w => w.style === stip.style).length / core.length; r += add((stip.bonus || 0) * (0.4 + fit), seg.stip + ' stipulation'); }
+    if (stip.style) { const fit = avg(core.map(w => BR.fit(w, stip.style))); r += add((stip.bonus || 0) * (0.4 + fit), seg.stip + ' stipulation'); }
     else if (stip.bonus) r += add(stip.bonus * 0.6, seg.stip + ' stipulation');
     if (stip.multi) r += sides.length >= 4 ? add(3, seg.stip + ' with a full field') : add(-4, seg.stip + ' needs more people');
     if (stip.stam) r += add((avg(core.map(w => w.stam)) - 60) / 4, 'Stamina for a long match');
     const st = ffa ? storyAmong(people.map(w => w.id)) : storyBetween(sides[0].map(w => w.id), sides.slice(1).flat().map(w => w.id));
-    if (st) r += add(st.heat * (ffa ? 0.1 : 0.2), (ffa ? 'Rivals collide: ' : 'Storyline: ') + st.title);
+    if (st) r += add(st.heat * (ffa ? 0.1 : 0.2) * (0.8 + avg(core.map(w => BR.stat(w, 'psych'))) / 250), (ffa ? 'Rivals collide: ' : 'Storyline: ') + st.title);
     if (stip.feud) r += st && st.heat >= 50 ? add(4, seg.stip + ' ends a hot feud') : add(-3, seg.stip + ' without a feud to settle');
     const title = seg.title && G.titles.find(t => t.id === seg.title);
     if (title) r += add(title.prestige * 0.08, title.name + ' on the line');
@@ -1839,6 +1841,7 @@ function simSegment(seg, ctx) {
       if (sides.some(sd => sd.length > 1 && sd.some(w => w.id === tw.id))) r += add(3, 'Betrayed a partner');
     }
     if (recentlyFaced(people.map(w => w.id))) r += add(-6, 'Same match was booked recently');
+    else if (!ffa) r += add(BR.overdone(segPeople(seg), st), 'Fans have seen this match a lot lately');
     if (!ffa && (sides.length > 2 || sides[0].length > 1)) r += add(2, 'Multi-person chaos');
     if (ctx.big && seg.hype >= 5) r += add(seg.hype * 0.12, 'Built up for weeks: hype ' + Math.round(seg.hype));
     // records matter: streaks draw the crowd in, and title shots have to be earned
@@ -1868,8 +1871,8 @@ function simSegment(seg, ctx) {
     // squash check
     if (wi >= 0 && sides.length === 2) {
       const gap = avg(sides[wi].map(w => w.pop)) - avg(sides[1 - wi].map(w => w.pop));
-      if (gap > 30) r += add(-6, 'One-sided squash');
-      if (gap < -20) r += add(4, 'Upset victory');
+      if (gap > 30) r += ctx.main || ctx.big ? add(-6, 'One-sided squash') : add(-2, 'Quick squash: builds the winner, but no contest');
+      if (gap < -20) r += add(4 + clamp((avg(sides[1 - wi].map(w => BR.stat(w, 'sell'))) - 50) / 12, -1, 2), 'Upset victory');
     }
     out.winners = wi >= 0 ? sides[wi].map(w => w.id) : [];
     out.losers = sides.flat().map(w => w.id).filter(id => !out.winners.includes(id));
@@ -1976,7 +1979,9 @@ function simSegment(seg, ctx) {
   if (unhappy) r += add(-3 * unhappy, 'Unhappy talent phoning it in');
   if (ctx.big) r += add(5, 'Big event atmosphere');
   if (ctx.main) r += seg.kind === 'match' ? add(3, 'Main event spot') : add(-5, 'Fans wanted a main event match');
-  if (!ctx.proj) { const luck = rnd(-6, 6); r += add(luck, luck > 0 ? 'Crowd was hot' : 'Crowd was flat'); }
+  r += BR.placement(seg, people, ctx, add);
+  r += BR.soften(why, add, seg, r);
+  if (!ctx.proj) { const luck = BR.luck(people); r += add(luck, luck > 0 ? 'Crowd was hot' : 'Crowd was flat'); }
   out.rating = clamp(Math.round(r), 5, 100);
   return out;
 }
@@ -2084,21 +2089,217 @@ function applySegment(seg, res, ctx) {
 }
 
 // projected ratings (no luck) so the booker can see how a card shapes up before running it
-function projectFull(seg, i, card, wk) { try { return simSegment(seg, { big: isBig(wk), main: i === card.length - 1 && card.length > 1, proj: true }); } catch (e) { return { rating: 0, why: [] }; } }
+function projectFull(seg, i, card, wk) { try { return simSegment(seg, { big: isBig(wk), main: i === card.length - 1 && card.length > 1, proj: true, i, card, wk }); } catch (e) { return { rating: 0, why: [] }; } }
 const HINTS = [[/Same alignment/, 'Same alignment'], [/recently/, 'Rematch'], [/Styles clashed/, 'Styles clash'], [/squash/, 'Squash'], [/nobody to call out|needs a target/, 'Needs a target'], [/Stamina/, 'Low stamina'], [/injured/, 'Injured'], [/Tired/, 'Tired'], [/Unhappy/, 'Unhappy talent'], [/Cheap finish/, 'Cheap finish'], [/too soon/, 'Turned too soon'], [/face who cheats/, 'Face cheating']];
 function hintsOf(why) { const out = []; for (const [v, t] of why || []) { if (v > -3 || /^Base/.test(t)) continue; const h = HINTS.find(([re]) => re.test(t)); const l = h ? h[1] : t; if (!out.includes(l)) out.push(l); } return out.slice(0, 2); }
-function projectSeg(seg, i, card, wk) { try { return simSegment(seg, { big: isBig(wk), main: i === card.length - 1 && card.length > 1, proj: true }).rating; } catch (e) { return 0; } }
+function projectSeg(seg, i, card, wk) { try { return simSegment(seg, { big: isBig(wk), main: i === card.length - 1 && card.length > 1, proj: true, i, card, wk }).rating; } catch (e) { return 0; } }
 function projectShow(card, wk) {
   const segs = card.filter(s => segPeople(s).length); if (!segs.length) return 0;
   const rs = segs.map((s, i) => projectSeg(s, i, segs, wk));
-  const wts = rs.map((r, i) => i === rs.length - 1 ? 1.6 : 1);
-  let o = sum(rs.map((r, i) => r * wts[i])) / sum(wts);
-  const ideal = isBig(wk) ? [6, 10] : [4, 8];
-  if (rs.length < ideal[0]) o -= 4 * (ideal[0] - rs.length); if (rs.length > ideal[1]) o -= 3 * (rs.length - ideal[1]);
-  o += new Set(segs.map(s => s.kind)).size >= 2 ? 2 : -3;
-  const sg = sigOf(wk); if (sg) o += sigBooked(segs, sg) ? 4 : -4;
-  return clamp(Math.round(o), 1, 100);
+  return BR.show(rs, segs, wk).overall;
 }
+// ---------- booking brain: smarter match ratings, show flow, rankings and auto-fill ----------
+// Deeper stats (psych, sell, cons, safety, tech, brawl, air) are seeded by the training system.
+// Every read falls back to the core stats, so old saves, imports and rival rosters still rate sensibly.
+const BR = {
+  stat(w, k) {
+    const v = w && w[k];
+    if (typeof v === 'number' && v > 0) return v;
+    const ring = +w.ring || 50, cha = +w.cha || 50, age = +w.age || 27, m = w.stats?.m || 0;
+    switch (k) {
+      case 'psych': return clamp(ring + clamp((age - 28) * 0.8, -5, 6), 1, 99);
+      case 'sell': return ring * 0.7 + cha * 0.3;
+      case 'cons': return clamp(45 + (age - 22) * 1.5 + Math.min(15, m / 4), 30, 85);
+      case 'tech': return w.style === 'Technician' ? ring + 8 : ring - 6;
+      case 'brawl': return w.style === 'Brawler' || w.style === 'Powerhouse' ? ring + 8 : ring - 6;
+      case 'air': return w.style === 'High Flyer' ? ring + 8 : ring - 10;
+      default: return ring;
+    }
+  },
+  // how well someone actually works a match: moves, psychology and making the other person look good
+  work: w => w.ring * 0.55 + BR.stat(w, 'psych') * 0.25 + BR.stat(w, 'sell') * 0.2,
+  // a great worker can carry a weaker one, but only so far
+  quality(ws) { const q = ws.map(BR.work).sort((a, b) => b - a); return q.length ? avg(q) * 0.55 + q[0] * 0.25 + q[q.length - 1] * 0.2 : 0; },
+  // star power: the biggest name sells the match, the rest still count
+  power(ws) { const p = ws.map(w => w.pop); return p.length ? avg(p) * 0.6 + Math.max(...p) * 0.4 : 0; },
+  // how well a wrestler suits a gimmick's style: their style, plus the matching skill when it exists
+  STYLE_SKILL: { Brawler: 'brawl', Powerhouse: 'brawl', Technician: 'tech', 'High Flyer': 'air', Showman: 'cha' },
+  fit(w, style) { const k = BR.STYLE_SKILL[style], sk = k === 'cha' ? w.cha : k ? BR.stat(w, k) : w.ring; return clamp((w.style === style ? 0.5 : 0) + (sk - 40) / 90, 0, 1); },
+  // the crowd's read on face vs heel: a heel who can draw heat and a face fans love make it work
+  roles(sides, st) {
+    if (sides.length !== 2) return null;
+    const al = sides.map(s => s[0].align);
+    if (al[0] !== al[1]) {
+      const H = sides[al[0] === 'heel' ? 0 : 1], F = sides[al[0] === 'heel' ? 1 : 0];
+      const heat = avg(H.map(w => w.cha * 0.5 + w.mic * 0.5)), love = avg(F.map(w => w.pop * 0.5 + w.cha * 0.5));
+      const v = 2 + clamp((heat - 50) / 10, -1, 2.5) + clamp((love - 50) / 12, -1, 1.5);
+      return [v, v >= 4.5 ? 'Face vs heel: both play their roles well' : 'Face vs heel'];
+    }
+    if (st) return [-1, 'Same alignment, but the story explains it'];
+    if (Math.min(...sides.flat().map(w => w.pop)) >= 75) return [2, 'Dream match between two top stars'];
+    return [-3, 'Same alignment, crowd unsure who to cheer'];
+  },
+  // chemistry is learned: pairs who keep having good matches get better together, bad pairs stay bad
+  pairKey: (a, b) => a < b ? a + '|' + b : b + '|' + a,
+  history(a, b) { const h = a.chx?.[b.id]; return Array.isArray(h) ? h : null; },
+  learned(sides) {
+    const vs = [];
+    for (let i = 0; i < sides.length; i++) for (let j = i + 1; j < sides.length; j++) for (const a of sides[i]) for (const b of sides[j]) {
+      const h = BR.history(a, b); if (h) vs.push(clamp((h[1] - 62) * 0.12, -3, 4) * Math.min(1, h[0] / 3));
+    }
+    return vs.length ? avg(vs) : 0;
+  },
+  key: ids => ids.slice().sort().join(','),
+  // the same match over and over: fine inside a hot feud, tiring otherwise
+  overdone(ids, st) {
+    const k = BR.key(ids), n = G.history.slice(-10, -2).filter(h => (h.keys || []).includes(k)).length;
+    return n >= 2 ? -Math.min(6, n * 1.5) * (st ? 0.5 : 1) : 0;
+  },
+  crew(wk) { return (typeof bookable === 'function' ? bookable(wk ?? G.week) : signed()).filter(w => !w.injury); },
+  topPops(wk) { return BR.crew(wk).map(w => w.pop).sort((a, b) => b - a); },
+  // card placement: who closes, who opens, and how tonight's earlier segments have worn the crowd
+  placement(seg, people, ctx, add) {
+    let r = 0;
+    const card = Array.isArray(ctx.card) ? ctx.card : null, i = ctx.i ?? -1;
+    if (!card || i < 0) return 0;
+    const n = card.length, match = seg.kind === 'match', pops = BR.topPops(ctx.wk);
+    if (match && ctx.main && pops.length >= 4 && !isFFA(seg)) {
+      const top = pops[2], mp = Math.max(...people.map(w => w.pop));
+      if (mp < top - 8) r += add(-Math.min(6, (top - 8 - mp) * 0.25), 'Main event lacks star power');
+    }
+    if (match && !ctx.main && !seg.title && n >= 5 && i < n * 0.34 && pops.length >= 6 && !isFFA(seg) && people.some(w => w.pop >= pops[1])) r += add(-3, 'Top star wasted early on the card');
+    if (match && i === 0 && n >= 4 && !isFFA(seg)) { const q = BR.quality(people); if (q >= 68) r += add(2, 'Hot opener fires up the crowd'); else if (q < 48) r += add(-2, 'Flat opener'); }
+    const prev = card.slice(0, i).filter(s => segPeople(s).length);
+    if (match) {
+      const gm = GM(seg.stip), pm = prev.filter(s => s.kind === 'match');
+      if (seg.stip && seg.stip !== 'Standard') { const same = pm.filter(s => s.stip === seg.stip).length; if (same) r += add(-3 * same, `Another ${seg.stip} match tonight`); }
+      if ((gm.fat || 0) >= 10 && pm.filter(s => (GM(s.stip).fat || 0) >= 10).length >= 2) r += add(-3, 'Crowd is worn out by brutal matches');
+      if (n >= 7 && prev.length >= 3 && prev.slice(-3).every(s => s.kind === 'match')) r += add(-1.5, 'Fourth match in a row: the crowd needs a breather');
+    } else if (prev.length && prev[prev.length - 1].kind !== 'match') r += add(-2, 'Back-to-back talking segments');
+    // overexposure: the same face closing every show
+    if (ctx.main) {
+      const last = G.history.filter(h => (h.bid ?? G.showId) === G.showId && !h.big && h.results?.length).slice(-3);
+      if (last.length === 3) { const p = people.find(w => last.every(h => segPeople(h.results[h.results.length - 1].seg).includes(w.id))); if (p) r += add(-2, `Fans have seen ${p.name} close every show`); }
+    }
+    return r;
+  },
+  // stacking every bonus onto one match has diminishing returns
+  // and a talking segment can be great, but it rarely steals the show from the matches
+  soften(why, add, seg, r) {
+    const P = sum(why.filter(([v, t]) => v > 0 && !/^Base/.test(t)).map(([v]) => v));
+    let d = P > 20 ? add(-(P - 20) * 0.35, 'Crowd can only get so hot') : 0;
+    if (seg.kind !== 'match' && r + d > 80) d += add(-(r + d - 80) * 0.5, 'Talk segments rarely steal the show');
+    return d;
+  },
+  // consistent workers have fewer off nights
+  luck(people) { const c = avg(people.map(w => BR.stat(w, 'cons'))); const s = 6 * (1.25 - c / 125); return rnd(-s, s); },
+
+  // ----- show rating: card weights, flow and expectations (shared by the real show and the projection) -----
+  show(rs, segs, wk, live) {
+    const big = isBig(wk), n = rs.length, why = [];
+    const wts = rs.map((r, i) => i === n - 1 && n > 1 ? 1.6 : i === n - 2 && n >= 4 ? 1.25 : i === 0 && n >= 4 ? 1.15 : 1);
+    let o = sum(rs.map((r, i) => r * wts[i])) / sum(wts);
+    const push = (v, t) => { v = Math.round(v); if (v) { o += v; why.push([v, t]); } };
+    const ideal = big ? [6, 10] : [4, 8];
+    if (n < ideal[0]) push(-4 * (ideal[0] - n), 'Short show');
+    if (n > ideal[1]) push(-3 * (n - ideal[1]), 'Show ran long');
+    push(new Set(segs.map(s => s.kind)).size >= 2 ? 2 : -3, new Set(segs.map(s => s.kind)).size >= 2 ? 'Good variety' : 'No variety (add promos/angles)');
+    const sg = big && sigOf(wk), sgOn = sg && sigBooked(segs, sg);
+    if (sg) push(sgOn ? 4 : -4, sgOn ? `Signature match: the ${sigName(sg)}` : `Fans missed the ${sigName(sg)}`);
+    const mi = rs.map((r, i) => segs[i].kind === 'match' ? r : -1);
+    if (n > 1 && segs[n - 1].kind !== 'match' && mi.some(x => x >= 0)) push(-2, 'Show did not close with a match');
+    else if (n > 1 && rs[n - 1] < Math.max(...mi) - 5) push(-3, 'Main event was not the best match');
+    // flow: two duds in a row kill the crowd; a strong closing stretch sends them home happy
+    let dead = 0; for (let i = 1; i < n; i++) if (rs[i] < 45 && rs[i - 1] < 45) dead++;
+    if (dead) push(-Math.min(4, dead * 2), 'Dead stretch: the crowd went quiet');
+    if (n >= 4 && rs[n - 1] >= 75 && rs[n - 2] >= 72) push(2, 'Strong finish to the night');
+    // expectations: fans tune in to see your stars, and big events have to feel big
+    const crew = BR.crew(wk), bShow = !onMain() && !splitOn();
+    if (!bShow && crew.length >= 8) { const top = crew.slice().sort((a, b) => b.pop - a.pop).slice(0, 3).map(w => w.id), on = new Set(segs.flatMap(segPeople)); if (!top.some(id => on.has(id))) push(-3, 'Your biggest stars were missing'); }
+    if (big && mi.filter(x => x >= 0).length >= 3 && avg(mi.filter(x => x >= 0)) < 58) push(-3, 'Big event felt like a weekly show');
+    if (live) { const tb = tutBoost(); if (tb) push(tb, 'Opening night crowd'); }
+    return { overall: clamp(Math.round(o), 1, 100), why };
+  },
+
+  // ----- rankings: wins over strong opponents count most, idle and hurt wrestlers slide -----
+  elo(w) { if (!Number.isFinite(w.elo)) w.elo = Math.round(1000 + (w.pop - 50) * 6 + (winPct(w) - 0.5) * 150); return w.elo; },
+  formScore(w) { let s = 0; formOf(w).slice(0, 8).forEach((x, i) => s += (x === 'W' ? 1 : x === 'D' ? 0.3 : -0.6) * Math.pow(0.85, i)); return s; },
+  rank(w) {
+    const st = w.stats || {}, q = st.m ? clamp((st.sum / st.m - 55) * 0.12, -4, 5) : 0;
+    const idle = Math.max(0, G.week - (w.lastBooked || 0) - 3);
+    return w.pop * 0.4 + (BR.elo(w) - 1000) / 20 + BR.formScore(w) * 3.5 + q + clamp((w.streak || 0) * 1.2, -4, 8) + (w.momentum || 0) * 0.12
+      - Math.min(12, idle * 1.5) - (w.injury > 0 ? 6 : 0);
+  },
+  team(t) { const ms = liveMembers(t); return avg(ms.map(BR.rank)) * 0.6 + clamp(((t.w || 0) - (t.l || 0)) * 2, -10, 20) + Math.min(t.w || 0, 20) * 0.5; },
+  // after each match: learn chemistry, move power ratings
+  record(seg, res, rating) {
+    if (seg.kind !== 'match' || res.ffa) return;
+    const sides = seg.sides.map(s => s.map(W).filter(Boolean)).filter(s => s.length);
+    if (sides.length < 2) return;
+    for (let i = 0; i < sides.length; i++) for (let j = i + 1; j < sides.length; j++) for (const a of sides[i]) for (const b of sides[j]) for (const [x, y] of [[a, b], [b, a]]) {
+      const c = x.chx && typeof x.chx === 'object' ? x.chx : (x.chx = {}), h = Array.isArray(c[y.id]) ? c[y.id] : [0, 0], k = Math.min(h[0], 5);
+      c[y.id] = [h[0] + 1, Math.round((h[1] * k + rating) / (k + 1))];
+      const ks = Object.keys(c); if (ks.length > 16) delete c[ks.sort((p, q) => c[p][0] - c[q][0])[0]];
+    }
+    const win = res.winners || [], wi = sides.findIndex(sd => sd.some(w => win.includes(w.id)));
+    const e = sd => avg(sd.map(BR.elo)), cheap = res.fin?.keep || res.fin?.cheap ? 0.5 : 1;
+    if (wi < 0) { if (sides.length === 2 && seg.winner === -2) { const [A, B] = sides, ea = 1 / (1 + Math.pow(10, (e(B) - e(A)) / 400)), d = 12 * (0.5 - ea); A.forEach(w => w.elo += Math.round(d)); B.forEach(w => w.elo -= Math.round(d)); } return; }
+    const Wn = sides[wi], L = sides.filter((_, i) => i !== wi).flat(), ex = 1 / (1 + Math.pow(10, (e(L) - e(Wn)) / 400));
+    const K = 28 * cheap / Math.sqrt(Wn.length), gain = K * (1 - ex);
+    Wn.forEach(w => w.elo = Math.round(BR.elo(w) + gain));
+    L.forEach(w => w.elo = Math.round(BR.elo(w) - gain * (sides.length > 2 ? 0.6 : 1)));
+  },
+  clean(w) {
+    if (w.elo != null) w.elo = clamp(Math.round(+w.elo) || 1000, 400, 1800);
+    if (w.chx && typeof w.chx === 'object' && !Array.isArray(w.chx)) { const o = {}; for (const [k, v] of Object.entries(w.chx).slice(0, 16)) if (typeof k === 'string' && Array.isArray(v)) o[k] = [clamp(Math.floor(+v[0]) || 0, 0, 999), clamp(+v[1] || 0, 0, 100)]; w.chx = o; } else delete w.chx;
+  },
+
+  // ----- auto-fill helpers -----
+  // who most needs a spot: idle, unhappy or popular, and not worn down
+  need(w) { const idle = Math.min(4, G.week - (w.lastBooked || 0)); return idle * 6 + (w.morale < 40 ? 8 : 0) + w.pop * 0.3 - (w.fatigue || 0) * 0.3 + rnd(0, 10); },
+  proj(seg, wk, extra = {}) { try { return simSegment(seg, { big: isBig(wk), proj: true, wk, ...extra }).rating; } catch (e) { return 0; } },
+  // the opponent the engine itself thinks makes the best match, kept in the same tier
+  opponent(a, pool, wk) {
+    const c = pool.filter(b => b !== a && sameDiv(a, b)).sort((x, y) => Math.abs(x.pop - a.pop) - Math.abs(y.pop - a.pop)).slice(0, 14);
+    let best = null, bs = -1e9;
+    for (const b of c) {
+      const s = BR.proj({ kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean' }, wk) - Math.abs(a.pop - b.pop) * 0.08 - ((b.fatigue || 0) > 50 ? 4 : 0) + rnd(0, 5);
+      if (s > bs) { bs = s; best = b; }
+    }
+    return best;
+  },
+  // title shots go to the top contender most of the time, a face for a heel champion (and back) when possible
+  challenger(t, top) {
+    const fresh = top.filter(w => !recentlyFaced([...t.holder, w.id])); if (fresh.length) top = fresh;
+    const h = W(t.holder[0]), wt = top.map((w, i) => [w, [0.6, 0.25, 0.15, 0.08, 0.05, 0.03][i] * (h && w.align !== h.align ? 1 : 0.5)]);
+    let x = Math.random() * sum(wt.map(p => p[1])); for (const [w, p] of wt) if ((x -= p) <= 0) return w; return top[0];
+  },
+  // a story that just had a match gets a promo next, a story that just talked gets a match
+  lastStoryKind(st) {
+    for (const h of G.history.slice(-2).reverse()) for (const r of h.results || []) { const ids = segPeople(r.seg); if (st.a.some(x => ids.includes(x)) && st.b.some(x => ids.includes(x))) return r.seg.kind === 'match' ? 'match' : 'talk'; }
+    return null;
+  },
+  storyMatch(st, big) { const k = BR.lastStoryKind(st); return big || (k ? k === 'talk' : st.heat > 30); },
+  // a talking segment for someone with a reason to talk: a champion, someone in a story, or a great talker
+  speaker(pool) {
+    const champs = new Set(G.titles.flatMap(t => t.holder)), sc = w => w.mic * 0.5 + w.pop * 0.5 + (champs.has(w.id) ? 10 : 0) + (storiesTouching([w.id]).length ? 8 : 0) + rnd(0, 6);
+    return pool.slice().sort((a, b) => sc(b) - sc(a))[0];
+  },
+  // running order: a hot opener, the build in the middle with talk spaced out, the two biggest matches last
+  order(segs, wk) {
+    const score = new Map(segs.map(s => [s, s.kind === 'match' ? BR.proj(s, wk, { main: true }) + (s.title ? 4 : 0) : -1]));
+    const ms = segs.filter(s => s.kind === 'match').sort((a, b) => score.get(b) - score.get(a)), talk = segs.filter(s => s.kind !== 'match');
+    if (ms.length < 3) return [...talk, ...ms.slice().reverse()];
+    const main = ms[0], semi = ms[1], rest = ms.slice(2);
+    const qOf = s => BR.quality(segPeople(s).map(W).filter(Boolean));
+    const op = rest.slice().sort((a, b) => qOf(b) - qOf(a))[0], mid = rest.filter(s => s !== op).sort((a, b) => score.get(a) - score.get(b));
+    const seq = [op, ...mid, semi, main], gaps = seq.length - 1, slots = seq.map(() => []);
+    talk.forEach((t, k) => slots[Math.min(gaps - 1, Math.floor((k + 0.5) * gaps / talk.length))].push(t));
+    return seq.flatMap((m, i) => [m, ...slots[i]]);
+  }
+};
+// new booking hints for the card preview
+HINTS.push([/lacks star power/, 'Needs bigger stars'], [/wasted early/, 'Star booked too early'], [/match tonight/, 'Repeat gimmick'], [/seen this match/, 'Overdone match'], [/Back-to-back/, 'Two talk segments in a row'], [/worn out/, 'Too many brutal matches'], [/close every show/, 'Overexposed']);
 // the calendar: week 1 is the first Monday of the promotion's first year
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const BASE = Date.UTC(2027, 0, 4);
@@ -2129,7 +2330,7 @@ function runShow(opts = {}) {
     let veto = null;
     if (seg.kind === 'match' && seg.winner >= 0 && seg.sides[seg.winner]) { const v = seg.sides.map((sd, si) => [si, sd.map(W).find(w => w && w.creative >= G.week)]).find(([si, w]) => si !== seg.winner && w);
       if (v && Math.random() < 0.6) { seg.winner = v[0]; veto = `💼 ${v[1].name} used creative control and changed the finish.`; news(veto, 'office'); } }
-    const ctx = { big, main: i === card.length - 1 && card.length > 1 };
+    const ctx = { big, main: i === card.length - 1 && card.length > 1, i, card, wk: G.week };
     const res = simSegment(seg, ctx);
     const cue = cueOf(seg, res, ctx);
     applySegment(seg, res, ctx);
@@ -2139,20 +2340,8 @@ function runShow(opts = {}) {
     if (seg.kind === 'match') keys.push(segPeople(seg).slice().sort().join(','));
   });
   // overall show score
-  const weights = results.map((r, i) => i === results.length - 1 ? 1.6 : 1);
-  let overall = sum(results.map((r, i) => r.rating * weights[i])) / sum(weights);
-  const why = [];
-  const ideal = big ? [6, 10] : [4, 8];
-  if (results.length < ideal[0]) { overall -= 4 * (ideal[0] - results.length); why.push([-4 * (ideal[0] - results.length), 'Short show']); }
-  if (results.length > ideal[1]) { overall -= 3 * (results.length - ideal[1]); why.push([-3 * (results.length - ideal[1]), 'Show ran long']); }
-  const kinds = new Set(results.map(r => r.seg.kind));
-  if (kinds.size >= 2) { overall += 2; why.push([2, 'Good variety']); } else { overall -= 3; why.push([-3, 'No variety (add promos/angles)']); }
+  const { overall, why } = BR.show(results.map(r => r.rating), results.map(r => r.seg), G.week, true);
   const sg = big && sigOf(G.week), sgOn = sg && sigBooked(card, sg);
-  if (sg) { const v = sgOn ? 4 : -4; overall += v; why.push([v, sgOn ? `Signature match: the ${sigName(sg)}` : `Fans missed the ${sigName(sg)}`]); }
-  if (results.length > 1 && results[results.length - 1].seg.kind !== 'match' && results.some(r => r.seg.kind === 'match')) { overall -= 2; why.push([-2, 'Show did not close with a match']); }
-  else if (results.length > 1 && results[results.length - 1].rating < Math.max(...results.filter(r => r.seg.kind === 'match').map(r => r.rating)) - 5) { overall -= 3; why.push([-3, 'Main event was not the best match']); }
-  { const tb = tutBoost(); if (tb) { overall += tb; why.push([tb, 'Opening night crowd']); } }
-  overall = clamp(Math.round(overall), 1, 100);
 
   // money and fans
   const topHeat = G.stories.filter(s => s.status === 'active').map(s => s.heat).sort((a, b) => b - a).slice(0, 3);
@@ -3174,7 +3363,7 @@ function autoFill(quiet) {
     const A = st.a.filter(id => avail().some(w => w.id === id)), B = st.b.filter(id => avail().some(w => w.id === id));
     if (!A.length || !B.length || segs.length >= target - 2) continue;
     const size = Math.min(A.length, B.length, 3);
-    if ((big || st.heat > 55 || Math.random() < 0.4) && !ppvSaved([...A.slice(0, size), ...B.slice(0, size)])) {
+    if (BR.storyMatch(st, big) && (big || !recentlyFaced([...A.slice(0, size), ...B.slice(0, size)])) && !ppvSaved([...A.slice(0, size), ...B.slice(0, size)])) {
       const mtype = size === 1 ? 'Singles' : size === 2 ? 'Tag Team' : 'Six-Person Tag';
       const title = st.titleId && G.titles.find(t => t.id === st.titleId);
       segs.push({ id: uid(), kind: 'match', mtype, stip: big && st.heat > 60 ? pick(['Street Fight', 'Steel Cage', 'No DQ', 'Ladder']) : 'Standard', sides: [A.slice(0, size), B.slice(0, size)], winner: -1, finish: 'Clean', title: title && title.holder.some(h => [...A, ...B].includes(h)) ? title.id : null, sim: true });
@@ -3191,7 +3380,7 @@ function autoFill(quiet) {
     const n = t.tag ? 2 : 1;
     const tms = t.tag ? availTeams().filter(x => !x.some(id => t.holder.includes(id))) : [];
     if (pool.length < n && !tms.length) continue;
-    const ch = tms.length ? pick(tms.slice(0, 3)) : shuffle(pool).slice(0, n).map(w => w.id);
+    const ch = tms.length ? tms[Math.random() < 0.6 ? 0 : rint(0, Math.min(2, tms.length - 1))] : n === 1 ? [BR.challenger(t, pool.slice(0, 6)).id] : shuffle(pool).slice(0, n).map(w => w.id);
     segs.push({ id: uid(), kind: 'match', mtype: t.tag ? 'Tag Team' : 'Singles', stip: 'Standard', sides: [t.holder.slice(), ch], winner: -1, finish: !big && W(t.holder[0])?.align === 'heel' && Math.random() < 0.25 ? pick(['DQ', 'Count-out', 'Cheating']) : 'Clean', title: t.id });
     take([...t.holder, ...ch]);
   }
@@ -3199,13 +3388,12 @@ function autoFill(quiet) {
   let guard = 0;
   while (segs.length < target && guard++ < 20) {
     const pool = avail(); if (pool.length < 2) break;
+    if ((segs.length >= Math.floor(target / 2) && ![...card, ...segs].some(s => s.kind !== 'match')) || Math.random() < 0.12) { const w = BR.speaker(pool); segs.push({ id: uid(), kind: 'promo', ptype: 'Hype Promo', who: [w.id], target: [] }); take([w.id]); continue; }
     const fa = (G.factions || []).map(f => f.members.filter(id => avail().some(w => w.id === id)).slice(0, 3)).filter(x => x.length === 3);
     if (fa.length && Math.random() < 0.15) { const x = pick(fa), opp = shuffle(fa.filter(y => y !== x && !y.some(id => x.includes(id)) && sameDiv(W(x[0]), W(y[0]))))[0] || shuffle(avail().filter(w => !x.includes(w.id) && sameDiv(W(x[0]), w) && !factionsOfW(w.id).some(f => x.every(id => f.members.includes(id))))).slice(0, 3).map(w => w.id); if (opp.length === 3) { segs.push({ id: uid(), kind: 'match', mtype: 'Six-Person Tag', stip: 'Standard', sides: [x, opp], winner: -1, finish: 'Clean', title: null }); take([...x, ...opp]); continue; } }
     const tt = availTeams();
-    if (tt.length >= 2 && Math.random() < 0.3) { const x = pick(tt.slice(0, 5)), y = shuffle(tt).find(z => z !== x && !z.some(id => x.includes(id)) && sameDiv(W(x[0]), W(z[0]))); if (y) { segs.push({ id: uid(), kind: 'match', mtype: 'Tag Team', stip: 'Standard', sides: [x, y], winner: -1, finish: 'Clean', title: null }); take([...x, ...y]); continue; } }
-    if (Math.random() < 0.25) { const w = pool.sort((a, b) => b.mic - a.mic)[rint(0, Math.min(3, pool.length - 1))]; segs.push({ id: uid(), kind: 'promo', ptype: 'Hype Promo', who: [w.id], target: [] }); take([w.id]); continue; }
-    const p = shuffle(pool); const faces = p.filter(w => w.align === 'face'), heels = p.filter(w => w.align === 'heel');
-    const a = faces[0] || p[0], b = heels.find(w => w !== a && sameDiv(a, w)) || p.find(w => w !== a && sameDiv(a, w));
+    if (tt.length >= 2 && Math.random() < 0.3) { const xi = rint(0, Math.min(4, tt.length - 1)), x = tt[xi], y = tt.map((z, i) => [z, Math.abs(i - xi) + rnd(0, 1.5)]).sort((p, q) => p[1] - q[1]).map(p => p[0]).find(z => z !== x && !z.some(id => x.includes(id)) && sameDiv(W(x[0]), W(z[0]))); if (y) { segs.push({ id: uid(), kind: 'match', mtype: 'Tag Team', stip: 'Standard', sides: [x, y], winner: -1, finish: 'Clean', title: null }); take([...x, ...y]); continue; } }
+    const a = pool.slice().sort((x, y) => BR.need(y) - BR.need(x))[0], b = a && BR.opponent(a, pool, wk);
     if (!a) break; if (!b) { take([a.id]); continue; }
     if (ppvSaved([a.id, b.id])) { segs.push({ id: uid(), kind: 'promo', ptype: 'Face-off', who: [a.id], target: [b.id] }); take([a.id, b.id]); continue; }
     segs.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: !big && Math.random() < 0.25 ? pick(['Roll-up', 'Cheating', 'Submission']) : 'Clean', title: null });
@@ -3213,8 +3401,8 @@ function autoFill(quiet) {
   }
   // main event = the segment with the most star power, last
   const power = x => avg(segPeople(x).map(id => W(id).pop)) + (x.kind === 'match' ? 0 : -15) + (x.title ? 8 : 0);
-  segs.sort((x, y) => power(x) - power(y));
-  card.push(...segs);
+  if (!card.length) card.push(...BR.order(segs, wk));
+  else { segs.sort((x, y) => power(x) - power(y)); card.push(...segs); }
   // make sure the best projected segment closes the show
   for (let k = 0; k < 2 && card.length > 2; k++) { const r = card.map((x, i) => x.kind === 'match' && segPeople(x).length ? projectFull(x, card.length - 1, card, wk).rating : -1), b = r.indexOf(Math.max(...r)); if (b < 0 || r[b] < 0 || b === card.length - 1) break; card.push(...card.splice(b, 1)); }
   if (quiet) return;
@@ -4460,7 +4648,7 @@ function modalRankings(m) {
     body += (c ? `<button class="item rk champ" data-act="openW" data-id="${c.w.id}"><span class="rk-n">C</span>${av(c.w, 36)}<div class="main"><div class="t">${esc(c.w.name)}</div><div class="d">${esc(c.t.name)} · ${recStr(c.w)} · ${reignLen(ensureReigns(c.t).at(-1) || { from: c.t.since || 1 })} wk</div></div></button>` : '')
       + `<div class="list">${list.map((w, i) => `<button class="item rk" data-act="openW" data-id="${w.id}"><span class="rk-n">${i + 1}</span>${av(w, 32)}<div class="main"><div class="t">${nm(w.id)} ${rankMove(w.id, i + 1)}</div><div class="d">${recStr(w)} · ${formChips(w)}${w.streak >= 3 ? ' · W' + w.streak : ''}${w.injury ? ' · injured' : ''}</div></div></button>`).join('')}</div>`;
   }
-  body += '<div class="tiny muted" style="margin-top:8px">Ranked by popularity, recent wins, record and streak. Arrows show the change since the last show.</div>';
+  body += '<div class="tiny muted" style="margin-top:8px">Ranked by wins over strong opponents, recent form, popularity and match quality. Idle and injured wrestlers slide. Arrows show the change since the last show.</div>';
   return modal('Rankings', body);
 }
 function modalRecords(m) {
@@ -5880,6 +6068,7 @@ function sanitizeGame(g) {
     if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520) };
     if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && MEDIA[a.k].long ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3) } : undefined; if (!w.away) delete w.away; }
     if (w.mediaWk != null) w.mediaWk = Math.floor(+w.mediaWk) || 0;
+    BR.clean(w);
   }
   g.mediaLog = (Array.isArray(g.mediaLog) ? g.mediaLog : []).filter(x => x && typeof x === 'object' && Object.hasOwn(MEDIA, x.k) && typeof x.wid === 'string').slice(0, 30)
     .map(x => ({ wk: Math.floor(+x.wk) || 0, wid: x.wid, k: x.k, ...(x.short ? { short: 1 } : {}), ...(x.long ? { long: 1, wks: clamp(Math.floor(+x.wks) || 1, 1, 20) } : {}), ...(x.back ? { back: 1 } : {}), ...(x.bad ? { bad: 1 } : {}), ...(x.d != null ? { d: clamp(+x.d || 0, -50, 50) } : {}) }));
