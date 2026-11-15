@@ -75,7 +75,7 @@ Every 4th week is a **big event** (configurable). Big events earn far more and p
 - **Winners and records:** pick the winner of any match or call it a draw, and pick who comes out on top in promos and angles with a target. Every wrestler has a W–L–D record, last-5 form, streaks, and career stats (matches, average and best rating, title wins, defenses, match of the night). Records feed the sim: streaks add crowd interest, snapping a 5+ streak is a big moment, losing runs hurt popularity, and contender rankings (Office → Titles) reward giving the #1 contender their shot. The roster can be sorted by wins, win % or streak.
 - **Contracts:** real-world lengths (3 months to 5 years, one show a week). Each wrestler prefers a length by career stage: stars want 3 years, solid hands 2, rising talent and veterans 1. Short deals cost more per week and long ones get a small discount. Talks open 12 weeks before a deal ends, and re-signing earlier takes 10%+ over their price. In the last 8 weeks rivals may court bigger names, which raises their price. When a deal ends they may work 4 weeks on a handshake, sign with the rival, or become a free agent. Also: a live "will they say yes" meter, releases with a buyout, and morale.
 - **Optional money and contracts:** both can be switched off on the "How do you want to run it?" step of the welcome sequence, or later in Menu → Settings. With money off there is no bank, payroll or profit to watch. With contracts off there are no salaries or expiring deals: signing is instant and wrestlers stay until you release them.
-- **Championships and the belt designer:** new companies get a Championships step after the roster (and the draft): name the titles, crown the first champions and design each belt. The designer has a live belt on top with tabs for the plate shape and engraving, metal and trim, strap colour and style, side plates and gems, the centre piece and the lettering, plus templates, Surprise me and Undo. A Rules tab sets the level (top, secondary, specialty), division, singles or tag, a defense deadline (an overdue belt loses prestige each week) and whether the belt changes hands on a DQ. Every title can be redesigned in Office → Titles.
+- **Championships and the belt designer:** new companies get a Championships step after the roster (and the draft): name the titles, crown the first champions and design each belt. The designer has a live belt on top with tabs for the plate shape and engraving, metal and trim, strap colour and style, side plates and gems, the centre piece and the lettering, plus templates, Surprise me and Undo. A Rules tab sets the card level (main event, upper card, mid card, low card; prestige starts in that level's band and then moves with how the title is booked), the brand (with a brand split on), division, singles or tag, a defense deadline (an overdue belt loses prestige each week) and whether the belt changes hands on a DQ. Every title can be redesigned in Office → Titles.
 - **Storylines:** two-sided feuds with heat that rises when both sides share a segment and cools when ignored, a running story log, optional title tie-in, story suggestions.
 - **Notes to keep up:** to-do list, free-form notebook, filterable news log, full show history with recaps, and a notes box on every wrestler and storyline.
 - **Saves:** auto-save after every action, 3 save slots, backup by file download or copy/paste text.
@@ -132,6 +132,7 @@ After each show the game looks for a moment worth a story and starts at most one
 
 ## Navigation (v1.5.1)
 
+- **Office → Brands** runs the brand split: each brand side by side with its champions and top stars, wrestlers who work both brands, a brand draft, which brand defends each title, and how each brand's show did for the one company bank.
 - **Office → Setup** holds the company setup: promotion and show names, other companies, shows and brands, big events and match types.
 - **Menu** holds only save slots and backup, Settings (game rules, sound and display), Help, and leaving or deleting the save.
 - Roster tools, Community and Rankings are on the Roster tab. History, awards and trophies are under Office → Titles.
@@ -187,6 +188,15 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 - **Turns during a match:** anyone in the match (or the run-in) can turn heel or face. Turning on a tag partner starts a Betrayal story. Turning again within 8 weeks is less believable.
 - **Managers:** set one from a wrestler's profile. Managers talk for weak speakers in promos and add a little at ringside. Managers aren't included in shared Community packs.
 - **Auto-fill** now mixes finishes: clean payoffs at big shows, dirtier finishes in hot weekly feuds, and heel champions sometimes keeping the belt by DQ.
+
+## Version 1.9: Brands tab, brand draft and card levels
+
+- **Office → Brands** (Office tabs are now a 3 × 3 grid; sw bookit-v80). Each brand shows its night, roster size, champions and top five stars.
+- **Brand draft:** brands take turns in snake order and you make every pick. Tag team partners go together, Undo takes back a pick, Auto-pick finishes it, and nothing changes until you press Finish. Champions take their titles to their new brand; shared titles stay shared. Quick auto-split is still there.
+- **Both brands:** any wrestler can work every weekly show (`w.both`). Their pay and merch are split between the shows, so nobody is paid twice. Set it in the Brands tab, the draft (🔀) or the wrestler's profile.
+- **Money stays company-wide:** one bank pays every brand. The Brands tab lists each brand's last result next to the bank balance.
+- **Card level** replaces a title's Level buttons and Prestige number: Main event, Upper card, Mid card or Low card. Prestige starts in that level's band, and changing the level later moves it into the new band. Older titles map Top → Main event, Secondary → Upper card, Specialty → Mid card (`t.cl` marks the new values).
+- **Brand on each title** in the title designer's Rules tab: a brand or Shared.
 
 ## Version 1.4: brands, several weekly shows and one shared calendar
 
