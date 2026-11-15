@@ -6540,19 +6540,45 @@ function applyPX() {
   const d = UI.modal?.draft; if (!PX || !d || PX.draft !== d) return;
   d.photo = PX.mode === 'pixel' ? pixelize(PX.src, PX, d.color) : PX.jpeg;
 }
+// the photo settings rows, shared by the builder (PX) and the mass photo import (m.batch.o)
+const PX_DEF = { mode: 'pixel', zoom: 1, detail: 48, colors: 10, bg: 'color' };
+const PX_ROWS = { mode: ['Photo style', [['pixel', '👾 Pixel character'], ['photo', '📷 Real photo']]], zoom: ['Framing', [[1, 'As taken'], [0.8, 'Closer'], [0.62, 'Head']]], detail: ['Detail', [[32, 'Classic'], [48, 'Fine']]], colors: ['Colors', [[6, '6'], [10, '10'], [16, '16']]], bg: ['Background', [['color', 'Their color'], ['keep', 'Keep photo']]] };
+function pxRow(S, act, f) { const [label, opts] = PX_ROWS[f]; return `<label class="f"><span>${label}</span><div class="seg-ctl">${opts.map(([v, t]) => `<button class="${String(S[f]) === String(v) ? 'on' : ''}" data-act="${act}" data-f="${f}" data-id="${v}">${t}</button>`).join('')}</div></label>`; }
+function pxSettings(S, act) { return S.mode !== 'pixel' ? '' : `${['zoom', 'detail', 'colors', 'bg'].map(f => pxRow(S, act, f)).join('')}${S.bg === 'color' ? '<div class="tiny muted" style="margin:-4px 0 6px">Plain backgrounds work best.</div>' : ''}`; }
+function pxSet(S, f, v) { S[f] = (f === 'detail' || f === 'colors' || f === 'zoom') ? +v : v; }
 function pxPanel(d) {
   if (!PX || PX.draft !== d) return '';
-  const row = (f, label, opts) => `<label class="f"><span>${label}</span><div class="seg-ctl">${opts.map(([v, t]) => `<button class="${String(PX[f]) === String(v) ? 'on' : ''}" data-act="bPx" data-f="${f}" data-id="${v}">${t}</button>`).join('')}</div></label>`;
   return `<div class="px-panel">
-    ${row('mode', 'Photo style', [['pixel', '👾 Pixel character'], ['photo', '📷 Real photo']])}
+    ${pxRow(PX, 'bPx', 'mode')}
     ${PX.mode === 'pixel' ? `
     <div class="px-prev"><img class="px" alt="Pixel preview" src="${esc(d.photo)}"><div class="tiny muted">Made on this device. Only the pixel version is saved, never your photo.</div></div>
-    ${row('zoom', 'Framing', [[1, 'As taken'], [0.8, 'Closer'], [0.62, 'Head']])}
-    ${row('detail', 'Detail', [[32, 'Classic'], [48, 'Fine']])}
-    ${row('colors', 'Colors', [[6, '6'], [10, '10'], [16, '16']])}
-    ${row('bg', 'Background', [['color', 'Their color'], ['keep', 'Keep photo']])}
-    ${PX.bg === 'color' ? '<div class="tiny muted" style="margin:-4px 0 6px">Plain backgrounds work best.</div>' : ''}` : ''}
+    ${pxSettings(PX, 'bPx')}` : ''}
   </div>`;
+}
+// a photo file as a square canvas (256) and a small JPEG (112), cropped a little high to keep the head in
+function photoSquares(f) {
+  return new Promise((ok, no) => {
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const sq = S => { const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+        const s = Math.min(img.width, img.height); x.drawImage(img, (img.width - s) / 2, (img.height - s) / 2 * 0.6, s, s, 0, 0, S, S); return c; };
+      URL.revokeObjectURL(url); ok({ src: sq(256), jpeg: sq(112).toDataURL('image/jpeg', 0.78) });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); no(new Error('unreadable')); };
+    img.src = url;
+  });
+}
+const batchPic = (b, w, sq) => b.o.mode === 'pixel' ? pixelize(sq.src, b.o, w.color) : sq.jpeg;
+// step 2 of the mass photo import: set the look on one photo, then it's used for all of them
+function photoBatch(m) {
+  const b = m.batch, it = b.items[b.i], n = b.items.length;
+  return `<div class="rt-found"><div class="sp"><b>${n} photo${n > 1 ? 's' : ''} matched</b><div class="tiny muted">${b.miss.length ? b.miss.length + ' not matched to a wrestler' : 'Every photo has a wrestler'}</div></div></div>
+    <p class="small muted">Pick the look on this one. The same settings are used for ${n > 1 ? `all ${n}` : 'it'}.</p>
+    <div class="px-panel">
+      ${pxRow(b.o, 'rtBx', 'mode')}
+      <div class="px-prev"><img class="${b.o.mode === 'pixel' ? 'px' : ''}" alt="Preview of ${esc(it.w.name)}" src="${esc(b.prev || '')}"><div class="sp" style="min-width:0"><b class="n-${it.w.align || 'face'}">${esc(it.w.name)}</b><div class="tiny muted">${b.o.mode === 'pixel' ? 'Made on this device. Only the pixel version is saved.' : 'A small copy of the photo is saved in this game.'}</div>${n > 1 ? `<div class="row" style="gap:6px;margin-top:6px"><button class="btn sm" data-act="rtBi" data-id="-1" aria-label="Previous photo">‹</button><span class="tiny muted">${b.i + 1} of ${n}</span><button class="btn sm" data-act="rtBi" data-id="1" aria-label="Next photo">›</button></div>` : ''}</div></div>
+      ${pxSettings(b.o, 'rtBx')}
+    </div>`;
 }
 
 // ---- the builder screen ----
@@ -6614,9 +6640,12 @@ const rtTop = () => { const mb = document.querySelector('.modal-bg:not(.picker-b
 function modalRoster(m) {
   const t = m.tab || 'import';
   let body = `<div class="seg-ctl" style="margin-bottom:12px"><button class="${t === 'import' ? 'on' : ''}" data-act="rtTab" data-id="import">Import</button><button class="${t === 'export' ? 'on' : ''}" data-act="rtTab" data-id="export">Export</button>${G ? `<button class="${t === 'photos' ? 'on' : ''}" data-act="rtTab" data-id="photos">Photos</button>` : ''}</div>`;
+  if (t === 'photos' && G && m.batch) {
+    return modal('Photos', body + photoBatch(m), `<button class="btn" data-act="rtBatchOff">Cancel</button><button class="btn pri" data-act="rtBatchGo">${m.batch.items.length > 1 ? `Apply to all ${m.batch.items.length}` : 'Add photo'}</button>`);
+  }
   if (t === 'photos' && G) {
     const n = G.wrestlers.filter(w => w.photoLocal).length, r = m.res;
-    body += `<p class="small muted" style="margin-top:0">Add photos for many wrestlers at once. Each one becomes a pixel character on this device.</p>
+    body += `<p class="small muted" style="margin-top:0">Add photos for many wrestlers at once. You pick the look on the first one, then it is used for all of them.</p>
       <div class="alert" style="margin-bottom:10px"><span class="ic">🔒</span><div class="small"><b>Private to you.</b> These photos stay in this save on this device. They are left out of share codes, Community and shared saves.</div></div>
       <p class="tiny muted">Name each file after the wrestler, like <b>Rex Calloway.jpg</b>. Only use photos you're allowed to use.</p>
       <button class="btn pri block" data-act="rtPhotos" ${m.busy ? 'disabled' : ''}>${m.busy ? 'Working… ' + esc(m.busy) : '📷 Choose photos'}</button>
@@ -7401,7 +7430,7 @@ function modalCView(m) {
 
 const CREATOR_ACTIONS = {
   rosterTools(tab) { openModal({ type: 'rtools', tab: tab || 'import', mode: G && signed().length ? 'sign' : 'replace' }); },
-  rtTab(t) { UI.modal.tab = t; UI.modal.res = null; render(); },
+  rtTab(t) { UI.modal.tab = t; UI.modal.res = null; UI.modal.batch = null; render(); },
   rtPhotos() {
     const m = UI.modal; if (!G || m.busy) return;
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
@@ -7410,23 +7439,45 @@ const CREATOR_ACTIONS = {
       const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
       const keys = []; for (const w of G.wrestlers) for (const k of [w.name, w.nick]) { const n = norm(k); if (n.length >= 3) keys.push([n, w]); }
       keys.sort((a, b) => b[0].length - a[0].length);
-      const res = { ok: [], miss: [] };
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i], base = f.name.replace(/\.[^.]+$/, ''), nb = norm(base);
+      const items = [], miss = [];
+      for (const f of files) {
+        const base = f.name.replace(/\.[^.]+$/, ''), nb = norm(base);
         const w = (keys.find(([k]) => k === nb) || keys.find(([k]) => nb.includes(k)))?.[1];
-        if (!w) { res.miss.push(base.slice(0, 40)); continue; }
-        m.busy = (i + 1) + ' of ' + files.length; if (UI.modal === m) render();
-        try {
-          const img = new Image(), url = URL.createObjectURL(f);
-          await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = url; });
-          const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
-          const sz = Math.min(img.width, img.height); x.drawImage(img, (img.width - sz) / 2, (img.height - sz) / 2 * 0.6, sz, sz, 0, 0, 256, 256); URL.revokeObjectURL(url);
-          w.photo = safePhoto(pixelize(c, { detail: 48, colors: 10, zoom: 1, bg: 'color' }, w.color)); w.photoLocal = true; delete w.photoGen; res.ok.push(w.name);
-        } catch (e) { res.miss.push(base.slice(0, 40)); }
+        if (w) items.push({ w, f }); else miss.push(base.slice(0, 40));
       }
-      m.busy = null; m.res = res; commit(res.ok.length ? `Added ${res.ok.length} private photo${res.ok.length > 1 ? 's' : ''}.` : 'No photos matched a wrestler.');
+      m.res = null;
+      if (!items.length) { m.res = { ok: [], miss }; return commit('No photos matched a wrestler.'); }
+      // open the editor on the first photo that loads; its settings go to all of them
+      m.batch = { items, miss, i: 0, o: { ...PX_DEF } };
+      for (let i = 0; i < items.length; i++) { if (await CREATOR_ACTIONS.rtBi(0, null, i)) return; }
+      m.batch = null; m.res = { ok: [], miss: miss.concat(items.map(x => x.f.name.replace(/\.[^.]+$/, '').slice(0, 40))) }; commit('Those photos could not be read.');
     };
     inp.click();
+  },
+  // show another photo from the batch as the example (or photo `at`)
+  async rtBi(d, el, at) {
+    const m = UI.modal, b = m?.batch; if (!b) return false;
+    const n = b.items.length, i = at != null ? at : (b.i + (+d || 0) + n) % n, it = b.items[i];
+    try { it.sq = it.sq || await photoSquares(it.f); } catch (e) { if (at == null) toast('That photo could not be read.'); return false; }
+    if (UI.modal !== m || m.batch !== b) return false;
+    b.i = i; try { b.prev = batchPic(b, it.w, it.sq); } catch (e) { b.o.mode = 'photo'; b.prev = it.sq.jpeg; toast('Could not make a pixel version. Using the photo.'); }
+    render(); return true;
+  },
+  rtBx(v, el) { const b = UI.modal.batch; pxSet(b.o, el.dataset.f, v); const it = b.items[b.i]; b.prev = batchPic(b, it.w, it.sq); render(); },
+  rtBatchOff() { UI.modal.batch = null; render(); },
+  async rtBatchGo() {
+    const m = UI.modal, b = m.batch; if (!b || m.busy) return;
+    m.batch = null; const res = { ok: [], miss: b.miss.slice() };
+    for (let i = 0; i < b.items.length; i++) {
+      const it = b.items[i];
+      m.busy = (i + 1) + ' of ' + b.items.length; if (UI.modal === m) render();
+      try {
+        const sq = it.sq || await photoSquares(it.f); it.sq = null;
+        const pic = safePhoto(batchPic(b, it.w, sq)); if (!pic) throw new Error('too big');
+        it.w.photo = pic; it.w.photoLocal = true; delete it.w.photoGen; res.ok.push(it.w.name);
+      } catch (e) { res.miss.push(it.f.name.replace(/\.[^.]+$/, '').slice(0, 40)); }
+    }
+    m.busy = null; m.res = res; commit(res.ok.length ? `Added ${res.ok.length} private photo${res.ok.length > 1 ? 's' : ''}.` : 'No photos were added.');
   },
   rtPlace(k) { let n = 0; for (const w of G.wrestlers) if (k === 'redo' ? w.photoGen : !w.photo) { w.photo = placeholderPic(w.id + ':' + Math.random(), w.color, w.division === "Women's"); w.photoGen = true; n++; } commit(n ? `${k === 'redo' ? 'Rerolled' : 'Added'} ${n} placeholder${n > 1 ? 's' : ''}.` : 'Everyone already has a picture.'); },
   rtPlaceOff() { for (const w of G.wrestlers) if (w.photoGen) { w.photo = ''; delete w.photoGen; } commit('Placeholders removed.'); },
@@ -7459,14 +7510,14 @@ const CREATOR_ACTIONS = {
     const d = UI.modal.draft;
     pickPhoto((url, src) => {
       if (UI.modal?.draft !== d) return;
-      PX = { draft: d, src, jpeg: url, mode: 'pixel', zoom: 1, detail: 48, colors: 10, bg: 'color' }; delete d.photoLocal; delete d.photoGen;
+      PX = { draft: d, src, jpeg: url, ...PX_DEF }; delete d.photoLocal; delete d.photoGen;
       try { applyPX(); } catch (e) { PX.mode = 'photo'; d.photo = url; toast('Could not make a pixel version. Kept the photo.'); }
       render();
     });
   },
   bPhotoDel() { UI.modal.draft.photo = ''; delete UI.modal.draft.photoLocal; delete UI.modal.draft.photoGen; PX = null; render(); },
   bPlace() { const d = UI.modal.draft; d.photo = placeholderPic((d.id || d.name || 'x') + ':' + Math.random(), d.color, d.division === "Women's"); d.photoGen = true; delete d.photoLocal; PX = null; render(); },
-  bPx(v, el) { const f = el.dataset.f; PX[f] = (f === 'detail' || f === 'colors' || f === 'zoom') ? +v : v; applyPX(); render(); },
+  bPx(v, el) { pxSet(PX, el.dataset.f, v); applyPX(); render(); },
   bColor(c) { UI.modal.draft.color = c; if (PX?.bg === 'color') applyPX(); render(); },
   bSet(v, el) { UI.modal.draft[el.dataset.f] = v; render(); },
   symPick(id) { if (!id) { UI.modal.draft.sym = ''; return render(); } const b = BELTS.find(x => x[0] === id); if (!b) return; if (bookerLvl() < b[2]) return toast(`${b[1]} unlocks at booker level ${b[2]}.`); UI.modal.draft.sym = id; render(); },
