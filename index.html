@@ -197,6 +197,10 @@ html.scroll-lock, html.scroll-lock body { overflow: hidden; overscroll-behavior:
 .pick .ck { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; font-size: 14px; flex: none; }
 .pick.sel .ck { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .pick.dis { opacity: .5; }
+.lib-pick { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; flex: none; }
+.lib-pick .ck { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; font-size: 14px; flex: none; }
+.lib-pick.on .ck { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.lib-row:has(.lib-pick.on) { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .toast { animation: up .2s; position: fixed; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; z-index: 50; max-width: calc(100% - 32px); box-shadow: 0 6px 24px rgba(0,0,0,.3); }
 .empty { text-align: center; color: var(--dim); padding: 22px 10px; font-size: 14px; }
 .big-ev { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--card)), var(--card)); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
@@ -821,6 +825,8 @@ body { --ic: var(--gold); }
 .hs-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .hs-opt { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: inherit; cursor: pointer; font: inherit; }
 .hs-opt b { font-size: 15px; }
+.hs-lib { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; text-align: left; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: inherit; cursor: pointer; font: inherit; }
+.hs-lib .hs-ic { font-size: 22px; }
 .hs-ic { color: var(--accent-t); font-size: 20px; }
 
 /* ----- community accounts ----- */
@@ -4510,6 +4516,7 @@ function viewStart() {
     <button class="hs-opt" data-act="wzStart"><span class="hs-ic">🏟️</span><b>New company</b><span class="tiny muted">Name it, draft a roster, crown champions.</span></button>
     <button class="hs-opt" data-act="import"><span class="hs-ic">⬆</span><b>Restore a backup</b><span class="tiny muted">Load a save file or a pasted save.</span></button>
   </div>
+  <button class="hs-lib" data-act="${lib().length ? 'library' : 'community'}"><span class="hs-ic">📚</span><span class="sp"><b>Wrestler library${lib().length ? ` · ${lib().length}` : ''}</b><span class="tiny muted" style="display:block">Grab wrestlers from Community and keep them for any save, now or later.</span></span><span class="muted">›</span></button>
   <div style="text-align:center;margin:18px 0 8px"><button class="link" data-act="help">How to play</button> · <button class="link" data-act="support">❤️ Support the game</button><br><button class="link tiny" data-act="privacy">Privacy &amp; terms</button> · <button class="link tiny" data-act="feedback">Send feedback</button></div>
   </div>`;
 }
@@ -4726,7 +4733,7 @@ function viewRoster() {
     <select data-in="rosterSort" style="width:auto" aria-label="Sort roster by">${[['pop', 'Popularity'], ['ring', 'In-ring'], ['mic', 'Mic'], ['morale', 'Morale (low first)'], ['fatigue', 'Fatigue'], ...(CON() ? [['contract', 'Contract (ending first)']] : []), ['wins', 'Wins'], ['winpct', 'Win %'], ['streak', 'Win streak'], ['name', 'Name']].map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
   ${filt}
   <div class="small muted" style="margin-bottom:8px">${list.length} of ${signed().length} signed${CON() && MON() ? ` · payroll ${money(sum(signed().map(w => w.contract.salary)))}/wk` : ''}</div>
-  <div class="list">${list.map(w => wItem(w)).join('') || (signed().length ? '<div class="empty">Nobody matches.</div>' : '<div class="empty">Your roster is empty. Build, import or grab one from Community.</div>')}</div>`;
+  <div class="list">${list.map(w => wItem(w)).join('') || (signed().length ? '<div class="empty">Nobody matches.</div>' : `<div class="empty">Your roster is empty. Build, import or grab one from Community.${lib().length ? `<br><button class="btn" style="margin-top:8px" data-act="library">📚 Add from my library (${lib().length})</button>` : ''}</div>`)}</div>`;
 }
 
 // ---------- stories ----------
@@ -4967,8 +4974,9 @@ function renderModal() {
       const i = COMM.items.find(x => x.author + '|' + x.id === m.key), slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) })).filter(x => x.info);
       return modal('Start a company first', `<p style="margin-top:0">Wrestlers from Community join a company you run. Start one, or open a save you already have, and <b>${esc(i?.title || 'this creation')}</b> will be ready to add.</p>
         <p class="small muted">You'll pick how they join: signed to your roster, as free agents, or as a rival promotion.</p>
+        <p class="small muted">Not ready yet? Tap <b>📚 Library</b> to keep them on this device and add them to any save later.</p>
         ${slots.length ? `<div class="sec">Your saves</div><div class="list">${slots.map(x => `<button class="item" data-act="needLoad" data-id="${x.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${x.n}</div><div class="main"><div class="t">${esc(x.info.name)}</div><div class="d">Week ${x.info.week}</div></div><span class="muted">›</span></button>`).join('')}</div>` : ''}`,
-        `<button class="btn" data-act="cOpen" data-id="${esc(m.key)}">Back</button><button class="btn pri" data-act="needNew">🏟️ New company</button>`);
+        `<button class="btn" data-act="cOpen" data-id="${esc(m.key)}">Back</button>${i ? libBtn(m.key) : ''}<button class="btn pri" data-act="needNew">🏟️ New company</button>`);
     }
     case 'editProfile': return modalEditProfile(m);
     case 'rankings': return modalRankings(m);
@@ -6650,6 +6658,7 @@ Rex Calloway, face, Showman, 80, 74, 88, 90</pre>
       <p class="tiny muted">Only a name is needed. Missing ratings are filled in.</p>
       <textarea id="rtIn" placeholder="Paste here" style="min-height:130px;font-size:13px">${esc(m.text || '')}</textarea>
       ${m.error ? `<div class="alert bad" style="margin-top:10px"><span class="ic">⚠️</span><div class="small">${esc(m.error)}</div></div>` : ''}`;
+    if (G && lib().length) body += `<button class="btn block" style="margin-top:10px" data-act="library">📚 Add from my library (${lib().length})</button>`;
     return modal('Roster tools', body, `<button class="btn" data-act="rtFile">📄 Open a file</button><button class="btn pri" data-act="rtParse">Next</button>`);
   }
   return modal('Roster tools', body);
@@ -7185,12 +7194,77 @@ async function commMe(patch) {
   try { await cdb.doc('creations/' + COMM.me).set(body); } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'Your space is full. Remove an old upload first.' : e?.code === 'permission-denied' ? 'You can browse, but the owner has not given you access to post.' : 'Could not save that. Try again.'); }
 }
 function markUsed(key) { if (!COMM.me || myList('used').includes(key) || COMM.canWrite === false) return; commMe({ used: [key, ...myList('used')].slice(0, 300) }); }
+// ---- wrestler library: Community wrestlers kept on this device, ready to add to any save ----
+const LIB_KEY = 'bookit.library', LIB_MAX = 300, LIB_SRC = /^[A-Za-z0-9_-]{1,64}\|[A-Za-z0-9_-]{1,64}\|\d{1,3}$/;
+let LIB = null;
+function lib() {
+  if (LIB) return LIB;
+  let x = null; try { x = JSON.parse(ls.get(LIB_KEY) || '[]'); } catch (e) {}
+  const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+  LIB = (Array.isArray(x) ? x : []).slice(0, LIB_MAX).map(e => { const w = e && cleanW(e.w); return w ? { id: /^[A-Za-z0-9_-]{1,40}$/.test(e.id) ? e.id : uid(), w, from: str(e.from, 60), by: AUTHOR_ID.test(e.by || '') ? e.by : '', byName: str(e.byName, 40), src: LIB_SRC.test(e.src || '') ? e.src : '', at: +e.at || 0 } : null; }).filter(Boolean);
+  return LIB;
+}
+const libSave = () => ls.set(LIB_KEY, JSON.stringify(LIB));
+const libNorm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const libFind = (src, w) => lib().find(e => (src && e.src === src) || (libNorm(e.w.name) === libNorm(w.name) && e.by === (src || '').split('|')[0]));
+const inLib = key => { const { i, base, n } = cItem(key); if (!i) return false; const ws = packWs(i); return n != null ? !!ws[n] && !!libFind(base + '|' + n, ws[n]) : ws.length > 0 && ws.every((w, k) => libFind(base + '|' + k, w)); };
+const inSave = w => !!G && G.wrestlers.some(x => libNorm(x.name) === libNorm(w.name));
+// adds one wrestler (key ends in |n) or everyone in a creation; newer copies replace older ones
+function libAdd(key) {
+  const { i, base, n } = cItem(key); if (!i) return { err: 'This creation was removed.' };
+  const ws = packWs(i), picks = n != null ? (ws[n] ? [[ws[n], n]] : []) : ws.map((w, k) => [w, k]);
+  if (!picks.length) return { err: 'This creation is empty.' };
+  const before = LIB.slice(); let added = 0, updated = 0;
+  for (const [w, k] of picks) {
+    const src = base + '|' + k, old = libFind(src, w), e = { id: old?.id || uid(), w: { ...w }, from: i.title, by: i.author, byName: authorName(i.author).slice(0, 40), src, at: Date.now() };
+    if (old) { LIB[LIB.indexOf(old)] = e; updated++; } else { LIB.unshift(e); added++; }
+  }
+  if (LIB.length > LIB_MAX) { LIB = before; return { err: `Your library holds ${LIB_MAX} wrestlers. Remove some first.` }; }
+  if (!libSave()) { LIB = before; return { err: 'Your device is out of space for the library. Remove some wrestlers first.' }; }
+  if (added) markUsed(base);
+  return { added, updated };
+}
+const libBtn = (key, label) => inLib(key) ? `<button class="btn" data-act="library" aria-label="In your library. Open your library">✓ In library</button>` : `<button class="btn" data-act="libAdd" data-id="${esc(key)}">📚 ${label || 'Library'}</button>`;
+function libTab(m) {
+  const all = lib(), q = (m.lq || '').toLowerCase(), sel = new Set(m.sel || []);
+  const list = all.filter(e => !q || (e.w.name + ' ' + (e.w.nick || '') + ' ' + e.from + ' ' + e.byName).toLowerCase().includes(q));
+  let h = `<p class="small muted" style="margin-top:0">Wrestlers you keep here stay on this device and work in <b>every save</b>. Add them to the company you're running now, or to a new one later. Keep up to ${LIB_MAX}.</p>`;
+  if (!all.length) return h + '<div class="empty"><p><b>Your library is empty.</b></p><p class="small">Open any wrestler or roster in Browse and tap <b>📚 Library</b>. You don\'t need a save to do it.</p><button class="btn" data-act="cTab" data-id="browse">Browse Community</button></div>';
+  if (all.length > 8) h += `<input type="search" data-in="libQ" aria-label="Search your library" value="${esc(m.lq || '')}" placeholder="Search your library" style="margin-bottom:8px">`;
+  h += `<div class="row small" style="margin-bottom:6px"><span class="sp muted">${all.length} wrestler${all.length > 1 ? 's' : ''}${G ? ` · ${sel.size} picked` : ''}</span>${G ? `<button class="link" data-act="libAll">${list.length && list.every(e => sel.has(e.id)) ? 'Clear' : 'Pick all' + (q ? ' shown' : '')}</button>` : ''}</div>`;
+  h += `<div class="list">${list.map(e => { const w = e.w, on = sel.has(e.id), here = inSave(w), info = `<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}${here ? ' <span class="tag">In this save</span>' : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))}</div><div class="d">From ${esc(e.from || 'Community')}${e.byName ? ' · by ' + esc(e.byName) : ''}</div></div>`;
+    return `<div class="item lib-row">${G ? `<button class="lib-pick ${on ? 'on' : ''}" data-act="libPick" data-id="${e.id}" aria-pressed="${on}" aria-label="Pick ${esc(w.name)}"><span class="ck">${on ? '✓' : ''}</span>${av(w)}</button>` : av(w)}${info}<button class="btn sm" data-act="libDel" data-id="${e.id}" aria-label="Remove ${esc(w.name)} from your library">✕</button></div>`; }).join('') || '<div class="empty">Nobody matches.</div>'}</div>`;
+  return h;
+}
+function libFoot(m) {
+  if (!lib().length) return '';
+  if (!G) return '<button class="btn pri" data-act="needNew">🏟️ Start a company to use them</button>';
+  const n = (m.sel || []).filter(id => LIB.some(e => e.id === id)).length;
+  return `<button class="btn pri" data-act="libUse" ${n ? '' : 'disabled'}>${n ? `⬇ Add ${n} to ${esc(G.promo.name)}` : 'Pick wrestlers to add'}</button>`;
+}
+const LIB_ACTIONS = {
+  libAdd(key) {
+    const r = libAdd(key); if (r.err) return toast(r.err);
+    toast(r.added ? `📚 ${r.added === 1 ? 'Saved' : r.added + ' saved'} to your library. Add them to any save from Community → Library.` : 'Already in your library. Updated to the latest version.');
+    render();
+  },
+  libDel(id) { const e = lib().find(x => x.id === id); if (!e) return; LIB = LIB.filter(x => x !== e); libSave(); if (UI.modal?.sel) UI.modal.sel = UI.modal.sel.filter(x => x !== id); toast(`${e.w.name} removed from your library.`); render(); },
+  libPick(id) { const m = UI.modal, s = new Set(m.sel || []); s.has(id) ? s.delete(id) : s.add(id); m.sel = [...s]; render(); },
+  libAll() { const m = UI.modal, q = (m.lq || '').toLowerCase(), ids = lib().filter(e => !q || (e.w.name + ' ' + (e.w.nick || '') + ' ' + e.from + ' ' + e.byName).toLowerCase().includes(q)).map(e => e.id), s = new Set(m.sel || []); if (ids.every(id => s.has(id))) ids.forEach(id => s.delete(id)); else ids.forEach(id => s.add(id)); m.sel = [...s]; render(); },
+  libUse() {
+    if (!G) return; const ids = new Set(UI.modal?.sel || []), ws = lib().filter(e => ids.has(e.id)).map(e => ({ ...e.w }));
+    if (!ws.length) return toast('Pick some wrestlers first.');
+    UI.modal = { type: 'rtools', tab: 'import', parsed: { kind: ws.length === 1 ? 'wrestler' : 'roster', title: 'From your library', promo: '', wrestlers: ws, titles: null }, mode: signed().length ? 'sign' : 'replace', text: '', fromLib: true }; render();
+  },
+  library() { openModal({ type: 'community', tab: 'lib' }); },
+};
 function modalCommunity(m) {
   commInit();
   const t = m.tab || 'browse';
   const st = COMM.status;
   const nIn = COMM.owner ? new Set(COMM.reports.map(r => r.t)).size + COMM.feedback.length : 0; // counts only cleaned entries
-  const tabs = `<div class="seg-ctl" style="margin-bottom:12px">${[['browse', 'Browse'], ['share', 'Share'], ['mine', 'My profile']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="cTab" data-id="${k}">${l}</button>`).join('')}${COMM.owner ? `<button data-act="inbox">Inbox${nIn ? ` <span class="cnt">${nIn}</span>` : ''}</button>` : ''}</div>`;
+  const tabs = `<div class="seg-ctl" style="margin-bottom:12px">${[['browse', 'Browse'], ['lib', 'Library'], ['share', 'Share'], ['mine', 'Profile']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="cTab" data-id="${k}">${l}</button>`).join('')}${COMM.owner ? `<button data-act="inbox">Inbox${nIn ? ` <span class="cnt">${nIn}</span>` : ''}</button>` : ''}</div>`;
+  if (t === 'lib') return modal('Community', (st === 'off' ? '' : tabs) + libTab(m), libFoot(m)); // the library lives on this device, so it opens even offline
   if (st === 'off') return modal('Community', `<div class="empty" style="text-align:left"><p><b>Community isn't in this version of the game.</b></p><p>You can still swap rosters with friends using share codes in <b>Roster tools</b>.</p></div><button class="btn block" data-act="rosterTools">Open roster tools</button>`);
   if (st === 'idle' || st === 'loading') return modal('Community', tabs + '<div class="empty">Loading community creations…</div>');
   if (st === 'error') return modal('Community', tabs + `<div class="empty">The community board can't be reached right now (${esc(COMM.err)}). Share codes in Roster tools still work.</div>`);
@@ -7390,13 +7464,14 @@ function modalCView(m) {
     const body = `${cvHead(i, base, 'Wrestler')}
       <div class="list"><div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.align === 'heel' ? 'Heel' : w.align ? 'Face' : '', w.division, w.style].filter(Boolean).join(' · '))}</div><div class="d">${esc(['pop', 'ring', 'mic', 'cha', 'stam'].filter(k => w[k] != null).map(k => ({ pop: 'Pop', ring: 'Ring', mic: 'Mic', cha: 'Charisma', stam: 'Stamina' })[k] + ' ' + w[k]).join(' · '))}</div>${w.finisher ? `<div class="d">Finisher: ${esc(w.finisher)}</div>` : ''}</div></div></div>
       <button class="btn block" style="margin-top:10px" data-act="cOpen" data-id="${esc(base)}">From the roster “${esc(i.title)}” · see all ${packWs(i).length}</button>`;
-    return modal(esc(w.name), body, `${COMM.me && i.author !== COMM.me && i.author !== 'featured' ? `<button class="btn" data-act="cReport" data-id="${esc(base)}" aria-label="Report this">🚩</button>` : ''}<button class="btn pri" data-act="cGet" data-id="${esc(m.key)}">${G ? '⬇ Add to my game' : '🏟️ Start a company to add this'}</button>`);
+    return modal(esc(w.name), body, `${COMM.me && i.author !== COMM.me && i.author !== 'featured' ? `<button class="btn" data-act="cReport" data-id="${esc(base)}" aria-label="Report this">🚩</button>` : ''}${libBtn(m.key)}<button class="btn pri" data-act="cGet" data-id="${esc(m.key)}">${G ? '⬇ Add to my game' : '🏟️ Start a company'}</button>`);
   }
   const body = `${cvHead(i, m.key, kindLbl({ ...i, count: p.wrestlers.length }))}
     ${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
     ${p.titles?.length ? `<div class="tiny muted" style="margin-bottom:6px">Includes ${p.titles.length} championships: ${p.titles.map(t => esc(t.short)).join(', ')}</div>` : ''}
-    <div class="list">${p.wrestlers.map(w => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : '', w.ring != null ? 'Ring ' + w.ring : '', w.finisher ? 'Finisher: ' + w.finisher : ''].filter(Boolean).join(' · '))}</div></div></div>`).join('')}</div>`;
-  return modal(esc(i.title), body, `${COMM.owner && i.author !== COMM.me ? '<button class="btn bad" data-act="cDel" data-id="' + esc(m.key) + '">Remove</button>' : ''}${COMM.me && i.author !== COMM.me && i.author !== 'featured' ? `<button class="btn" data-act="cReport" data-id="${esc(m.key)}" aria-label="Report this">🚩</button>` : ''}<button class="btn pri" data-act="cGet" data-id="${esc(m.key)}">${G ? '⬇ Add to my game' : '🏟️ Start a company to add this'}</button>`);
+    ${p.wrestlers.length > 1 ? `<div class="alert" style="margin-bottom:8px"><span class="ic">📚</span><div class="small sp">Keep any of them in your library to use in every save, no save needed.</div></div>` : ''}
+    <div class="list">${p.wrestlers.map((w, k) => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : '', w.ring != null ? 'Ring ' + w.ring : '', w.finisher ? 'Finisher: ' + w.finisher : ''].filter(Boolean).join(' · '))}</div></div>${p.wrestlers.length > 1 ? (inLib(m.key + '|' + k) ? `<span class="tag" aria-label="In your library">✓ 📚</span>` : `<button class="btn sm" data-act="libAdd" data-id="${esc(m.key + '|' + k)}" aria-label="Save ${esc(w.name)} to your library">📚 +</button>`) : ''}</div>`).join('')}</div>`;
+  return modal(esc(i.title), body, `${COMM.owner && i.author !== COMM.me ? '<button class="btn bad" data-act="cDel" data-id="' + esc(m.key) + '">Remove</button>' : ''}${COMM.me && i.author !== COMM.me && i.author !== 'featured' ? `<button class="btn" data-act="cReport" data-id="${esc(m.key)}" aria-label="Report this">🚩</button>` : ''}${libBtn(m.key, p.wrestlers.length > 1 ? 'Save all ' + p.wrestlers.length : 'Library')}<button class="btn pri" data-act="cGet" data-id="${esc(m.key)}">${G ? '⬇ Add to my game' : '🏟️ Start a company'}</button>`);
 }
 
 const CREATOR_ACTIONS = {
@@ -7432,7 +7507,7 @@ const CREATOR_ACTIONS = {
   rtPlaceOff() { for (const w of G.wrestlers) if (w.photoGen) { w.photo = ''; delete w.photoGen; } commit('Placeholders removed.'); },
   rtPhotosOff() { confirmBox('Remove private photos?', 'Wrestlers with a private photo go back to their initials. Other photos stay.', 'Remove', () => { for (const w of G.wrestlers) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; } UI.modal = { type: 'rtools', tab: 'photos' }; commit('Removed.'); }, true); },
   rtParse() { const m = UI.modal; m.text = document.getElementById('rtIn').value; const r = parseImport(m.text); m.parsed = r.pack || null; m.error = r.error || ''; render(); rtTop(); },
-  rtBack() { const m = UI.modal; m.parsed = null; m.error = ''; render(); rtTop(); },
+  rtBack() { const m = UI.modal; if (m.fromLib) return A.library(); m.parsed = null; m.error = ''; render(); rtTop(); },
   rtFile() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,.txt,.csv,.tsv,application/json,text/*'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; if (f.size > MAX_FILE) return toast('That file is too big to import.'); f.text().then(t => { UI.modal.text = t; const r = parseImport(t); UI.modal.parsed = r.pack || null; UI.modal.error = r.error || ''; render(); rtTop(); }); }; inp.click(); },
   rtMode(k) { UI.modal.mode = k; render(); },
   rtImport() {
@@ -7659,6 +7734,7 @@ const CREATOR_ACTIONS = {
 };
 
 Object.assign(A, CREATOR_ACTIONS);
+Object.assign(A, LIB_ACTIONS);
 
 // ---------- wrestler personalities (optional: G.settings.persona) ----------
 // Each wrestler gets a personality, a trust level in you (0-100) and a short memory of how you treated them.
@@ -8752,7 +8828,7 @@ function viewWizard() {
   if (z.step === 'roster') {
     return `<div class="app wz">${wizSteps('roster')}
       <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">Where does your talent come from?</h2>
-      <div class="list">${[['draft', '🎯 Hold a roster draft', `Draft ${draftRounds()} wrestlers from a talent pool, taking turns with two rival promotions. Recommended.`], ['import', '📦 Build or import my own', 'Start empty. Build, import or grab a roster from Community.'], ['starter', '⚡ Use the starter roster', 'Skip the draft. 24 wrestlers, champions and stories ready.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>
+      <div class="list">${[['draft', '🎯 Hold a roster draft', `Draft ${draftRounds()} wrestlers from a talent pool, taking turns with two rival promotions. Recommended.`], ['import', '📦 Build or import my own', `Start empty. Build, import or grab a roster from Community${lib().length ? `, or add the ${lib().length} wrestler${lib().length > 1 ? 's' : ''} in your library` : ''}.`], ['starter', '⚡ Use the starter roster', 'Skip the draft. 24 wrestlers, champions and stories ready.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button>${z.source === 'draft' ? '<button class="btn pri" data-act="wzDraft">Go to the draft</button>' : '<button class="btn pri" data-act="wzGo" data-id="titles">Next</button>'}</div></div>`;
   }
   if (z.step === 'draft') {
@@ -8953,6 +9029,7 @@ document.addEventListener('input', e => {
     else if (k === 'faQ') { UI.faQ = v; debRender(el, e); }
     else if (k === 'pickQ') { UI.picker.q = v; debRender(el, e); }
     else if (k === 'cQ') { UI.modal.q = v; debRender(el, e); }
+    else if (k === 'libQ') { UI.modal.lq = v; debRender(el, e); }
     else if (k === 'rrQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'mediaQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'cTitle') UI.modal.title = v;
@@ -9212,6 +9289,7 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9';
 const WHATS_NEW = [
+  ['📚 Wrestler library', 'Keep Community wrestlers in your own library, no save needed. Tap 📚 on any wrestler or roster in Community, then add them to any save, now or later, from Community → Library or Roster tools.'],
   ['🏆 Design your championships', 'New companies get a Championships step: name your titles, crown champions and design every belt. The belt designer lets you pick the plate shape, metal and trim, strap colour and style, side plates, gems, the centre piece, engraving and lettering, or start from a template. Each title also has a level, a division and rules, like a defense deadline or the belt changing hands on a DQ. Edit any title in Office → Titles.'],
   ['🌍 A living world', 'Rival companies book their own shows, sign free agents, grow, shrink and can close, and new ones open. Edit any of them in Office → Rivals, build a whole world with Sandbox, and share worlds in Community.'],
   ['📈 Smarter ratings and rankings', 'Matches rate on more than raw stats, rankings follow wins and form, and Auto-fill builds better cards.'],
