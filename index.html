@@ -675,6 +675,12 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .lv-face { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; max-width: 84px; text-align: center; }
 .lv-face .av { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
 .lv-faces > .vs { color: #ffb547; font-family: var(--f-display); font-size: 22px; }
+.lv-faces.sm { gap: 8px; margin: 8px 0 4px; }
+.lv-faces.sm .lv-side { gap: 4px; }
+.lv-faces.sm .lv-face { font-size: 11px; max-width: 60px; }
+.lv-faces.sm .lv-face span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px; }
+.lv-faces.sm .lv-face .av { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+.lv-faces.sm > .vs { font-size: 16px; }
 .lv-o { margin-top: 6px; }
 .lv-txt { font-size: 14px; color: rgba(255,255,255,.85); margin-bottom: 4px; }
 .lv-st { font-size: 20px; color: #ffcf5a; animation: starPop .5s cubic-bezier(.2,1.8,.4,1) both; animation-delay: var(--d); }
@@ -3734,7 +3740,7 @@ function liveScreen(m) {
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
     <div class="lv-seg ${main ? 'main' : ''}" style="--d:${t0(d0)}" data-lv="${i}">
       <div class="lv-k">${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${segTitle(r.seg)}</div>
-      ${main ? lvFaces(r.seg) : ''}<div class="lv-w">${segWho(r.seg)}</div>
+      ${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -3765,13 +3771,27 @@ function liveScreen(m) {
     <div class="lv-body">${segs}${fin}</div></div>`;
 }
 const t0 = x => Math.round(x * 100) / 100 + 's';
-// the main event shows the wrestlers' photos when they have them (photos never leave this device)
-function lvFaces(seg) {
+// every match and angle shows the wrestlers' photos when they have them (photos never leave this device);
+// the main event gets the big ones. Each photo is turned into a short blob link once and reused, so a long
+// card with the same stars in several segments doesn't copy the image into the page again and again.
+const PHOTO_URLS = new Map();
+function photoURL(ph) {
+  let u = PHOTO_URLS.get(ph); if (u) return u;
+  try {
+    const i = ph.indexOf(','), bin = atob(ph.slice(i + 1)), b = new Uint8Array(bin.length);
+    for (let k = 0; k < bin.length; k++) b[k] = bin.charCodeAt(k);
+    u = URL.createObjectURL(new Blob([b], { type: ph.slice(5, ph.indexOf(';')) }));
+  } catch (e) { return ph; }
+  if (PHOTO_URLS.size > 400) { for (const v of PHOTO_URLS.values()) URL.revokeObjectURL(v); PHOTO_URLS.clear(); }
+  PHOTO_URLS.set(ph, u); return u;
+}
+function lvFaces(seg, main) {
   const sides = (seg.kind === 'match' ? seg.sides : [seg.who || [], seg.target || []]).map(sd => (sd || []).map(W).filter(Boolean)).filter(sd => sd.length);
   if (!sides.flat().some(w => safePhoto(w.photo))) return '';
-  const face = w => `<div class="lv-face">${av(w, 72)}<span>${esc(shortOf(w.id))}</span></div>`;
-  if (sides.length > 4) return `<div class="lv-faces">${sides.flat().filter(w => safePhoto(w.photo)).slice(0, 6).map(face).join('')}</div>`;
-  return `<div class="lv-faces">${sides.map(sd => `<div class="lv-side">${sd.slice(0, 4).map(face).join('')}</div>`).join('<span class="vs">VS</span>')}</div>`;
+  const sz = main ? 72 : 52, face = w => `<div class="lv-face">${av(w, sz, true)}<span>${esc(shortOf(w.id))}</span></div>`;
+  const cls = `lv-faces${main ? '' : ' sm'}`;
+  if (sides.length > 4) return `<div class="${cls}">${sides.flat().filter(w => safePhoto(w.photo)).slice(0, main ? 6 : 8).map(face).join('')}</div>`;
+  return `<div class="${cls}">${sides.map(sd => `<div class="lv-side">${sd.slice(0, 4).map(face).join('')}</div>`).join('<span class="vs">VS</span>')}</div>`;
 }
 function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
@@ -4355,12 +4375,12 @@ function ding() {
   document.body.appendChild(el); setTimeout(() => el.remove(), 1400);
 }
 
-function av(w, size) {
+function av(w, size, lazy) {
   const s = size || 38;
   const ph = safePhoto(w.photo);
   const ac = w.align === 'face' || w.align === 'heel' ? ' av-' + w.align : '';
   // PNG photos are pixel art (real photos are saved as JPEG), so keep their pixels crisp
-  if (ph) return `<img class="av${ac}${ph.startsWith('data:image/png') ? ' px' : ''}" alt="" src="${esc(ph)}" style="width:${s}px;height:${s}px;object-fit:cover">`;
+  if (ph) return `<img class="av${ac}${ph.startsWith('data:image/png') ? ' px' : ''}" alt="" src="${esc(lazy ? photoURL(ph) : ph)}"${lazy ? ' loading="lazy" decoding="async"' : ''} style="width:${s}px;height:${s}px;object-fit:cover">`;
   return `<div class="av${ac}" style="width:${s}px;height:${s}px;font-size:${Math.round(s * .37)}px;background:${safeColor(w.color) || `hsl(${hue(w.name || '?')} 45% 32%)`}${safeColor(w.color) ? ';color:' + inkOn(safeColor(w.color)) : ''}">${esc(initials(w.name || '?'))}</div>`;
 }
 function wTags(w) {
