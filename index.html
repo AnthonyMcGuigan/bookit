@@ -172,6 +172,13 @@ label.f > span { display: block; font-size: 12px; font-weight: 700; color: var(-
 .seg-ctl button { flex: 1; border: 0; background: none; border-radius: 9px; padding: 8px 6px; font-size: 13px; font-weight: 650; color: var(--dim); min-height: 36px; white-space: nowrap; }
 .seg-ctl button.on { background: var(--card2); color: var(--ink); box-shadow: 0 1px 0 var(--line); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mo-rows { padding: 4px 12px; margin-bottom: 12px; }
+.mo-row { gap: 10px; padding: 6px 0; }
+.mo-row + .mo-row { border-top: 1px solid var(--line); }
+.mo-row input { margin: 0; flex: 1; min-width: 0; }
+.mo-l { width: 52px; flex: none; }
+.mo-l b { font-family: var(--f-cond); text-transform: uppercase; letter-spacing: .06em; }
+.mo-l b.on { color: var(--accent-t); }
 .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 6px 5px 10px; font-size: 13.5px; font-weight: 600; }
 .chip button { border: 0; background: var(--line); width: 22px; height: 22px; border-radius: 50%; font-size: 12px; line-height: 1; display: grid; place-items: center; }
 .chip.add { padding: 6px 12px; color: var(--accent-t); border-style: dashed; background: none; }
@@ -1137,6 +1144,7 @@ function migrate(g) {
   // keep older saves working as features get added
   g.todos ||= []; g.notebook ??= ''; g.future ||= {}; g.card ||= []; g.news ||= []; g.history ||= []; g.settings ||= {};
   g.settings.injuries ??= true; g.settings.finances ??= true; g.settings.contracts ??= true; g.settings.organic ??= true; g.settings.bigEvery = [3, 4, 5, 6, 8].includes(+g.settings.bigEvery) ? +g.settings.bigEvery : 4;
+  g.settings.bigMode = g.settings.bigMode === 'month' ? 'month' : 'weeks'; g.bigMonths = cleanMonths(g.bigMonths);
   // an empty list is allowed: a company whose booker named no big events gets plain numbered ones
   if (!Array.isArray(g.bigEvents)) g.bigEvents = BIG_EVENTS.slice();
   g.customMatch = fixCustomMatch(g.customMatch); if (!Array.isArray(g.ppvSig)) g.ppvSig = [];
@@ -1273,10 +1281,14 @@ const signed = () => G.wrestlers.filter(w => w.contract);
 const MON = () => !!G?.settings?.finances, CON = () => G?.settings?.contracts !== false;
 const freeAgents = () => G.wrestlers.filter(w => !w.contract && !w.retired);
 const ppvList = v => String(v || '').split('\n').map(x => x.trim().replace(/[<>`"]/g, '').slice(0, 40)).filter(Boolean).slice(0, 24);
-const bigWk = wk => wk % G.settings.bigEvery === 0;
+// big events run every few weeks, or by month: a named event on the last show of a month (an empty month is TV only)
+const cleanMonths = a => Array.from({ length: 12 }, (_, i) => ppvList(Array.isArray(a) ? a[i] : '')[0] || '');
+const monthNames = a => [...new Set((a || []).filter(Boolean))];
+const byMonth = () => G.settings.bigMode === 'month' && (G.bigMonths || []).some(Boolean);
+const bigWk = wk => byMonth() ? monthKey(wk + 1) !== monthKey(wk) && !!G.bigMonths[monthKey(wk) % 12] : wk % G.settings.bigEvery === 0;
 // a big event takes the main show's slot that week; the company's other shows stay weekly TV
 const isBig = wk => bigWk(wk) && onMain();
-const bigName = wk => { const i = Math.max(0, Math.floor(wk / G.settings.bigEvery) - 1), l = G.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`; };
+const bigName = wk => { if (byMonth()) return G.bigMonths[monthKey(wk) % 12] || 'Big Event'; const i = Math.max(0, Math.floor(wk / G.settings.bigEvery) - 1), l = G.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`; };
 const showName = wk => isBig(wk) ? bigName(wk) : G.promo.show;
 // ---------- big event signature matches ----------
 // Each big event can have a signature match (a participant type, a gimmick, or both), like a yearly Rumble.
@@ -1323,6 +1335,7 @@ function bigOneWeek(from = 1) {
   let last = 0; for (let w = from; w < from + 52; w++) if (bigWk(w)) last = w;
   return last || from;
 }
+const bigOneHtml = () => G.bigEvents.length > 1 ? `<label class="f"><span>The big one: your biggest event of the year</span><select data-in="bigOne">${G.bigEvents.map(n => `<option ${n === bigOne() ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : '';
 const isBigOne = wk => bigWk(wk) && !!bigOne() && bigName(wk) === bigOne();
 const titlesOf = id => G.titles.filter(t => t.holder.includes(id));
 const storiesOf = id => G.stories.filter(s => s.status === 'active' && (s.a.includes(id) || s.b.includes(id)));
@@ -2497,6 +2510,9 @@ const dateOf = wk => new Date(BASE + ((wk - 1) * 7 + (G?.promo?.day || 0)) * 864
 const monthKey = wk => { const d = dateOf(wk); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
 const monthLabel = k => `${MONTHS[k % 12]} · Year ${Math.floor(k / 12) - 2026}`;
 const dayLabel = wk => { const d = dateOf(wk); return `${MONTHS[d.getUTCMonth()].slice(0, 3)} ${d.getUTCDate()}`; };
+// the date of the last show in each month of a year, for the by-month big event rows
+function monthEnds(day, yr) { const out = []; for (let w = 1; w < 60 * (yr - 2026) + 60; w++) { const d = new Date(BASE + ((w - 1) * 7 + (day || 0)) * 864e5); if (d.getUTCFullYear() === yr) out[d.getUTCMonth()] = d; else if (d.getUTCFullYear() > yr) break; } return out; }
+const monthRows = (vals, attr, day, yr) => { const ds = monthEnds(day, yr); return `<div class="card mo-rows">${MONTHS.map((m, i) => `<div class="row mo-row"><div class="mo-l"><b class="${vals[i] ? 'on' : ''}">${m.slice(0, 3)}</b><div class="tiny muted">${ds[i] ? m.slice(0, 3) + ' ' + ds[i].getUTCDate() : ''}</div></div><input type="text" ${attr} data-i="${i}" value="${esc(vals[i] || '')}" maxlength="40" placeholder="No big event, TV only" aria-label="${m} big event"></div>`).join('')}</div>`; };
 function weeksInMonth(k) { const out = []; let w = 1; while (monthKey(w) < k) w++; while (monthKey(w) === k) out.push(w++); return out; }
 // card being edited on the booking screen (this week, or a week booked ahead)
 function BK() { const wk = UI.selWeek; if (wk === G.week) return G.card; return (G.future[wk] ||= []); }
@@ -5003,9 +5019,10 @@ function setupView() {
     <label class="f"><span>${manyShows() ? 'Name of the show you are booking' : 'Weekly show name'}</span><input type="text" data-in="showName" value="${esc(G.promo.show)}" maxlength="40"></label>
     <button class="btn block" style="margin-bottom:10px" data-act="shows">📺 ${manyShows() ? `Weekly shows and brands (${SHOWS().length})` : 'Add another weekly show or brand'}</button>
     <div class="sec">Big events</div>
-    <label class="f"><span>Big event every</span><select data-in="bigEvery">${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigEvery === n ? 'selected' : ''}>${n} weeks</option>`).join('')}</select></label>
-    <label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>
-    ${G.bigEvents.length > 1 ? `<label class="f"><span>The big one: your biggest event of the year</span><select data-in="bigOne">${G.bigEvents.map(n => `<option ${n === bigOne() ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : ''}
+    <label class="f"><span>Schedule</span><select data-in="bigEvery"><option value="month" ${G.settings.bigMode === 'month' ? 'selected' : ''}>By month</option>${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigMode !== 'month' && G.settings.bigEvery === n ? 'selected' : ''}>Every ${n} weeks</option>`).join('')}</select></label>
+    ${G.settings.bigMode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(G.bigMonths || [], 'data-in="bigMonth"', G.promo.day, dateOf(G.week).getUTCFullYear())}<div class="tiny muted" style="margin:-4px 0 12px">Each one takes the place of your last show of that month, every year. Leave a month empty for TV only.${byMonth() ? '' : ` With every month empty you get a big event every ${G.settings.bigEvery} weeks.`}</div>`
+    : `<label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>`}
+    <div id="bigOneBox">${bigOneHtml()}</div>
     <div class="sec">Matches</div>
     <button class="btn block" data-act="matchTypes">🤼 Match types and signature matches</button>
     <div class="tiny muted" style="margin-top:8px">Sim settings, sound and display are in Menu → Settings.</div>`;
@@ -5393,7 +5410,12 @@ function sigOptions(cur) {
   return o('', 'None') + `<optgroup label="Participants">${mtNames().filter(k => k !== 'Singles').map(k => o('mt:' + k, k)).join('')}</optgroup><optgroup label="Gimmick">${gmNames().filter(k => k !== 'Standard').map(k => o('gm:' + k, k)).join('')}</optgroup>`;
 }
 const sigFromVal = (name, v) => { v = String(v || ''); const x = v.slice(3); return v.startsWith('mt:') && mtNames().includes(x) ? { name, mt: x, gm: '' } : v.startsWith('gm:') && gmNames().includes(x) ? { name, mt: '', gm: x } : null; };
-const sigsFromWiz = z => ppvList(z.ppv).map(n => sigFromVal(n, z.sig?.[n])).filter(Boolean);
+// the big event names the setup has so far: the months' names in by-month mode, else the typed list
+const wzNames = z => z.mode === 'month' ? monthNames(cleanMonths(z.months)) : ppvList(z.ppv);
+// the setup's signature match picks, redrawn on its own so typing in the month rows keeps focus
+const wzSigHtml = z => wzNames(z).length ? `<div class="f"><span>Signature matches <span class="muted">(optional)</span></span><div class="tiny muted" style="margin:2px 0 8px">A match fans expect every year at that event, like a 30-person Rumble. It goes on the card for you.</div>
+        ${wzNames(z).map((n, i) => `<div class="row" style="gap:8px;margin-bottom:6px"><span class="sp small clip">${esc(n)}</span><select data-wz="sig" data-i="${i}" style="width:auto;max-width:55%" aria-label="Signature match for ${esc(n)}">${sigOptions(z.sig?.[n] || '')}</select></div>`).join('')}</div>` : '';
+const sigsFromWiz = z => wzNames(z).map(n => sigFromVal(n, z.sig?.[n])).filter(Boolean);
 function blankSeg(kind) {
   if (kind === 'match') return { id: uid(), kind, mtype: 'Singles', stip: 'Standard', sides: [[], []], winner: -1, finish: 'Clean', title: null };
   if (kind === 'promo') return { id: uid(), kind, ptype: 'Call-out', who: [], target: [] };
@@ -7224,7 +7246,7 @@ function makeWorld(withMine) {
   ensureRivals();
   const cos = [...(withMine ? [G, ...(G.cos || [])].map(coAsRival) : []), ...G.rivalPromos].map(worldCo);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop).slice(0, 60).map(worldW);
-  return { wv: WORLD_V, cos, fa, every: G.settings.bigEvery };
+  return { wv: WORLD_V, cos, fa, every: G.settings.bigEvery, mode: G.settings.bigMode };
 }
 function worldSummary(wd) {
   return { cos: wd.cos.slice(0, 10).map(c => [String(c.name).slice(0, 40), tierOf(c), c.roster.length, String(c.roster.find(w => w.id === c.titles?.find(t => !t.mid && !t.div)?.holder[0])?.name || '').slice(0, 40)]), fa: wd.fa.length, n: sum(wd.cos.map(c => c.roster.length)) + wd.fa.length };
@@ -7280,7 +7302,7 @@ function applyWorld(z) {
   }
   for (const w of wd.fa) G.wrestlers.push({ ...w, contract: null });
   G.rivalPromos = cos.map(c => { liven(c); setRivalChamp(c); return c; });
-  G.settings.bigEvery = wd.every || G.settings.bigEvery; syncRivals();
+  G.settings.bigEvery = wd.every || G.settings.bigEvery; if (wd.mode) G.settings.bigMode = wd.mode === 'month' ? 'month' : 'weeks'; syncRivals();
   startBeforeBigOne();
   G.wlog = [{ wk: G.week, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} free agents.` }];
   news(take ? `🌍 You took over ${take.name} in the world "${wd.title || 'Shared world'}". Its roster and titles are yours.` : `🌍 ${G.promo.name} opened in the world "${wd.title || 'Shared world'}". Sign free agents in the Office.`, 'office');
@@ -8867,7 +8889,7 @@ const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w
 
 function wizStart(add, chain) {
   add = add === true && !!G;
-  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : false, contracts: add ? CON() : false, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft', titles: wizTitles() };
+  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : false, contracts: add ? CON() : false, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, mode: add ? G.settings.bigMode : 'weeks', months: Array(12).fill(''), extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft', titles: wizTitles() };
   render(); window.scrollTo(0, 0);
 }
 function wizPool() {
@@ -8972,7 +8994,8 @@ function wizFinish() {
   }
   G.promo.day = z.day; G.promo.color = z.color; G.rivals = z.rivals || shuffle(RIVALS).slice(0, 2);
   // only the big events this booker named: nothing pre-filled shows up on a company they built
-  G.bigEvents = ppvList(z.ppv); G.ppvSig = sigsFromWiz(z); G.sigSeeded = []; if (!host && [3, 4, 5, 6, 8].includes(+z.every)) G.settings.bigEvery = +z.every;
+  if (!host) G.settings.bigMode = z.mode === 'month' ? 'month' : 'weeks';
+  G.bigMonths = cleanMonths(z.months); G.bigEvents = wzNames(z); G.ppvSig = sigsFromWiz(z); G.sigSeeded = []; if (!host && [3, 4, 5, 6, 8].includes(+z.every)) G.settings.bigEvery = +z.every;
   delete G.shows; delete G.showId; migrateShows(G);
   G.news = []; G.todos = [];
   if (z.source === 'draft') {
@@ -9070,11 +9093,13 @@ function viewWizard() {
       ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} ${z.split ? 'Every brand gets a full A show: its own crowd, TV deal and costs.' : 'Extra shows are B shows: smaller crowds, half a TV deal and their own costs.'} Each one adds 8 picks to your roster.</div>` : ''}
       <label class="f"><span>Company color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
       <div class="sec">Big events</div>
-      ${z.add ? `<p class="small muted" style="margin-top:0">This world has a big event every ${G.settings.bigEvery} weeks.</p>` : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}
-      <label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
-      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order and repeat each year. Leave it empty for Big Event 1, 2, 3. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>
-      ${ppvList(z.ppv).length ? `<div class="f"><span>Signature matches <span class="muted">(optional)</span></span><div class="tiny muted" style="margin:2px 0 8px">A match fans expect every year at that event, like a 30-person Rumble. It goes on the card for you.</div>
-        ${ppvList(z.ppv).map((n, i) => `<div class="row" style="gap:8px;margin-bottom:6px"><span class="sp small clip">${esc(n)}</span><select data-wz="sig" data-i="${i}" style="width:auto;max-width:55%" aria-label="Signature match for ${esc(n)}">${sigOptions(z.sig?.[n] || '')}</select></div>`).join('')}</div>` : ''}
+      ${z.add ? `<p class="small muted" style="margin-top:0">${z.mode === 'month' ? 'This world runs its big events by month.' : `This world has a big event every ${G.settings.bigEvery} weeks.`}</p>` : `<label class="f"><span>Schedule</span><div class="seg-ctl"><button class="${z.mode === 'month' ? 'on' : ''}" data-act="wzSet" data-f="mode" data-id="month">By month</button><button class="${z.mode !== 'month' ? 'on' : ''}" data-act="wzSet" data-f="mode" data-id="weeks">Every few weeks</button></div></label>
+      ${z.mode === 'month' ? '' : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}`}
+      ${z.mode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(z.months || [], 'data-wz="month"', z.day, 2027)}
+      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">Each big event takes the place of your last show of that month, every year. Leave a month empty for TV only. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`
+      : `<label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
+      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order, then start again from the top. Leave it empty for Big Event 1, 2, 3. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`}
+      <div id="wzSig">${wzSigHtml(z)}</div>
       <div class="wz-nav">${z.add ? `<button class="btn" data-act="wzCancel">${(z.nth || 1) > 1 ? 'Skip the rest' : 'Cancel'}</button>` : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
   }
   if (z.step === 'budget') {
@@ -9254,7 +9279,8 @@ const WIZ_ACTIONS = {
   wzXDay(v) { const [i, k] = String(v).split(':').map(Number), x = UI.wiz.extra?.[i]; if (x) { x.day = clamp(k || 0, 0, 6); render(); } },
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
-  wzPpvIdeas() { const l = shuffle(BIG_EVENTS).slice(0, 12); UI.wiz.ppv = l.join('\n'); if (!Object.values(UI.wiz.sig || {}).some(Boolean)) UI.wiz.sig = { [l[0]]: 'mt:Rumble' }; render(); },
+  wzPpvIdeas() { if (UI.wiz.mode === 'month') { UI.wiz.months = BIG_EVENTS.slice(0, 12); if (!Object.values(UI.wiz.sig || {}).some(Boolean)) UI.wiz.sig = { [BIG_EVENTS[0]]: 'mt:Rumble' }; return render(); }
+    const l = shuffle(BIG_EVENTS).slice(0, 12); UI.wiz.ppv = l.join('\n'); if (!Object.values(UI.wiz.sig || {}).some(Boolean)) UI.wiz.sig = { [l[0]]: 'mt:Rumble' }; render(); },
   wzSet(v, el) { const f = el.dataset.f; UI.wiz[f] = f === 'day' || f === 'every' || f === 'count' || f === 'rivN' ? +v : v; if (f === 'color') applyBrand(v); render(); },
   wzBack() { UI.wiz = null; applyBrand(''); render(); },
   wzQuick() { const z = UI.wiz; meta.slot = z.slot; newGame({ name: z.name.trim() || 'Thunder Valley Wrestling', show: z.show.trim() || 'Monday Mayhem', difficulty: z.budget, challenge: z.challenge, finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false, deep: !!z.deep }); tutStart(); UI.wiz = null; UI.tab = 'book'; UI.selWeek = G.week; UI.modal = null; save(); render(); },
@@ -9288,6 +9314,7 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.in === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); el.setAttribute('aria-valuetext', el.value + '%'); MUSIC.sync(); return; }
   if (el.dataset.wz === 'ppv') { UI.wiz.ppv = el.value; return; }
+  if (el.dataset.wz === 'month') { (UI.wiz.months ||= Array(12).fill(''))[+el.dataset.i] = el.value; return; }
   if (el.dataset.wz === 'xName') { const x = UI.wiz.extra?.[+el.dataset.i]; if (x) x.name = el.value; return; }
   if (el.dataset.wz === 'name' || el.dataset.wz === 'show') {
     const z = UI.wiz; z[el.dataset.wz] = el.value;
@@ -9319,6 +9346,7 @@ document.addEventListener('input', e => {
     else if (k === 'showName') { G.promo.show = v || 'Weekly Show'; curShow().name = G.promo.show; debSave(); }
     else if (k === 'shName') { const x = showById(el.dataset.id); if (x) { const n = v.trim().slice(0, 40) || 'Weekly Show'; if (x.id === G.showId) G.promo.show = n; x.name = n; debSave(); } }
     else if (k === 'bigEvents') { G.bigEvents = ppvList(v); debSave(); }
+    else if (k === 'bigMonth') { G.bigMonths = cleanMonths(G.bigMonths); G.bigMonths[+el.dataset.i] = ppvList(v)[0] || ''; G.bigEvents = monthNames(G.bigMonths); debSave(); }
     else if (k === 'bigOne') { if (G.bigEvents.includes(el.value)) { G.bigOne = el.value; commit(`${el.value} is now your big one.`); } }
   }
   if (el.dataset.ew != null && el.type !== 'checkbox') {
@@ -9344,7 +9372,8 @@ document.addEventListener('change', e => {
     else if (k === 'xDay') { const x = z.extra?.[+el.dataset.i]; if (x) x.day = clamp(+el.value || 0, 0, 6); }
     else if (k === 'xSplit') { z.split = el.checked; render(); }
     else if (k === 'ppv') render();
-    else if (k === 'sig') { const n = ppvList(z.ppv)[+el.dataset.i]; if (n) (z.sig ||= {})[n] = el.value; }
+    else if (k === 'month') { el.closest('.mo-row')?.querySelector('.mo-l b')?.classList.toggle('on', !!el.value.trim()); const box = document.getElementById('wzSig'); if (box) box.innerHTML = iconize(wzSigHtml(z)); }
+    else if (k === 'sig') { const n = wzNames(z)[+el.dataset.i]; if (n) (z.sig ||= {})[n] = el.value; }
     return;
   }
   if (el.dataset.mt) { const d = UI.modal?.edit?.d; if (d) d[el.dataset.mt] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value; return; }
@@ -9371,7 +9400,11 @@ document.addEventListener('change', e => {
     else if (k === 'tBrand') { const t = G.titles.find(x => x.id === el.dataset.id); if (t) { t.brand = showById(el.value) ? el.value : ''; commit(); } }
     else if (k === 'wBrand') { const w = W(el.dataset.id); if (w && el.value === '*') { w.both = true; commit(`${w.name} now works both brands.`); }
       else if (w && showById(el.value)) { delete w.both; w.brand = el.value; for (const t of titlesOf(w.id)) if (showById(t.brand) && t.brand !== w.brand && t.holder.length === 1) t.brand = w.brand; commit(`${w.name} now works ${brandName(w.brand)}.`); } }
-    else if (k === 'bigEvery') { G.settings.bigEvery = +el.value; commit(); }
+    else if (k === 'bigEvery') {
+      if (el.value === 'month') { G.settings.bigMode = 'month'; G.bigMonths = cleanMonths(G.bigMonths); if (!G.bigMonths.some(Boolean)) { G.bigMonths = cleanMonths(G.bigEvents.slice(0, 12)); G.bigEvents = monthNames(G.bigMonths); } }
+      else { G.settings.bigMode = 'weeks'; G.settings.bigEvery = +el.value; }
+      commit();
+    }
     else if (k === 'injuries') { G.settings.injuries = el.checked; commit(); }
     else if (k === 'organic') { G.settings.organic = el.checked; commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
@@ -9397,6 +9430,7 @@ document.addEventListener('change', e => {
     else if (k === 'soundOn') { meta.sound = el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) SFX.tap(); render(); }
     else if (k === 'musicOn') { meta.music = el.checked; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); ls.set(META, JSON.stringify(meta)); MUSIC.sync(); }
+    else if (k === 'bigMonth') { save(); el.closest('.mo-row')?.querySelector('.mo-l b')?.classList.toggle('on', !!el.value.trim()); const box = document.getElementById('bigOneBox'); if (box) box.innerHTML = bigOneHtml(); }
     else if (['promoName', 'showName', 'bigEvents', 'notebook', 'wNotes', 'sNotes'].includes(k)) { save(); render(); }
   }
   if (el.dataset.ew != null && UI.modal?.draft) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
@@ -9563,7 +9597,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.2';
+const VERSION = '1.9.3';
 const WHATS_NEW = [
   ['🏆 More belt shapes and centre pieces', 'The belt designer has 8 new plate shapes (Medallion, Starburst, Diamond, Cross, Flared, Twin, Arch and Feathered) and 13 new centre pieces, from an eagle, flame and skull to a laurel, trophy and maple leaf. They all take your metal and gem colours, and the text still fits. Five new templates use them.'],
   ['🏆 Better belts and belt photos', 'Every belt is redrawn in raised relief, with a bevelled rim, rivets, a curved top line and a ribbon nameplate, and text that always fits. Make any belt Ornate, try the new Oval plate, or upload a photo of a belt (pixel art or the real photo, like wrestler photos). Belts now show on title matches during the live show and on each champion\'s card.'],
