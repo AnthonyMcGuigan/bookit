@@ -191,7 +191,7 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 
 ## Version 1.9: Brands tab, brand draft and card levels
 
-- **Office → Brands** (Office tabs are now a 3 × 3 grid). Each brand shows its night, roster size, champions and top five stars.
+- **Office → Brands** (Office tabs are now a 3 × 3 grid; sw bookit-v80). Each brand shows its night, roster size, champions and top five stars.
 - **Brand draft:** brands take turns in snake order and you make every pick. Tag team partners go together, Undo takes back a pick, Auto-pick finishes it, and nothing changes until you press Finish. Champions take their titles to their new brand; shared titles stay shared. Quick auto-split is still there.
 - **Both brands:** any wrestler can work every weekly show (`w.both`). Their pay and merch are split between the shows, so nobody is paid twice. Set it in the Brands tab, the draft (🔀) or the wrestler's profile.
 - **Money stays company-wide:** one bank pays every brand. The Brands tab lists each brand's last result next to the bank balance.
