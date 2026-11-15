@@ -5104,15 +5104,16 @@ async function cloudPush(n) {
   await sbGuest(); if (!sbSess?.user?.id) throw { code: 'unavailable' };
   const z = await gz(JSON.stringify({ ...G, savedAt: Date.now() }));
   if (z.length > 380000) throw { code: 'big' };
-  await sbDb().doc(`cloud${n}/${sbSess.user.id}`).set({ v: 1, save: z, sum: saveSummary(G), at: Date.now() });
+  const lz = await libPack(385000 - z.length);
+  await sbDb().doc(`cloud${n}/${sbSess.user.id}`).set({ v: 1, save: z, sum: saveSummary(G), at: Date.now(), ...(lz ? { lib: lz, libN: LIB.length } : {}) });
   meta.cloudWk = { ...(meta.cloudWk || {}), [n]: G.week }; ls.set(META, JSON.stringify(meta));
 }
 async function cloudList() {
   const m = UI.modal; if (m?.type !== 'cloud') return;
   try {
     await sbGuest(); const id = sbSess?.user?.id; if (!id) throw 0;
-    const rows = await sbFetch(`/rest/v1/docs?select=col,data->sum,data->at&col=in.(cloud1,cloud2,cloud3,cloud4,cloud5,cloud6)&id=eq.${sbQ(id)}`);
-    const list = {}; for (const r of Array.isArray(rows) ? rows : []) { const n = +String(r.col).slice(5); if (CLOUD_SLOTS.includes(n)) list[n] = { sum: r.sum && typeof r.sum === 'object' ? r.sum : {}, at: +r.at || 0 }; }
+    const rows = await sbFetch(`/rest/v1/docs?select=col,data->sum,data->at,data->libN&col=in.(cloud1,cloud2,cloud3,cloud4,cloud5,cloud6)&id=eq.${sbQ(id)}`);
+    const list = {}; for (const r of Array.isArray(rows) ? rows : []) { const n = +String(r.col).slice(5); if (CLOUD_SLOTS.includes(n)) list[n] = { sum: r.sum && typeof r.sum === 'object' ? r.sum : {}, at: +r.at || 0, libN: +r.libN || 0 }; }
     await supCheck();
     if (UI.modal === m) { m.list = list; m.err = ''; render(); }
   } catch (e) { if (UI.modal === m) { m.list = {}; m.err = cloudErr(e); render(); } }
@@ -5122,6 +5123,10 @@ let cloudBusy = false;
 function cloudAutoPush() {
   if (!meta.cloudAuto || !sbOn() || !G || cloudBusy || meta.cloudWk?.[meta.slot] === G.week) return;
   cloudBusy = true; cloudPush(meta.slot).catch(() => {}).finally(() => { cloudBusy = false; });
+}
+function cloudLibCard(m) {
+  const L = m.list, best = L ? Math.max(0, ...Object.values(L).map(x => x.libN || 0)) : 0, n = lib().length;
+  return `<div class="sec">📚 Wrestler library</div><div class="item"><div class="main"><div class="t">${n} on this device${best ? ` · ${best} in the cloud` : ''}</div><div class="d">Every upload carries your library. Loading a cloud save, or tapping Get, adds the cloud's wrestlers to this device.</div></div>${best ? `<button class="btn sm" data-act="cloudLib" ${m.libBusy ? 'disabled' : ''}>${m.libBusy ? '…' : 'Get'}</button>` : ''}</div>`;
 }
 function modalCloud(m) {
   const u = sbSess?.user, L = m.list;
@@ -5133,6 +5138,7 @@ function modalCloud(m) {
   const body = `<p class="small muted" style="margin-top:0">Keep your games online, and load them on another phone or computer. Only you can see your cloud saves.</p>
     ${m.err ? `<div class="alert bad"><span class="ic">⚠️</span><div class="small">${esc(m.err)}</div></div>` : ''}
     <div class="list">${rows}</div>
+    ${cloudLibCard(m)}
     ${G ? `<label class="todo" style="margin-top:10px"><input type="checkbox" data-act="cloudAuto" ${meta.cloudAuto ? 'checked' : ''}><span>Back up slot ${meta.slot} to cloud slot ${meta.slot} after every week</span></label>` : ''}
     ${u && !u.email ? '<div class="tiny muted" style="margin-top:8px">To load these saves on another device, add your email below and sign in there with it.</div>' : ''}
     ${sbAccountCard()}`;
@@ -5640,9 +5646,18 @@ const A = {
     const x = UI.modal?.list?.[n]; if (!x) return;
     confirmBox('Load this cloud save?', `${x.sum?.promo || 'This game'}, week ${x.sum?.week || '?'}, goes into slot ${meta.slot}, replacing the game there.`, 'Load it', async () => {
       try { const d = (await sbDb().doc(`cloud${+n}/${sbSess.user.id}`).get()).data(); if (!d?.save) throw { code: 'gone' };
-        const g = sanitizeGame(JSON.parse(await ungz(d.save))); G = g; save(); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Cloud save loaded into slot ' + meta.slot + '.'); }
+        const g = sanitizeGame(JSON.parse(await ungz(d.save))); G = g; save(); const nl = await libMerge(d.lib); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Cloud save loaded into slot ' + meta.slot + '.' + (nl ? ` ${nl} wrestler${nl > 1 ? 's' : ''} added to your library.` : '')); }
       catch (e) { toast(e?.code === 'gone' ? 'That cloud save is gone.' : 'Could not load it. Try again.'); }
     });
+  },
+  async cloudLib() {
+    const m = UI.modal; if (m?.type !== 'cloud' || m.libBusy) return; m.libBusy = true; render();
+    try {
+      const rows = await sbFetch(`/rest/v1/docs?select=col,data->lib&col=in.(cloud1,cloud2,cloud3,cloud4,cloud5,cloud6)&id=eq.${sbQ(sbSess.user.id)}`);
+      let n = 0; for (const r of Array.isArray(rows) ? rows : []) n += await libMerge(r.lib);
+      toast(n ? `📚 ${n} wrestler${n > 1 ? 's' : ''} added to your library.` : 'Your library already has everyone from the cloud.');
+    } catch (e) { toast(cloudErr(e)); }
+    m.libBusy = false; if (UI.modal === m) render();
   },
   cloudDel(n) { confirmBox('Delete cloud slot ' + n + '?', 'Saves on this device are not touched.', 'Delete', async () => { try { await sbDb().doc(`cloud${+n}/${sbSess.user.id}`).delete(); toast('Deleted.'); cloudList(); } catch (e) { toast(cloudErr(e)); } }, true); },
   cloudAuto() { meta.cloudAuto = !meta.cloudAuto; ls.set(META, JSON.stringify(meta)); if (meta.cloudAuto && G) cloudPush(meta.slot).then(() => cloudList(), e => toast(cloudErr(e))); render(); },
@@ -7200,9 +7215,27 @@ let LIB = null;
 function lib() {
   if (LIB) return LIB;
   let x = null; try { x = JSON.parse(ls.get(LIB_KEY) || '[]'); } catch (e) {}
+  return (LIB = libClean(x));
+}
+function libClean(x) {
   const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
-  LIB = (Array.isArray(x) ? x : []).slice(0, LIB_MAX).map(e => { const w = e && cleanW(e.w); return w ? { id: /^[A-Za-z0-9_-]{1,40}$/.test(e.id) ? e.id : uid(), w, from: str(e.from, 60), by: AUTHOR_ID.test(e.by || '') ? e.by : '', byName: str(e.byName, 40), src: LIB_SRC.test(e.src || '') ? e.src : '', at: +e.at || 0 } : null; }).filter(Boolean);
-  return LIB;
+  return (Array.isArray(x) ? x : []).slice(0, LIB_MAX).map(e => { const w = e && cleanW(e.w); return w ? { id: /^[A-Za-z0-9_-]{1,40}$/.test(e.id) ? e.id : uid(), w, from: str(e.from, 60), by: AUTHOR_ID.test(e.by || '') ? e.by : '', byName: str(e.byName, 40), src: LIB_SRC.test(e.src || '') ? e.src : '', at: +e.at || 0 } : null; }).filter(Boolean);
+}
+// cloud sync: every cloud upload carries a copy of the library, and loading from the cloud merges it in.
+// Merging only adds, so a wrestler removed on one device comes back if another device still has them.
+async function libPack(room) {
+  if (!lib().length) return null;
+  let z = await gz(JSON.stringify(LIB));
+  if (z.length > room) z = await gz(JSON.stringify(LIB.map(e => ({ ...e, w: { ...e.w, photo: '' } })))); // too big: leave the pictures behind
+  return z.length > room ? null : z;
+}
+async function libMerge(z) {
+  if (typeof z !== 'string' || !z) return 0;
+  let inc = []; try { inc = libClean(JSON.parse(await ungz(z))); } catch (e) { return 0; }
+  const before = lib().slice(); let added = 0;
+  for (const e of inc) { const old = LIB.find(x => (e.src && x.src === e.src) || (libNorm(x.w.name) === libNorm(e.w.name) && x.by === e.by)); if (old) { if (!old.w.photo && e.w.photo) old.w.photo = e.w.photo; continue; } if (LIB.length >= LIB_MAX) break; LIB.push(e); added++; }
+  if (!libSave()) { LIB = before; return 0; }
+  return added;
 }
 const libSave = () => ls.set(LIB_KEY, JSON.stringify(LIB));
 const libNorm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -7228,7 +7261,7 @@ const libBtn = (key, label) => inLib(key) ? `<button class="btn" data-act="libra
 function libTab(m) {
   const all = lib(), q = (m.lq || '').toLowerCase(), sel = new Set(m.sel || []);
   const list = all.filter(e => !q || (e.w.name + ' ' + (e.w.nick || '') + ' ' + e.from + ' ' + e.byName).toLowerCase().includes(q));
-  let h = `<p class="small muted" style="margin-top:0">Wrestlers you keep here stay on this device and work in <b>every save</b>. Add them to the company you're running now, or to a new one later. Keep up to ${LIB_MAX}.</p>`;
+  let h = `<p class="small muted" style="margin-top:0">Wrestlers you keep here work in <b>every save</b>. Add them to the company you're running now, or to a new one later. Keep up to ${LIB_MAX}.${sbOn() ? ' Cloud saves carry them to your other devices.' : ''}</p>`;
   if (!all.length) return h + '<div class="empty"><p><b>Your library is empty.</b></p><p class="small">Open any wrestler or roster in Browse and tap <b>📚 Library</b>. You don\'t need a save to do it.</p><button class="btn" data-act="cTab" data-id="browse">Browse Community</button></div>';
   if (all.length > 8) h += `<input type="search" data-in="libQ" aria-label="Search your library" value="${esc(m.lq || '')}" placeholder="Search your library" style="margin-bottom:8px">`;
   h += `<div class="row small" style="margin-bottom:6px"><span class="sp muted">${all.length} wrestler${all.length > 1 ? 's' : ''}${G ? ` · ${sel.size} picked` : ''}</span>${G ? `<button class="link" data-act="libAll">${list.length && list.every(e => sel.has(e.id)) ? 'Clear' : 'Pick all' + (q ? ' shown' : '')}</button>` : ''}</div>`;
