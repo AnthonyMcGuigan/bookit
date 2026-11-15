@@ -209,6 +209,9 @@ html.scroll-lock, html.scroll-lock body { overflow: hidden; overscroll-behavior:
 .pick.sel { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .pick .ck { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; font-size: 14px; flex: none; }
 .pick.sel .ck { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.pick .pa-fee { flex: none; margin-left: 6px; text-align: right; font-weight: 800; font-size: 13px; line-height: 1.15; color: var(--gold, var(--accent)); white-space: nowrap; }
+.pick .pa-fee small { display: block; font-size: 10px; font-weight: 600; opacity: .75; }
+.pick .pa-t { font-size: 10px; padding: 1px 6px; }
 .pick.dis { opacity: .5; }
 .lib-pick { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; flex: none; }
 .lib-pick .ck { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; font-size: 14px; flex: none; }
@@ -1171,6 +1174,7 @@ function migrate(g) {
   if (!g.rankPrev || typeof g.rankPrev !== 'object' || Array.isArray(g.rankPrev)) g.rankPrev = {};
   for (const t of g.titles || []) if (t.reigns && !(Array.isArray(t.reigns) && t.reigns.every(r => r && Array.isArray(r.rh)))) delete t.reigns;
   if (g.promo) migrateShows(g);
+  g.guests = (Array.isArray(g.guests) ? g.guests : []).filter(d => d && typeof d.id === 'string').map(d => ({ id: d.id, gname: String(d.gname || '').replace(/[<>&"'`]/g, '').slice(0, 40), fee: clamp(Math.round(+d.fee) || 100, 0, 1e6), excl: !!d.excl, until: Math.floor(+d.until) || 0, apps: Math.max(0, Math.floor(+d.apps) || 0) })).slice(0, 60);
   cleanTraining(g, false);
   return g;
 }
@@ -1732,6 +1736,7 @@ function advanceWeek() {
   G.week++; G.curWk = G.week;
   // a title with a defense rule loses prestige every week it goes past its deadline
   for (const t of G.titles || []) { const ev = titleEvery(t); if (!ev || !t.holder.length) continue; const late = G.week - t.lastDefense - ev; if (late > 0) { t.prestige = clamp((t.prestige || 30) - 1.5, 5, 100); if (late === 1) news(`🏆 The ${t.name} is overdue for a defense. It loses prestige every week until it's defended.`, 'title'); } }
+  guestTick();
   G.card = (G.future[G.week] || []).filter(s => { removeGone(s); return segPeople(s).length; });
   delete G.future[G.week];
   UI.selWeek = G.week; UI.calMonth = null;
@@ -1739,7 +1744,7 @@ function advanceWeek() {
 }
 function catchUpCo() {
   if (!G.curWk || G.curWk >= G.week) { G.curWk = G.week; return; }
-  G.curWk = G.week;
+  G.curWk = G.week; guestTick();
   G.card = (G.future[G.week] || []).filter(s => { removeGone(s); return segPeople(s).length; });
   for (const k of Object.keys(G.future)) if (+k <= G.week) delete G.future[k];
   rollEvent(); ensureGoals();
@@ -2574,8 +2579,11 @@ function runShow(opts = {}) {
     gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
     merch: Math.round(sum(crew.map(w => w.pop * w.pop * wsh(w))) / 9 * share * (perk('merch') ? 1.15 : 1)),
     payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary * wsh(w))) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15)),
-    staff: MON() ? -Math.round(staffCost() / nS) : 0
+    staff: MON() ? -Math.round(staffCost() / nS) : 0,
+    guests: -guestFees(card)
   };
+  if (!fin.guests) delete fin.guests;
+  for (const id of new Set(card.flatMap(segPeople))) { const d = guestDeal(id); if (d) { d.apps = (d.apps || 0) + 1; W(id).lastBooked = G.week; } }
   for (const k of ['gate', 'tv', 'ppv', 'merch']) fin[k] = Math.round(fin[k] * DF().income);
   const net = sum(Object.values(fin));
   if (G.settings.finances) G.money += net;
@@ -2644,7 +2652,7 @@ function endOfWeek(card, world = true) {
     if (w.injury > 0 && !booked.has(w.id)) { w.injury--; if (w.injury === 0 && w.contract) news(`✅ ${w.name} is cleared to compete.`, 'injury'); }
     else if (w.injury > 0) w.injury = Math.max(0, w.injury - 0.5) | 0;
     w.momentum *= 0.92;
-    if (!w.contract) { w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
+    if (!w.contract) { if (!booked.has(w.id)) w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
     if (!booked.has(w.id) && w.injury === 0 && !w.away && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
     if (CON() && w.contract.salary < asking(w) * 0.75) w.morale = clamp(w.morale - 1, 0, 100);
     w.morale += (65 + room + (PER() ? ((w.trust ?? 50) - 50) / 5 : 0) - w.morale) * 0.02;
@@ -2863,6 +2871,7 @@ function wantR(r, w, needs = rivalNeeds(r)) { return worth(r, w) + (needs.some(n
 function canSignR(r, w) {
   const sal = rSalFor(r, w), T = TIERS[tierIx(r)];
   if (w.cutBy === r.id && G.week - (w.cutWk || 0) < 30) return false;
+  if (exclAny(w.id)) return false;
   return (payrollR(r) + sal < incomeR(r) * 0.9 || r.money > sal * 60 || (r.roster.length < T[2] - 2 && r.money > sal * 30)) && w.pop <= r.prestige + 32 && r.roster.length < Math.min(34, T[2] + 5);
 }
 // a rival promotion that would come calling for one of your wrestlers
@@ -3130,7 +3139,41 @@ function leaveCompany(w, why) {
   w.contract = null; w.morale = 60; delete w.courted;
   news(`👋 ${w.name} left the company (${why}).`, 'contract');
 }
-function removeGone(seg) { for (const id of segPeople(seg)) if (!W(id)?.contract) removeFromSeg(seg, id); }
+function removeGone(seg) { for (const id of segPeople(seg)) if (!W(id)?.contract && !isGuest(id)) removeFromSeg(seg, id); }
+// ---------- per-appearance deals ----------
+// A free agent or a retired legend can work show by show. They stay off your roster and payroll, and you pay their
+// fee each time they're on a card. Non-exclusive talent can still sign anywhere. Exclusive talent costs more per show,
+// but nobody else can sign them until the deal ends. Deals belong to the company (G.guests: id, gname, fee, excl, until, apps).
+const PA_LENS = [[4, '1 mo'], [13, '3 mo'], [26, '6 mo']];
+const paBase = w => +w.askSet > 0 ? +w.askSet : Math.pow(value(w) / 10, 3) * 22 * (1 + (w.momentum || 0) / 200);
+const paFee = (w, excl) => Math.max(100, Math.round(paBase(w) * (excl ? 1.6 : 1.25) / 50) * 50);
+function guestDeal(id, wk = G.week) { if (!CON()) return null; const d = (G.guests || []).find(x => x.id === id), w = d && W(id); return d && w && !w.contract && d.until >= wk ? d : null; }
+const isGuest = (id, wk) => !!guestDeal(id, wk);
+const guestList = (wk = G.week) => (G.guests || []).filter(d => guestDeal(d.id, wk)).map(d => ({ w: W(d.id), d }));
+// exclusive to another of your companies, or to this one
+function exclElsewhere(id) { for (const c of G.cos || []) { const d = (c.guests || []).find(x => x.id === id && x.excl && x.until >= G.week); if (d) return c.promo?.name || 'another company'; } return null; }
+const exclAny = id => !!(guestDeal(id)?.excl || exclElsewhere(id));
+const guestFees = segs => sum([...new Set(segs.flatMap(segPeople))].map(id => guestDeal(id)?.fee || 0));
+function paChance(w, fee, excl, wks) {
+  if (w.refusedWk === G.week) return 0;
+  let c = (fee / paFee(w, excl) - 0.7) / 0.45;
+  if (w.morale < 40) c -= 0.1;
+  if (excl && wks >= 26 && w.pop >= 70) c -= 0.12; // big names don't like being tied up for long
+  if (w.retired && wks > 4) c -= 0.15; // legends like a short run
+  if (blastOn()) c -= 0.05;
+  return clamp(c, 0, 0.97);
+}
+// once a week: drop deals that ran out, or whose wrestler signed somewhere full-time
+function guestTick() {
+  if (!Array.isArray(G.guests)) { G.guests = []; return; }
+  G.guests = G.guests.filter(d => {
+    const w = W(d.id);
+    if (!w) { news(`💰 ${d.gname || 'A per-appearance wrestler'} signed with another company. Their per-appearance deal is over.`, 'contract'); return false; }
+    if (w.contract) return false;
+    if (d.until < G.week) { news(`💰 ${w.name}'s per-appearance deal ended after ${d.apps || 0} appearance${d.apps === 1 ? '' : 's'}.`, 'contract'); return false; }
+    return true;
+  });
+}
 function removeFromSeg(seg, id) {
   if (seg.sides) seg.sides = seg.sides.map(s => s.filter(x => x !== id));
   if (seg.who) seg.who = seg.who.filter(x => x !== id);
@@ -4526,6 +4569,7 @@ function wTags(w) {
   const sk = streakTag(w); if (sk) t.push(sk);
   if (CON() && w.contract && w.contract.weeks <= TALKS_OPEN) t.push(`<span class="tag ${w.contract.weeks <= 4 ? 'warn' : ''}">📝 ${w.contract.weeks}wk</span>`);
   if (CON() && w.courted && w.contract) t.push(`<span class="tag bad">🗞️ courted</span>`);
+  { const g = !w.contract && guestDeal(w.id); if (g) t.push(`<span class="tag ${g.excl ? 'gold' : ''}">💰 ${money(g.fee)}/show${g.excl ? ' · excl.' : ''}</span>`); }
   if (w.morale < 35) t.push(`<span class="tag warn">😠</span>`);
   if (w.fatigue >= 60) t.push(`<span class="tag warn">😮‍💨 tired</span>`);
   return t.join(' ');
@@ -4546,7 +4590,9 @@ function faView(all) {
   list = faSorted(list, s);
   const tm = w => (G.teams || []).find(t => t.members.includes(w.id) && t.members.some(id => id !== w.id && freeAgents().some(x => x.id === id)));
   const extra = w => { const t = tm(w); return (CON() ? `asks <b>${money(askFor(w, prefLen(w)))}</b>/wk · ${lenLabel(prefLen(w))}` : 'tap to sign instantly') + ` · Age ${w.age}${skillsShown() && w.pot ? ` · Pot ${Math.round(w.pot)}` : ''}${t ? ` · 👥 ${esc(t.name)}` : ''}`; };
-  return `<div class="small muted" style="margin-bottom:8px">Unsigned talent. Rivals sign them over time.${CON() ? ' Tag teams sign together.' : ''}</div>
+  const gl = CON() ? guestList() : [];
+  return `<div class="small muted" style="margin-bottom:8px">Unsigned talent. Rivals sign them over time.${CON() ? ' Tag teams sign together. Anyone can also work per appearance: you pay only for the shows they\'re on.' : ''}</div>
+  ${gl.length ? `<div class="sec">💰 Your per-appearance talent (${gl.length})</div><div class="list" style="margin-bottom:12px">${gl.map(({ w, d }) => wItem(w, 'guestDeal', `${d.excl ? 'exclusive' : 'non-exclusive'} · until week ${d.until} · ${d.apps} appearance${d.apps === 1 ? '' : 's'}${w.retired ? ' · legend' : ''}`)).join('')}</div>` : ''}
   ${all.length ? `<div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search free agents" aria-label="Search free agents" value="${esc(UI.faQ || '')}" data-in="faQ" style="flex:1">
     <select data-in="faSort" style="width:auto;max-width:45%" aria-label="Sort free agents by">${FA_SORTS().map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
   ${divs.length > 1 ? `<div class="filters">${[['all', 'All'], ...divs.map(d => [d, d])].map(([k, l]) => `<button class="${dv === k ? 'on' : ''}" data-act="faDiv" data-id="${esc(k)}">${l}</button>`).join('')}</div>` : ''}
@@ -4826,6 +4872,7 @@ function matchRow(s, i, n, o) {
   }
   if (o.builds) chips.push(`<span class="hype">📈 Builds ${esc(o.builds)}</span>`);
   if (!o.past && s.kind === 'match' && s.hype != null && isBig(UI.selWeek)) chips.push(`<span class="hype">📈 Hype ${hypeOf(s)}</span>`);
+  if (!o.past) { const gf = guestFees([s]); if (gf) chips.push(`💰 ${money(gf)} per-appearance`); }
   for (const h of o.hints || []) chips.push(`<span class="hint">⚠ ${esc(h)}</span>`);
   const won = id => o.past && (o.winners || []).includes(id);
   const sideHTML = (ids, right) => `<div class="mside ${right ? 'r' : ''}">${ids.map(id => { const w = W(id); if (!w) return '<span class="muted">?</span>'; return `<div class="mw ${won(id) ? 'won' : ''}">${right ? '' : av(w, 26)}<span class="n-${w.align}">${esc(w.name)}</span>${won(id) ? ' 👑' : ''}${right ? av(w, 26) : ''}</div>`; }).join('') || '<span class="muted small">empty</span>'}</div>`;
@@ -4996,7 +5043,7 @@ function moneyView(last, payroll) {
     <div class="stat"><div class="k">Roster</div><div class="v">${signed().length}</div><div class="s">wrestlers signed</div></div>
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn on Deep sim in Menu → Settings to use it.</div>`}
-  ${last && MON() ? `<details class="card" style="margin-top:12px" open><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}`;
+  ${last && MON() ? `<details class="card" style="margin-top:12px" open><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school', guests: 'Per-appearance fees' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}`;
 }
 function viewOffice() {
   const last = G.history[G.history.length - 1];
@@ -5105,6 +5152,7 @@ function renderModal() {
     case 'cview': return modalCView(m);
     case 'shareOne': return modal('Share ' + esc(m.pack.wrestlers[0].name), `<p class="small muted" style="margin-top:0">Send this code to a friend. They paste it into Roster tools → Import.</p><textarea id="oneCode" readonly style="min-height:110px;font-size:11px;font-family:ui-monospace,monospace">${esc(m.code)}</textarea><button class="btn block" style="margin-top:8px" data-act="copyEl" data-id="oneCode">📋 Copy code</button>${m.draftBack?.draft?.id && W(m.draftBack.draft.id) ? `<button class="btn block" style="margin-top:8px" data-act="shareOneComm">🌐 Share in Community</button>` : ''}`, `<button class="btn" data-act="shareBack">Back to builder</button>`);
     case 'negotiate': return modalNegotiate(m);
+    case 'guest': return modalGuest(m);
     case 'story': return modalStory(m);
     case 'editStory': return modalEditStory(m);
     case 'recap': return modalRecap(m);
@@ -5497,6 +5545,9 @@ function renderPicker() {
   const brandF = splitOn() && !isBig(UI.selWeek) && !p.free;
   if (brandF && !p.allB) list = list.filter(w => onBrand(w));
   if (p.free) list = G.wrestlers.filter(w => !w.away);
+  // per-appearance talent has its own tab in the match and segment picker
+  const gTab = UI.modal?.type === 'seg' && CON() && !p.free, gOn = gTab && p.tab === 'guests', nG = gTab ? guestList(UI.selWeek).length : 0;
+  if (gOn) list = guestList(UI.selWeek).map(x => x.w).filter(w => !w.away);
   if (q) list = list.filter(w => (w.name + ' ' + w.nick + ' ' + w.style).toLowerCase().includes(q));
   if (p.align) list = list.filter(w => w.align === p.align);
   // suggest story rivals and opposite-alignment opponents of whoever is already in the segment
@@ -5506,11 +5557,13 @@ function renderPicker() {
   const score = w => (rival.has(w.id) ? 3 : 0) + (opp.length && opp.every(o => sameDiv(o, w)) ? 2 : 0) + (oppAlign && w.align === oppAlign ? 1 : 0);
   list.sort((a, b) => (a.injury > 0) - (b.injury > 0) || (onCard.has(a.id)) - (onCard.has(b.id)) || score(b) - score(a) || b.pop - a.pop);
   const body = `<input type="search" placeholder="Search" aria-label="Search wrestlers" value="${esc(p.q || '')}" data-in="pickQ" style="margin-bottom:8px">
+   ${gTab ? `<div class="seg-ctl" style="margin-bottom:10px"><button class="${gOn ? '' : 'on'}" data-act="pickTab" data-id="roster" aria-pressed="${!gOn}">🤼 Roster (${signed().length})</button><button class="${gOn ? 'on' : ''}" data-act="pickTab" data-id="guests" aria-pressed="${gOn}">💰 Per appearance (${nG})</button></div>` : ''}
    <div class="filters">${[['', 'All'], ['face', 'Faces'], ['heel', 'Heels']].map(([k, l]) => `<button class="${(p.align || '') === k ? 'on' : ''}" data-act="pickAlign" data-id="${k}">${l}</button>`).join('')}${brandF ? `<button class="${p.allB ? 'on' : ''}" data-act="pickAllB">Other brands</button>` : ''}</div>
    ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
-   <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.</div>
-   ${list.map(w => { const sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
-     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b> · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}</div></div></button>`; }).join('') || '<div class="empty">Nobody matches.</div>'}`;
+   <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear.' : ''}</div>
+   ${list.map(w => { const g = gOn && guestDeal(w.id, UI.selWeek), sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
+     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b> · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : 'Nobody matches.'}</div>`}
+   ${gOn ? `<button class="btn block" style="margin-top:10px" data-act="localTalent">+ Book local enhancement talent (${money(100)}–${money(250)})</button><div class="tiny muted" style="margin-top:6px">A local wrestler for one month, non-exclusive. Good for squash matches that make your stars look strong.</div>` : ''}`;
   return modal('Choose wrestlers', body, `<button class="btn pri" data-act="pickDone">Done (${p.sel.length})</button>`, { cls: 'picker-bg', closeAct: 'pickDone', anim });
 }
 
@@ -5549,7 +5602,7 @@ function modalWrestler(m) {
    <div class="sec">Your notes on ${esc(lastName(w))}</div>
    <textarea data-in="wNotes" data-id="${w.id}" placeholder="Plans, gimmick ideas, who they should feud with next...">${esc(w.notes)}</textarea>
    ${w.retired ? `<div class="alert" style="margin-top:12px"><span class="ic">🎤</span><div class="sp small"><b>Retired</b> in week ${w.retired}. Legends can always come back.</div><button class="btn sm" data-act="unretireW" data-id="${w.id}">Bring back</button></div>
-   <div class="grid2" style="margin-top:10px"><button class="btn" data-act="editW" data-id="${w.id}">✏️ Edit</button></div>` : `<div class="grid2" style="margin-top:12px">
+   <div class="grid2" style="margin-top:10px"><button class="btn" data-act="editW" data-id="${w.id}">✏️ Edit</button>${CON() ? `<button class="btn" data-act="guestDeal" data-id="${w.id}">💰 ${guestDeal(w.id) ? 'Appearance deal' : 'Book appearances'}</button>` : ''}</div>` : `<div class="grid2" style="margin-top:12px">
      <button class="btn" data-act="editW" data-id="${w.id}">✏️ Edit</button>
      <button class="btn" data-act="turn" data-id="${w.id}">🔄 Make ${w.align === 'face' ? 'heel' : 'face'}</button>
      <button class="btn" data-act="negotiate" data-id="${w.id}">${CON() ? `📝 ${w.contract ? 'Contract' : 'Sign'}` : w.contract ? '👋 Release' : '✍️ Sign'}</button>
@@ -5568,7 +5621,7 @@ function modalNegotiate(m) {
   const teamBox = ps.length ? `<div class="card" style="margin-top:10px"><div class="row small" style="margin-bottom:8px"><span class="sp"><b>👥 ${esc(tm?.name || 'Tag team')}</b><div class="tiny muted">${w.contract ? 'Their deals end within 6 months of each other. Re-sign them together and the deals end the same week.' : `${esc(ps.map(p => p.name).join(' & '))} ${ps.length === 1 ? 'is' : 'are'} a free agent too. They'd rather sign together.`}</div></span></div>
      <div class="seg-ctl"><button class="${team ? 'on' : ''}" data-act="negTeam" data-id="1">Team deal</button><button class="${team ? '' : 'on'}" data-act="negTeam" data-id="0">Just ${esc(lastName(w))}</button></div>
      ${team ? `<div class="team-talk" id="negTalk">${teamTalkHTML(ws, m)}</div>` : `<div class="tiny muted" style="margin-top:6px">Signing one partner alone is harder. They want to stay a team.</div>`}</div>` : '';
-  const body = `<div class="row" style="margin-bottom:12px">${team ? ws.map(x => av(x, 44)).join('') : av(w, 48)}<div class="sp"><b>${team ? esc(tm?.name || ws.map(x => x.name).join(' & ')) : esc(w.name)}</b><div class="small muted">${team ? ws.map(x => `${esc(lastName(x))}: pop ${Math.round(x.pop)}, asks ${money(askFor(x, m.weeks))}`).join(' · ') : `Pop ${Math.round(w.pop)} · Morale ${Math.round(w.morale)} · Age ${w.age}`}</div></div></div>
+  const body = `${!w.contract ? paSwitch(w, false) : ''}<div class="row" style="margin-bottom:12px">${team ? ws.map(x => av(x, 44)).join('') : av(w, 48)}<div class="sp"><b>${team ? esc(tm?.name || ws.map(x => x.name).join(' & ')) : esc(w.name)}</b><div class="small muted">${team ? ws.map(x => `${esc(lastName(x))}: pop ${Math.round(x.pop)}, asks ${money(askFor(x, m.weeks))}`).join(' · ') : `Pop ${Math.round(w.pop)} · Morale ${Math.round(w.morale)} · Age ${w.age}`}</div></div></div>
    <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' : 'None (free agent)'}</b></div>
    ${team && w.contract ? ps.map(p => `<div class="row small"><span class="sp muted">${esc(lastName(p))}'s deal</span><b>${money(p.contract.salary)}/wk · ${lenLabel(p.contract.weeks)} left</b></div>`).join('') : ''}
    ${w.contract ? `<div class="row small"><span class="sp muted">Signed through</span><b>Week ${G.week + w.contract.weeks} · ${showDate(G.week + w.contract.weeks).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</b></div>` : ''}
@@ -5584,6 +5637,30 @@ function modalNegotiate(m) {
    <div id="negChance">${negChanceHTML(w, m)}</div>
    ${w.contract ? `<div class="sec">Release</div><div class="small muted" style="margin-bottom:8px">Releasing ${esc(w.name)} costs a buyout of ${money(buyout)} (25% of what's left) and they become a free agent.</div><button class="btn bad block" data-act="release" data-id="${w.id}">Release ${esc(w.name)}</button>` : ''}`;
   return modal(team ? 'Team contract talks' : w.contract ? 'Contract talks' : 'Sign free agent', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="offer">Make ${team ? 'team ' : ''}offer</button>`);
+}
+function paSwitch(w, on) {
+  return w.retired ? '' : `<div class="seg-ctl" style="margin-bottom:12px"><button class="${on ? '' : 'on'}" ${on ? `data-act="negotiate" data-id="${w.id}"` : ''} aria-pressed="${!on}">📝 Full contract</button><button class="${on ? 'on' : ''}" ${on ? '' : `data-act="guestDeal" data-id="${w.id}"`} aria-pressed="${on}">💰 Per appearance</button></div>`;
+}
+function modalGuest(m) {
+  const w = W(m.id); if (!w) return '';
+  const d = guestDeal(w.id), ask = paFee(w, m.excl), until = G.week + m.wks - 1;
+  const body = `${paSwitch(w, true)}<div class="row" style="margin-bottom:12px">${av(w, 48)}<div class="sp"><b>${esc(w.name)}</b><div class="small muted">${w.retired ? `🎤 Retired legend · ` : ''}Pop ${Math.round(w.pop)} · OVR ${overall(w)} · Age ${w.age}</div></div></div>
+   <div class="small muted" style="margin-bottom:10px">They stay off your roster and payroll. You pay their fee only on the shows they're booked on. Book them from the 💰 Per appearance tab when you pick wrestlers.</div>
+   ${d ? `<div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${money(d.fee)}/show · ${d.excl ? 'exclusive' : 'non-exclusive'}</b></div><div class="row small"><span class="sp muted">Runs until</span><b>Week ${d.until} · ${d.apps} appearance${d.apps === 1 ? '' : 's'} so far</b></div></div>` : ''}
+   <label class="f"><span>Deal type</span><div class="seg-ctl"><button class="${m.excl ? '' : 'on'}" data-act="gExcl" data-id="0">Non-exclusive</button><button class="${m.excl ? 'on' : ''}" data-act="gExcl" data-id="1">🔒 Exclusive</button></div></label>
+   <div class="tiny muted" style="margin:-4px 0 10px">${m.excl ? 'Costs more per show. Nobody else can sign them until the deal ends.' : 'Cheaper per show. Rivals can still sign them full-time, which ends your deal.'}</div>
+   <div class="card"><div class="row small"><span class="sp muted">${m.excl ? 'Exclusive' : 'Non-exclusive'} asking price</span><b>${money(ask)}/show</b></div>
+   ${w.contract == null && !w.retired && CON() ? `<div class="row small"><span class="sp muted">Full-time would cost</span><b>${money(askFor(w, prefLen(w)))}/wk</b></div>` : ''}
+   ${w.refusedWk === G.week ? '<div class="small" style="color:var(--bad);margin-top:6px">They said no. Try again next week.</div>' : ''}</div>
+   <label class="f"><span id="gFeeLbl">Fee per appearance: ${money(m.fee)}</span><input type="range" min="${Math.max(50, Math.round(ask * 0.4 / 50) * 50)}" max="${Math.max(200, Math.round(ask * 2 / 50) * 50)}" step="50" value="${m.fee}" data-in="gFee" style="width:100%"></label>
+   <label class="f"><span>Length</span><div class="seg-ctl">${PA_LENS.map(([n, l]) => `<button class="${m.wks === n ? 'on' : ''}" data-act="gLen" data-id="${n}">${l}</button>`).join('')}</div></label>
+   <div id="gChance">${guestChanceHTML(w, m)}</div>
+   ${d ? `<button class="btn bad block" style="margin-top:10px" data-act="gEnd" data-id="${w.id}">End the deal</button>` : ''}`;
+  return modal(w.retired ? 'Legend appearances' : 'Per-appearance deal', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="gOffer">${d ? 'Offer new terms' : 'Make offer'}</button>`);
+}
+function guestChanceHTML(w, m) {
+  const c = paChance(w, m.fee, m.excl, m.wks), [lbl, cls] = chanceLabel(c);
+  return `<div class="alert ${cls}"><span class="ic">🤝</span><div><b>${lbl}</b> <span class="muted small">(${Math.round(c * 100)}%)</span><div class="small muted">${PA_LENS.find(x => x[0] === m.wks)?.[1] || m.wks + ' wk'}, through week ${G.week + m.wks - 1}. Book them every week and it costs ${money(m.fee * m.wks)}.</div></div></div>`;
 }
 function teamTalkHTML(ws, m) {
   return teamTalkLines(ws, m.salary, m.weeks).map(([x, t, ok]) => `<div class="tt-l">${av(x, 28)}<div class="ph-b"><b class="ph-tt">${esc(lastName(x))} <span class="tiny ${ok ? '' : ''}" style="color:var(--${ok ? 'good' : 'bad'})">${ok ? '✓ happy' : '✗ wants more'}</span></b>${esc(t)}</div></div>`).join('');
@@ -5676,7 +5753,7 @@ function modalRecords(m) {
   let body = tabsOf([['titles', 'Title history'], ['awards', 'Awards'], ['legends', 'Legends']], tab, 'recTab');
   if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${titleArt(t, 'belt-sm')}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
   if (tab === 'awards') body += (G.awards || []).slice().reverse().map(a => `<div class="card aw"><div class="review-h">Year ${a.yr} awards · week ${a.wk}</div>${a.list.map(x => `<div class="aw-r"><span class="tiny muted">${esc(x.lbl)}</span><b>${esc(x.nm)}</b><span class="tiny muted">${esc(x.det || '')}</span></div>`).join('') || '<div class="tiny muted">No shows that year.</div>'}</div>`).join('') || `<div class="empty">Awards are handed out at the end of every year (week 52). ${52 - (G.week - 1) % 52} weeks to go.</div>`;
-  if (tab === 'legends') body += legends.length ? `<div class="list">${legends.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">Retired week ${w.retired} at ${w.age} · ${recStr(w)} · ${reignsOfW(w.id).length} title reigns</div></div></button>`).join('')}</div>` : '<div class="empty">No one has retired yet. Older wrestlers start to slow down after 34 and may retire from 38.</div>';
+  if (tab === 'legends') body += legends.length ? `<div class="list">${legends.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">Retired week ${w.retired} at ${w.age} · ${recStr(w)} · ${reignsOfW(w.id).length} title reigns${guestDeal(w.id) ? ` · 💰 ${money(guestDeal(w.id).fee)}/show` : ''}</div></div></button>`).join('')}</div>${CON() ? '<div class="tiny muted" style="margin-top:8px">Open a legend to book them for a few appearances without bringing them out of retirement.</div>' : ''}` : '<div class="empty">No one has retired yet. Older wrestlers start to slow down after 34 and may retire from 38.</div>';
   return modal('History', body);
 }
 function modalEditTeam(m) {
@@ -6266,6 +6343,7 @@ const A = {
   turn(id) { const w = W(id); w.align = w.align === 'face' ? 'heel' : 'face'; news(`🔄 ${w.name} is now a ${w.align}.`, 'story'); commit(`${w.name} is now a ${w.align}.`); },
   negotiate(id) {
     const w = W(id); if (!w) return;
+    if (!w.contract && CON()) { const ex = exclElsewhere(id); if (ex) return toast(`${w.name} is on an exclusive deal with ${ex}.`); }
     if (CON()) { const ps = partnersFor(w), wk = prefLen(w), team = ps.length > 0, ws = [w, ...ps]; return openModal({ type: 'negotiate', id, salary: team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, wk))) / 100) * 100 : askFor(w, wk), weeks: wk, team }); }
     if (!CON()) {
       if (w.contract) return confirmBox('Release ' + w.name + '?', 'They become a free agent.', 'Release', () => { leaveCompany(w, 'released'); UI.modal = null; commit(w.name + ' released.'); }, true);
@@ -6273,6 +6351,47 @@ const A = {
       news(`✍️ ${w.name} joined the roster.`, 'contract'); if (UI.modal?.type === 'negotiate') UI.modal = null; return commit(`${w.name} signed!`);
     }
     const ask = asking(w); openModal({ type: 'negotiate', id, salary: Math.round(ask / 100) * 100, weeks: w.age > 34 ? 52 : 26 }); },
+  guestDeal(id) {
+    const w = W(id); if (!w || w.contract || !CON()) return;
+    const ex = exclElsewhere(id); if (ex) return toast(`${w.name} is on an exclusive deal with ${ex}.`);
+    const d = guestDeal(id), excl = d ? d.excl : false;
+    openModal({ type: 'guest', id, excl, fee: d ? d.fee : paFee(w, excl), wks: w.retired ? 4 : 13 });
+  },
+  gExcl(v) { const m = UI.modal, w = W(m.id); if (!w) return; m.excl = v === '1'; m.fee = paFee(w, m.excl); render(); },
+  gLen(n) { UI.modal.wks = +n; render(); },
+  gOffer() {
+    const m = UI.modal, w = W(m.id); if (!w) return;
+    if (G.settings.finances && G.money < m.fee) return toast('Not enough money to cover even one appearance.');
+    const c = paChance(w, m.fee, m.excl, m.wks), old = guestDeal(w.id);
+    if (Math.random() < c) {
+      G.guests = (G.guests || []).filter(x => x.id !== w.id);
+      G.guests.push({ id: w.id, gname: w.name, fee: m.fee, excl: !!m.excl, until: G.week + m.wks - 1, apps: old?.apps || 0 });
+      w.morale = clamp(w.morale + (m.fee >= paFee(w, m.excl) ? 6 : 2), 0, 100);
+      news(`💰 ${w.name} agreed to ${m.excl ? "an exclusive" : "a non-exclusive"} per-appearance deal: ${money(m.fee)} a show through week ${G.week + m.wks - 1}.`, 'contract');
+      UI.modal = null; commit(`${w.name} said yes!`);
+    } else {
+      w.refusedWk = G.week; w.morale = clamp(w.morale - 3, 0, 100);
+      news(`❌ ${w.name} turned down ${money(m.fee)} a show.`, 'contract');
+      commit(`${w.name} said no. ${c > 0.3 ? 'It was close.' : 'Try a better fee.'}`);
+    }
+  },
+  gEnd(id) { const w = W(id), d = guestDeal(id); if (!w || !d) return;
+    confirmBox(`End ${w.name}'s deal?`, 'They go back to being a free agent. Any shows already booked with them lose them.', 'End deal', () => {
+      G.guests = G.guests.filter(x => x.id !== id); [G.card, ...Object.values(G.future || {})].forEach(c => c.forEach(seg => removeFromSeg(seg, id)));
+      news(`💰 You ended ${w.name}'s per-appearance deal.`, 'contract'); UI.modal = null; commit('Deal ended.'); }, true); },
+  localTalent() {
+    const p = UI.picker; if (!p) return;
+    if ((G.guests || []).length >= 60) return toast('That\'s a lot of guests already. Let some deals run out first.');
+    const w = makeWrestler(randomName(), '', p.align || null, null, rnd(0, .1));
+    w.pop = rint(3, 12); w.local = true; w.morale = 70; G.wrestlers.push(w);
+    const fee = clamp(paFee(w, false), 100, 250), wk = Math.max(UI.selWeek || G.week, G.week);
+    G.guests ||= []; G.guests.push({ id: w.id, gname: w.name, fee, excl: false, until: wk + 3, apps: 0 });
+    news(`💰 Local wrestler ${w.name} is working your shows for ${money(fee)} an appearance this month.`, 'contract');
+    if (p.sel.length < p.max) p.sel.push(w.id); else if (p.max === 1) p.sel = [w.id];
+    save(); render(); toast(`${w.name} booked for ${money(fee)} a show.`);
+    if (p.max === 1) A.pickDone();
+  },
+  pickTab(t) { UI.picker.tab = t === 'guests' ? 'guests' : 'roster'; render(); },
   negLen(n) { const m = UI.modal, w = W(m.id), old = askFor(w, m.weeks); m.weeks = +n; m.salary = Math.round(m.salary * askFor(w, m.weeks) / old / 100) * 100; render(); },
   negTeam(v) { const m = UI.modal, w = W(m.id); if (!w) return; m.team = v === '1' && partnersFor(w).length > 0; const ws = [w, ...partnersFor(w)]; m.salary = m.team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, m.weeks))) / 100) * 100 : askFor(w, m.weeks); render(); },
   offer() {
@@ -6286,6 +6405,7 @@ const A = {
       for (const x of ws) {
         const was = !!x.contract, ask = team ? teamAsk(x, ws, m.weeks) : askFor(x, m.weeks);
         x.contract = { salary: m.salary, weeks: m.weeks }; x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100); delete x.courted; delete x.payGap;
+        if (G.guests) G.guests = G.guests.filter(d => d.id !== x.id);
         if (!was) { x.joined = G.week; x.lastBooked = G.week; }
         if (!team) news(`✍️ ${x.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks}).`, 'contract');
       }
@@ -9355,6 +9475,7 @@ document.addEventListener('input', e => {
     else if (k === 'wNotes') { W(el.dataset.id).notes = v; debSave(); }
     else if (k === 'sNotes') { G.stories.find(s => s.id === el.dataset.id).notes = v; debSave(); }
     else if (k === 'negSal') { UI.modal.salary = +v; const w = W(UI.modal.id), tm = UI.modal.team && partnersFor(w).length; document.getElementById('negSalLbl').textContent = 'Weekly salary' + (tm ? ', each' : '') + ': ' + money(+v); document.getElementById('negChance').innerHTML = iconize(negChanceHTML(w, UI.modal)); const tt = document.getElementById('negTalk'); if (tt && tm) tt.innerHTML = iconize(teamTalkHTML([w, ...partnersFor(w)], UI.modal)); }
+    else if (k === 'gFee') { UI.modal.fee = +v; const w = W(UI.modal.id); document.getElementById('gFeeLbl').textContent = 'Fee per appearance: ' + money(+v); document.getElementById('gChance').innerHTML = iconize(guestChanceHTML(w, UI.modal)); }
     else if (k === 'promoName') { G.promo.name = v || 'My Promotion'; debSave(); }
     else if (k === 'showName') { G.promo.show = v || 'Weekly Show'; curShow().name = G.promo.show; debSave(); }
     else if (k === 'shName') { const x = showById(el.dataset.id); if (x) { const n = v.trim().slice(0, 40) || 'Weekly Show'; if (x.id === G.showId) G.promo.show = n; x.name = n; debSave(); } }
@@ -9615,8 +9736,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.4';
+const VERSION = '1.9.6';
 const WHATS_NEW = [
+  ['💰 Per-appearance deals', 'Sign free agents show by show instead of full-time. Non-exclusive deals are cheaper but rivals can still sign them. Exclusive deals cost more per show, and nobody else can sign them until the deal ends. Book them from the new Per appearance tab when you pick wrestlers, and you only pay for the shows they\'re on. Retired legends can make a few appearances too, and you can book local enhancement talent for squash matches from $100 a show.'],
   ['🏆 More belt shapes and centre pieces', 'The belt designer has 8 new plate shapes (Medallion, Starburst, Diamond, Cross, Flared, Twin, Arch and Feathered) and 13 new centre pieces, from an eagle, flame and skull to a laurel, trophy and maple leaf. They all take your metal and gem colours, and the text still fits. Five new templates use them.'],
   ['🏆 Better belts and belt photos', 'Every belt is redrawn in raised relief, with a bevelled rim, rivets, a curved top line and a ribbon nameplate, and text that always fits. Make any belt Ornate, try the new Oval plate, or upload a photo of a belt (pixel art or the real photo, like wrestler photos). Belts now show on title matches during the live show and on each champion\'s card.'],
   ['📚 Wrestler library', 'Keep Community wrestlers in your own library, no save needed. Tap 📚 on any wrestler or roster in Community, then add them to any save, now or later, from Community → Library or Roster tools.'],
