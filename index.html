@@ -4289,6 +4289,7 @@ const beltGem = (cx, cy, r, id, e) => `<circle cx="${cx}" cy="${cy}" r="${r + 1.
 // the centre piece, centred on (cx, cy) at radius r, sitting in a raised bezel
 function beltEmblem(b, cx, cy, r, M, T, id, abbrTxt) {
   const e = M[4], g = `url(#${id}g)`, m = `url(#${id}m)`, bez = `<circle cx="${cx}" cy="${cy}" r="${r + 5}" fill="url(#${id}t)" stroke="${e}" stroke-width="1.2"/><circle cx="${cx}" cy="${cy}" r="${r + 2.4}" fill="url(#${id}d)"/>`;
+  const ic = BICON[b.emblem]; if (ic) return ic[1]({ cx, cy, r, id, e, g, m, M, bez, p: d => beltPath(d, cx, cy, r), x: v => +(cx + v * r).toFixed(1), y: v => +(cy + v * r).toFixed(1) });
   switch (b.emblem) {
     case 'gem': return `${bez}${beltGem(cx, cy, r, id, e)}`;
     case 'globe': return `${bez}<circle cx="${cx}" cy="${cy}" r="${r}" fill="${g}"/><g fill="none" stroke="${M[1]}" stroke-width="1.5" opacity=".9"><ellipse cx="${cx}" cy="${cy}" rx="${r * .45}" ry="${r}"/><path d="M${cx - r} ${cy}H${cx + r}M${cx - r * .87} ${cy - r * .5}H${cx + r * .87}M${cx - r * .87} ${cy + r * .5}H${cx + r * .87}M${cx} ${cy - r}V${cy + r}"/></g><circle cx="${cx - r * .4}" cy="${cy - r * .45}" r="${r * .2}" fill="#fff" opacity=".5"/>`;
@@ -4312,8 +4313,8 @@ function beltRender(raw, opt = {}) {
   const [, P, Z] = BPLATE[b.plate], F = BFONT[b.font], cx = 180, orn = b.orn;
   const inner = (s, extra) => `transform="translate(180 75) scale(${s}) translate(-180 -75)"${extra || ''}`;
   // side plates spread along the strap, behind the main plate
-  const sx = { 0: [], 2: [58, 302], 4: [36, 80, 280, 324], 6: [22, 58, 94, 266, 302, 338] }[b.sides].filter(x => b.plate !== 'winged' || x < 40 || x > 320 || b.sides === 2);
-  const sxw = b.plate === 'winged' && b.sides ? (b.sides === 2 ? [22, 338] : [20, 340]) : sx;
+  const sx = { 0: [], 2: [58, 302], 4: [36, 80, 280, 324], 6: [22, 58, 94, 266, 302, 338] }[b.sides].filter(x => !['winged', 'eagle'].includes(b.plate) || x < 40 || x > 320 || b.sides === 2);
+  const sxw = ['winged', 'eagle'].includes(b.plate) && b.sides ? (b.sides === 2 ? [22, 338] : [20, 340]) : sx;
   const strap = `<rect x="2" y="50" width="356" height="50" rx="14" fill="${b.strap}"/><rect x="2" y="50" width="356" height="50" rx="14" fill="url(#${id}s)"/>
     ${b.tex === 'snake' ? `<rect x="2" y="50" width="356" height="50" rx="14" fill="url(#${id}k)"/>` : ''}
     ${b.tex === 'leather' || b.tex === 'snake' ? `<path d="M12 57H348M12 93H348" stroke="#fff" stroke-opacity=".3" stroke-width="1.3" stroke-dasharray="5 3.5"/>` : ''}
@@ -4369,6 +4370,49 @@ function beltRender(raw, opt = {}) {
   </svg>`;
 }
 
+// ---------- more plates and centre icons ----------
+// a closed outline from points around (180, 75): radius at each angle from fn
+const beltRing = (n, fn) => { const p = []; for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / n, r = fn(i, a); p.push(`${(180 + r[0] * Math.cos(a)).toFixed(1)} ${(75 + r[1] * Math.sin(a)).toFixed(1)}`); } return 'M' + p.join('L') + 'Z'; };
+const beltScallop = () => { let d = ''; const n = 18, R = 64; for (let i = 0; i <= n; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / n, x = 180 + R * Math.cos(a), y = 75 + R * Math.sin(a); if (!i) d = `M${x.toFixed(1)} ${y.toFixed(1)}`; else d += `A11.5 11.5 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}`; } return d + 'Z'; };
+// feathered wings around a round centre, as one outline
+const beltFeather = () => {
+  const L = [[130, 28], [96, 22], [58, 26], [30, 40], [52, 46], [24, 58], [50, 64], [28, 78], [56, 82], [40, 96], [72, 98], [62, 110], [100, 106], [132, 118]];
+  const R = L.slice().reverse().map(([x, y]) => [360 - x, y]);
+  return `M${L.map(p => p.join(' ')).join('L')}Q150 146 180 146Q210 146 ${R.map(p => p.join(' ')).join('L')}Q252 12 180 8Q108 12 130 28Z`;
+};
+Object.assign(BPLATE, {
+  scallop: ['Medallion', beltScallop(), { em: [70, 24], ban: [114, 172], top: [36, 104, 50] }],
+  star: ['Starburst', beltRing(28, i => i % 2 ? [62, 62] : [76, 72]), { em: [72, 23], ban: [114, 172], top: [38, 96, 48] }],
+  diamond: ['Diamond', 'M180 4L278 75L180 146L82 75Z', { em: [66, 21], ban: [104, 168], top: [36, 64, 0] }],
+  cross: ['Cross', 'M150 6H210L206 40Q228 34 270 38V112Q228 116 206 110L210 144H150L154 110Q132 116 90 112V38Q132 34 154 40Z', { em: [70, 22], ban: [114, 176], top: [26, 54, 0] }],
+  tablet: ['Flared', 'M96 18H264L292 40L276 75L292 110L264 132H96L68 110L84 75L68 40Z', { em: [64, 24], ban: [108, 196], top: [34, 160, 0] }],
+  twin: ['Twin', 'M180 30.3A60 60 0 1 0 180 119.7A60 60 0 1 0 180 30.3Z', { em: [74, 22], ban: [122, 176], top: [28, 64, 0] }],
+  arch: ['Arch', 'M112 144V62Q112 22 180 6Q248 22 248 62V144Z', { em: [72, 22], ban: [114, 164], top: [40, 104, 0] }],
+  eagle: ['Feathered', beltFeather(), { em: [72, 22], ban: [114, 176], top: [32, 84, 60] }]
+});
+// icons drawn in a -1..1 box and placed at (cx, cy) with radius r (absolute M L C Q Z only)
+const beltPath = (d, cx, cy, r) => d.replace(/(-?\d*\.?\d+)\s+(-?\d*\.?\d+)/g, (m, x, y) => `${(cx + x * r).toFixed(1)} ${(cy + y * r).toFixed(1)}`);
+const BICON = {
+  eagle: ['Eagle', (c) => { const R = c.r * 1.35, P = d => beltPath(d, c.cx, c.cy, R); return `<path d="${P('M0 -0.35C-0.3 -0.7 -0.8 -0.9 -1.1 -0.55C-0.88 -0.55 -0.78 -0.45 -0.72 -0.35C-0.88 -0.35 -0.94 -0.2 -0.88 -0.08C-0.62 -0.2 -0.4 -0.05 -0.25 0.1L-0.2 0.5L0 0.88L0.2 0.5L0.25 0.1C0.4 -0.05 0.62 -0.2 0.88 -0.08C0.94 -0.2 0.88 -0.35 0.72 -0.35C0.78 -0.45 0.88 -0.55 1.1 -0.55C0.8 -0.9 0.3 -0.7 0 -0.35Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1.4" stroke-linejoin="round"/><path d="${P('M-0.14 -0.32C-0.18 -0.62 0.12 -0.72 0.22 -0.5L0.36 -0.44L0.16 -0.36C0.12 -0.28 -0.06 -0.24 -0.14 -0.32Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1.2"/><circle cx="${+(c.cx + .06 * R).toFixed(1)}" cy="${+(c.cy - .48 * R).toFixed(1)}" r="${R * .06}" fill="${c.g}"/><path d="${P('M-0.55 -0.5L-0.35 -0.25M-0.75 -0.42L-0.5 -0.15M0.55 -0.5L0.35 -0.25M0.75 -0.42L0.5 -0.15')}" stroke="${c.e}" stroke-opacity=".5" stroke-width="1"/>`; }, 1],
+  flame: ['Flame', (c) => `${c.bez}<path d="${c.p('M0 0.9C-0.62 0.9 -0.76 0.32 -0.45 -0.08C-0.36 0.18 -0.18 0.22 -0.14 0.08C-0.27 -0.36 0 -0.62 0.09 -0.9C0.18 -0.54 0.62 -0.36 0.54 0.18C0.68 0.04 0.68 -0.09 0.63 -0.18C0.86 0.27 0.68 0.9 0 0.9Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1.3" stroke-linejoin="round"/><path d="${c.p('M0 0.8C-0.32 0.8 -0.36 0.45 -0.14 0.22C-0.09 0.4 0.05 0.4 0.05 0.27C0.05 0.09 0.18 0 0.22 -0.18C0.32 0.18 0.4 0.36 0.32 0.54C0.27 0.72 0.14 0.8 0 0.8Z')}" fill="${c.g}"/>`],
+  bolt: ['Lightning', (c) => `${c.bez}<path d="${c.p('M0.22 -0.88L-0.5 0.14L-0.04 0.14L-0.27 0.88L0.54 -0.22L0.07 -0.22L0.36 -0.88Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1.4" stroke-linejoin="round"/><path d="${c.p('M0.2 -0.7L-0.3 0.05')}" stroke="#fff" stroke-opacity=".55" stroke-width="1.2"/>`],
+  skull: ['Skull', (c) => `${c.bez}<path d="${c.p('M-0.66 0C-0.66 -0.53 -0.35 -0.8 0 -0.8C0.35 -0.8 0.66 -0.53 0.66 0C0.66 0.26 0.48 0.35 0.4 0.4L0.4 0.66L-0.4 0.66L-0.4 0.4C-0.48 0.35 -0.66 0.26 -0.66 0Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1.3"/><circle cx="${c.x(-0.28)}" cy="${c.y(0.04)}" r="${c.r * .18}" fill="${c.g}" stroke="${c.e}" stroke-width=".8"/><circle cx="${c.x(0.28)}" cy="${c.y(0.04)}" r="${c.r * .18}" fill="${c.g}" stroke="${c.e}" stroke-width=".8"/><path d="${c.p('M0 0.22L-0.09 0.37L0.09 0.37Z')}" fill="${c.e}"/><path d="${c.p('M-0.22 0.52L-0.22 0.66M0 0.52L0 0.66M0.22 0.52L0.22 0.66')}" stroke="${c.e}" stroke-width="1.2"/>`],
+  laurel: ['Laurel', (c) => { let l = ''; for (const s of [-1, 1]) for (let k = 0; k < 6; k++) { const a = (s < 0 ? 200 - k * 26 : -20 + k * 26) * Math.PI / 180, x = c.cx + Math.cos(a) * c.r * .86 * (s < 0 ? 1 : 1), y = c.cy - Math.sin(a) * c.r * .86 + c.r * .12; l += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(c.r * .24).toFixed(1)}" ry="${(c.r * .1).toFixed(1)}" transform="rotate(${(-a * 180 / Math.PI + 90 * s).toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${c.m}" stroke="${c.e}" stroke-width=".8"/>`; }
+    return `${l}${beltGem(c.cx, c.cy, c.r * .48, c.id, c.e)}`; }, 1],
+  ring: ['Ring', (c) => `${c.bez}<path d="${c.p('M-0.86 0.16L0.86 0.16L0.86 0.62L-0.86 0.62Z')}" fill="${c.g}" stroke="${c.e}" stroke-width="1"/><path d="${c.p('M-0.86 -0.62L-0.72 -0.62L-0.72 0.16L-0.86 0.16ZM0.72 -0.62L0.86 -0.62L0.86 0.16L0.72 0.16Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1"/><path d="${c.p('M-0.72 -0.46L0.72 -0.46M-0.72 -0.2L0.72 -0.2M-0.72 0.04L0.72 0.04')}" stroke="${c.M[1]}" stroke-width="${(c.r * .08).toFixed(1)}"/><path d="${c.p('M-0.72 -0.46L0.72 -0.46M-0.72 -0.2L0.72 -0.2M-0.72 0.04L0.72 0.04')}" stroke="${c.e}" stroke-width=".6" stroke-opacity=".6"/>`],
+  swords: ['Swords', (c) => { const sw = `<path d="${c.p('M-0.07 -0.95L0 -1.08L0.07 -0.95L0.07 0.42L-0.07 0.42Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1"/><path d="${c.p('M-0.28 0.42L0.28 0.42L0.28 0.52L-0.28 0.52Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1"/><path d="${c.p('M-0.06 0.52L0.06 0.52L0.06 0.8L-0.06 0.8Z')}" fill="${c.e}"/><circle cx="${c.cx}" cy="${c.y(0.87)}" r="${c.r * .08}" fill="${c.g}"/>`;
+    return `${c.bez}<g transform="rotate(-38 ${c.cx} ${c.cy})">${sw}</g><g transform="rotate(38 ${c.cx} ${c.cy})">${sw}</g>`; }],
+  trophy: ['Trophy', (c) => `${c.bez}<path d="${c.p('M-0.56 -0.72C-0.92 -0.72 -0.92 -0.16 -0.42 -0.1M0.56 -0.72C0.92 -0.72 0.92 -0.16 0.42 -0.1')}" fill="none" stroke="${c.e}" stroke-width="${(c.r * .14).toFixed(1)}"/><path d="${c.p('M-0.56 -0.72C-0.92 -0.72 -0.92 -0.16 -0.42 -0.1M0.56 -0.72C0.92 -0.72 0.92 -0.16 0.42 -0.1')}" fill="none" stroke="${c.M[2]}" stroke-width="${(c.r * .07).toFixed(1)}"/><path d="${c.p('M-0.56 -0.78L0.56 -0.78C0.56 -0.1 0.28 0.16 0 0.2C-0.28 0.16 -0.56 -0.1 -0.56 -0.78Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1.3"/><path d="${c.p('M-0.1 0.2L0.1 0.2L0.14 0.5L-0.14 0.5ZM-0.46 0.5L0.46 0.5L0.46 0.74L-0.46 0.74Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1.1"/>${beltGem(c.cx, c.y(-0.36), c.r * .15, c.id, c.e)}`],
+  maple: ['Maple leaf', (c) => `${c.bez}<path d="${c.p('M0 -0.86L0.11 -0.62L0.25 -0.72L0.2 -0.3L0.4 -0.48L0.45 -0.37L0.68 -0.43L0.58 -0.2L0.74 -0.13L0.4 0.15L0.47 0.3L0.05 0.24L0.05 0.62L-0.05 0.62L-0.05 0.24L-0.47 0.3L-0.4 0.15L-0.74 -0.13L-0.58 -0.2L-0.68 -0.43L-0.45 -0.37L-0.4 -0.48L-0.2 -0.3L-0.25 -0.72L-0.11 -0.62Z')}" fill="${c.g}" stroke="${c.e}" stroke-width="1.1" stroke-linejoin="round"/>`],
+  diamond: ['Diamond', (c) => `${c.bez}<path d="${c.p('M-0.8 -0.2L-0.45 -0.65L0.45 -0.65L0.8 -0.2L0 0.8Z')}" fill="${c.g}" stroke="${c.e}" stroke-width="1.2" stroke-linejoin="round"/><path d="${c.p('M-0.8 -0.2L0.8 -0.2M-0.45 -0.65L-0.22 -0.2L0 -0.65L0.22 -0.2L0.45 -0.65M-0.22 -0.2L0 0.8L0.22 -0.2')}" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".9"/>`],
+  orbit: ['Planet', (c) => `${c.bez}<circle cx="${c.cx}" cy="${c.cy}" r="${c.r * .5}" fill="${c.g}"/><ellipse cx="${c.cx}" cy="${c.cy}" rx="${c.r * .92}" ry="${c.r * .28}" transform="rotate(-18 ${c.cx} ${c.cy})" fill="none" stroke="${c.e}" stroke-width="${(c.r * .14).toFixed(1)}"/><ellipse cx="${c.cx}" cy="${c.cy}" rx="${c.r * .92}" ry="${c.r * .28}" transform="rotate(-18 ${c.cx} ${c.cy})" fill="none" stroke="${c.M[1]}" stroke-width="${(c.r * .07).toFixed(1)}"/>`],
+  heart: ['Heart', (c) => `${c.bez}<path d="${c.p('M0 0.78C-0.82 0.2 -0.82 -0.62 -0.4 -0.68C-0.18 -0.7 0 -0.5 0 -0.36C0 -0.5 0.18 -0.7 0.4 -0.68C0.82 -0.62 0.82 0.2 0 0.78Z')}" fill="${c.g}" stroke="${c.e}" stroke-width="1.2"/><path d="${c.p('M-0.45 -0.45C-0.6 -0.35 -0.6 -0.15 -0.5 0')}" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.4"/>`],
+  crest: ['Crest', (c) => `${c.bez}<path d="${c.p('M-0.62 -0.72L0.62 -0.72L0.62 0C0.62 0.44 0.27 0.66 0 0.8C-0.27 0.66 -0.62 0.44 -0.62 0Z')}" fill="${c.m}" stroke="${c.e}" stroke-width="1.3"/><path d="${c.p('M-0.56 0.04L0 -0.4L0.56 0.04L0.56 0.3L0 -0.14L-0.56 0.3Z')}" fill="${c.g}" stroke="${c.e}" stroke-width=".8"/>`]
+};
+
+// the new icons join the centre list, with None kept last
+delete BEMBLEM.none; for (const [k, v] of Object.entries(BICON)) BEMBLEM[k] = v[0]; BEMBLEM.none = 'None';
+
 // finished belts to start from; the designer's Templates row and the quick-add titles use them
 const BTPL = [
   ['World', { plate: 'classic', metal: 'gold', strap: '#1a1a1f', emblem: 'globe', gem: '#d62839', carve: 'sunburst', sides: 2, enamel: '#9b1020' }],
@@ -4379,7 +4423,12 @@ const BTPL = [
   ['Hardcore', { plate: 'hex', metal: 'bronze', strap: '#0f4a2c', tex: 'snake', emblem: 'gem', gem: '#1f9e5a', carve: 'sunburst', sides: 6, enamel: '#0c5a35', font: 'serif' }],
   ['Tag team', { plate: 'wide', metal: 'copper', strap: '#3b2416', emblem: 'bell', gem: '#d62839', carve: 'scroll', sides: 4, enamel: '#9b1020' }],
   ['Cruiserweight', { plate: 'winged', metal: 'silver', trim: 'gold', strap: '#4a1b5e', emblem: 'star', gem: '#8a3fd1', carve: 'sunburst', sides: 2, ring: 1, enamel: '#1a1a1f', font: 'tall' }],
-  ['Classic', { plate: 'classic', metal: 'gold', strap: '#1a1a1f', emblem: 'gem', gem: '#d62839', carve: 'none', sides: 2, banner: 0 }]
+  ['Classic', { plate: 'classic', metal: 'gold', strap: '#1a1a1f', emblem: 'gem', gem: '#d62839', carve: 'none', sides: 2, banner: 0 }],
+  ['Eagle', { plate: 'eagle', metal: 'gold', strap: '#1a1a1f', emblem: 'eagle', gem: '#d62839', carve: 'scroll', sides: 4, enamel: '#9b1020' }],
+  ['Inferno', { plate: 'star', metal: 'copper', strap: '#1a1a1f', tex: 'studs', emblem: 'flame', gem: '#f2b01e', carve: 'sunburst', sides: 2, side: 'shield', enamel: '#9b1020' }],
+  ['Legacy', { plate: 'scallop', metal: 'silver', trim: 'gold', strap: '#14306b', emblem: 'laurel', gem: '#2f6fe0', carve: 'lines', sides: 2, side: 'round', enamel: '#123a7a', font: 'serif' }],
+  ['Deathmatch', { plate: 'cross', metal: 'black', trim: 'silver', strap: '#1a1a1f', tex: 'snake', emblem: 'skull', gem: '#d62839', carve: 'dots', sides: 6, enamel: '#1a1a1f' }],
+  ['Grand Slam', { plate: 'tablet', metal: 'gold', strap: '#0f4a2c', emblem: 'trophy', gem: '#1f9e5a', carve: 'sunburst', sides: 4, enamel: '#0c5a35' }]
 ];
 // a template's look with this title's own words kept
 const beltFromTpl = (i, cur) => { const c = beltClean(cur), x = BTPL[i]?.[1] || {}; return beltClean({ ...beltDefault(), trim: '', tex: 'leather', side: 'rect', ring: 0, font: 'block', banner: 1, ...x, top: c.top, line: c.line, sub: c.sub, orn: c.orn }); };
@@ -9514,8 +9563,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.1';
+const VERSION = '1.9.2';
 const WHATS_NEW = [
+  ['🏆 More belt shapes and centre pieces', 'The belt designer has 8 new plate shapes (Medallion, Starburst, Diamond, Cross, Flared, Twin, Arch and Feathered) and 13 new centre pieces, from an eagle, flame and skull to a laurel, trophy and maple leaf. They all take your metal and gem colours, and the text still fits. Five new templates use them.'],
   ['🏆 Better belts and belt photos', 'Every belt is redrawn in raised relief, with a bevelled rim, rivets, a curved top line and a ribbon nameplate, and text that always fits. Make any belt Ornate, try the new Oval plate, or upload a photo of a belt (pixel art or the real photo, like wrestler photos). Belts now show on title matches during the live show and on each champion\'s card.'],
   ['📚 Wrestler library', 'Keep Community wrestlers in your own library, no save needed. Tap 📚 on any wrestler or roster in Community, then add them to any save, now or later, from Community → Library or Roster tools.'],
   ['🏆 Design your championships', 'New companies get a Championships step: name your titles, crown champions and design every belt. The belt designer lets you pick the plate shape, metal and trim, strap colour and style, side plates, gems, the centre piece, engraving and lettering, or start from a template. Each title also has a level, a division and rules, like a defense deadline or the belt changing hands on a DQ. Edit any title in Office → Titles.'],
