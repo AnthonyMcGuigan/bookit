@@ -460,7 +460,6 @@ nav.tabs .dot { background: var(--rope-r); font-family: system-ui, sans-serif; l
 .hero { padding-top: calc(env(safe-area-inset-top) + 18px); }
 .hero h1 { font-family: var(--f-display); font-weight: 400; font-size: 46px; letter-spacing: .02em; text-transform: uppercase; line-height: .95; }
 .hero h1 em { display: block; font-size: 62px; color: transparent; background: linear-gradient(180deg, #fff3c2, #f6c544 50%, #c78a12); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 4px 14px rgba(246,197,68,.25)); }
-.ring-art { width: min(300px, 82vw); height: auto; display: block; margin: 0 auto 6px; filter: drop-shadow(0 18px 30px rgba(0,0,0,.45)); }
 .belt-art { width: min(240px, 70vw); height: auto; display: block; margin: 6px auto 10px; filter: drop-shadow(0 10px 24px rgba(246,197,68,.28)); }
 .belt-sm { width: 64px; height: auto; flex: none; }
 /* wizard + draft */
@@ -607,6 +606,11 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .lv-k { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.6); font-weight: 700; }
 .lv-w { font-weight: 800; font-size: 16px; margin: 4px 0 2px; }
 .lv-w .vs { color: #ffb547; font-family: var(--f-display); margin: 0 6px; }
+.lv-faces { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0 6px; }
+.lv-side { display: flex; gap: 6px; }
+.lv-face { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; max-width: 84px; text-align: center; }
+.lv-face .av { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.lv-faces > .vs { color: #ffb547; font-family: var(--f-display); font-size: 22px; }
 .lv-o { margin-top: 6px; }
 .lv-txt { font-size: 14px; color: rgba(255,255,255,.85); margin-bottom: 4px; }
 .lv-st { font-size: 20px; color: #ffcf5a; animation: starPop .5s cubic-bezier(.2,1.8,.4,1) both; animation-delay: var(--d); }
@@ -783,6 +787,9 @@ html[data-nw] .seg-ctl button { font-size: 12.5px; letter-spacing: .01em; paddin
 html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw="2"] .stat { padding: 8px 8px; } html[data-nw="2"] .stat .v { font-size: 18px; } html[data-nw="2"] .seg-ctl button { font-size: 11.5px; letter-spacing: 0; padding: 7px 2px; } html[data-nw="2"] .cal-t { font-size: 10px; letter-spacing: 0; }
 @media (max-width: 300px) { .cal-now { font-size: 8.5px; letter-spacing: 0; } .stat { padding: 8px 8px; } .stat .v { font-size: 18px; } .seg-ctl button { font-size: 11.5px; letter-spacing: 0; padding: 7px 2px; } .cal-t { font-size: 10px; letter-spacing: 0; } }
 .seg-ctl.tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg-ctl.quad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.seg-ctl.wrap button { font-size: 12px; letter-spacing: .02em; line-height: 1.15; padding: 6px 2px; }
+.seg-ctl.wrap .cnt { display: block; margin: 2px auto 0; width: max-content; }
 .seg-ctl .cnt, .filters .cnt { display: inline-block; min-width: 1.6em; padding: 0 .35em; border-radius: 99px; background: color-mix(in srgb, currentColor 10%, transparent); font-size: .85em; line-height: 1.4; letter-spacing: 0; }
 .item .main, .row > *, .sp { min-width: 0; }
 .t, .d, .small, .tiny, h1, h2, h3, p, li, label, td, th, b, .news { overflow-wrap: anywhere; }
@@ -840,7 +847,7 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 </style>
 </head>
 <body>
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><symbol id="i-mute" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4.5v15l-5.5-4.5H3V9h3.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M21.5 9l-5.5 6M16 9l5.5 6"/></symbol><symbol id="i-sound" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4.5v15l-5.5-4.5H3V9h3.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.8a4.5 4.5 0 0 1 0 6.4M18.5 5.8a8.8 8.8 0 0 1 0 12.4"/></symbol><symbol id="i-bug" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 6.5c3 0 5.2 2.4 5.2 5.5v3a5.2 5.2 0 0 1-10.4 0v-3c0-3.1 2.2-5.5 5.2-5.5zM12 9v10"/><path fill-rule="evenodd" d="M9 6.8a3 3 0 0 1 6 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12.5h3.5M17.5 12.5H21M4 19l3-1.8M20 19l-3-1.8M4 6l3 2M20 6l-3 2M9.5 3.5l1 2M14.5 3.5l-1 2"/></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2c1.4 3.8 6.5 6 6.5 11.5a6.5 6.5 0 0 1-13 0c0-3 1.7-4.9 3-6 0 2.3 1 3.6 2.2 3.8C10.5 8 10.3 5 12 2zM12 21a3 3 0 0 1-3-3c0-2 2-3 2.5-5 1.5 1.5 3.5 2.8 3.5 5a3 3 0 0 1-3 3z"/></symbol><symbol id="i-trophy" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7 3h10v6.5a5 5 0 0 1-10 0zM10.3 6.2l.6 1.6h1.7l-1.3 1 .5 1.7-1.5-1-1.5 1 .5-1.7-1.3-1h1.7z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 5.5H4.5a3 3 0 0 0 3.3 4.4M17 5.5h2.5a3 3 0 0 1-3.3 4.4"/><path fill-rule="evenodd" d="M10.8 14h2.4v3.5h-2.4zM8 17.5h8a1 1 0 0 1 1 1V21H7v-2.5a1 1 0 0 1 1-1z"/></symbol><symbol id="i-heart" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 21s-8.2-4.9-10-10C.6 7.1 3.1 3.3 7 3.3c2.2 0 3.8 1.2 5 2.9 1.2-1.7 2.8-2.9 5-2.9 3.9 0 6.4 3.8 5 7.7-1.8 5.1-10 10-10 10z"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.3l2.9 6 6.6.9-4.8 4.6 1.2 6.6L12 17.2l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9z"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.3 3.6a2 2 0 0 1 3.4 0l8.4 14.6a2 2 0 0 1-1.7 3H3.6a2 2 0 0 1-1.7-3zM11 9h2l-.3 5.5h-1.4zM12 16.3a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z"/></symbol><symbol id="i-checkc" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM6.9 12.4l1.8-1.8 2.1 2.1 4.5-5.1 1.9 1.7-6.3 7.1z"/></symbol><symbol id="i-xc" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM8.6 7l3.4 3.4L15.4 7 17 8.6 13.6 12l3.4 3.4-1.6 1.6-3.4-3.4L8.6 17 7 15.4l3.4-3.4L7 8.6z"/></symbol><symbol id="i-pen" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M15.6 3.6a2 2 0 0 1 2.8 0l2 2a2 2 0 0 1 0 2.8L9 19.8 3.5 21 4.7 15.5zM14 7.2l2.8 2.8 1-1L15 6.2z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 2.5h6a1 1 0 0 1 1 1V5h4a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2h4V3.5a1 1 0 0 1 1-1zM5.5 8.5h13l-1 11.5a1.6 1.6 0 0 1-1.6 1.5H8.1a1.6 1.6 0 0 1-1.6-1.5zM9.3 11v7.5h1.4V11zM13.3 11v7.5h1.4V11z"/></symbol><symbol id="i-dice" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM8 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM16 14.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></symbol><symbol id="i-trend" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 21h18v-1.8H3z"/><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 16l5.5-5.5 4 4 7.5-7.5"/><path fill-rule="evenodd" d="M14.5 5.5H22V13z"/></symbol><symbol id="i-snow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M12 2.5v19M3.8 7.2l16.4 9.6M3.8 16.8l16.4-9.6M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5A7.8 7.8 0 0 0 5.2 7.2M4.5 13.5a7.8 7.8 0 0 0 14.3 3.3"/><path fill-rule="evenodd" d="M3 3v7h7zM21 21v-7h-7z"/></symbol><symbol id="i-news" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 4.5h14v13.5a2.5 2.5 0 0 0 2.5 2.5H5.5A2.5 2.5 0 0 1 3 18zM6 7.5v3.5h8V7.5zM6 13v1.6h8V13zM6 16.2v1.6h5.5v-1.6z"/><path fill-rule="evenodd" d="M18 9h3v9.5a1.5 1.5 0 0 1-3 0z"/></symbol><symbol id="i-medal" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 13.5l-1.8 8 6.3-3 6.3 3-1.8-8z"/><path fill-rule="evenodd" d="M12 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM12 5l1.1 2.3 2.5.3-1.8 1.7.5 2.5L12 10.6l-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></symbol><symbol id="i-equal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 9h14M5 15h14"/></symbol><symbol id="i-box" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.3l9 4.2-9 4.3-9-4.3z"/><path fill-rule="evenodd" d="M2.5 8.2l8.7 4.1v9.4L2.5 17.6z"/><path fill-rule="evenodd" d="M21.5 8.2l-8.7 4.1v9.4l8.7-4.1z"/></symbol><symbol id="i-tv" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 6.5h16a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2zM5 9.5v7.5h14V9.5z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5l4 4 4-4"/></symbol><symbol id="i-frown" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM15 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.8 16.6a1 1 0 0 0 1.6 1.1 3.3 3.3 0 0 1 5.2 0 1 1 0 0 0 1.6-1.1 5.3 5.3 0 0 0-8.4 0z"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM15 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.4 13.2a4.8 4.8 0 0 0 9.2 0z"/></symbol><symbol id="i-heel" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM7 8.2l4 1.7-.5 1.6-4-1.3zM17 8.2l-4 1.7.5 1.6 4-1.3zM7.8 16.8a1 1 0 0 0 1.6 1.1 3.3 3.3 0 0 1 5.2 0 1 1 0 0 0 1.6-1.1 5.3 5.3 0 0 0-8.4 0z"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 2.5h2v19H4z"/><path fill-rule="evenodd" d="M6.5 3.5H19l-2.5 4.5 2.5 4.5H6.5z"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a1.5 1.5 0 0 1 1.5 1.5v.6A6.5 6.5 0 0 1 18.5 11v4.5l2 2.5v1H3.5v-1l2-2.5V11a6.5 6.5 0 0 1 5-6.4V4A1.5 1.5 0 0 1 12 2.5zM9.5 20h5a2.5 2.5 0 0 1-5 0z"/></symbol><symbol id="i-target" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 4.5h14a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2zM5 9.5V19h14V9.5zM7 11.5h2.5V14H7zM10.8 11.5h2.5V14h-2.5zM14.5 11.5H17V14h-2.5zM7 15.5h2.5V18H7zM10.8 15.5h2.5V18h-2.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5v4M16 2.5v4"/></symbol><symbol id="i-crown" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 7.5l5 4.5L12 4.5l4.5 7.5 5-4.5-1.8 10H4.3z"/><path fill-rule="evenodd" d="M4.5 19h15v2.5h-15z"/></symbol><symbol id="i-megaphone" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M16 3.5v17l-8-4.3H5A2.5 2.5 0 0 1 2.5 13.7v-3.4A2.5 2.5 0 0 1 5 7.8h3z"/><path fill-rule="evenodd" d="M5.5 17.5h3l1.3 4H7z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 9a4 4 0 0 1 0 6"/></symbol><symbol id="i-briefcase" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3h6a1.5 1.5 0 0 1 1.5 1.5V7H20a2 2 0 0 1 2 2v3.5h-8.5v-1h-3v1H2V9a2 2 0 0 1 2-2h3.5V4.5A1.5 1.5 0 0 1 9 3zM9.3 4.8V7h5.4V4.8zM2 14h8.5v1.5h3V14H22v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a4.5 4.5 0 0 1 4.5 4.5v3h.5a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2h.5V7A4.5 4.5 0 0 1 12 2.5zM12 4.5A2.5 2.5 0 0 0 9.5 7v3h5V7A2.5 2.5 0 0 0 12 4.5zM12 13.5a1.8 1.8 0 0 0-1 3.3V19h2v-2.2a1.8 1.8 0 0 0-1-3.3z"/></symbol><symbol id="i-tired" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 7h13a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM4.2 9.2v5.6h4V9.2z"/><path fill-rule="evenodd" d="M20 10h1.5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5H20z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 2.5h8l5.5 5.5v8L16 21.5H8L2.5 16V8zM7 10.8v2.4h10v-2.4z"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM1.5 20.5a7.5 7.5 0 0 1 15 0v1h-15z"/><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M19.5 7.5v7M16 11h7"/></symbol><symbol id="i-coin" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12.9 5.8h-1.8v1.4c-1.7.4-2.8 1.6-2.8 3.1 0 1.9 1.6 2.6 3.3 3 1.3.3 1.9.6 1.9 1.3 0 .6-.6 1-1.6 1-1 0-1.8-.4-2.2-1.2l-1.7.8c.5 1.2 1.6 2 3.1 2.2v1.3h1.8v-1.4c1.8-.4 2.8-1.5 2.8-3 0-2-1.6-2.7-3.4-3.1-1.2-.3-1.8-.6-1.8-1.2 0-.5.5-.9 1.4-.9.8 0 1.5.3 1.9 1l1.6-.9c-.6-1-1.4-1.6-2.5-1.9z"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM10.8 10.5h2.4V17h-2.4zM12 6.3a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z"/></symbol><symbol id="i-book" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6.5 2.5H19v15H7a1.5 1.5 0 0 0 0 3h12v1.5H6.8A2.8 2.8 0 0 1 4 19.2V5a2.5 2.5 0 0 1 2.5-2.5zM8.5 6v1.6h7V6zM8.5 9.2v1.6h5V9.2z"/></symbol><symbol id="i-door" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 2.5h12v18H6zM14 11a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/><path fill-rule="evenodd" d="M3 20h18v2H3z"/></symbol><symbol id="i-ticket" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4zM13.3 7.5v1.8h1.4V7.5zM13.3 11.1v1.8h1.4v-1.8zM13.3 14.7v1.8h1.4v-1.8z"/></symbol><symbol id="i-bulb" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a6.8 6.8 0 0 1 4 12.3V16.5H8v-2.2A6.8 6.8 0 0 1 12 2z"/><path fill-rule="evenodd" d="M8.5 17.8h7v1.7h-7zM9.8 20.5h4.4a2.2 2.2 0 0 1-4.4 0z"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3a4.2 4.2 0 1 1 0 8.4A4.2 4.2 0 0 1 9 3zM1.5 21a7.5 7.5 0 0 1 15 0v.5h-15z"/><path fill-rule="evenodd" d="M15.8 3.2a4.2 4.2 0 0 1 0 8 6 6 0 0 0 0-8zM18 13.6A7.5 7.5 0 0 1 22.5 21v.5h-4.2V21a9 9 0 0 0-2.8-6.6 7 7 0 0 1 2.5-.8z"/></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13.5 1.5L3.5 14H11l-1.2 8.5L20.5 10H13z"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M15 4a3 3 0 0 0-6 0v7a3 3 0 0 0 6 0z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol><symbol id="i-film" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 9.5h18V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path fill-rule="evenodd" d="M3.2 8.2l1.6-4.5a1 1 0 0 1 1-.7h14.4a.8.8 0 0 1 .7 1.1L19.4 8.2zM8.6 4.2L7.3 7.2h2.3l1.3-3zM14.4 4.2L13.1 7.2h2.3l1.3-3z"/></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11 2.5l2.1 6.4 6.4 2.1-6.4 2.1L11 19.5l-2.1-6.4-6.4-2.1 6.4-2.1z"/><path fill-rule="evenodd" d="M19 14.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 4h6l1.8 2.5H20a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2h3.2zM12 8.5a4.3 4.3 0 1 0 0 8.6 4.3 4.3 0 0 0 0-8.6zM12 10.5a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6z"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 1.5h8a2 2 0 0 1 2 2v17a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-17a2 2 0 0 1 2-2zM8.2 4v13h7.6V4zM12 18.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3.5h14a2.5 2.5 0 0 1 2.5 2.5v8.5A2.5 2.5 0 0 1 19 17h-9l-5.5 4.5V17H5a2.5 2.5 0 0 1-2.5-2.5V6A2.5 2.5 0 0 1 5 3.5zM7 8v1.8h10V8zM7 11.3v1.8h6.5v-1.8z"/></symbol><symbol id="i-cap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3l11 5.5L12 14 1 8.5z"/><path fill-rule="evenodd" d="M5.5 11.5l6.5 3.3 6.5-3.3v4.8c-3.5 2.8-9.5 2.8-13 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21.5 9.5v6"/></symbol><symbol id="i-mask" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 5c3.2 1.3 6.3 1.3 9.5 0 3.2 1.3 6.3 1.3 9.5 0v6a9.5 9.5 0 0 1-19 0zM6.8 9.3v1.8h3.5V9.3zM13.7 9.3v1.8h3.5V9.3zM8.3 14.5a4.7 4.7 0 0 0 7.4 0z"/></symbol><symbol id="i-skip" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.5 4.5l9 7.5-9 7.5zM12.5 4.5l9 7.5-9 7.5z"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M4 6.5h16M4 12h16M4 17.5h16"/></symbol><symbol id="i-notebook" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6.5 2.5H18a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H6.5zM9.5 6.5v1.8h7V6.5zM9.5 10v1.8h5V10z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 7h3.5M3 12h3.5M3 17h3.5"/></symbol><symbol id="i-swap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 2.5v4h12v3.5h-12v4L2 8.3z"/><path fill-rule="evenodd" d="M16.5 9.5v4h-12V17h12v4.5L22 15.8z"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5l10 8-1.3 1.6-1.2-1V20.5a1 1 0 0 1-1 1H14.5v-6h-5v6H5.5a1 1 0 0 1-1-1V11.1l-1.2 1L2 10.5z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 1.5a7.5 7.5 0 0 1 7.5 7.5c0 5.8-7.5 13-7.5 13S4.5 14.8 4.5 9A7.5 7.5 0 0 1 12 1.5zM12 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M16.6 2.2l5.2 5.2L7.4 21.8l-5.2-5.2zM15.3 6.3l-1.2 1.2 2 2 1.2-1.2zM12.1 9.5l-1.2 1.2 2 2 1.2-1.2zM8.9 12.7l-1.2 1.2 2 2 1.2-1.2z"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 5.5L21 3v13.5a3.2 3.2 0 1 1-2-3V7.4L10 9.2v9.3a3.2 3.2 0 1 1-2-3z"/></symbol><symbol id="i-musicoff" viewBox="0 0 24 24"><path fill-rule="evenodd" opacity=".45" d="M8 5.5L21 3v13.5a3.2 3.2 0 1 1-2-3V7.4L10 9.2v9.3a3.2 3.2 0 1 1-2-3z"/><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M3 3l18 18"/></symbol><symbol id="i-grid" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 2h8.5L19 6.5V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM13.5 3.5V7.5h4zM7.5 11v1.8h9V11zM7.5 14.6v1.8h6v-1.8z"/></symbol><symbol id="i-medical" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3h6a1.5 1.5 0 0 1 1.5 1.5V7H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3.5V4.5A1.5 1.5 0 0 1 9 3zM9.3 4.8V7h5.4V4.8zM10.8 10v2.8H8v2.4h2.8V18h2.4v-2.8H16v-2.4h-2.8V10z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 3.5v10"/><path fill-rule="evenodd" d="M6.5 10.5h11L12 17z"/><path fill-rule="evenodd" d="M3.5 19h17v2.5h-17z"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 20.5v-10"/><path fill-rule="evenodd" d="M6.5 13.5h11L12 7z"/><path fill-rule="evenodd" d="M3.5 2.5h17V5h-17z"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12 4.5c-1.2 1.5-2.1 3.8-2.3 6.5h4.6c-.2-2.7-1.1-5-2.3-6.5zM14.4 13h-4.8c.2 2.7 1.1 5 2.4 6.5 1.3-1.5 2.2-3.8 2.4-6.5zM4.6 11h3.1c.1-2.4.8-4.6 1.8-6.1A7.6 7.6 0 0 0 4.6 11zM16.3 11h3.1a7.6 7.6 0 0 0-4.9-6.1c1 1.5 1.7 3.7 1.8 6.1zM4.6 13a7.6 7.6 0 0 0 4.9 6.1c-1-1.5-1.7-3.7-1.8-6.1zM16.3 13c-.1 2.4-.8 4.6-1.8 6.1a7.6 7.6 0 0 0 4.9-6.1z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 2.5h11.5l4 4V19.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2zM7 4.5v4.5h8V4.5zM7 13.5v6h10v-6z"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 2h6a1 1 0 0 1 1 1v1h3a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 19 22H5a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 5 4h3V3a1 1 0 0 1 1-1zM9.5 3.8v2.4h5V3.8zM7.5 10.5v1.8h9v-1.8zM7.5 14.5v1.8h6v-1.8z"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zM4 21.5a8 8 0 0 1 16 0z"/></symbol><symbol id="i-wrestle" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4zM16.5 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4z"/><path fill-rule="evenodd" d="M2.5 21.5l1.8-8.5 3.4-3.6L12 12.3l4.3-2.9 3.4 3.6 1.8 8.5h-3.2l-1.4-6-1.4 1.1V21.5H8.5v-4.9l-1.4-1.1-1.4 6z"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13.5 1.5L3.5 14H11l-1.2 8.5L20.5 10H13z"/></symbol></svg>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><symbol id="i-mute" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4.5v15l-5.5-4.5H3V9h3.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M21.5 9l-5.5 6M16 9l5.5 6"/></symbol><symbol id="i-sound" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4.5v15l-5.5-4.5H3V9h3.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.8a4.5 4.5 0 0 1 0 6.4M18.5 5.8a8.8 8.8 0 0 1 0 12.4"/></symbol><symbol id="i-bug" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 6.5c3 0 5.2 2.4 5.2 5.5v3a5.2 5.2 0 0 1-10.4 0v-3c0-3.1 2.2-5.5 5.2-5.5zM12 9v10"/><path fill-rule="evenodd" d="M9 6.8a3 3 0 0 1 6 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12.5h3.5M17.5 12.5H21M4 19l3-1.8M20 19l-3-1.8M4 6l3 2M20 6l-3 2M9.5 3.5l1 2M14.5 3.5l-1 2"/></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2c1.4 3.8 6.5 6 6.5 11.5a6.5 6.5 0 0 1-13 0c0-3 1.7-4.9 3-6 0 2.3 1 3.6 2.2 3.8C10.5 8 10.3 5 12 2zM12 21a3 3 0 0 1-3-3c0-2 2-3 2.5-5 1.5 1.5 3.5 2.8 3.5 5a3 3 0 0 1-3 3z"/></symbol><symbol id="i-trophy" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7 3h10v6.5a5 5 0 0 1-10 0zM10.3 6.2l.6 1.6h1.7l-1.3 1 .5 1.7-1.5-1-1.5 1 .5-1.7-1.3-1h1.7z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 5.5H4.5a3 3 0 0 0 3.3 4.4M17 5.5h2.5a3 3 0 0 1-3.3 4.4"/><path fill-rule="evenodd" d="M10.8 14h2.4v3.5h-2.4zM8 17.5h8a1 1 0 0 1 1 1V21H7v-2.5a1 1 0 0 1 1-1z"/></symbol><symbol id="i-heart" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 21s-8.2-4.9-10-10C.6 7.1 3.1 3.3 7 3.3c2.2 0 3.8 1.2 5 2.9 1.2-1.7 2.8-2.9 5-2.9 3.9 0 6.4 3.8 5 7.7-1.8 5.1-10 10-10 10z"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.3l2.9 6 6.6.9-4.8 4.6 1.2 6.6L12 17.2l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9z"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.3 3.6a2 2 0 0 1 3.4 0l8.4 14.6a2 2 0 0 1-1.7 3H3.6a2 2 0 0 1-1.7-3zM11 9h2l-.3 5.5h-1.4zM12 16.3a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z"/></symbol><symbol id="i-checkc" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM6.9 12.4l1.8-1.8 2.1 2.1 4.5-5.1 1.9 1.7-6.3 7.1z"/></symbol><symbol id="i-xc" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM8.6 7l3.4 3.4L15.4 7 17 8.6 13.6 12l3.4 3.4-1.6 1.6-3.4-3.4L8.6 17 7 15.4l3.4-3.4L7 8.6z"/></symbol><symbol id="i-pen" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M15.6 3.6a2 2 0 0 1 2.8 0l2 2a2 2 0 0 1 0 2.8L9 19.8 3.5 21 4.7 15.5zM14 7.2l2.8 2.8 1-1L15 6.2z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 2.5h6a1 1 0 0 1 1 1V5h4a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2h4V3.5a1 1 0 0 1 1-1zM5.5 8.5h13l-1 11.5a1.6 1.6 0 0 1-1.6 1.5H8.1a1.6 1.6 0 0 1-1.6-1.5zM9.3 11v7.5h1.4V11zM13.3 11v7.5h1.4V11z"/></symbol><symbol id="i-dice" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM8 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM16 14.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></symbol><symbol id="i-trend" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 21h18v-1.8H3z"/><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 16l5.5-5.5 4 4 7.5-7.5"/><path fill-rule="evenodd" d="M14.5 5.5H22V13z"/></symbol><symbol id="i-down" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 21h18v-1.8H3z"/><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 5l5.5 5.5 4-4 7.5 7.5"/><path fill-rule="evenodd" d="M14.5 16.5H22V9z"/></symbol><symbol id="i-snow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M12 2.5v19M3.8 7.2l16.4 9.6M3.8 16.8l16.4-9.6M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5A7.8 7.8 0 0 0 5.2 7.2M4.5 13.5a7.8 7.8 0 0 0 14.3 3.3"/><path fill-rule="evenodd" d="M3 3v7h7zM21 21v-7h-7z"/></symbol><symbol id="i-news" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 4.5h14v13.5a2.5 2.5 0 0 0 2.5 2.5H5.5A2.5 2.5 0 0 1 3 18zM6 7.5v3.5h8V7.5zM6 13v1.6h8V13zM6 16.2v1.6h5.5v-1.6z"/><path fill-rule="evenodd" d="M18 9h3v9.5a1.5 1.5 0 0 1-3 0z"/></symbol><symbol id="i-medal" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 13.5l-1.8 8 6.3-3 6.3 3-1.8-8z"/><path fill-rule="evenodd" d="M12 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM12 5l1.1 2.3 2.5.3-1.8 1.7.5 2.5L12 10.6l-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></symbol><symbol id="i-equal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 9h14M5 15h14"/></symbol><symbol id="i-box" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.3l9 4.2-9 4.3-9-4.3z"/><path fill-rule="evenodd" d="M2.5 8.2l8.7 4.1v9.4L2.5 17.6z"/><path fill-rule="evenodd" d="M21.5 8.2l-8.7 4.1v9.4l8.7-4.1z"/></symbol><symbol id="i-tv" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 6.5h16a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2zM5 9.5v7.5h14V9.5z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5l4 4 4-4"/></symbol><symbol id="i-frown" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM15 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.8 16.6a1 1 0 0 0 1.6 1.1 3.3 3.3 0 0 1 5.2 0 1 1 0 0 0 1.6-1.1 5.3 5.3 0 0 0-8.4 0z"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM15 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.4 13.2a4.8 4.8 0 0 0 9.2 0z"/></symbol><symbol id="i-heel" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM7 8.2l4 1.7-.5 1.6-4-1.3zM17 8.2l-4 1.7.5 1.6 4-1.3zM7.8 16.8a1 1 0 0 0 1.6 1.1 3.3 3.3 0 0 1 5.2 0 1 1 0 0 0 1.6-1.1 5.3 5.3 0 0 0-8.4 0z"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 2.5h2v19H4z"/><path fill-rule="evenodd" d="M6.5 3.5H19l-2.5 4.5 2.5 4.5H6.5z"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a1.5 1.5 0 0 1 1.5 1.5v.6A6.5 6.5 0 0 1 18.5 11v4.5l2 2.5v1H3.5v-1l2-2.5V11a6.5 6.5 0 0 1 5-6.4V4A1.5 1.5 0 0 1 12 2.5zM9.5 20h5a2.5 2.5 0 0 1-5 0z"/></symbol><symbol id="i-target" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 4.5h14a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2zM5 9.5V19h14V9.5zM7 11.5h2.5V14H7zM10.8 11.5h2.5V14h-2.5zM14.5 11.5H17V14h-2.5zM7 15.5h2.5V18H7zM10.8 15.5h2.5V18h-2.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5v4M16 2.5v4"/></symbol><symbol id="i-crown" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 7.5l5 4.5L12 4.5l4.5 7.5 5-4.5-1.8 10H4.3z"/><path fill-rule="evenodd" d="M4.5 19h15v2.5h-15z"/></symbol><symbol id="i-megaphone" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M16 3.5v17l-8-4.3H5A2.5 2.5 0 0 1 2.5 13.7v-3.4A2.5 2.5 0 0 1 5 7.8h3z"/><path fill-rule="evenodd" d="M5.5 17.5h3l1.3 4H7z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 9a4 4 0 0 1 0 6"/></symbol><symbol id="i-briefcase" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3h6a1.5 1.5 0 0 1 1.5 1.5V7H20a2 2 0 0 1 2 2v3.5h-8.5v-1h-3v1H2V9a2 2 0 0 1 2-2h3.5V4.5A1.5 1.5 0 0 1 9 3zM9.3 4.8V7h5.4V4.8zM2 14h8.5v1.5h3V14H22v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a4.5 4.5 0 0 1 4.5 4.5v3h.5a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2h.5V7A4.5 4.5 0 0 1 12 2.5zM12 4.5A2.5 2.5 0 0 0 9.5 7v3h5V7A2.5 2.5 0 0 0 12 4.5zM12 13.5a1.8 1.8 0 0 0-1 3.3V19h2v-2.2a1.8 1.8 0 0 0-1-3.3z"/></symbol><symbol id="i-tired" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 7h13a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM4.2 9.2v5.6h4V9.2z"/><path fill-rule="evenodd" d="M20 10h1.5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5H20z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 2.5h8l5.5 5.5v8L16 21.5H8L2.5 16V8zM7 10.8v2.4h10v-2.4z"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM1.5 20.5a7.5 7.5 0 0 1 15 0v1h-15z"/><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M19.5 7.5v7M16 11h7"/></symbol><symbol id="i-coin" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12.9 5.8h-1.8v1.4c-1.7.4-2.8 1.6-2.8 3.1 0 1.9 1.6 2.6 3.3 3 1.3.3 1.9.6 1.9 1.3 0 .6-.6 1-1.6 1-1 0-1.8-.4-2.2-1.2l-1.7.8c.5 1.2 1.6 2 3.1 2.2v1.3h1.8v-1.4c1.8-.4 2.8-1.5 2.8-3 0-2-1.6-2.7-3.4-3.1-1.2-.3-1.8-.6-1.8-1.2 0-.5.5-.9 1.4-.9.8 0 1.5.3 1.9 1l1.6-.9c-.6-1-1.4-1.6-2.5-1.9z"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM10.8 10.5h2.4V17h-2.4zM12 6.3a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z"/></symbol><symbol id="i-book" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6.5 2.5H19v15H7a1.5 1.5 0 0 0 0 3h12v1.5H6.8A2.8 2.8 0 0 1 4 19.2V5a2.5 2.5 0 0 1 2.5-2.5zM8.5 6v1.6h7V6zM8.5 9.2v1.6h5V9.2z"/></symbol><symbol id="i-door" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 2.5h12v18H6zM14 11a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/><path fill-rule="evenodd" d="M3 20h18v2H3z"/></symbol><symbol id="i-ticket" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4zM13.3 7.5v1.8h1.4V7.5zM13.3 11.1v1.8h1.4v-1.8zM13.3 14.7v1.8h1.4v-1.8z"/></symbol><symbol id="i-bulb" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a6.8 6.8 0 0 1 4 12.3V16.5H8v-2.2A6.8 6.8 0 0 1 12 2z"/><path fill-rule="evenodd" d="M8.5 17.8h7v1.7h-7zM9.8 20.5h4.4a2.2 2.2 0 0 1-4.4 0z"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3a4.2 4.2 0 1 1 0 8.4A4.2 4.2 0 0 1 9 3zM1.5 21a7.5 7.5 0 0 1 15 0v.5h-15z"/><path fill-rule="evenodd" d="M15.8 3.2a4.2 4.2 0 0 1 0 8 6 6 0 0 0 0-8zM18 13.6A7.5 7.5 0 0 1 22.5 21v.5h-4.2V21a9 9 0 0 0-2.8-6.6 7 7 0 0 1 2.5-.8z"/></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13.5 1.5L3.5 14H11l-1.2 8.5L20.5 10H13z"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M15 4a3 3 0 0 0-6 0v7a3 3 0 0 0 6 0z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol><symbol id="i-film" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 9.5h18V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path fill-rule="evenodd" d="M3.2 8.2l1.6-4.5a1 1 0 0 1 1-.7h14.4a.8.8 0 0 1 .7 1.1L19.4 8.2zM8.6 4.2L7.3 7.2h2.3l1.3-3zM14.4 4.2L13.1 7.2h2.3l1.3-3z"/></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11 2.5l2.1 6.4 6.4 2.1-6.4 2.1L11 19.5l-2.1-6.4-6.4-2.1 6.4-2.1z"/><path fill-rule="evenodd" d="M19 14.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 4h6l1.8 2.5H20a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2h3.2zM12 8.5a4.3 4.3 0 1 0 0 8.6 4.3 4.3 0 0 0 0-8.6zM12 10.5a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6z"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 1.5h8a2 2 0 0 1 2 2v17a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-17a2 2 0 0 1 2-2zM8.2 4v13h7.6V4zM12 18.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3.5h14a2.5 2.5 0 0 1 2.5 2.5v8.5A2.5 2.5 0 0 1 19 17h-9l-5.5 4.5V17H5a2.5 2.5 0 0 1-2.5-2.5V6A2.5 2.5 0 0 1 5 3.5zM7 8v1.8h10V8zM7 11.3v1.8h6.5v-1.8z"/></symbol><symbol id="i-cap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3l11 5.5L12 14 1 8.5z"/><path fill-rule="evenodd" d="M5.5 11.5l6.5 3.3 6.5-3.3v4.8c-3.5 2.8-9.5 2.8-13 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21.5 9.5v6"/></symbol><symbol id="i-mask" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 5c3.2 1.3 6.3 1.3 9.5 0 3.2 1.3 6.3 1.3 9.5 0v6a9.5 9.5 0 0 1-19 0zM6.8 9.3v1.8h3.5V9.3zM13.7 9.3v1.8h3.5V9.3zM8.3 14.5a4.7 4.7 0 0 0 7.4 0z"/></symbol><symbol id="i-skip" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.5 4.5l9 7.5-9 7.5zM12.5 4.5l9 7.5-9 7.5z"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M4 6.5h16M4 12h16M4 17.5h16"/></symbol><symbol id="i-notebook" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6.5 2.5H18a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H6.5zM9.5 6.5v1.8h7V6.5zM9.5 10v1.8h5V10z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 7h3.5M3 12h3.5M3 17h3.5"/></symbol><symbol id="i-swap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 2.5v4h12v3.5h-12v4L2 8.3z"/><path fill-rule="evenodd" d="M16.5 9.5v4h-12V17h12v4.5L22 15.8z"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5l10 8-1.3 1.6-1.2-1V20.5a1 1 0 0 1-1 1H14.5v-6h-5v6H5.5a1 1 0 0 1-1-1V11.1l-1.2 1L2 10.5z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 1.5a7.5 7.5 0 0 1 7.5 7.5c0 5.8-7.5 13-7.5 13S4.5 14.8 4.5 9A7.5 7.5 0 0 1 12 1.5zM12 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M16.6 2.2l5.2 5.2L7.4 21.8l-5.2-5.2zM15.3 6.3l-1.2 1.2 2 2 1.2-1.2zM12.1 9.5l-1.2 1.2 2 2 1.2-1.2zM8.9 12.7l-1.2 1.2 2 2 1.2-1.2z"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 5.5L21 3v13.5a3.2 3.2 0 1 1-2-3V7.4L10 9.2v9.3a3.2 3.2 0 1 1-2-3z"/></symbol><symbol id="i-musicoff" viewBox="0 0 24 24"><path fill-rule="evenodd" opacity=".45" d="M8 5.5L21 3v13.5a3.2 3.2 0 1 1-2-3V7.4L10 9.2v9.3a3.2 3.2 0 1 1-2-3z"/><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M3 3l18 18"/></symbol><symbol id="i-grid" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 2h8.5L19 6.5V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM13.5 3.5V7.5h4zM7.5 11v1.8h9V11zM7.5 14.6v1.8h6v-1.8z"/></symbol><symbol id="i-medical" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3h6a1.5 1.5 0 0 1 1.5 1.5V7H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3.5V4.5A1.5 1.5 0 0 1 9 3zM9.3 4.8V7h5.4V4.8zM10.8 10v2.8H8v2.4h2.8V18h2.4v-2.8H16v-2.4h-2.8V10z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 3.5v10"/><path fill-rule="evenodd" d="M6.5 10.5h11L12 17z"/><path fill-rule="evenodd" d="M3.5 19h17v2.5h-17z"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 20.5v-10"/><path fill-rule="evenodd" d="M6.5 13.5h11L12 7z"/><path fill-rule="evenodd" d="M3.5 2.5h17V5h-17z"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12 4.5c-1.2 1.5-2.1 3.8-2.3 6.5h4.6c-.2-2.7-1.1-5-2.3-6.5zM14.4 13h-4.8c.2 2.7 1.1 5 2.4 6.5 1.3-1.5 2.2-3.8 2.4-6.5zM4.6 11h3.1c.1-2.4.8-4.6 1.8-6.1A7.6 7.6 0 0 0 4.6 11zM16.3 11h3.1a7.6 7.6 0 0 0-4.9-6.1c1 1.5 1.7 3.7 1.8 6.1zM4.6 13a7.6 7.6 0 0 0 4.9 6.1c-1-1.5-1.7-3.7-1.8-6.1zM16.3 13c-.1 2.4-.8 4.6-1.8 6.1a7.6 7.6 0 0 0 4.9-6.1z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 2.5h11.5l4 4V19.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2zM7 4.5v4.5h8V4.5zM7 13.5v6h10v-6z"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 2h6a1 1 0 0 1 1 1v1h3a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 19 22H5a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 5 4h3V3a1 1 0 0 1 1-1zM9.5 3.8v2.4h5V3.8zM7.5 10.5v1.8h9v-1.8zM7.5 14.5v1.8h6v-1.8z"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zM4 21.5a8 8 0 0 1 16 0z"/></symbol><symbol id="i-wrestle" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4zM16.5 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4z"/><path fill-rule="evenodd" d="M2.5 21.5l1.8-8.5 3.4-3.6L12 12.3l4.3-2.9 3.4 3.6 1.8 8.5h-3.2l-1.4-6-1.4 1.1V21.5H8.5v-4.9l-1.4-1.1-1.4 6z"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13.5 1.5L3.5 14H11l-1.2 8.5L20.5 10H13z"/></symbol></svg>
 <div id="root"></div>
 <div id="modals"></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -1047,7 +1054,7 @@ function migrate(g) {
   g.customMatch = fixCustomMatch(g.customMatch); if (!Array.isArray(g.ppvSig)) g.ppvSig = [];
   g.booker ||= { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0 }; g.event ??= null;
   // company level: an older save starts at the level its XP already earned, without back pay
-  g.booker.cxp ??= +g.booker.xp || 0; g.booker.coPaid ??= coLvlOf(+g.booker.cxp || 0); g.booker.perks = (Array.isArray(g.booker.perks) ? g.booker.perks : []).filter(k => Object.hasOwn(PERKS, k)).slice(0, 6);
+  g.booker.cxp ??= +g.booker.xp || 0; g.booker.coPaid ??= coLvlOf(+g.booker.cxp || 0); g.booker.perks = (Array.isArray(g.booker.perks) ? g.booker.perks : []).map(k => ({ medic: 'fans', heat: 'tv' })[k] || k).filter(k => Object.hasOwn(PERKS, k)).slice(0, 6);
   if (g.sponsor && (typeof g.sponsor !== 'object' || !(+g.sponsor.pay >= 0))) g.sponsor = null;
   if (g.sponsor) g.sponsor = { n: String(g.sponsor.n || 'Sponsor').replace(/[<>&"'`]/g, '').slice(0, 30), pay: clamp(+g.sponsor.pay || 0, 0, 1e6), T: clamp(+g.sponsor.T || 60, 1, 100), left: clamp(Math.floor(+g.sponsor.left) || 0, 0, 52), paidWk: +g.sponsor.paidWk || 0 };
   for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; }
@@ -1218,6 +1225,15 @@ function fillEntrants(d, wk = UI.selWeek ?? G.week) {
   return ids.length - have.length;
 }
 const nextBig = () => { let w = G.week; while (!bigWk(w)) w++; return w; };
+// every company has one big one: the biggest show of its year (the last named event unless the booker picks another)
+const bigOne = () => { const l = G.bigEvents || []; return l.includes(G.bigOne) ? G.bigOne : l.length ? l[l.length - 1] : ''; };
+function bigOneWeek(from = 1) {
+  const n = bigOne();
+  if (n) for (let w = from; w < from + 156; w++) if (bigWk(w) && bigName(w) === n) return w;
+  let last = 0; for (let w = from; w < from + 52; w++) if (bigWk(w)) last = w;
+  return last || from;
+}
+const isBigOne = wk => bigWk(wk) && !!bigOne() && bigName(wk) === bigOne();
 const titlesOf = id => G.titles.filter(t => t.holder.includes(id));
 const storiesOf = id => G.stories.filter(s => s.status === 'active' && (s.a.includes(id) || s.b.includes(id)));
 const segPeople = s => s.kind === 'match' ? s.sides.flat() : [...(s.who || []), ...(s.target || [])];
@@ -1337,9 +1353,11 @@ function hotForPPV(big) {
 function roadCard() {
   const big = nextBig(); if (!big || big === G.week) return '';
   const ms = ppvMatches(big), left = big - G.week, name = bigName(big);
+  // nothing announced yet: the "Plan the big event first" panel at the top already asks for this
+  if (!ms.length && !tutOn()) return '';
   const label = m => isFFA(m) ? `${entrants(m).length}-person ${esc(m.mtype)}` : m.sides.filter(sd => sd.length).map(sd => sd.map(nm).join(' & ')).join(' <span class="vs">VS</span> ');
   const t = m => m.title && G.titles.find(x => x.id === m.title);
-  return `<div class="road"><div class="road-h"><span class="road-k">Road to</span><b>🎆 ${esc(name)}</b><span class="sp"></span><span class="road-w">${left === 1 ? 'Next week' : left + ' weeks'}</span></div>
+  return `<div class="road"><div class="road-h"><span class="road-k">Road to</span><b>🎆 ${esc(name)}</b>${isBigOne(big) ? ' <span class="tag gold">The big one</span>' : ''}<span class="sp"></span><span class="road-w">${left === 1 ? 'Next week' : left + ' weeks'}</span></div>
     ${ms.length ? `<div class="road-l">${ms.map(m => `<div class="road-m"><div class="road-n">${t(m) ? belt(t(m).short) + ' ' : ''}${label(m)}</div><div class="road-b"><div class="bar"><i style="width:${hypeOf(m)}%"></i></div><b>${hypeOf(m)}</b><button class="btn sm" data-act="roadFaceoff" data-id="${m.id}" title="Add a face-off to this week's show">+ Face-off</button></div></div>`).join('')}</div>
       <div class="tiny muted">Put both sides on this week's show to build hype. Ignored matches cool off.</div>
       ${hotForPPV(big).map(st => `<div class="road-hot"><div class="small sp">🔥 <b>${esc(st.title)}</b> is hotter than your card (heat ${Math.round(st.heat)}).</div><button class="btn sm" data-act="ppvAddStory" data-id="${st.id}">Add it</button></div>`).join('')}
@@ -2085,7 +2103,7 @@ function applySegment(seg, res, ctx) {
   if (st) {
     let gain = (seg.kind === 'match' ? 6 : seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
-    gain = Math.round(gain * (perk('heat') ? 1.15 : 1) * (1 + staffQ('writer') * 0.04));
+    gain = Math.round(gain * (1 + staffQ('writer') * 0.04));
     st.heat = clamp(st.heat + gain, 0, 100); st._touched = G.week;
     st.log.unshift({ wk: G.week, text: `${res.text} (${starStr(res.rating)}, heat +${gain})` });
     notes.push(`🔥 ${st.title} heat +${gain}`);
@@ -2370,6 +2388,7 @@ function runShow(opts = {}) {
   // more shows a week means each one moves the needle a little less
   let fanDelta = Math.round(G.fans * (overall - 58) / (big ? 500 : 900) * (overall > 58 ? Math.max(0.02, room) * DF().fanUp : DF().fanDown) / Math.sqrt(nS));
   if (special && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.5);
+  if (perk('fans') && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.1);
   if (room < 0 && overall < 80) fanDelta -= Math.round(G.fans * Math.min(0.01, -room * 0.02));
   G.fans = Math.max(1000, G.fans + fanDelta);
   G.promo.prestige = clamp(G.promo.prestige + (overall - G.promo.prestige) * 0.05 / Math.sqrt(nS), 1, 100);
@@ -2426,7 +2445,6 @@ function endOfWeek(card, world = true) {
   for (const w of G.wrestlers) {
     if (!world && !w.contract) continue;
     if (!booked.has(w.id)) w.fatigue = clamp(w.fatigue - 18, 0, 100); else w.fatigue = clamp(w.fatigue - 6, 0, 100);
-    if (w.injury > 1 && w.contract && perk('medic') && Math.random() < 0.35) w.injury--;
     if (w.injury > 0 && !booked.has(w.id)) { w.injury--; if (w.injury === 0 && w.contract) news(`✅ ${w.name} is cleared to compete.`, 'injury'); }
     else if (w.injury > 0) w.injury = Math.max(0, w.injury - 0.5) | 0;
     w.momentum *= 0.92;
@@ -2482,7 +2500,7 @@ function endOfWeek(card, world = true) {
   G.tvWeeks--;
   if (G.tvWeeks <= 0) {
     const recent = avg(G.history.slice(-12).map(h => h.rating));
-    const old = G.tv; G.tv = Math.round((30000 * Math.pow(G.fans / 22000, 0.65) * (0.6 + recent / 100)) / 1000) * 1000; G.tvWeeks = 26;
+    const old = G.tv; G.tv = Math.round((30000 * Math.pow(G.fans / 22000, 0.65) * (0.6 + recent / 100) * (perk('tv') ? 1.1 : 1)) / 1000) * 1000; G.tvWeeks = 26;
     if (MON()) news(`📡 New TV deal: ${money(G.tv)} per week (was ${money(old)}), based on fans and recent show quality.`, 'office');
   }
   personaWeek(booked);
@@ -2559,6 +2577,7 @@ function liven(r) {
   r.money = isFinite(+r.money) && r.money != null ? +r.money : Math.round(r.fans * rnd(3, 7));
   r.off ??= rint(0, 3); r.red = +r.red || 0;
   r.ppvs = Array.isArray(r.ppvs) && r.ppvs.length ? r.ppvs.map(x => String(x).slice(0, 40)).slice(0, 12) : shuffle(RIV_PPVS).slice(0, 4);
+  if (!r.ppvs.includes(r.bigOne)) r.bigOne = r.ppvs[0];
   r.feuds = (Array.isArray(r.feuds) ? r.feuds : []).filter(f => f && f.a && f.b);
   r.push = (Array.isArray(r.push) ? r.push : []).filter(p => p && p.id);
   r.log = Array.isArray(r.log) ? r.log.slice(0, 14) : [];
@@ -3022,7 +3041,6 @@ const MILES = [
   ['peak', '👥', 'Biggest fanbase', [25000, 100000, 500000]]
 ];
 // old saves' trophies keep their place: the first 13 ids are the original trophies
-const TROPHIES = ACH;
 function cleanCareer(c) {
   const o = { v: 1, xp: 0, ach: Object.create(null), st: Object.create(null), tier: Object.create(null), since: Date.now() };
   if (!c || typeof c !== 'object') return o;
@@ -3097,7 +3115,6 @@ const BELTS = [ // id, name, booker level, look
   ['legacy', 'Legacy', 30, { strap: '#3a1f0f', stitch: '#8a5a2a', p: ['#ffe2c2', '#d08a3a', '#7a3f0a'], edge: '#5a2a05', gem: ['#ffd0d0', '#d62839', '#6d0a15'], ink: '#3a1a00', gems: true }],
   ['hof', 'Hall of Fame', 40, { strap: '#000000', stitch: '#f2c443', p: ['#fff8dc', '#ffd84a', '#c48e14'], edge: '#fff3c2', gem: ['#ffffff', '#ffd0d0', '#d62839'], ink: '#3a2600', big: true, gems: true, spin: true }]
 ];
-const beltOf = id => BELTS.find(b => b[0] === id) || BELTS[0];
 const FLAIRS = [['rookie', 'Rookie', 1], ['mainev', 'Main Eventer', 5], ['general', 'Ring General', 10], ['promoter', 'Promoter', 15], ['mind', 'Mastermind', 20], ['king', 'Kingmaker', 25], ['legend', 'Booking Legend', 35], ['hof', 'Hall of Famer', 45]];
 const bookerLvl = () => lvlOf(CAR().xp);
 const CO_MAX = 25, coXpAt = L => L <= 1 ? 0 : Math.round(14 * (L - 1) ** 1.8);
@@ -3106,8 +3123,8 @@ const coLvl = () => G && G.booker ? coLvlOf(G.booker.cxp || 0) : 1;
 const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [3, '💼', 'More staff', 'Hire a PR Agent, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'Bonus TV specials', 'The network offers one-off specials.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
 const PERKS = {
   deals: ['💼', 'Contract discount', 'Wrestlers ask 10% less.'],
-  heat: ['🔥', 'Hot storylines', 'Stories gain heat 15% faster.'],
-  medic: ['🩹', 'Medical team', 'Injuries heal faster.'],
+  tv: ['📺', 'Network friends', 'TV deals renew 10% bigger.'],
+  fans: ['📣', 'Fan club', 'Good shows win 10% more new fans.'],
   ppv: ['🎆', 'PPV marketing', '10% more pay-per-view buys.'],
   merch: ['💰', 'Merch deal', '15% more merchandise money.'],
   crowd: ['🎟️', 'Street team', '10% bigger crowds at every show.']
@@ -3510,7 +3527,7 @@ function goalCard() {
 }
 function modalTrophies() {
   const c = CAR(), t = UI.carTab || 'ach', got = Object.keys(c.ach).length;
-  const tabs = `<div class="seg-ctl" style="margin:12px 0"><button class="${t === 'ach' ? 'on' : ''}" data-act="carTab" data-id="ach">Achievements <span class="cnt">${got}/${ACH.length}</span></button><button class="${t === 'miles' ? 'on' : ''}" data-act="carTab" data-id="miles">Milestones</button><button class="${t === 'lvl' ? 'on' : ''}" data-act="carTab" data-id="lvl">Unlocks</button><button class="${t === 'co' ? 'on' : ''}" data-act="carTab" data-id="co">Company${G && perksDue() ? ' <span class="cnt">!</span>' : ''}</button></div>`;
+  const tabs = `<div class="seg-ctl wrap" style="margin:12px 0"><button class="${t === 'ach' ? 'on' : ''}" data-act="carTab" data-id="ach">Achievements <span class="cnt">${got}/${ACH.length}</span></button><button class="${t === 'miles' ? 'on' : ''}" data-act="carTab" data-id="miles">Milestones</button><button class="${t === 'lvl' ? 'on' : ''}" data-act="carTab" data-id="lvl">Unlocks</button><button class="${t === 'co' ? 'on' : ''}" data-act="carTab" data-id="co">Company${G && perksDue() ? ' <span class="cnt">!</span>' : ''}</button></div>`;
   let body = '';
   if (t === 'ach') {
     const list = ACH.slice().sort((a, b) => !!c.ach[b[0]] - !!c.ach[a[0]]);
@@ -3555,7 +3572,7 @@ function liveScreen(m) {
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
     <div class="lv-seg ${main ? 'main' : ''}" style="--d:${t0(d0)}" data-lv="${i}">
       <div class="lv-k">${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${segTitle(r.seg)}</div>
-      <div class="lv-w">${segWho(r.seg)}</div>
+      ${main ? lvFaces(r.seg) : ''}<div class="lv-w">${segWho(r.seg)}</div>
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -3586,6 +3603,14 @@ function liveScreen(m) {
     <div class="lv-body">${segs}${fin}</div></div>`;
 }
 const t0 = x => Math.round(x * 100) / 100 + 's';
+// the main event shows the wrestlers' photos when they have them (photos never leave this device)
+function lvFaces(seg) {
+  const sides = (seg.kind === 'match' ? seg.sides : [seg.who || [], seg.target || []]).map(sd => (sd || []).map(W).filter(Boolean)).filter(sd => sd.length);
+  if (!sides.flat().some(w => safePhoto(w.photo))) return '';
+  const face = w => `<div class="lv-face">${av(w, 72)}<span>${esc(shortOf(w.id))}</span></div>`;
+  if (sides.length > 4) return `<div class="lv-faces">${sides.flat().filter(w => safePhoto(w.photo)).slice(0, 6).map(face).join('')}</div>`;
+  return `<div class="lv-faces">${sides.map(sd => `<div class="lv-side">${sd.slice(0, 4).map(face).join('')}</div>`).join('<span class="vs">VS</span>')}</div>`;
+}
 function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
   const box = document.querySelector('.live .lv-body'); if (!box || box.closest('.skip')) return;
@@ -3823,7 +3848,7 @@ document.addEventListener('touchmove', e => {
 
 
 // ---------- minimal line icons: emoji in any rendered text become small SVG icons ----------
-const EMO = {"❤️": "heart", "ℹ": "info", "😮‍💨": "tired", "🔥": "flame", "🏆": "trophy", "🩹": "medical", "🤕": "medical", "📝": "pen", "✍️": "pen", "✏️": "pen", "🎆": "sparkles", "✨": "sparkles", "🎉": "sparkles", "⭐": "star", "🌟": "star", "💾": "save", "📋": "clipboard", "🌐": "globe", "🌎": "globe", "🎲": "dice", "📈": "trend", "🥶": "snow", "🧊": "snow", "❄️": "snow", "🔄": "refresh", "🔁": "refresh", "🗞️": "news", "🏅": "medal", "🤝": "equal", "📦": "box", "📺": "tv", "📡": "tv", "😠": "frown", "😡": "frown", "🏁": "flag", "🚩": "flag", "🔇": "mute", "🔊": "sound", "🐞": "bug", "💬": "message", "🔔": "bell", "🎯": "target", "📅": "calendar", "👑": "crown", "📣": "megaphone", "🙌": "megaphone", "👏": "megaphone", "🔊": "megaphone", "💼": "briefcase", "🔒": "lock", "🛑": "stop", "✅": "checkc", "❌": "xc", "🆕": "userplus", "💸": "coin", "💰": "coin", "📕": "book", "📚": "book", "📖": "book", "👋": "door", "🚪": "door", "🎟️": "ticket", "🏟️": "home", "💡": "bulb", "🧠": "bulb", "👥": "users", "🤼": "wrestle", "🤯": "zap", "😱": "zap", "👊": "zap", "💥": "zap", "⚡": "bolt", "🎤": "mic", "🎬": "film", "⚠️": "alert", "⚠": "alert", "📷": "camera", "📇": "user", "📱": "phone", "🗣️": "message", "🎓": "cap", "🎭": "mask", "⏭": "skip", "⏩": "skip", "☰": "menu", "📓": "notebook", "↔️": "swap", "🏠": "home", "🗑": "trash", "📍": "pin", "📏": "ruler", "🎵": "music", "👾": "grid", "😇": "smile", "😈": "heel", "📄": "file", "⬇": "download", "⬆": "upload", "⇅": "swap", "🙂": "", "😐": "", "🍿": "", "😴": "", "🦗": "", "🥱": ""};
+const EMO = {"🌍": "globe", "🛠️": "ruler", "📉": "down", "🚑": "medical", "🖊️": "pen", "✂️": "door", "🏚️": "door", "🏢": "home", "🌱": "sparkles", "💎": "star", "🩸": "zap", "☁️": "upload", "🧪": "bulb", "🚫": "stop", "💳": "coin", "🔑": "lock", "❤️": "heart", "ℹ": "info", "😮‍💨": "tired", "🔥": "flame", "🏆": "trophy", "🩹": "medical", "🤕": "medical", "📝": "pen", "✍️": "pen", "✏️": "pen", "🎆": "sparkles", "✨": "sparkles", "🎉": "sparkles", "⭐": "star", "🌟": "star", "💾": "save", "📋": "clipboard", "🌐": "globe", "🌎": "globe", "🎲": "dice", "📈": "trend", "🥶": "snow", "🧊": "snow", "❄️": "snow", "🔄": "refresh", "🔁": "refresh", "🗞️": "news", "🏅": "medal", "🤝": "equal", "📦": "box", "📺": "tv", "📡": "tv", "😠": "frown", "😡": "frown", "🏁": "flag", "🚩": "flag", "🔇": "mute", "🔊": "sound", "🐞": "bug", "💬": "message", "🔔": "bell", "🎯": "target", "📅": "calendar", "👑": "crown", "📣": "megaphone", "🙌": "megaphone", "👏": "megaphone", "🔊": "megaphone", "💼": "briefcase", "🔒": "lock", "🛑": "stop", "✅": "checkc", "❌": "xc", "🆕": "userplus", "💸": "coin", "💰": "coin", "📕": "book", "📚": "book", "📖": "book", "👋": "door", "🚪": "door", "🎟️": "ticket", "🏟️": "home", "💡": "bulb", "🧠": "bulb", "👥": "users", "🤼": "wrestle", "🤯": "zap", "😱": "zap", "👊": "zap", "💥": "zap", "⚡": "bolt", "🎤": "mic", "🎬": "film", "⚠️": "alert", "⚠": "alert", "📷": "camera", "📇": "user", "📱": "phone", "🗣️": "message", "🎓": "cap", "🎭": "mask", "⏭": "skip", "⏩": "skip", "☰": "menu", "📓": "notebook", "↔️": "swap", "🏠": "home", "🗑": "trash", "📍": "pin", "📏": "ruler", "🎵": "music", "👾": "grid", "😇": "smile", "😈": "heel", "📄": "file", "⬇": "download", "⬆": "upload", "⇅": "swap", "🙂": "", "😐": "", "🍿": "", "😴": "", "🦗": "", "🥱": ""};
 const EMO_RE = new RegExp(Object.keys(EMO).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + '|️', 'g');
 const ic = n => n ? `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>` : '';
 // one-tap music on/off, shown on the start screen and in the top bar
@@ -3867,29 +3892,6 @@ function logoSVG(cls = 'logo-art') {
 <g class="bl-ding" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round">
 <path d="M34 54q-14 22 0 46"/><path d="M16 42q-22 34 0 70"/><path d="M206 54q14 22 0 46"/><path d="M224 42q22 34 0 70"/></g><g transform="translate(208 128) rotate(40)"><g class="bl-ham"><rect x="-4" y="0" width="12" height="78" rx="5" fill="url(#wd)" stroke="#1a1306" stroke-width="4.5"/>
 <rect x="-16" y="-24" width="36" height="28" rx="6" fill="#c9ccd6" stroke="#1a1306" stroke-width="4.5"/><rect x="-12" y="-20" width="8" height="20" rx="3" fill="#fff" opacity=".6"/></g></g></svg>`;
-}
-function ringSVG(label) {
-  const L = esc(label || 'RB');
-  return `<svg class="ring-art" viewBox="0 0 300 200" role="img" aria-label="Wrestling ring">
-  <defs><linearGradient id="rgMat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9d3c6"/><stop offset="1" stop-color="#f4f0e6"/></linearGradient>
-  <linearGradient id="rgSpot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-  <linearGradient id="rgPost" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a8f9c"/><stop offset=".5" stop-color="#e6e9f0"/><stop offset="1" stop-color="#6b7080"/></linearGradient></defs>
-  <polygon points="95,0 135,0 175,150 40,150" fill="url(#rgSpot)"/><polygon points="170,0 205,0 265,150 130,150" fill="url(#rgSpot)"/>
-  <polygon points="48,78 252,78 288,140 12,140" fill="url(#rgMat)"/>
-  <ellipse cx="150" cy="108" rx="44" ry="15" style="fill:var(--accent)" opacity=".9"/>
-  <text x="150" y="114" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="17" letter-spacing="1" style="fill:var(--accent-ink)">${L}</text>
-  <rect x="12" y="140" width="276" height="34" style="fill:var(--card2)"/><rect x="12" y="140" width="276" height="4" fill="#000" opacity=".25"/>
-  <text x="150" y="164" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="15" letter-spacing="4" style="fill:var(--accent)">BOOKIT</text>
-  <g stroke-linecap="round" fill="none">
-   <path d="M48 42L252 42" stroke="#e53945" stroke-width="3"/><path d="M48 54L252 54" stroke="#f1f1f4" stroke-width="3"/><path d="M48 66L252 66" stroke="#2f6fe0" stroke-width="3"/>
-   <path d="M48 42L12 80M252 42L288 80" stroke="#e53945" stroke-width="3"/><path d="M48 54L12 98M252 54L288 98" stroke="#f1f1f4" stroke-width="3"/><path d="M48 66L12 116M252 66L288 116" stroke="#2f6fe0" stroke-width="3"/>
-  </g>
-  <rect x="45" y="34" width="6" height="46" rx="2" fill="url(#rgPost)"/><rect x="249" y="34" width="6" height="46" rx="2" fill="url(#rgPost)"/>
-  <g stroke-linecap="round" fill="none"><path d="M12 80L288 80" stroke="#e53945" stroke-width="4"/><path d="M12 98L288 98" stroke="#f1f1f4" stroke-width="4"/><path d="M12 116L288 116" stroke="#2f6fe0" stroke-width="4"/></g>
-  <rect x="7" y="70" width="10" height="72" rx="3" fill="url(#rgPost)"/><rect x="283" y="70" width="10" height="72" rx="3" fill="url(#rgPost)"/>
-  <g style="fill:var(--accent)"><rect x="5" y="76" width="14" height="9" rx="3"/><rect x="5" y="94" width="14" height="9" rx="3"/><rect x="5" y="112" width="14" height="9" rx="3"/>
-   <rect x="281" y="76" width="14" height="9" rx="3"/><rect x="281" y="94" width="14" height="9" rx="3"/><rect x="281" y="112" width="14" height="9" rx="3"/></g>
-  </svg>`;
 }
 function beltSVG(cls, label) {
   return `<svg class="${cls || 'belt-art'}" viewBox="0 0 240 100" role="img" aria-label="Championship belt">
@@ -4041,24 +4043,24 @@ function viewStart() {
   setTimeout(commInit);
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) })).filter(s => s.info).sort((a, b) => (b.info.savedAt || 0) - (a.info.savedAt || 0));
   const top = slots[0], rest = slots.slice(1);
-  const st = COMM.status, saves = COMM.items.filter(i => i.kind === 'save' && !isHidden(i)).sort((a, b) => popScore(b) - popScore(a) || b.created - a.created).slice(0, 8);
+  const st = COMM.status, saves = COMM.items.filter(i => i.kind === 'world' && !isHidden(i)).sort((a, b) => popScore(b) - popScore(a) || b.created - a.created).slice(0, 8);
   const shelf = st === 'off' || st === 'error'
-    ? `<div class="hs-off"><div class="small"><b>${hosted() ? 'Community saves are loading or offline.' : 'Community saves aren\'t in this version.'}</b> Got a save someone shared with you? Paste it in.</div><button class="btn sm" data-act="import">Paste a save</button></div>`
-    : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared saves yet. Be the first: play a few weeks, then share yours from Community.</div></div>`
+    ? `<div class="hs-off"><div class="small"><b>${hosted() ? 'Community worlds are loading or offline.' : 'Community worlds aren\'t in this version.'}</b> Got a save someone shared with you? Paste it in.</div><button class="btn sm" data-act="import">Paste a save</button></div>`
+    : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared worlds yet. Be the first: build your world, then share it from Office → Rivals.</div></div>`
     : `<div class="hs-shelf">${saves.length ? saves.map(i => { const u = i.sum || {}, key = esc(i.author + '|' + i.id), champs = Array.isArray(u.champs) ? u.champs.length : 0;
         return `<button class="hs-card ${i.author === 'featured' ? 'feat' : ''}" data-act="cOpen" data-id="${key}">
           <span class="hs-by">${i.author === 'featured' ? '⭐ Featured' : 'by ' + esc(authorName(i.author))}</span>
           <span class="hs-t">${esc(i.title)}</span>
           <span class="hs-d">${esc(i.desc || String(u.promo || ''))}</span>
-          <span class="hs-m">${+u.roster || i.count || 0} wrestlers · week ${+u.week || 1}${champs ? ` · ${champs} champions` : ''}${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} playing` : ''}</span>
-          ${Array.isArray(u.stars) && u.stars.length ? `<span class="hs-s">${u.stars.slice(0, 3).map(x => esc(String(x))).join(' · ')}</span>` : ''}
+          <span class="hs-m">${Array.isArray(u.cos) ? u.cos.length : 0} companies · ${+u.n || i.count || 0} wrestlers${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} playing` : ''}</span>
+          ${Array.isArray(u.cos) && u.cos.length ? `<span class="hs-s">${u.cos.slice(0, 3).map(c => esc(String(c[0] || ''))).join(' · ')}</span>` : ''}
           <span class="hs-go">Play this ›</span></button>`; }).join('')
       : [0, 1].map(() => '<div class="hs-card skel"><span></span><span></span><span></span></div>').join('')}</div>`;
   return `<div class="app home"><div class="home-menu">${musicBtn()}<button class="iconbtn" data-act="menu" aria-label="Menu">☰</button></div><div class="hero">${logoSVG()}<h1>Book<em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div>
   <p class="muted">Book the shows. Write the stories. Sign the talent.</p></div>
   ${top ? `<button class="hs-cont" data-act="loadSlot" data-id="${top.n}"><span class="hs-k">Continue</span><span class="hs-ct">${esc(top.info.name)}</span><span class="hs-cd">Week ${top.info.week} · saved ${new Date(top.info.savedAt).toLocaleDateString()}</span><span class="hs-arrow">›</span></button>
     ${rest.length ? `<div class="list" style="margin-top:8px">${rest.map(s => `<button class="item" data-act="loadSlot" data-id="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">${esc(s.info.name)}</div><div class="d">Week ${s.info.week} · saved ${new Date(s.info.savedAt).toLocaleDateString()}</div></div></button>`).join('')}</div>` : ''}` : ''}
-  <div class="hs-sec"><div><b>Jump into a universe</b><div class="tiny muted">Ready-made saves from the community. Pick one and start booking.</div></div>${st === 'ready' && saves.length ? '<button class="link" data-act="homeComm">See all</button>' : ''}</div>
+  <div class="hs-sec"><div><b>Jump into a universe</b><div class="tiny muted">Worlds from the community. Run your own company or take one over, starting the month before its big one.</div></div>${st === 'ready' && saves.length ? '<button class="link" data-act="homeComm">See all</button>' : ''}</div>
   ${shelf}
   <div class="hs-sec"><div><b>Or start your own</b></div></div>
   <div class="hs-two">
@@ -4108,16 +4110,6 @@ function segWho(s) {
   if (isFFA(s)) return nmList(entrants(s).slice(0, 6)) + (entrants(s).length > 6 ? ` <span class="muted">+${entrants(s).length - 6} more</span>` : '');
   if (s.kind === 'match') return s.sides.map(side => nmList(side)).join('<span class="vs">VS</span>');
   return nmList(s.who || []) + ((s.target || []).length ? '<span class="vs">→</span>' + nmList(s.target) : '');
-}
-function segMeta(s) {
-  if (s.kind !== 'match') { const st = s.kind === 'promo' ? (s.target?.length ? storyBetween(s.who, s.target) : storiesTouching(s.who || [])[0]) : (s.target?.length ? storyBetween(s.who, s.target) : storiesTouching(s.who || [])[0]); return st ? `🔥 ${esc(st.title)}` : ''; }
-  const bits = [];
-  bits.push(s.winner >= 0 && s.sides[s.winner]?.length ? `Winner: ${s.sides[s.winner].map(nameOf).map(esc).join(' & ')}` : s.winner === -2 ? 'Draw' : 'Winner: let the sim decide');
-  { const f = finOf(s); if (f !== 'Clean') bits.push(esc(f) + (f === 'Run-in' && s.runin?.[0] && W(s.runin[0]) ? ': ' + esc(nameOf(s.runin[0])) : '')); }
-  if (s.turn && W(s.turn)) bits.push('🔄 ' + esc(nameOf(s.turn)) + ' turns');
-  const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat());
-  if (st) bits.push(`🔥 ${esc(st.title)}`);
-  return bits.join(' · ');
 }
 function viewBook() { return coBar() + viewBookCard(); }
 function viewBookCard() {
@@ -4356,7 +4348,7 @@ function modalEditRival(m) {
     <div class="tiny muted" style="margin:-6px 0 12px">Size: <b>${tierOf({ fans: +d.fans || 0 })}</b>. ${TIERS.map(t => `${t[0]} from ${kfmt(t[1])}`).join(' · ')} fans.</div>
     <label class="f"><span>Booking style</span><div class="list">${Object.entries(RPHIL).map(([k, p]) => `<button class="pick ${d.phil === k ? 'sel' : ''}" data-act="bSet" data-f="phil" data-id="${k}"><span class="ck">${d.phil === k ? '✓' : ''}</span><div><b>${p.ic} ${p.n}</b><div class="tiny muted">${p.d}</div></div></button>`).join('')}</div></label>
     <label class="f"><span>Color</span><div class="swatches">${RIV_COLORS.concat(['#c9d64a', '#d0d0d0']).map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
-    <label class="f"><span>Big events, one per line</span><textarea data-et="ppvs" maxlength="600" style="min-height:80px" placeholder="Night of Glory">${esc(d.ppvs || '')}</textarea><div class="tiny muted" style="margin-top:4px">They run one a month, in this order.</div></label>
+    <label class="f"><span>Big events, one per line</span><textarea data-et="ppvs" maxlength="600" style="min-height:80px" placeholder="Night of Glory">${esc(d.ppvs || '')}</textarea><div class="tiny muted" style="margin-top:4px">They run one a month, in this order.${d.bigOne ? ` Their big one, the biggest show of their year, is <b>${esc(d.bigOne)}</b>.` : ''}</div></label>
     ${r ? `<div class="sec">Championships</div>
     ${(d.titles || []).map((t, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px"><div class="row" style="gap:8px;margin-bottom:6px"><input type="text" data-tt="name" data-i="${i}" value="${esc(t.name)}" maxlength="50" aria-label="Title name" style="flex:1"><button class="btn sm" data-act="rtDel" data-id="${i}" aria-label="Remove this title">✕</button></div>
       <div class="grid2"><select data-tt="holder" data-i="${i}" aria-label="Champion">${opts(t.holder)}</select><select data-tt="kind" data-i="${i}" aria-label="Kind of title"><option value="main" ${!t.mid && !t.div ? 'selected' : ''}>Top title</option><option value="mid" ${t.mid ? 'selected' : ''}>Secondary</option><option value="women" ${t.div ? 'selected' : ''}>Women's</option></select></div></div>`).join('')}
@@ -4383,6 +4375,18 @@ function modalRivalRoster(m) {
     <div class="tiny muted" style="margin-top:8px">To bring in your own creations, build them in Roster, release them to free agency, then add them here. Or import a roster and pick "Make it a rival promotion".</div>`;
   return modal('👥 Roster', body, `<button class="btn pri" data-act="editRival" data-id="${r.id}">Done</button>`);
 }
+function moneyView(last, payroll) {
+  return `  ${MON() ? `<div class="grid2">
+    <div class="stat"><div class="k">Bank</div><div class="v" style="color:${G.money < 0 ? 'var(--bad)' : 'inherit'}">${money(G.money)}</div><div class="s">cash on hand</div></div>
+    <div class="stat"><div class="k">Payroll</div><div class="v">${CON() ? money(payroll) : '$0'}</div><div class="s">${CON() ? 'per week' : 'contracts off'} · ${signed().length} wrestlers</div></div>
+    <div class="stat"><div class="k">TV deal</div><div class="v">${money(G.tv)}</div><div class="s">per week · renews in ${G.tvWeeks} wk</div></div>
+    <div class="stat"><div class="k">Last show</div><div class="v" style="color:${last && last.net < 0 ? 'var(--bad)' : 'var(--good)'}">${last ? (last.net >= 0 ? '+' : '') + money(last.net) : '–'}</div><div class="s">${last ? last.attendance.toLocaleString() + ' attended' : 'no shows yet'}</div></div>
+  </div>` : `<div class="grid2">
+    <div class="stat"><div class="k">Roster</div><div class="v">${signed().length}</div><div class="s">wrestlers signed</div></div>
+    <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
+  </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn on Deep sim in Menu → Settings to use it.</div>`}
+  ${last && MON() ? `<details class="card" style="margin-top:12px" open><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}`;
+}
 function viewOffice() {
   const last = G.history[G.history.length - 1];
   const payroll = sum(signed().map(w => w.contract.salary));
@@ -4390,17 +4394,8 @@ function viewOffice() {
   const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop);
   return `
-  ${MON() ? `<div class="grid2">
-    <div class="stat"><div class="k">Bank</div><div class="v" style="color:${G.money < 0 ? 'var(--bad)' : 'inherit'}">${G.settings.finances ? money(G.money) : '∞'}</div><div class="s">${G.settings.finances ? 'cash on hand' : 'finances off (sandbox)'}</div></div>
-    <div class="stat"><div class="k">Payroll</div><div class="v">${CON() ? money(payroll) : '$0'}</div><div class="s">${CON() ? 'per week' : 'contracts off'} · ${signed().length} wrestlers</div></div>
-    <div class="stat"><div class="k">TV deal</div><div class="v">${money(G.tv)}</div><div class="s">per week · renews in ${G.tvWeeks} wk</div></div>
-    <div class="stat"><div class="k">Last show</div><div class="v" style="color:${last && last.net < 0 ? 'var(--bad)' : 'var(--good)'}">${last ? (last.net >= 0 ? '+' : '') + money(last.net) : '–'}</div><div class="s">${last ? last.attendance.toLocaleString() + ' attended' : 'no shows yet'}</div></div>
-  </div>` : `<div class="grid2">
-    <div class="stat"><div class="k">Roster</div><div class="v">${signed().length}</div><div class="s">wrestlers signed</div></div>
-    <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
-  </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn it on in Menu → Settings.</div>`}
-  ${last && MON() ? `<details class="card" style="margin-top:12px"><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}
-  <div class="seg-ctl tri" style="margin:14px 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  <div class="seg-ctl quad wrap" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'setup' ? setupView() : ''}
   ${t === 'media' ? mediaView() : ''}
   ${t === 'staff' ? staffView() : ''}
@@ -4427,9 +4422,10 @@ function setupView() {
     <div class="sec">Big events</div>
     <label class="f"><span>Big event every</span><select data-in="bigEvery">${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigEvery === n ? 'selected' : ''}>${n} weeks</option>`).join('')}</select></label>
     <label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>
+    ${G.bigEvents.length > 1 ? `<label class="f"><span>The big one: your biggest event of the year</span><select data-in="bigOne">${G.bigEvents.map(n => `<option ${n === bigOne() ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : ''}
     <div class="sec">Matches</div>
     <button class="btn block" data-act="matchTypes">🤼 Match types and signature matches</button>
-    <div class="tiny muted" style="margin-top:8px">Game rules, sound and display are in Menu → Settings.</div>`;
+    <div class="tiny muted" style="margin-top:8px">Sim settings, sound and display are in Menu → Settings.</div>`;
 }
 
 // ---------- notes ----------
@@ -4576,17 +4572,17 @@ function modalMenu() {
     ${sbOn() ? `<button class="btn block" style="margin-top:8px" data-act="cloud">🌐 Cloud saves${meta.cloudAuto ? ' (auto backup on)' : ''}</button>` : ''}
     <div class="tiny muted" style="margin-top:8px">Company setup (names, shows, big events, match types) is in Office → Setup.</div>
     <div class="sec">Settings</div>
-    <div class="small muted" style="margin-bottom:8px">Game rules</div>
+    <div class="small muted" style="margin-bottom:8px">Sim settings</div>
+    <label class="todo"><input type="checkbox" data-in="deep" ${G.settings.deep ? 'checked' : ''}><span>🧠 Deep sim: show every skill (psychology, selling, consistency and more) and potential</span></label>
+    <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>💰 Money: payroll, tickets and TV deals${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
+    <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>📝 Contracts: deals run out and wrestlers can leave${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
+    <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>💬 Personalities: texts, demands and memory</span></label>
+    <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Rivals.</span></span></label>
+    ${MON() && SANDBOX() ? `<div class="card" style="margin:4px 0 10px;padding:10px 12px"><label class="f" style="margin:0"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label><div class="tiny" style="color:var(--warn);margin-top:6px">⚠️ Changing your bank balance can throw off the game's balance. Money stops being a challenge.</div></div>` : ''}
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
-    <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''}><span>Money</span></label>
-    <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''}><span>Contracts</span></label>
     <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
-    <label class="todo"><input type="checkbox" data-in="deep" ${G.settings.deep ? 'checked' : ''}><span>Deep sim: show every skill (psychology, selling, consistency and more) and potential</span></label>
-    <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>Wrestler personalities (texts, demands, memory)</span></label>
-    <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Rivals.</span></span></label>
-    <label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label>
 ${displaySettings()}
     <div class="sec">Help</div>
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button></div>
@@ -4605,7 +4601,6 @@ const supTesting = (() => { try { if (/[?&]suptest\b/.test(location.search)) ses
 const SUP_LINKS = supTesting ? SUP_TEST : SUP_LIVE;
 // Stripe customer portal login link, so supporters can cancel or change their card
 const SUP_PORTAL = supTesting ? 'https://billing.stripe.com/p/login/test_8x27sMgDR9qj2ZZaVx2cg00' : 'https://billing.stripe.com/p/login/eVq7sN4BU7UZgB1gAGd3i00';
-const SUP_PRICE = { month: '$2.99 a month', year: '$24.99 a year' };
 
 const SUP_KEY = 'bookit.supporter';
 const supUrl = (u, host) => { try { const x = new URL(u); return x.protocol === 'https:' && x.hostname === host && !x.username && !x.port ? x : null; } catch (e) { return null; } };
@@ -4638,7 +4633,7 @@ async function supResume() {
   try { localStorage.removeItem('bookit.supIntent'); } catch (e) {}
   UI.modal = { type: 'support', plan: SUP_PLANS[x.plan] ? x.plan : 'year' }; render();
 }
-const SUP_PERKS = [['☁️', '6 cloud save slots', 'Three more than the free three.'], ['🌐', 'More Community space', 'Up to 10 shared saves and more room for rosters and photos.'], ['⭐', 'Supporter badge', 'A gold badge next to your name in Community.'], ['🧪', 'Early access', 'Try new features before everyone else.']];
+const SUP_PERKS = [['☁️', '6 cloud save slots', 'Three more than the free three.'], ['🌐', 'More Community space', 'Up to 10 shared worlds and more room for rosters and photos.'], ['⭐', 'Supporter badge', 'A gold badge next to your name in Community.'], ['🧪', 'Early access', 'Try new features before everyone else.']];
 const CLOUD_SLOTS = [1, 2, 3, 4, 5, 6], CLOUD_FREE = 3;
 const cloudErr = e => e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'This save is too big for the cloud. Use Back up instead.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
 async function cloudPush(n) {
@@ -4936,17 +4931,6 @@ function modalWrestler(m) {
    <div class="tiny muted" style="margin-top:8px">“Make heel/face” switches instantly behind the scenes. For a big moment, book a Turn angle on a show instead. <button class="link" data-act="retireW" data-id="${w.id}">Retire ${esc(lastName(w))}</button></div>`}`;
   return modal(esc(w.name), body);
 }
-function modalEditW(m) {
-  const d = m.draft;
-  const num = (k, l) => `<label class="f"><span>${l}</span><input type="number" min="1" max="100" data-ew="${k}" value="${Math.round(d[k])}"></label>`;
-  const body = `<label class="f"><span>Name</span><input type="text" data-ew="name" value="${esc(d.name)}" maxlength="40"></label>
-   <label class="f"><span>Nickname</span><input type="text" data-ew="nick" value="${esc(d.nick)}" maxlength="40"></label>
-   <div class="grid2"><label class="f"><span>Alignment</span><select data-ew="align"><option value="face" ${d.align === 'face' ? 'selected' : ''}>Face</option><option value="heel" ${d.align === 'heel' ? 'selected' : ''}>Heel</option></select></label>
-   <label class="f"><span>Style</span><select data-ew="style">${STYLES.map(s => `<option ${s === d.style ? 'selected' : ''}>${s}</option>`).join('')}</select></label></div>
-   <div class="grid2">${num('pop', 'Popularity')}${num('ring', 'In-ring')}${num('mic', 'Mic')}${num('cha', 'Charisma')}${num('stam', 'Stamina')}${num('morale', 'Morale')}${num('age', 'Age')}<label class="f"><span>Injury (weeks)</span><input type="number" min="0" max="52" data-ew="injury" value="${d.injury}"></label></div>
-   ${m.isNew ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>${CON() ? 'Sign to the roster now (their preferred length at their asking price)' : 'Add to my roster now'}</span></label>` : ''}`;
-  return modal(m.isNew ? 'Create wrestler' : 'Edit ' + esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="deleteW">Delete</button>'}<button class="btn pri" data-act="saveW">Save</button>`);
-}
 function modalNegotiate(m) {
   const w = W(m.id); if (!w) return '';
   const ask = asking(w);
@@ -5145,7 +5129,7 @@ const A = {
   closeModal,
   openRival(id) { openModal({ type: 'rival', id }); },
   newRival() { openModal({ type: 'editRival', isNew: true, draft: { name: '', short: '', show: '', color: pick(RIV_COLORS), prestige: 45, size: '14', phil: pick(Object.keys(RPHIL)), canClose: false, auto: true, fans: 15000, money: 300000, ppvs: shuffle(RIV_PPVS).slice(0, 4).join('\n') } }); },
-  editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: t.holder[0] || '', mid: !!t.mid, div: t.div || '' })) } }); } },
+  editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), bigOne: r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '', titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: t.holder[0] || '', mid: !!t.mid, div: t.div || '' })) } }); } },
   rtAdd() { const d = UI.modal.draft; d.titles ||= []; if (d.titles.length >= 4) return; d.titles.push({ id: uid(), name: `${(d.short || abbr(d.name)).trim()} ${d.titles.some(t => !t.mid && !t.div) ? 'Television' : 'World'} Championship`, holder: '', mid: d.titles.some(t => !t.mid && !t.div), div: '', isNew: true }); render(); },
   rtDel(i) { UI.modal.draft.titles.splice(+i, 1); render(); },
   rivRoster(id) { openModal({ type: 'rivalRoster', id }); },
@@ -5171,7 +5155,7 @@ const A = {
     r.color = safeColor(d.color) || r.color; r.prestige = clamp(+d.prestige || 40, 1, 100);
     if (RPHIL[d.phil]) r.phil = d.phil; r.safe = !d.canClose; r.manual = d.auto === false;
     r.fans = clamp(Math.round(+d.fans) || r.fans, 500, 5e6); if (MON() && d.money !== '' && isFinite(+d.money)) r.money = clamp(Math.round(+d.money), -1e7, 1e9);
-    const pp = String(d.ppvs || '').split('\n').map(x => x.replace(/[<>`"]/g, '').trim().slice(0, 40)).filter(Boolean).slice(0, 12); if (pp.length) r.ppvs = pp;
+    const pp = String(d.ppvs || '').split('\n').map(x => x.replace(/[<>`"]/g, '').trim().slice(0, 40)).filter(Boolean).slice(0, 12); if (pp.length) { r.ppvs = pp; if (!pp.includes(r.bigOne)) r.bigOne = pp[0]; }
     if (Array.isArray(d.titles) && d.id) {
       // titles as the player set them: kept reigns for existing belts, quiet crowning for changed champions
       r.tset = 1;
@@ -5219,17 +5203,6 @@ const A = {
     try { navigator.clipboard.writeText(code).then(() => toast('Share code copied. Import it and pick "Make it a rival promotion".'), () => toast('Copy was blocked by the browser.')); } catch (e) { toast('Copy was blocked by the browser.'); }
   },
   confirmYes() { const m = UI.modal; UI.modal = null; m.fn(); },
-  newGame() {
-    const slot = +document.getElementById('ng-slot').value;
-    const go = () => {
-      meta.slot = slot;
-      const roster = document.getElementById('ng-roster').value;
-      newGame({ name: document.getElementById('ng-name').value.trim(), show: document.getElementById('ng-show').value.trim(), difficulty: document.getElementById('ng-diff').value, roster });
-      UI.tab = roster === 'empty' ? 'roster' : 'book'; UI.selWeek = G.week; UI.modal = roster === 'empty' ? { type: 'rtools', tab: 'import', mode: 'replace' } : { type: 'help' }; commit();
-    };
-    if (slotInfo(slot)) { const nameV = document.getElementById('ng-name').value, showV = document.getElementById('ng-show').value, diffV = document.getElementById('ng-diff').value, rosV = document.getElementById('ng-roster').value; confirmBox('Overwrite slot ' + slot + '?', 'The save in this slot will be replaced.', 'Overwrite', () => { meta.slot = slot; newGame({ name: nameV.trim(), show: showV.trim(), difficulty: diffV, roster: rosV }); UI.tab = rosV === 'empty' ? 'roster' : 'book'; UI.selWeek = G.week; UI.modal = rosV === 'empty' ? { type: 'rtools', tab: 'import', mode: 'replace' } : { type: 'help' }; commit(); }, true); }
-    else go();
-  },
   loadSlot(n) { const g = loadSlot(+n); if (!g) return toast('That slot is empty.'); G = g; meta.slot = +n; ls.set(META, JSON.stringify(meta)); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Loaded ' + G.promo.name); },
   copyTo(n) { const go = () => { meta.slot = +n; save(); UI.modal = { type: 'menu' }; render(); toast('Saved to slot ' + n + '. You are now playing in slot ' + n + '.'); }; if (slotInfo(+n)) confirmBox('Overwrite slot ' + n + '?', 'Copy this game into slot ' + n + ', replacing what is there.', 'Overwrite', go, true); else go(); },
   quit() { save(); G = null; UI.modal = null; render(); },
@@ -5267,7 +5240,7 @@ const A = {
       catch (e) { toast('That file is not a BookIt save.'); } }); };
     inp.click();
   },
-  setMoney() { const v = +document.getElementById('setMoney').value; if (isFinite(v)) { G.money = v; commit('Bank balance set.'); } },
+  setMoney() { if (!SANDBOX()) return; const v = +document.getElementById('setMoney').value; if (isFinite(v)) { G.money = v; commit('Bank balance set.'); } },
 
   // booking
   addSig() { const wk = UI.selWeek, sg = sigOf(wk); if (!sg) return; const card = BK(); if (!roomLeft(wk, card)) return toast(fullMsg(wk)); card.push(sigSeg(sg, wk)); commit(`The ${sigName(sg)} is on the card.`); },
@@ -6401,14 +6374,15 @@ function worldW(w) {
 // one company as it will start in the world: its people, belts and the names of past champions, nothing in progress
 function worldCo(r) {
   liven(r);
-  const c = { id: r.id, name: r.name, short: r.short, color: r.color, prestige: Math.round(r.prestige), fans: Math.round(r.fans), show: r.show, phil: r.phil, ppvs: r.ppvs, money: Math.max(50000, Math.round(r.money)), custom: !!r.custom, safe: !!r.safe, roster: r.roster.map(worldW), hist: [], last: 0 };
+  const c = { id: r.id, name: r.name, short: r.short, color: r.color, prestige: Math.round(r.prestige), fans: Math.round(r.fans), show: r.show, phil: r.phil, ppvs: r.ppvs, bigOne: r.ppvs?.includes(r.bigOne) ? r.bigOne : r.ppvs?.[0] || '', money: Math.max(50000, Math.round(r.money)), custom: !!r.custom, safe: !!r.safe, roster: r.roster.map(worldW), hist: [], last: 0 };
   c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, 1), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
   return c;
 }
 // a company the player runs, written as an AI company for the world
 function coAsRival(g) {
   const ros = (g === G ? signed() : (g.roster || []).filter(w => w.contract)).filter(w => !w.loan);
-  const r = { id: uid(), name: g.promo.name, short: abbr(g.promo.name), color: g.promo.color, prestige: clamp(+g.promo.prestige || 40, 1, 100), fans: +g.fans || 20000, show: g.promo.show, roster: [], champId: null, last: 0, hist: [], custom: true, born: 1, money: MON() ? +g.money || 0 : (+g.fans || 20000) * 5 };
+  const r = { id: uid(), name: g.promo.name, short: abbr(g.promo.name), color: g.promo.color, prestige: clamp(+g.promo.prestige || 40, 1, 100), fans: +g.fans || 20000, show: g.promo.show, roster: [], champId: null, last: 0, hist: [], custom: true, born: 1, money: MON() ? +g.money || 0 : (+g.fans || 20000) * 5, ppvs: (g.bigEvents || []).slice(0, 12) };
+  if (r.ppvs.length) r.bigOne = g === G ? bigOne() : r.ppvs.includes(g.bigOne) ? g.bigOne : r.ppvs[r.ppvs.length - 1];
   const a = k => avg(ros.map(w => +w[k] || 0));
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
   for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; r.roster.push(x); }
@@ -6439,13 +6413,24 @@ function cleanWorld(raw) {
     r.roster = r.roster.slice(0, 60).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
     r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 4).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, 1), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
     for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
-    r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12);
+    r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
     return r;
   });
   if (!cos.length) throw 0;
   return { cos, fa: free.slice(0, 80).map(fixW), every: [3, 4, 5, 6, 8].includes(+raw.every) ? +raw.every : 4 };
 }
 // start a new game in a world: the AI companies and free agents arrive, and a company taken over becomes yours
+// a shared world opens at the start of the month leading to the company's big one, so there's a big show to build to right away
+function startBeforeBigOne() {
+  const B = bigOneWeek(1), som = wk => weeksInMonth(monthKey(Math.max(1, wk)))[0] || 1;
+  let S = som(B); if (B - S < 2) S = som(B - 2); S = clamp(S, 1, B);
+  if (S <= 1) return;
+  G.week = S;
+  for (const t of G.titles) { t.since = t.lastDefense = S; for (const r of t.reigns || []) if (!r.to) r.from = S; }
+  for (const st of G.stories) st.start = S;
+  for (const w of G.wrestlers) { if (w.joined != null) w.joined = Math.max(+w.joined || 0, S); if (w.lastBooked != null) w.lastBooked = Math.max(+w.lastBooked || 0, S - 1); }
+  for (const r of G.rivalPromos || []) { r.born = Math.min(+r.born || S, S); r.last = Math.max(+r.last || 0, S - 1); }
+}
 function applyWorld(z) {
   const wd = z.world, cos = JSON.parse(JSON.stringify(wd.cos)), take = z.take && cos.find(c => c.id === z.take);
   G.wseed = 1;
@@ -6458,6 +6443,7 @@ function applyWorld(z) {
     if (tag) G.titles.push({ ...tag, holder: [] });
     G.titles.forEach(t => ensureReigns(t));
     G.promo.prestige = take.prestige; G.fans = Math.max(5000, take.fans);
+    if (Array.isArray(take.ppvs) && take.ppvs.length) { G.bigEvents = ppvList(take.ppvs.join('\n')); G.bigOne = take.bigOne; G.ppvSig = []; }
     cos.splice(cos.indexOf(take), 1);
   } else {
     // a brand-new company starts with nobody signed when it came for the world's free agents
@@ -6467,7 +6453,8 @@ function applyWorld(z) {
   for (const w of wd.fa) G.wrestlers.push({ ...w, contract: null });
   G.rivalPromos = cos.map(c => { liven(c); setRivalChamp(c); return c; });
   G.settings.bigEvery = wd.every || G.settings.bigEvery; syncRivals();
-  G.wlog = [{ wk: 1, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} free agents.` }];
+  startBeforeBigOne();
+  G.wlog = [{ wk: G.week, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} free agents.` }];
   news(take ? `🌍 You took over ${take.name} in the world "${wd.title || 'Shared world'}". Its roster and titles are yours.` : `🌍 ${G.promo.name} opened in the world "${wd.title || 'Shared world'}". Sign free agents in the Office.`, 'office');
 }
 function saveSummary(g) {
@@ -6633,7 +6620,7 @@ function modalCommunity(m) {
     body += `<div class="seg-ctl sm" style="margin-bottom:8px">${[['popular', 'Popular'], ['new', 'New'], ['following', 'Following']].map(([k, l]) => `<button class="${sort === k ? 'on' : ''}" data-act="cSort" data-id="${k}">${l}</button>`).join('')}</div>`;
     if (sort === 'following' && !myList('follows').length) body += '<div class="tiny muted" style="margin-bottom:8px">Follow creators from their page to see their new uploads here.</div>';
     body += `<input type="search" data-in="cQ" aria-label="Search creations" value="${esc(m.q || '')}" placeholder="Search creations" style="margin-bottom:8px">
-      <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['world', '🌍 Worlds'], ['save', '💾 Saves']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
+      <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['world', '🌍 Worlds']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
       <div class="list">${(list.map(i => i.kind === 'world' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">🌍</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>` : i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent-t)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
   } else if (t === 'share' && !G) {
     body += `<div class="empty"><p><b>Start a company first.</b></p><p class="small">You share wrestlers, rosters and saves from a company you run.</p><button class="btn pri" data-act="needNew">🏟️ New company</button></div>`;
@@ -6641,12 +6628,12 @@ function modalCommunity(m) {
     const sel = m.sel || [];
     const what = m.what || 'roster';
     const cnt = what === 'roster' ? signed().length : sel.length;
-    const whatCtl = `<label class="f"><span>What to share</span><div class="seg-ctl"><button class="${what === 'roster' ? 'on' : ''}" data-act="cWhat" data-id="roster">Whole roster</button><button class="${what === 'pick' ? 'on' : ''}" data-act="cWhat" data-id="pick">Pick wrestlers</button><button class="${what === 'world' ? 'on' : ''}" data-act="cWhat" data-id="world">🌍 World</button><button class="${what === 'save' ? 'on' : ''}" data-act="cWhat" data-id="save">💾 Save</button></div></label>`;
+    const whatCtl = `<label class="f"><span>What to share</span><div class="seg-ctl"><button class="${what === 'roster' ? 'on' : ''}" data-act="cWhat" data-id="roster">Whole roster</button><button class="${what === 'pick' ? 'on' : ''}" data-act="cWhat" data-id="pick">Pick wrestlers</button><button class="${what === 'world' ? 'on' : ''}" data-act="cWhat" data-id="world">🌍 World</button></div></label>`;
     if (what === 'world') {
       const mineW = COMM.mine.filter(x => x.kind === 'world').length, mineCo = m.mine !== false;
       ensureRivals();
       const cos = [...(mineCo ? [G, ...(G.cos || [])].map(c => ({ name: c.promo.name, n: (c === G ? signed() : (c.roster || []).filter(w => w.contract)).length, you: 1 })) : []), ...G.rivalPromos.map(r => ({ name: r.name, n: r.roster.length, tier: tierOf(r) }))];
-      body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:6px">A world is the setting, not your game. Others start a new game in it at week 1, with every company run by the AI. They can open their own company or take one over.</div>
+      body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:6px">A world is the setting, not your game. Others start a new game in it, with every company run by the AI. They can open their own company or take one over, and they start the month before that company's big one.</div>
         ${cos.map(c => `<div class="row small"><span class="sp">${esc(c.name)}${c.you ? ' <span class="tag gold">yours</span>' : c.tier ? ` <span class="tag">${c.tier}</span>` : ''}</span><b>${c.n} wrestlers</b></div>`).join('')}
         <div class="row small"><span class="sp muted">Free agents</span><b>${Math.min(60, freeAgents().length)}</b></div>
         <div class="tiny muted" style="margin-top:6px">Rosters, championships and past champions go in. Shows, stories in progress, money and notes don't.</div></div>
@@ -6655,16 +6642,6 @@ function modalCommunity(m) {
         <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="What kind of world is it? Who's on top? Which company would you take over?">${esc(m.desc || '')}</textarea></label>
         <div class="tiny muted" style="margin:6px 0 10px">You can have ${saveShareMax()} worlds shared at once${mineW ? ` (you have ${mineW})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
         ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishWorld" ${mineW >= saveShareMax() || cos.length < 2 ? 'disabled' : ''}>${mineW >= saveShareMax() ? 'Remove an old world in My uploads first' : cos.length < 2 ? 'A world needs at least 2 companies' : '🌍 Share this world'}</button>`}`;
-      return modal('🌐 Community', body);
-    }
-    if (what === 'save') {
-      const mineSaves = COMM.mine.filter(x => x.kind === 'save').length;
-      body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="row small"><span class="sp muted">Game</span><b>${esc(G.promo.name)}</b></div><div class="row small"><span class="sp muted">Progress</span><b>Week ${G.week} · ${signed().length} wrestlers · ${kfmt(G.fans)} fans</b></div><div class="tiny muted" style="margin-top:6px">Others get a copy of your game to play from here. Yours doesn't change.</div></div>
-        <label class="f"><span>Title</span><input type="text" data-in="cTitle" value="${esc(m.title || '')}" maxlength="60" placeholder="${esc(G.promo.name + ' · week ' + G.week)}"></label>
-        <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="What's going on in this universe? Who are the champions? What's the big storyline?">${esc(m.desc || '')}</textarea></label>
-        <label class="todo"><input type="checkbox" data-in="cNotes" ${m.notes ? 'checked' : ''}><span>Include my notes (notebook, to-dos, wrestler and story notes)</span></label>
-        <div class="tiny muted" style="margin:6px 0 10px">You can have ${saveShareMax()} saves shared at once${mineSaves ? ` (you have ${mineSaves})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
-        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishSave" ${mineSaves >= saveShareMax() ? 'disabled' : ''}>${mineSaves >= saveShareMax() ? 'Remove an old save in My uploads first' : '💾 Share this save'}</button>`}`;
       return modal('🌐 Community', body);
     }
     body += whatCtl + ``;
@@ -6934,7 +6911,6 @@ const CREATOR_ACTIONS = {
   // remember the plan, so tapping the sign-in link brings the player back to checkout
   supEmail() { try { localStorage.setItem('bookit.supIntent', JSON.stringify({ plan: UI.modal?.plan || 'year', at: Date.now() })); } catch (e) {} A.sbLink(); },
   supManage() { const p = supUrl(SUP_PORTAL, 'billing.stripe.com'); if (p) try { window.open(p.href, '_blank', 'noopener'); } catch (e) { location.href = p.href; } },
-  supCopy() { const sp = supportLink(); if (sp) copyText(sp.url, 'Link copied.'); },
   async supSave() {
     if (!COMM.owner || !cdb) return;
     const d = { url: document.querySelector('[data-sup=url]')?.value.trim() || '', note: document.querySelector('[data-sup=note]')?.value || '' };
@@ -6991,7 +6967,7 @@ const CREATOR_ACTIONS = {
     }, true);
   },
   cF(f) { UI.modal.f = f; render(); },
-  cWhat(w) { UI.modal.what = w; render(); },
+  cWhat(w) { UI.modal.what = ['roster', 'pick', 'world'].includes(w) ? w : 'roster'; render(); },
   cOpen(key) { UI.modal = { type: 'cview', key, back: UI.modal }; render(); },
   cReport(target) { if (!COMM.me) return; UI.modal = { type: 'report', target, back: UI.modal }; render(); },
   repWhy(k) { UI.modal.why = k; render(); },
@@ -7038,18 +7014,6 @@ const CREATOR_ACTIONS = {
     const item = { id: uid(), title: pack.title, desc: (m.desc || '').trim().slice(0, 300), kind: m.what === 'roster' ? 'roster' : 'wrestler', count: ws.length, created: Date.now(), pack };
     try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.'); }
     catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
-  },
-  async cPublishSave() {
-    const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
-    if (isRude(m.title) || isRude(m.desc) || isRude(G.promo.name) || isRude(G.promo.show)) return toast('Please remove the rude words first.');
-    if (typeof CompressionStream === 'undefined') return toast('This browser can\'t pack save files. Try an up-to-date browser.');
-    if (COMM.mine.filter(x => x.kind === 'save').length >= saveShareMax()) return toast('Remove an old save first.');
-    try {
-      const data = await gz(JSON.stringify(shareableSave(G, !!m.notes)));
-      const item = { id: uid(), title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' · week ' + G.week, desc: (m.desc || '').trim().slice(0, 300), kind: 'save', count: signed().length, created: Date.now(), sum: saveSummary(G), save: data };
-      await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30));
-      UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Save shared with the community.');
-    } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   shareWorld() { if (G) openModal({ type: 'community', tab: 'share', what: 'world' }); },
   async cPublishWorld() {
@@ -7449,6 +7413,7 @@ function mediaView() {
   return `<div class="small muted" style="margin-bottom:8px">Short spots use no fatigue and keep them on your shows. Long ones take them away for a while, then they come back much more popular.</div>
     ${away.length ? `<div class="sec" style="margin-top:4px">Away now</div><div class="list">${away.map(w => wItem(w, 'openW', `${MEDIA[w.away.k]?.n || 'Away'} · back week ${w.away.until}`)).join('')}</div>` : ''}
     <div class="sec">Short appearances <span class="cnt">${used}/${MEDIA_SLOTS} this week</span></div>
+    ${staffQ('pr') ? `<div class="tiny muted" style="margin:-4px 0 8px">${G.staff.pr.off ? `Your PR Agent, ${esc(G.staff.pr.n)}, is paused. Turn them back on in Office → Staff.` : `Your PR Agent, ${esc(G.staff.pr.n)}, fills any short spots you leave open at the end of the week.`}</div>` : ''}
     <div class="list">${Object.entries(MEDIA).filter(([, M]) => !M.long).map(([k, M]) => item(k, M, used >= MEDIA_SLOTS)).join('')}</div>
     ${used >= MEDIA_SLOTS ? '<div class="tiny muted" style="margin-top:6px">All media spots are used this week. More open next week.</div>' : ''}
     <div class="sec">Long appearances</div>
@@ -7906,7 +7871,7 @@ const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w
 
 function wizStart(add, chain) {
   add = add === true && !!G;
-  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : true, contracts: add ? CON() : true, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
+  UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : false, contracts: add ? CON() : false, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft' };
   render(); window.scrollTo(0, 0);
 }
 function wizPool() {
@@ -8022,7 +7987,8 @@ function wizFinish() {
   { const u = nextUp(); if (u && u.c === G && !u.on) goUnit(u); }
   if (!z.add) tutStart();
   UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : z.world && !z.take && z.source === 'world' ? 'office' : 'book'; if (UI.tab === 'office') UI.faTab = 'fa'; UI.selWeek = G.week; UI.calMonth = null;
-  UI.modal = z.source === 'import' ? { type: 'rtools', tab: 'import', mode: 'replace' } : null;
+  // an empty roster lands on the Roster tab; Build, Import and Community are right there, so nothing pops up
+  UI.modal = null;
   applyBrand(G.promo.color); save(); render(); window.scrollTo(0, 0);
   // several companies chosen at the start: go straight on to setting up the next one
   if ((z.count || 1) > (z.nth || 1) && (G.cos || []).length + 1 < MAX_COS) { wizStart(true, { n: (z.nth || 1) + 1, of: Math.min(MAX_COS, z.count) }); toast(`${G.promo.name} is ready. Now company ${(z.nth || 1) + 1} of ${z.count}.`); }
@@ -8058,7 +8024,7 @@ function viewWizard() {
       <p class="wz-lead">You just bought a wrestling company. Name it, draft a roster and book your first show.</p>
       <p class="muted small">About 3 minutes. Change anything later.</p></div>
       <label class="f" style="margin-top:14px"><span>How many companies will you run?</span><div class="seg-ctl">${[1, 2, 3, 4].map(n => `<button class="${(z.count || 1) === n ? 'on' : ''}" data-act="wzSet" data-f="count" data-id="${n}">${n}</button>`).join('')}</div>
-        <div class="tiny muted" style="margin-top:4px">${(z.count || 1) > 1 ? `They share one world and take turns on the calendar. You set them up one after another.` : 'You can start more companies in the same world later, from Menu.'}</div></label>
+        <div class="tiny muted" style="margin-top:4px">${(z.count || 1) > 1 ? `They share one world and take turns on the calendar. You set them up one after another.` : 'You can start more companies in the same world later, from Office → Setup.'}</div></label>
       <button class="btn pri block wz-cta" data-act="wzGo" data-id="company">${(z.count || 1) > 1 ? `Start company 1 of ${z.count}` : 'Start my company'}</button>
       ${slots.some(s => s.info) ? `<label class="f" style="margin-top:14px"><span>Save to</span><select data-wz="slot">${slots.map(s => `<option value="${s.n}" ${z.slot === s.n ? 'selected' : ''}>Slot ${s.n}${s.info ? ' (replaces ' + esc(s.info.name) + ')' : ' (empty)'}</option>`).join('')}</select></label>` : ''}
       <div class="row" style="justify-content:center;gap:8px;margin-top:16px"><button class="btn sm" data-act="wzQuick">Skip setup, use the starter roster</button><button class="btn sm" data-act="wzBack">Back</button></div></div>`;
@@ -8088,25 +8054,25 @@ function viewWizard() {
   if (z.step === 'budget') {
     return `<div class="app wz">${wizSteps('budget')}
       <div class="wz-k">Step 2 · Sim settings</div><h2 class="wz-h">How do you want to run ${esc(z.name)}?</h2>
-      ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="sec" style="margin-top:4px">Sim settings</div>
-      <div class="list" style="margin-bottom:14px">${[['deep', '🧠 Deep sim', 'See every skill (psychology, selling, consistency, safety and more) and each wrestler\'s potential. Turns on money and contracts too. Off: the simple six stats.'], ['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.'], ['sandbox', '🛠️ Sandbox', 'Build the whole world: edit every company, title and roster, and move anyone anywhere. Share it when it\'s ready. Switch it on or off any time.']].map(([k, l, d]) => `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}"><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}</div></div></button>`).join('')}</div>
+      ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="list" style="margin-bottom:14px">${[['deep', '🧠 Deep sim', 'See every skill (psychology, selling, consistency, safety and more) and each wrestler\'s potential. Also turns on money and contracts, which you can then switch off. Off: the simple six stats, with no money or contracts.'], ['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.'], ['sandbox', '🛠️ Sandbox', 'Build the whole world: edit every company, title and roster, and move anyone anywhere. Share it when it\'s ready. Switch it on or off any time.']].map(([k, l, d]) => { const lock = (k === 'money' || k === 'contracts') && !z.deep; return `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}" ${lock ? 'disabled aria-disabled="true" style="opacity:.5"' : ''}><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}${lock ? ' Turn on Deep sim to use this.' : ''}</div></div></button>`; }).join('')}</div>
       ${z.world ? '' : `<div class="sec">Rival companies</div>
       <div class="seg-ctl" style="margin-bottom:6px">${[2, 3, 4, 5, 6].map(n => `<button class="${(z.rivN || 4) === n ? 'on' : ''}" data-act="wzSet" data-f="rivN" data-id="${n}">${n}</button>`).join('')}</div>
       <p class="muted tiny" style="margin:0 0 14px">How many AI companies share your world at the start. More open and close over time. Edit any of them in Office → Rivals.</p>`}
       <div class="sec">Challenge</div>
       <div class="seg-ctl" style="margin-bottom:6px">${CHALLENGES.map(([k, l]) => `<button class="${(z.challenge || 'normal') === k ? 'on' : ''}" data-act="wzSet" data-f="challenge" data-id="${k}">${l}</button>`).join('')}</div>
-      <p class="muted tiny" style="margin:0 0 14px">${CHALLENGES.find(c => c[0] === (z.challenge || 'normal'))[2]} You can change it later in the menu.</p>`}
+      <p class="muted tiny" style="margin:0 0 14px">${CHALLENGES.find(c => c[0] === (z.challenge || 'normal'))[2]} You can change it later in Menu → Settings.</p>`}
       ${z.money ? `<div class="sec">Starting budget</div>
       <p class="muted small" style="margin-top:0">This sets your bank balance${z.contracts ? ' and the weekly payroll you can spend in the draft' : ''}.</p>
-      <div class="list">${Object.entries(BUDGETS).sort((a, b) => a[1].money - b[1].money).map(([k, b]) => `<button class="pick wz-opt ${z.budget === k ? 'sel' : ''}" data-act="wzSet" data-f="budget" data-id="${k}"><span class="ck">${z.budget === k ? '✓' : ''}</span><div><b>${b.label}</b> <span class="muted small">· ${money(b.money)} bank · ${money(b.cap)}/wk payroll</span><div class="small muted">${b.desc}</div></div></button>`).join('')}</div>` : `<div class="tip">Sandbox mode: no money to manage. ${z.contracts ? 'Contracts still matter, but you can pay whatever it takes.' : 'Just book the shows you want.'}</div>`}
+      <div class="list">${Object.entries(BUDGETS).sort((a, b) => a[1].money - b[1].money).map(([k, b]) => `<button class="pick wz-opt ${z.budget === k ? 'sel' : ''}" data-act="wzSet" data-f="budget" data-id="${k}"><span class="ck">${z.budget === k ? '✓' : ''}</span><div><b>${b.label}</b> <span class="muted small">· ${money(b.money)} bank · ${money(b.cap)}/wk payroll</span><div class="small muted">${b.desc}</div></div></button>`).join('')}</div>` : `<div class="tip">Money is off: no budget to manage. ${z.contracts ? 'Contracts still matter, but you can pay whatever it takes.' : 'Just book the shows you want.'}</div>`}
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="company">Back</button><button class="btn pri" data-act="wzGo" data-id="roster">Next</button></div></div>`;
   }
   if (z.step === 'roster' && z.world) {
     const tk = z.take && z.world.cos.find(c => c.id === z.take);
     return `<div class="app wz">${wizSteps('roster')}
       <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">${tk ? `Taking over ${esc(tk.name)}` : 'Where does your talent come from?'}</h2>
-      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(tk.roster.find(w => w.id === t.holder[0])?.name || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>`
-      : `<div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
+      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(tk.roster.find(w => w.id === t.holder[0])?.name || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>
+      <div class="tip small" style="margin-top:10px">📅 You start at the beginning of the month leading to ${tk.bigOne ? `<b>${esc(tk.bigOne)}</b>, their big one` : 'their big one, the biggest show of their year'}.</div>`
+      : `<div class="tip small" style="margin-bottom:10px">📅 You start at the beginning of the month leading to your big one: ${ppvList(z.ppv).length ? `<b>${esc(ppvList(z.ppv).at(-1))}</b>, the last big event you named` : 'your last big event of the year'}. Pick a different big one later in Office → Setup.</div><div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button><button class="btn pri" data-act="wzFinish">Open for business</button></div></div>`;
   }
   if (z.step === 'roster') {
@@ -8195,10 +8161,13 @@ function tutStart(replay) {
 function tutSync() {
   // skip steps the player has already done (e.g. booked a match before reading the tip)
   while (tutOn() && G.tut < TUT_WIN && TUT[G.tut].done?.()) G.tut++;
+  // the closing card bows out by itself once another show has run
+  if (tutOn() && G.tut === TUT_WIN && G.tutRes && G.week > G.tutRes.wk + 1) { delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; }
 }
 function tutCard() {
   if (!tutOn() || UI.selWeek !== G.week) return '';
   tutSync();
+  if (!tutOn()) return '';
   const s = TUT[G.tut], n = G.tut + 1;
   const dots = TUT.map((_, i) => `<i class="${i < G.tut ? 'ok' : i === G.tut ? 'on' : ''}"></i>`).join('');
   return `<section class="tip tut" aria-labelledby="tut-h"><div class="row"><b class="sp" id="tut-h">${s.t}</b><span class="tiny muted">Step ${n} of ${TUT.length}</span></div>
@@ -8249,7 +8218,7 @@ const WIZ_ACTIONS = {
   wzStart: wizStart,
   wzCancel() { UI.wiz = null; render(); window.scrollTo(0, 0); },
   wzGo(step) { UI.wiz.step = step; render(); window.scrollTo(0, 0); },
-  wzRule(k) { const z = UI.wiz; z[k] = !z[k]; if (k === 'deep' && z.deep) { z.money = true; z.contracts = true; } render(); },
+  wzRule(k) { const z = UI.wiz; if ((k === 'money' || k === 'contracts') && !z.deep) return; z[k] = !z[k]; if (k === 'deep') { z.money = z.contracts = !!z.deep; } render(); },
   wzXDay(v) { const [i, k] = String(v).split(':').map(Number), x = UI.wiz.extra?.[i]; if (x) { x.day = clamp(k || 0, 0, 6); render(); } },
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
@@ -8312,6 +8281,7 @@ document.addEventListener('input', e => {
     else if (k === 'showName') { G.promo.show = v || 'Weekly Show'; curShow().name = G.promo.show; debSave(); }
     else if (k === 'shName') { const x = showById(el.dataset.id); if (x) { const n = v.trim().slice(0, 40) || 'Weekly Show'; if (x.id === G.showId) G.promo.show = n; x.name = n; debSave(); } }
     else if (k === 'bigEvents') { G.bigEvents = ppvList(v); debSave(); }
+    else if (k === 'bigOne') { if (G.bigEvents.includes(el.value)) { G.bigOne = el.value; commit(`${el.value} is now your big one.`); } }
   }
   if (el.dataset.ew != null && el.type !== 'checkbox') {
     const d = UI.modal.draft, k = el.dataset.ew;
@@ -8363,17 +8333,18 @@ document.addEventListener('change', e => {
     else if (k === 'injuries') { G.settings.injuries = el.checked; commit(); }
     else if (k === 'organic') { G.settings.organic = el.checked; commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
-    else if (k === 'deep') { G.settings.deep = el.checked; commit(el.checked ? 'Deep sim on. Open any wrestler to see their skills.' : 'Deep sim off.'); }
+    else if (k === 'deep') { G.settings.deep = el.checked; if (el.checked) { G.settings.finances = true; if (G.settings.contracts === false) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40); G.settings.contracts = true; } else { G.settings.finances = false; G.settings.contracts = false; } commit(el.checked ? 'Deep sim on, with money and contracts. Open any wrestler to see their skills.' : 'Deep sim off. Money and contracts are off too.'); }
     else if (k === 'trainFocus') { const w = W(el.dataset.id) || trainees().find(x => x.id === el.dataset.id); if (w && Object.hasOwn(FOCUS, el.value)) { w.train = el.value; commit(`${w.name}: ${FOCUS[w.train][0].toLowerCase()} training.`); } }
     else if (k === 'prOn') { const s = staffOf('pr'); if (s) { if (el.checked) delete s.off; else s.off = true; commit(); } }
     else if (k === 'persona') { G.settings.persona = el.checked; if (el.checked) ensurePers(); commit(el.checked ? 'Personalities on. Check 📱 for texts from your wrestlers.' : 'Personalities off.'); }
     else if (k === 'wPers') { const w = W(el.dataset.id); if (w && Object.hasOwn(PERS, el.value)) { w.pers = el.value; commit(`${w.name} is now a ${PERS[w.pers].n.toLowerCase()}.`); } }
     else if (k === 'difficulty') { G.settings.difficulty = Object.hasOwn(DIFF, el.value) ? el.value : 'normal'; commit('Challenge set to ' + CHALLENGES.find(c => c[0] === G.settings.difficulty)[1] + '.'); }
-    else if (k === 'finances') { G.settings.finances = el.checked; commit(); }
+    else if (k === 'finances') { if (!G.settings.deep) return render(); G.settings.finances = el.checked; commit(); }
     else if (k === 'cNotes') { UI.modal.notes = el.checked; }
     else if (k === 'cMine') { UI.modal.mine = el.checked; render(); }
     else if (k === 'sandbox') { G.settings.sandbox = el.checked; commit(el.checked ? 'Sandbox on. Build your world in Office → Rivals.' : 'Sandbox off.'); }
     else if (k === 'contracts') {
+      if (!G.settings.deep) return render();
       G.settings.contracts = el.checked;
       // deals were frozen while contracts were off; give anyone with almost nothing left a fresh runway
       if (el.checked) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40);
@@ -8488,16 +8459,21 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.7';
+const VERSION = '1.7.1';
 const WHATS_NEW = [
+  ['🌍 A living world', 'Rival companies book their own shows, sign free agents, grow, shrink and can close, and new ones open. Edit any of them in Office → Rivals, build a whole world with Sandbox, and share worlds in Community.'],
+  ['📈 Smarter ratings and rankings', 'Matches rate on more than raw stats, rankings follow wins and form, and Auto-fill builds better cards.'],
+  ['🏅 Booker and company levels', 'Your booker level follows you into every save and unlocks Community symbols and flairs. Each company levels up too, for cash bonuses, sponsors, perks and bigger event cards.'],
+  ['📱 Personalities', 'Wrestlers can text you, make demands and remember how you treat them. Switch it on or off in Menu → Settings.'],
+  ['📖 Guided first show', 'A short tutorial walks you through booking and running your first show. Replay it from Menu → How to play.'],
   ['🎓 Training school and staff', 'Office → Staff: hire a Head Trainer, Road Agent, Doctor, PR Agent, Scout and Writer, open a school and train your own rookies, and give anyone a training focus or a veteran mentor. Young wrestlers grow every week, and they learn from better workers in the ring.'],
   ['🧠 Deep sim', 'Menu → Settings → Deep sim shows every wrestler\'s psychology, selling, consistency, safety, technical, brawling and aerial skills, plus their potential.'],
   ['✏️ Short names', 'Give anyone a short name (Moxley instead of Jon) in their Edit screen. It is used wherever only one name fits.'],
-  ['📺 Media appearances', 'Office → Media: send wrestlers on talk shows, podcasts and fan signings for a popularity boost (with a small chance of a slip-up), or away on movies, media tours and indie runs to come back much bigger. Big offers come as backstage events, and some wrestlers will ask.'],
+  ['📣 Media appearances', 'Office → Media: send wrestlers on talk shows, podcasts and fan signings for a popularity boost (with a small chance of a slip-up), or away on movies, media tours and indie runs to come back much bigger. Big offers come as backstage events, and some wrestlers will ask.'],
   ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Rivals), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
   ['🎤 Plan your promos', 'Pick what a promo is about and its tone: fiery, calm, funny, cheap heat or from the heart. The speaker\'s mic skill decides if it lands or falls flat.'],
   ['💼 Backstage politics', 'New backstage moments: stars who refuse to lose, creative control, a locker room leader, cliques and no-shows.'],
-  ['🌐 Cloud saves', 'Menu → Cloud saves keeps up to 3 games online. Add your email to load them on another device, and turn on auto backup.'],
+  ['🌐 Cloud saves', 'Menu → Cloud saves keeps up to 3 games online (6 for BookIt Supporters). Add your email to load them on another device, and turn on auto backup.'],
   ['🤼 Participants plus a gimmick', 'Every match is who is in it (singles, tag, handicap, up to six-way, eight-person tag, battle royal, rumble) plus a gimmick on top: ladder, cage, tables, I quit, last man standing, the Cell and more. Mix any of them.'],
   ['👑 Rumbles and battle royals', 'Up to 40 entrants from every show. One tap fills the field, and wrestling earlier that night is fine.'],
   ['✏️ Make your own', 'Create match types and gimmicks in Office → Setup → Match types, or from any match.'],
