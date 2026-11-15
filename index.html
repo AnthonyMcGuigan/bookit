@@ -81,6 +81,12 @@ header.top .ph-btn .dot { position: absolute; top: -5px; right: -5px; min-width:
 .ph-del:hover, .ph-del:focus-visible { color: var(--bad); background: var(--card2); }
 .ph-asst { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); }
 .ph-tt { display: block; margin-bottom: 2px; }
+.ph-post { border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--line)); background: color-mix(in srgb, var(--bad) 8%, var(--card2)); border-radius: 14px; }
+.ph-pub { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--bad); margin-bottom: 3px; }
+.ph-stats { display: block; font-size: 12px; color: var(--dim); margin-top: 4px; }
+.team-talk { margin-top: 8px; }
+.team-talk .tt-l { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; }
+.team-talk .tt-l .ph-b { margin: 0; flex: 1; }
 .ph-m.open .ph-b { box-shadow: inset 3px 0 0 var(--accent); }
 header.top .ph-btn.ring { box-shadow: 0 0 0 2px var(--accent); animation: phRing 2.4s ease-in-out infinite; }
 @keyframes phRing { 0%, 100% { box-shadow: 0 0 0 2px var(--accent); } 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); } }
@@ -1139,6 +1145,8 @@ function makeWrestler(name, nick, align, style, tier) {
 function addPop(w, d) { if (d > 0) d *= Math.max(0.08, 1 - w.pop / 105); w.pop = clamp(w.pop + d, 1, 100); }
 const value = w => w.pop * 0.6 + w.ring * 0.2 + w.cha * 0.2;
 function asking(w) {
+  // Sandbox can set someone's price by hand
+  if (+w.askSet > 0) return Math.max(100, Math.round(+w.askSet / 100) * 100);
   const v = value(w);
   let a = Math.pow(v / 10, 3) * 22;
   a *= 1 + (w.momentum || 0) / 200;
@@ -2546,6 +2554,7 @@ function endOfWeek(card, world = true) {
     const old = G.tv; G.tv = Math.round((30000 * Math.pow(G.fans / 22000, 0.65) * (0.6 + recent / 100) * (perk('tv') ? 1.1 : 1)) / 1000) * 1000; G.tvWeeks = 26;
     if (MON()) news(`📡 New TV deal: ${money(G.tv)} per week (was ${money(old)}), based on fans and recent show quality.`, 'office');
   }
+  teamPayWeek();
   personaWeek(booked);
   if (G.settings.finances && G.money < 0) news('💸 You are in the red. Cut payroll or run bigger events.', 'office');
 }
@@ -3714,8 +3723,8 @@ const DF = () => { const d = G?.settings?.difficulty; return typeof d === 'strin
 // how many fans a promotion of this standing can hold; growth slows as you near it
 const fanCap = () => Math.round((140000 + G.promo.prestige * 6000) * DF().cap);
 const askFor = (w, wk) => Math.max(500, Math.round(asking(w) * lenMult(wk) * (w.courted ? 1.15 : 1) * DF().ask * (perk('deals') ? 0.9 : 1) / 100) * 100);
-function offerChance(w, salary, weeks) {
-  const ask = askFor(w, weeks);
+function offerChance(w, salary, weeks, o) {
+  const ask = o?.ask || askFor(w, weeks);
   let c = (salary / ask - 0.7) / 0.45;
   c += (w.morale - 55) / (w.contract ? 150 : 400);
   c += (G.promo.prestige - 45) / 250;
@@ -3728,7 +3737,138 @@ function offerChance(w, salary, weeks) {
   if (w.contract && w.contract.weeks > TALKS_OPEN) c -= salary >= ask * 1.1 ? 0.05 : 0.3;
   if (w.courted) c -= 0.08;
   if (w.refusedWk === G.week) c -= 0.5;
+  // tag partners compare pay, and want to sign together
+  if (!o?.team) { const tp = teamPay(w); if (tp && salary < tp.sal * 0.85) c -= 0.1; if (partnersFor(w).length) c -= 0.06; }
+  // a public blast makes other free agents wary for a while
+  if (!w.contract && blastOn()) c -= 0.05;
   return clamp(c, 0, 1);
+}
+// ---------- tag teams talk money together ----------
+// A team whose partners are in the same spot (all free agents, or all signed to you) can be offered one deal:
+// same pay, same length, so their deals end together. Partners compare what they earn.
+function partnersFor(w) {
+  if (!w || w.retired) return [];
+  const t = (G.teams || []).find(t => t.members.includes(w.id)); if (!t) return [];
+  return t.members.filter(id => id !== w.id).map(W).filter(p => p && !p.retired && !p.loan && (w.contract ? !!p.contract && p.contract.weeks <= 26 : !p.contract && !p.cutBy));
+}
+const teamFor = w => (G.teams || []).find(t => t.members.includes(w.id));
+// the best-paid signed partner, for "my partner makes more than me"
+function teamPay(w) {
+  if (!CON()) return null;
+  const t = teamFor(w); if (!t) return null;
+  const ps = t.members.filter(id => id !== w.id).map(W).filter(p => p?.contract && !p.loan);
+  if (!ps.length) return null;
+  const top = ps.sort((a, b) => b.contract.salary - a.contract.salary)[0];
+  return { w: top, sal: top.contract.salary };
+}
+// what each member will take as their share of an equal-pay team deal
+function teamAsk(m, ws, wk) {
+  const avgA = avg(ws.map(x => askFor(x, wk))), own = askFor(m, wk);
+  if (!PER()) return (avgA + own) / 2;
+  if (m.pers === 'ego' || m.pers === 'money') return Math.max(avgA, own * 0.95);
+  if (m.pers === 'team' || m.pers === 'loyal') return Math.min(avgA, own);
+  return (avgA + own) / 2;
+}
+function teamChance(ws, salary, wk) {
+  const each = ws.map(x => offerChance(x, salary, wk, { team: true, ask: teamAsk(x, ws, wk) }));
+  return { each, c: clamp(Math.min(...each) + 0.05, 0, 1) };
+}
+// what the partners say to each other about the offer
+function teamTalkLines(ws, salary, wk) {
+  const top = ws.slice().sort((a, b) => askFor(b, wk) - askFor(a, wk))[0];
+  return ws.map(x => {
+    const fair = teamAsk(x, ws, wk), ok = salary >= fair, P = PER() ? x.pers : '';
+    let t;
+    if (P === 'team') t = ok ? 'Same money for both of us. That\'s how a team should work.' : 'I\'m not greedy, but we can\'t sign for that.';
+    else if (P === 'loyal') t = ok ? 'If we\'re both looked after, I\'m in.' : 'I want to stay, but this doesn\'t look after us.';
+    else if (P === 'ego' && x === top) t = ok ? 'Fine, equal pay. Everyone knows who carries this team anyway.' : `I'm the star of this team. I want at least ${money(Math.round(fair / 100) * 100)}.`;
+    else if (P === 'money') t = ok ? 'The numbers work for me.' : `Our agent says ${money(Math.round(fair / 100) * 100)} each, minimum.`;
+    else if (P === 'hot') t = ok ? 'Let\'s get it signed before I change my mind.' : 'This offer is an insult to both of us.';
+    else t = ok ? 'Sounds fair for both of us.' : `We'd need closer to ${money(Math.round(fair / 100) * 100)} each.`;
+    return [x, t, ok];
+  });
+}
+// once a week: partners who find out one earns a lot more than the other
+function teamPayWeek() {
+  if (!CON()) return;
+  for (const t of G.teams || []) {
+    const ms = t.members.map(W).filter(w => w?.contract && !w.loan); if (ms.length < 2) continue;
+    const hi = ms.slice().sort((a, b) => b.contract.salary - a.contract.salary)[0];
+    for (const w of ms) {
+      if (w === hi || w.contract.salary >= hi.contract.salary * 0.7) { if (w.payGap) delete w.payGap; continue; }
+      if (w.pers === 'team' && PER()) continue;
+      w.morale = clamp(w.morale - (w.pers === 'money' || w.pers === 'ego' ? 1.5 : 0.8), 0, 100);
+      if (!w.payGap || G.week - w.payGap >= 26) {
+        w.payGap = G.week;
+        if (PER()) { textFrom(w, `I found out ${lastName(hi)} makes ${money(hi.contract.salary)} a week and I get ${money(w.contract.salary)}. We're a team. Fix it.`); remember(w, -3, `${lastName(hi)} earns much more than me`); }
+        else news(`💬 ${w.name} found out ${hi.name} earns far more. They're not happy about it.`, 'contract');
+      }
+    }
+  }
+}
+
+// ---------- going public (personalities on) ----------
+// Some wrestlers blast you on social media after a lowball offer or a broken promise.
+// It costs prestige and a few fans, makes free agents warier for a while, and you can answer it from your phone.
+const BLAST_ODDS = { hot: .6, ego: .45, money: .4, star: .35, team: .05, loyal: .03 };
+const blastOn = () => !!(G.blast && G.blast.until > G.week);
+const handle = w => '@' + String(w.short || w.name).replace(/[^A-Za-z0-9]/g, '').slice(0, 18);
+function blastText(w, why, x) {
+  const co = G.promo.name, P = w.pers;
+  if (why === 'lowball') return {
+    hot: `${money(x.sal)} a week? That's what ${co} thinks I'm worth? Insulting. I'm done being nice.`,
+    ego: `Just got a lowball offer from ${co}. Do they know who I am? The best in the world doesn't work for scraps.`,
+    money: `Business update: ${co} offered me ${money(x.sal)} a week. Other places pay a lot more. Do the math.`,
+    star: `${co} wants me cheap. Fine. Somebody else will pay to put me on TV.`,
+    team: `Disappointed in the offer from ${co}. Thought we were worth more than that.`,
+    loyal: `Not going to lie, the offer from ${co} hurt.`
+  }[P];
+  return {
+    hot: `${co} PROMISED me ${x.what}. Lies. Every word of it.`,
+    ego: `Funny how ${co} promised me ${x.what} and then forgot. Remember that next time they promise you something.`,
+    money: `Note to everyone in this business: get it in writing. ${co} promised me ${x.what}.`,
+    star: `I was promised ${x.what}. Instead I'm sitting at home. Ask ${co} why.`,
+    team: `I was told I'd get ${x.what}. Still waiting.`,
+    loyal: `Promises are promises. Just saying.`
+  }[P];
+}
+function maybeBlast(w, why, x = {}) {
+  if (!PER() || !w || w.retired || !Object.hasOwn(BLAST_ODDS, w.pers)) return false;
+  if (w.blastWk != null && G.week - w.blastWk < 10) return false;
+  const odds = BLAST_ODDS[w.pers] * clamp(1.3 - (w.trust ?? 50) / 100, .3, 1.3);
+  if (!(x.force || Math.random() < odds)) return false;
+  const sev = w.pop >= 70 ? 3 : w.pop >= 45 ? 2 : 1, lost = Math.round(G.fans * 0.003 * sev * DF().fanDown);
+  w.blastWk = G.week;
+  G.promo.prestige = clamp(G.promo.prestige - sev, 1, 100);
+  G.fans = Math.max(1000, G.fans - lost);
+  G.blast = { until: Math.max(G.blast?.until || 0, G.week + 3 + sev * 2), wid: w.id };
+  // the unhappy part of the locker room nods along
+  for (const o of signed()) if (o !== w && (o.trust ?? 50) < 40 && o.pers !== 'loyal') o.morale = clamp(o.morale - 2, 0, 100);
+  remember(w, -2, why === 'lowball' ? 'I went public about your lowball offer' : 'I went public about your broken promise');
+  const t = blastText(w, why, x), shares = Math.round((w.pop * w.pop * 3 + rint(50, 400)) / 10) * 10;
+  textFrom(w, t, null, { social: { why, sev, shares, lost } });
+  news(`📢 ${w.name} blasted ${G.promo.name} on social media${why === 'lowball' ? ' over a lowball offer' : ` over a broken promise (${x.what})`}. Prestige -${sev}, about ${kfmt(lost)} fans turned away.`, 'contract');
+  return true;
+}
+// how you answer a post. Signed wrestlers and free agents get different options.
+function blastChoices(m, w) {
+  if (w.contract) return [['Talk it out', 'Private chat. Trust and morale up, it blows over sooner'], [MON() ? `Fine them ${money(blastFine(w))}` : 'Discipline them', 'You look in charge. Prestige back up a little, they won\'t like it'], ['Put it on TV', 'Call it a storyline. Fans buy it, or it backfires']];
+  return [['Reach out and apologize', 'Trust up. They\'ll hear a new offer this week'], ['Ignore it', 'It blows over in time']];
+}
+const blastFine = w => Math.max(500, Math.round(w.contract.salary * 2 / 100) * 100);
+function blastAnswer(m, i) {
+  const w = W(m.wid); if (!w || m.ans != null) return '';
+  m.ans = i; const sv = m.social.sev;
+  const cool = k => { if (G.blast && G.blast.wid === w.id) G.blast.until = G.week + Math.max(0, Math.round((G.blast.until - G.week) * k)); };
+  if (w.contract) {
+    if (i === 0) { remember(w, 6, 'You talked it out after my post'); w.morale = clamp(w.morale + 5, 0, 100); cool(.5); textFrom(w, pick(['Okay. I said too much. Thanks for hearing me out.', 'Fair enough. I\'ll take it down.'])); G.phone[0].read = true; m.res = 'They took the post down.'; return `${w.name} took the post down.`; }
+    if (i === 1) { if (MON()) G.money += blastFine(w); remember(w, -8, 'You fined me for my post'); w.morale = clamp(w.morale - 8, 0, 100); G.promo.prestige = clamp(G.promo.prestige + Math.ceil(sv / 2), 1, 100); m.res = MON() ? `Fined ${money(blastFine(w))}.` : 'You laid down the law.'; return `${w.name} was ${MON() ? 'fined' : 'disciplined'}. The locker room got the message.`; }
+    // a worked shoot: it works if they're on your side, it can blow up if they aren't
+    if (Math.random() < clamp(.35 + (w.trust ?? 50) / 100 + w.cha / 400, .2, .9)) { addPop(w, 3); w.momentum = clamp((w.momentum || 0) + 6, -50, 50); G.promo.prestige = clamp(G.promo.prestige + sv, 1, 100); cool(0); remember(w, 3, 'You turned my rant into a storyline'); m.res = 'Fans think it was all part of the show.'; return `It worked. Fans think ${w.name}'s rant was a storyline.`; }
+    remember(w, -4, 'You tried to use my rant on TV'); G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); m.res = 'They went off script. It made things worse.'; return `${w.name} went off script. It made things worse.`;
+  }
+  if (i === 0) { remember(w, 8, 'You apologized after my post'); if (w.refusedWk === G.week) delete w.refusedWk; cool(.5); m.res = 'They\'ll hear a new offer.'; return `${w.name} will hear a new offer this week.`; }
+  m.res = 'You let it blow over.'; return 'You let it blow over.';
 }
 function chanceLabel(c) { return c >= .85 ? ['Will accept', 'good'] : c >= .6 ? ['Likely', 'good'] : c >= .35 ? ['Maybe', 'warn'] : c > .05 ? ['Unlikely', 'bad'] : ['No chance', 'bad']; }
 
@@ -3870,7 +4010,7 @@ function storyIdea() {
 // =====================================================================
 //  UI
 // =====================================================================
-const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', newsF: 'all', notesTab: 'todo', faTab: 'contracts' };
+const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts' };
 const root = document.getElementById('root'), modals = document.getElementById('modals');
 // ---------- scroll lock: nothing behind an open sheet, picker or overlay may scroll ----------
 const LOCK_SEL = '.modal-bg, .live, .crash';
@@ -4132,6 +4272,29 @@ function wTags(w) {
   if (w.morale < 35) t.push(`<span class="tag warn">😠</span>`);
   if (w.fatigue >= 60) t.push(`<span class="tag warn">😮‍💨 tired</span>`);
   return t.join(' ');
+}
+// free agents: search, sort (popularity, overall, price, age, potential, name) and a division filter
+const FA_SORTS = () => [['pop', 'Popularity'], ['ovr', 'Overall'], ['ring', 'In-ring'], ['mic', 'Mic'], ...(CON() ? [['cheap', 'Cheapest'], ['price', 'Priciest']] : []), ['young', 'Youngest'], ['old', 'Oldest'], ...(skillsShown() ? [['pot', 'Potential']] : []), ['name', 'Name']];
+function faSorted(list, s) {
+  if (!FA_SORTS().some(([k]) => k === s)) s = 'pop';
+  const ak = new Map(CON() && (s === 'cheap' || s === 'price') ? list.map(w => [w.id, askFor(w, prefLen(w))]) : []);
+  const f = { pop: (a, b) => b.pop - a.pop, ovr: (a, b) => overall(b) - overall(a), ring: (a, b) => b.ring - a.ring, mic: (a, b) => b.mic - a.mic, cheap: (a, b) => ak.get(a.id) - ak.get(b.id) || b.pop - a.pop, price: (a, b) => ak.get(b.id) - ak.get(a.id),
+    young: (a, b) => a.age - b.age || b.pop - a.pop, old: (a, b) => b.age - a.age || b.pop - a.pop, pot: (a, b) => (b.pot || 0) - (a.pot || 0) || b.pop - a.pop, name: (a, b) => a.name.localeCompare(b.name) }[s];
+  return list.slice().sort(f);
+}
+function faView(all) {
+  const q = (UI.faQ || '').toLowerCase().trim(), dv = UI.faDiv || 'all', s = UI.faSort || 'pop';
+  const divs = DIVISIONS.filter(d => all.some(w => (w.division || 'Open') === d));
+  let list = all.filter(w => (!q || (w.name + ' ' + (w.nick || '') + ' ' + w.style).toLowerCase().includes(q)) && (dv === 'all' || (w.division || 'Open') === dv));
+  list = faSorted(list, s);
+  const tm = w => (G.teams || []).find(t => t.members.includes(w.id) && t.members.some(id => id !== w.id && freeAgents().some(x => x.id === id)));
+  const extra = w => { const t = tm(w); return (CON() ? `asks <b>${money(askFor(w, prefLen(w)))}</b>/wk · ${lenLabel(prefLen(w))}` : 'tap to sign instantly') + ` · Age ${w.age}${skillsShown() && w.pot ? ` · Pot ${Math.round(w.pot)}` : ''}${t ? ` · 👥 ${esc(t.name)}` : ''}`; };
+  return `<div class="small muted" style="margin-bottom:8px">Unsigned talent. Rivals sign them over time.${CON() ? ' Tag teams sign together.' : ''}</div>
+  ${all.length ? `<div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search free agents" aria-label="Search free agents" value="${esc(UI.faQ || '')}" data-in="faQ" style="flex:1">
+    <select data-in="faSort" style="width:auto;max-width:45%" aria-label="Sort free agents by">${FA_SORTS().map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+  ${divs.length > 1 ? `<div class="filters">${[['all', 'All'], ...divs.map(d => [d, d])].map(([k, l]) => `<button class="${dv === k ? 'on' : ''}" data-act="faDiv" data-id="${esc(k)}">${l}</button>`).join('')}</div>` : ''}
+  <div class="small muted" style="margin-bottom:8px">${list.length} of ${all.length} free agents</div>` : ''}
+  <div class="list">${list.map(w => wItem(w, 'negotiate', extra(w))).join('') || `<div class="empty">${all.length ? 'Nobody matches.' : 'No free agents right now.'}</div>`}</div><button class="btn block" style="margin-top:12px" data-act="createW">+ Create a wrestler</button>`;
 }
 function wItem(w, act, extra) {
   return `<button class="item" data-act="${act || 'openW'}" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div>
@@ -4581,7 +4744,7 @@ function viewOffice() {
   ${t === 'rivals' ? rivalsView() : ''}
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
-  ${t === 'fa' ? `<div class="small muted" style="margin-bottom:8px">Unsigned talent. Rivals sign them over time.</div><div class="list">${fa.map(w => wItem(w, 'negotiate', CON() ? `asks <b>${money(asking(w))}</b>/wk` : 'tap to sign instantly')).join('') || '<div class="empty">No free agents right now.</div>'}</div><button class="btn block" style="margin-top:12px" data-act="createW">+ Create a wrestler</button>` : ''}
+  ${t === 'fa' ? faView(fa) : ''}
   ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleBelt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
@@ -5112,25 +5275,38 @@ function modalWrestler(m) {
 }
 function modalNegotiate(m) {
   const w = W(m.id); if (!w) return '';
-  const ask = asking(w);
+  const ps = partnersFor(w), team = !!(m.team && ps.length), ws = team ? [w, ...ps] : [w], tm = teamFor(w);
+  const ask = team ? Math.max(...ws.map(x => asking(x))) : asking(w);
   const buyout = w.contract ? Math.round(w.contract.salary * w.contract.weeks * 0.25) : 0;
-  const body = `<div class="row" style="margin-bottom:12px">${av(w, 48)}<div class="sp"><b>${esc(w.name)}</b><div class="small muted">Pop ${Math.round(w.pop)} · Morale ${Math.round(w.morale)} · Age ${w.age}</div></div></div>
+  const tp = !team && teamPay(w);
+  const teamBox = ps.length ? `<div class="card" style="margin-top:10px"><div class="row small" style="margin-bottom:8px"><span class="sp"><b>👥 ${esc(tm?.name || 'Tag team')}</b><div class="tiny muted">${w.contract ? 'Their deals end within 6 months of each other. Re-sign them together and the deals end the same week.' : `${esc(ps.map(p => p.name).join(' & '))} ${ps.length === 1 ? 'is' : 'are'} a free agent too. They'd rather sign together.`}</div></span></div>
+     <div class="seg-ctl"><button class="${team ? 'on' : ''}" data-act="negTeam" data-id="1">Team deal</button><button class="${team ? '' : 'on'}" data-act="negTeam" data-id="0">Just ${esc(lastName(w))}</button></div>
+     ${team ? `<div class="team-talk" id="negTalk">${teamTalkHTML(ws, m)}</div>` : `<div class="tiny muted" style="margin-top:6px">Signing one partner alone is harder. They want to stay a team.</div>`}</div>` : '';
+  const body = `<div class="row" style="margin-bottom:12px">${team ? ws.map(x => av(x, 44)).join('') : av(w, 48)}<div class="sp"><b>${team ? esc(tm?.name || ws.map(x => x.name).join(' & ')) : esc(w.name)}</b><div class="small muted">${team ? ws.map(x => `${esc(lastName(x))}: pop ${Math.round(x.pop)}, asks ${money(askFor(x, m.weeks))}`).join(' · ') : `Pop ${Math.round(w.pop)} · Morale ${Math.round(w.morale)} · Age ${w.age}`}</div></div></div>
    <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' : 'None (free agent)'}</b></div>
+   ${team && w.contract ? ps.map(p => `<div class="row small"><span class="sp muted">${esc(lastName(p))}'s deal</span><b>${money(p.contract.salary)}/wk · ${lenLabel(p.contract.weeks)} left</b></div>`).join('') : ''}
    ${w.contract ? `<div class="row small"><span class="sp muted">Signed through</span><b>Week ${G.week + w.contract.weeks} · ${showDate(G.week + w.contract.weeks).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</b></div>` : ''}
    <div class="row small"><span class="sp muted">Wants</span><b>${lenLabel(prefLen(w))} deal</b></div>
    <div class="tiny muted" style="margin-top:4px">${STAGE[careerStage(w)].why}${w.contract && w.contract.weeks > TALKS_OPEN ? ` Talks normally open in ${w.contract.weeks - TALKS_OPEN} weeks. To re-sign now, offer at least 10% over their price.` : ''}${w.courted ? ` <b style="color:var(--bad)">${esc(w.courted)} is also bidding.</b>` : ''}</div>
-   <div class="row small"><span class="sp muted">Asking for this length</span><b id="negAsk">${money(askFor(w, m.weeks))}/wk</b></div>
-   ${w.refusedWk === G.week ? '<div class="small" style="color:var(--bad);margin-top:6px">They said no. Try again next week.</div>' : ''}</div>
-   <label class="f"><span id="negSalLbl">Weekly salary: ${money(m.salary)}</span><input type="range" min="${Math.max(300, Math.round(ask * 0.4 / 100) * 100)}" max="${Math.round(ask * 2 / 100) * 100}" step="100" value="${m.salary}" data-in="negSal" style="width:100%"></label>
+   <div class="row small"><span class="sp muted">${team ? 'Team asks, each' : 'Asking for this length'}</span><b id="negAsk">${money(team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, m.weeks))) / 100) * 100 : askFor(w, m.weeks))}/wk</b></div>
+   ${tp ? `<div class="tiny muted" style="margin-top:4px">👥 Partner ${esc(tp.w.name)} earns ${money(tp.sal)}/wk. ${esc(lastName(w))} will compare.</div>` : ''}
+   ${!w.contract && blastOn() ? `<div class="tiny" style="color:var(--bad);margin-top:4px">📢 Free agents saw ${esc(nameOf(G.blast.wid))}'s posts about you. They're a little warier until week ${G.blast.until}.</div>` : ''}
+   ${ws.some(x => x.refusedWk === G.week) ? '<div class="small" style="color:var(--bad);margin-top:6px">They said no. Try again next week.</div>' : ''}</div>
+   ${teamBox}
+   <label class="f"><span id="negSalLbl">Weekly salary${team ? ', each' : ''}: ${money(m.salary)}</span><input type="range" min="${Math.max(300, Math.round(ask * 0.4 / 100) * 100)}" max="${Math.round(ask * 2 / 100) * 100}" step="100" value="${m.salary}" data-in="negSal" style="width:100%"></label>
    <label class="f"><span>Length</span><div class="seg-ctl">${DEAL_LENS.map(([n, l]) => `<button class="${m.weeks === n ? 'on' : ''}" data-act="negLen" data-id="${n}">${l}${n === prefLen(w) ? ' ★' : ''}</button>`).join('')}</div></label>
    <div id="negChance">${negChanceHTML(w, m)}</div>
    ${w.contract ? `<div class="sec">Release</div><div class="small muted" style="margin-bottom:8px">Releasing ${esc(w.name)} costs a buyout of ${money(buyout)} (25% of what's left) and they become a free agent.</div><button class="btn bad block" data-act="release" data-id="${w.id}">Release ${esc(w.name)}</button>` : ''}`;
-  return modal(w.contract ? 'Contract talks' : 'Sign free agent', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="offer">Make offer</button>`);
+  return modal(team ? 'Team contract talks' : w.contract ? 'Contract talks' : 'Sign free agent', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="offer">Make ${team ? 'team ' : ''}offer</button>`);
+}
+function teamTalkHTML(ws, m) {
+  return teamTalkLines(ws, m.salary, m.weeks).map(([x, t, ok]) => `<div class="tt-l">${av(x, 28)}<div class="ph-b"><b class="ph-tt">${esc(lastName(x))} <span class="tiny ${ok ? '' : ''}" style="color:var(--${ok ? 'good' : 'bad'})">${ok ? '✓ happy' : '✗ wants more'}</span></b>${esc(t)}</div></div>`).join('');
 }
 function negChanceHTML(w, m) {
-  const c = offerChance(w, m.salary, m.weeks);
-  const [lbl, cls] = chanceLabel(c);
-  return `<div class="alert ${cls}"><span class="ic">🤝</span><div><b>${lbl}</b> <span class="muted small">(${Math.round(c * 100)}%)</span><div class="small muted">${lenLabel(m.weeks)}, through week ${G.week + m.weeks}. Total cost ${money(m.salary * m.weeks)}.${m.weeks < 52 ? ' Short deals cost more per week.' : m.weeks > 104 ? ' Long deals get a small discount per week.' : ''}</div></div></div>`;
+  const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
+  const c = team ? teamChance(ws, m.salary, m.weeks).c : offerChance(w, m.salary, m.weeks);
+  const [lbl, cls] = chanceLabel(c), n = ws.length;
+  return `<div class="alert ${cls}"><span class="ic">🤝</span><div><b>${lbl}</b> <span class="muted small">(${Math.round(c * 100)}%)</span><div class="small muted">${lenLabel(m.weeks)}, through week ${G.week + m.weeks}. Total cost ${money(m.salary * m.weeks * n)}${team ? ` for ${n}` : ''}.${m.weeks < 52 ? ' Short deals cost more per week.' : m.weeks > 104 ? ' Long deals get a small discount per week.' : ''}${PER() && ws.some(x => m.salary < askFor(x, m.weeks) * 0.8 && BLAST_ODDS[x.pers] >= .3) ? ' <b style="color:var(--bad)">A lowball like this could end up on social media.</b>' : ''}</div></div></div>`;
 }
 function modalStory(m) {
   const s = G.stories.find(x => x.id === m.id); if (!s) return '';
@@ -5667,8 +5843,10 @@ const A = {
   // roster
   openW(id) { openModal({ type: 'wrestler', id }); },
   rosterF(f) { UI.rosterF = f; render(); },
+  faDiv(f) { UI.faDiv = f; render(); },
   createW() { const w = makeWrestler('', '', 'face', 'Showman', 0.45); w.division = 'Open'; w.color = pick(SWATCHES); openModal({ type: 'editW', isNew: true, draft: { ...w, signNow: true } }); },
   shareBack() { UI.modal = UI.modal.draftBack; render(); },
+  bAskAuto() { const d = UI.modal?.draft; if (!d) return; delete d.askSet; render(); },
   shareOneComm() { const id = UI.modal.draftBack.draft.id; UI.modal = { type: 'community', tab: 'share', what: 'pick', sel: [id], title: W(id)?.name || '' }; render(); },
   editW(id) { const w = W(id); openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); },
   saveW() {
@@ -5678,9 +5856,13 @@ const A = {
     d.short = String(d.short || '').replace(/[<>&"'`]/g, '').trim().slice(0, 20); if (!d.short) delete d.short;
     d.age = clamp(+d.age || 25, 16, 70); d.injury = clamp(+d.injury || 0, 0, 52); d.morale = clamp(+d.morale || 60, 0, 100);
     d.name = d.name.trim().slice(0, 40); d.photo = safePhoto(d.photo); d.color = safeColor(d.color);
+    if (SANDBOX() && +d.askSet > 0) d.askSet = clamp(Math.round(+d.askSet / 100) * 100, 100, 10000000); else if (SANDBOX() || !(+d.askSet > 0)) delete d.askSet;
+    const cSal = SANDBOX() && d.cSal !== '' && d.cSal != null && isFinite(+d.cSal) ? clamp(Math.round(+d.cSal / 100) * 100, 0, 10000000) : null, cWks = SANDBOX() && d.cWks !== '' && d.cWks != null && isFinite(+d.cWks) ? clamp(Math.round(+d.cWks), 1, 520) : null;
+    delete d.cSal; delete d.cWks;
+    if (d.contract && !UI.modal.isNew && !UI.modal.rid) { if (cSal != null) d.contract.salary = cSal; if (cWks != null) d.contract.weeks = cWks; }
     if (UI.modal.isNew) {
       const { signNow, ...w } = d; w.joined = G.week;
-      if (signNow) w.contract = { salary: askFor(w, prefLen(w)), weeks: prefLen(w) };
+      if (signNow) w.contract = { salary: cSal ?? askFor(w, prefLen(w)), weeks: cWks ?? prefLen(w) };
       G.wrestlers.push(w); news(`🆕 ${w.name} was created${signNow ? ' and signed' : ' as a free agent'}.`, 'contract');
       UI.modal = { type: 'wrestler', id: w.id };
       delete w._ageSet;
@@ -5702,7 +5884,7 @@ const A = {
   turn(id) { const w = W(id); w.align = w.align === 'face' ? 'heel' : 'face'; news(`🔄 ${w.name} is now a ${w.align}.`, 'story'); commit(`${w.name} is now a ${w.align}.`); },
   negotiate(id) {
     const w = W(id); if (!w) return;
-    if (CON()) { const wk = prefLen(w); return openModal({ type: 'negotiate', id, salary: askFor(w, wk), weeks: wk }); }
+    if (CON()) { const ps = partnersFor(w), wk = prefLen(w), team = ps.length > 0, ws = [w, ...ps]; return openModal({ type: 'negotiate', id, salary: team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, wk))) / 100) * 100 : askFor(w, wk), weeks: wk, team }); }
     if (!CON()) {
       if (w.contract) return confirmBox('Release ' + w.name + '?', 'They become a free agent.', 'Release', () => { leaveCompany(w, 'released'); UI.modal = null; commit(w.name + ' released.'); }, true);
       w.contract = { salary: asking(w), weeks: prefLen(w) }; w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(w.morale + 8, 0, 100);
@@ -5710,19 +5892,33 @@ const A = {
     }
     const ask = asking(w); openModal({ type: 'negotiate', id, salary: Math.round(ask / 100) * 100, weeks: w.age > 34 ? 52 : 26 }); },
   negLen(n) { const m = UI.modal, w = W(m.id), old = askFor(w, m.weeks); m.weeks = +n; m.salary = Math.round(m.salary * askFor(w, m.weeks) / old / 100) * 100; render(); },
+  negTeam(v) { const m = UI.modal, w = W(m.id); if (!w) return; m.team = v === '1' && partnersFor(w).length > 0; const ws = [w, ...partnersFor(w)]; m.salary = m.team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, m.weeks))) / 100) * 100 : askFor(w, m.weeks); render(); },
   offer() {
-    const m = UI.modal, w = W(m.id); const c = offerChance(w, m.salary, m.weeks);
-    if (G.settings.finances && !w.contract && G.money < m.salary * 2) return toast('Not enough money to cover their first weeks.');
+    const m = UI.modal, w = W(m.id); if (!w) return;
+    const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
+    const c = team ? teamChance(ws, m.salary, m.weeks).c : offerChance(w, m.salary, m.weeks);
+    const newbies = ws.filter(x => !x.contract);
+    if (G.settings.finances && newbies.length && G.money < m.salary * 2 * newbies.length) return toast(`Not enough money to cover their first weeks.`);
+    const tn = team ? (teamFor(w)?.name || ws.map(x => lastName(x)).join(' & ')) : '';
     if (Math.random() < c) {
-      const was = !!w.contract;
-      w.contract = { salary: m.salary, weeks: m.weeks }; w.morale = clamp(w.morale + (m.salary >= askFor(w, m.weeks) ? 10 : 3), 0, 100); delete w.courted;
-      if (!was) { w.joined = G.week; w.lastBooked = G.week; }
-      news(`✍️ ${w.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks}).`, 'contract');
-      UI.modal = null; commit(`${w.name} said yes!`);
+      for (const x of ws) {
+        const was = !!x.contract, ask = team ? teamAsk(x, ws, m.weeks) : askFor(x, m.weeks);
+        x.contract = { salary: m.salary, weeks: m.weeks }; x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100); delete x.courted; delete x.payGap;
+        if (!was) { x.joined = G.week; x.lastBooked = G.week; }
+        if (!team) news(`✍️ ${x.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks}).`, 'contract');
+      }
+      if (team) news(`✍️ ${tn} (${ws.map(x => x.name).join(' & ')}) ${ws.every(x => newbies.includes(x)) ? 'signed' : 're-signed'} together: ${lenLabel(m.weeks)} at ${money(m.salary)}/wk each (through week ${G.week + m.weeks}).`, 'contract');
+      UI.modal = null; commit(team ? `${tn} said yes!` : `${w.name} said yes!`);
     } else {
-      w.refusedWk = G.week; w.morale = clamp(w.morale - 4, 0, 100);
-      news(`❌ ${w.name} turned down an offer of ${money(m.salary)}/wk.`, 'contract');
-      commit(`${w.name} said no. ${c > 0.3 ? 'It was close.' : 'Try a better offer.'}`);
+      let blasted = null;
+      for (const x of ws) {
+        x.refusedWk = G.week; x.morale = clamp(x.morale - 4, 0, 100);
+        const ask = team ? teamAsk(x, ws, m.weeks) : askFor(x, m.weeks);
+        if (!blasted && m.salary < ask * 0.8 && maybeBlast(x, 'lowball', { sal: m.salary })) blasted = x;
+      }
+      news(team ? `❌ ${tn} turned down ${money(m.salary)}/wk each.` : `❌ ${w.name} turned down an offer of ${money(m.salary)}/wk.`, 'contract');
+      if (blasted) UI.modal = null;
+      commit(blasted ? `${blasted.name} said no, and posted about it. Check your phone.` : `${team ? tn : w.name} said no. ${c > 0.3 ? 'It was close.' : 'Try a better offer.'}`);
     }
   },
   release(id) {
@@ -6257,8 +6453,24 @@ function modalBuilder(m) {
    ${sl('pop', 'Popularity', 'How much fans care')}${sl('ring', 'In-ring', 'Match quality')}${sl('mic', 'Mic', 'Promo quality')}${sl('cha', 'Charisma', 'Star power, angles')}${sl('stam', 'Stamina', 'Slows fatigue')}
    ${skillsShown() ? `<div class="sec">Skills <span class="muted tiny">· Deep sim</span></div>${SK_KEYS.map(k => sl(k, SKILLS[k][0], SKILLS[k][1])).join('')}${sl('pot', 'Potential', 'How good they can become')}` : ''}
    ${m.isNew ? '' : `<div class="sec">Status</div><div class="grid2"><label class="f"><span>Morale</span><input type="number" min="0" max="100" data-ew="morale" value="${Math.round(d.morale)}"></label><label class="f"><span>Injury (weeks)</span><input type="number" min="0" max="52" data-ew="injury" value="${d.injury}"></label></div>`}
-   ${m.isNew ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now (26 weeks at their asking price)</span></label>` : ''}`;
+   ${G && CON() && !m.rid ? askBlock(d, m) : ''}
+   ${m.isNew && !(G && CON() && !m.rid) ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now${CON() ? ` (${lenLabel(prefLen(d))} at their asking price)` : ''}</span></label>` : ''}`;
   return modal(m.isNew ? 'Character builder' : 'Edit ' + esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="deleteW">Delete</button>'}<button class="btn" data-act="bShare">Share</button><button class="btn pri" data-act="saveW">Save</button>`);
+}
+
+// what they'd ask for, live as you move the sliders. Sandbox can set the price and edit the current deal.
+function askLine(d) { const wk = prefLen(d); return `<b>${money(askFor(d, wk))}</b>/wk · ${lenLabel(wk)} deal`; }
+function askBlock(d, m) {
+  const sb = SANDBOX(), signedNow = !m.isNew && d.contract;
+  return `<div class="sec">Contract</div><div class="card">
+    <div class="row small"><span class="sp muted">Asking price</span><span id="ew-ask">${askLine(d)}</span></div>
+    <div class="tiny muted" style="margin-top:2px">${+d.askSet > 0 ? 'Set by hand in Sandbox.' : 'Based on popularity, in-ring, charisma and momentum. Raise them and the price goes up.'} ${esc(STAGE[careerStage(d)].why)}</div>
+    ${m.isNew ? `<label class="todo" style="margin-top:8px"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now at their asking price</span></label>` : ''}
+    ${sb ? `<div class="sec" style="margin-top:12px">🛠️ Sandbox</div>
+      <label class="f"><span>Base price, 1-year deal ($/wk) <span class="muted">· blank = automatic</span></span><div class="row"><input type="number" min="0" step="100" inputmode="numeric" data-ew="askSet" value="${+d.askSet > 0 ? Math.round(+d.askSet) : ''}" placeholder="${Math.round(asking({ ...d, askSet: 0 }))}" style="flex:1">${+d.askSet > 0 ? '<button class="btn sm" data-act="bAskAuto">Auto</button>' : ''}</div></label>
+      ${signedNow ? `<div class="grid2"><label class="f"><span>Current salary ($/wk)</span><input type="number" min="0" step="100" inputmode="numeric" data-ew="cSal" value="${Math.round(d.cSal ?? d.contract.salary)}"></label><label class="f"><span>Weeks left</span><input type="number" min="1" max="520" inputmode="numeric" data-ew="cWks" value="${Math.round(d.cWks ?? d.contract.weeks)}"></label></div>` : ''}
+      ${m.isNew && d.signNow ? `<div class="grid2"><label class="f"><span>Salary ($/wk)</span><input type="number" min="0" step="100" inputmode="numeric" data-ew="cSal" value="${d.cSal ?? ''}" placeholder="${askFor(d, prefLen(d))}"></label><label class="f"><span>Weeks</span><input type="number" min="1" max="520" inputmode="numeric" data-ew="cWks" value="${d.cWks ?? ''}" placeholder="${prefLen(d)}"></label></div>` : ''}` : ''}
+  </div>`;
 }
 
 // ---- roster tools: import / export ----
@@ -6810,11 +7022,15 @@ function sanitizeGame(g) {
     if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520) };
     if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && MEDIA[a.k].long ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3) } : undefined; if (!w.away) delete w.away; }
     if (w.mediaWk != null) w.mediaWk = Math.floor(+w.mediaWk) || 0;
+    if (w.askSet != null) { if (+w.askSet > 0) w.askSet = clamp(Math.round(+w.askSet), 100, 10000000); else delete w.askSet; }
+    for (const k of ['blastWk', 'payGap']) if (w[k] != null) { w[k] = Math.floor(+w[k]); if (!isFinite(w[k])) delete w[k]; }
     BR.clean(w);
   }
   g.mediaLog = (Array.isArray(g.mediaLog) ? g.mediaLog : []).filter(x => x && typeof x === 'object' && Object.hasOwn(MEDIA, x.k) && typeof x.wid === 'string').slice(0, 30)
     .map(x => ({ wk: Math.floor(+x.wk) || 0, wid: x.wid, k: x.k, ...(x.short ? { short: 1 } : {}), ...(x.long ? { long: 1, wks: clamp(Math.floor(+x.wks) || 1, 1, 20) } : {}), ...(x.back ? { back: 1 } : {}), ...(x.bad ? { bad: 1 } : {}), ...(x.d != null ? { d: clamp(+x.d || 0, -50, 50) } : {}) }));
   cleanTraining(g, true);
+  if (g.blast) g.blast = g.blast && typeof g.blast === 'object' && typeof g.blast.wid === 'string' ? { wid: g.blast.wid, until: clamp(Math.floor(+g.blast.until) || 0, 0, g.week + 20) } : undefined;
+  if (Array.isArray(g.phone)) for (const m of g.phone) if (m && m.social) m.social = { why: m.social.why === 'promise' ? 'promise' : 'lowball', sev: clamp(+m.social.sev || 1, 1, 3), shares: Math.max(0, Math.round(+m.social.shares) || 0), lost: Math.max(0, Math.round(+m.social.lost) || 0) };
   return g;
 }
 
@@ -7367,7 +7583,7 @@ function textFrom(w, t, ask, x) {
 const phoneNew = () => Array.isArray(G.phone) ? G.phone.filter(m => !m.read).length : 0;
 // a message still waiting on you: an open ask from a wrestler, or a backstage moment you haven't decided
 const talksOpen = (m, w = W(m.wid)) => m.act === 'talks' && CON() && !!w?.contract && !w.loan && w.contract.weeks <= TALKS_OPEN;
-const msgOpen = m => m.from === 'asst' ? evOpen(m) : !!(m.ask && m.ans == null && W(m.wid)?.contract) || talksOpen(m);
+const msgOpen = m => m.from === 'asst' ? evOpen(m) : !!(m.ask && m.ans == null && W(m.wid)?.contract) || talksOpen(m) || !!(m.social && m.ans == null && W(m.wid) && G.week - m.wk < 2);
 const openAsk = w => (G.phone || []).some(m => m.wid === w.id && m.ask && m.ans == null) || (G.promises || []).some(p => p.wid === w.id);
 const mainedIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.length > 1 && segPeople(h.results.at(-1).seg).includes(w.id));
 const promoIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.some(r => r.seg.kind === 'promo' && (r.seg.who || []).includes(w.id)));
@@ -7450,7 +7666,9 @@ function personaWeek(booked) {
     G.promises.splice(G.promises.indexOf(p), 1); const w = W(p.wid); if (!w?.contract) continue;
     remember(w, -15, `You broke your promise: ${ASKS[p.key].what(p)}`); w.morale = clamp(w.morale - 12, 0, 100);
     textFrom(w, w.pers === 'hot' ? `You PROMISED me ${ASKS[p.key].what(p)}. Don't ever do that again.` : w.pers === 'loyal' ? `You said I'd get ${ASKS[p.key].what(p)}. I'm disappointed, but I'm still here.` : `You promised me ${ASKS[p.key].what(p)}. I won't believe that next time.`);
+    maybeBlast(w, 'promise', { what: ASKS[p.key].what(p) });
   }
+  for (const m of G.phone) if (m.social && m.ans == null && G.week - m.wk >= 2) { m.ans = -1; m.res = 'You let it blow over.'; }
   for (const m of G.phone) if (m.ask && m.ans == null && G.week - m.wk >= 2) { m.ans = -1; const w = W(m.wid); if (w?.contract) remember(w, -4, 'You ignored my message'); }
   for (const w of signed()) {
     w.trust += ((w.pers === 'loyal' ? 60 : 50) - w.trust) * 0.01;
@@ -7516,6 +7734,15 @@ function phoneMsg(m) {
     </div></div>`;
   }
   const w = W(m.wid); if (!w) return '';
+  if (m.social) {
+    const op = msgOpen(m), bc = op ? blastChoices(m, w) : [];
+    return `<div class="ph-m social${m.read ? '' : ' new'}${op ? ' open' : ''}"><button class="ph-av" data-act="openW" data-id="${w.id}" aria-label="${esc(w.name)}">${av(w, 36)}</button><div class="sp">
+      <div class="ph-h"><b>${esc(w.name)} <span class="tiny muted">${esc(handle(w))}</span></b><span class="tiny muted">Week ${m.wk}</span>${del}</div>
+      <div class="ph-b ph-post"><span class="ph-pub">📢 Posted publicly</span>${esc(m.t)}<span class="ph-stats">${kfmt(m.social.shares)} reposts · Prestige -${m.social.sev}</span></div>
+      ${op ? `<div class="bs-c">${bc.map(([l, d], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="blastAns" data-id="${m.id}:${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>`
+        : `<div class="ph-you">${m.ans != null && m.ans >= 0 ? `You: ${esc((blastChoices(m, w)[m.ans] || ['answered'])[0])}` : 'You let it blow over'}${m.res && m.ans >= 0 ? `<span>${esc(m.res)}</span>` : ''}</div>`}
+    </div></div>`;
+  }
   const open = !!(m.ask && m.ans == null && w.contract), ch = open ? phoneChoices(m) : [];
   const talks = talksOpen(m, w);
   return `<div class="ph-m${m.read ? '' : ' new'}${open || talks ? ' open' : ''}"><button class="ph-av" data-act="openW" data-id="${w.id}" aria-label="${esc(w.name)}">${av(w, 36)}</button><div class="sp">
@@ -7558,6 +7785,10 @@ Object.assign(A, {
     const msg = phoneAnswer(m, +i); G.booker.xp += 1; commit(msg);
   },
   phoneF(f) { UI.phF = f === 'open' ? 'open' : 'all'; render(); },
+  blastAns(v) {
+    const [id, i] = String(v).split(':'), m = (G.phone || []).find(x => x.id === id); if (!m?.social || !msgOpen(m)) return;
+    const msg = blastAnswer(m, +i); G.booker.xp += 1; commit(msg);
+  },
   // deleting a wrestler's open ask is the same as ignoring it; a backstage moment stays on the Shows screen
   phoneDel(id) {
     const m = (G.phone || []).find(x => x.id === id); if (!m) return;
@@ -8582,6 +8813,7 @@ document.addEventListener('input', e => {
   if (el.dataset.in) {
     const k = el.dataset.in, v = el.value;
     if (k === 'rosterQ') { UI.rosterQ = v; debRender(el, e); }
+    else if (k === 'faQ') { UI.faQ = v; debRender(el, e); }
     else if (k === 'pickQ') { UI.picker.q = v; debRender(el, e); }
     else if (k === 'cQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'rrQ') { UI.modal.q = v; debRender(el, e); }
@@ -8592,7 +8824,7 @@ document.addEventListener('input', e => {
     else if (k === 'notebook') { G.notebook = v; debSave(); }
     else if (k === 'wNotes') { W(el.dataset.id).notes = v; debSave(); }
     else if (k === 'sNotes') { G.stories.find(s => s.id === el.dataset.id).notes = v; debSave(); }
-    else if (k === 'negSal') { UI.modal.salary = +v; const w = W(UI.modal.id); document.getElementById('negSalLbl').textContent = 'Weekly salary: ' + money(+v); document.getElementById('negChance').innerHTML = iconize(negChanceHTML(w, UI.modal)); }
+    else if (k === 'negSal') { UI.modal.salary = +v; const w = W(UI.modal.id), tm = UI.modal.team && partnersFor(w).length; document.getElementById('negSalLbl').textContent = 'Weekly salary' + (tm ? ', each' : '') + ': ' + money(+v); document.getElementById('negChance').innerHTML = iconize(negChanceHTML(w, UI.modal)); const tt = document.getElementById('negTalk'); if (tt && tm) tt.innerHTML = iconize(teamTalkHTML([w, ...partnersFor(w)], UI.modal)); }
     else if (k === 'promoName') { G.promo.name = v || 'My Promotion'; debSave(); }
     else if (k === 'showName') { G.promo.show = v || 'Weekly Show'; curShow().name = G.promo.show; debSave(); }
     else if (k === 'shName') { const x = showById(el.dataset.id); if (x) { const n = v.trim().slice(0, 40) || 'Weekly Show'; if (x.id === G.showId) G.promo.show = n; x.name = n; debSave(); } }
@@ -8604,6 +8836,7 @@ document.addEventListener('input', e => {
     d[k] = el.type === 'range' ? +el.value : el.value;
     if (k === 'age') d._ageSet = true;
     if (el.type === 'range') { const o = document.getElementById('ewv-' + k); if (o) o.textContent = el.value; const ov = document.getElementById('ew-ovr'); if (ov) ov.textContent = overall(d); }
+    if (el.type === 'range' || k === 'age' || k === 'askSet') { const ak = document.getElementById('ew-ask'); if (ak && G) ak.innerHTML = iconize(askLine(d)); }
   }
   if (el.dataset.es != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
   if (el.dataset.et != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.et] = el.value; }
@@ -8641,6 +8874,7 @@ document.addEventListener('change', e => {
   if (el.dataset.in) {
     const k = el.dataset.in;
     if (k === 'rosterSort') { UI.rosterSort = el.value; render(); }
+    else if (k === 'faSort') { UI.faSort = el.value; try { localStorage.setItem('bookit-faSort', el.value); } catch (e) { } render(); }
     else if (k === 'shDay') { const x = showById(el.dataset.id); if (x) { x.day = clamp(+el.value || 0, 0, 6); if (x.id === G.showId) G.promo.day = x.day; commit(); } }
     else if (k === 'shAuto') { const x = showById(el.dataset.id); if (x) { if (el.checked && weekUnits().filter(u => !u.auto).length <= 1) { el.checked = false; return toast('Keep at least one show to book yourself.'); } x.auto = el.checked; commit(el.checked ? `${x.id === G.showId ? G.promo.show : x.name} will book itself.` : ''); } }
     else if (k === 'split') { G.split = el.checked; if (G.split && !signed().some(w => showById(w.brand) && w.brand !== mainShowId())) brandDraft(); commit(G.split ? 'Brand split on. Each show has its own roster.' : 'Brand split off. Everyone works every show.'); }
@@ -8674,7 +8908,7 @@ document.addEventListener('change', e => {
     else if (k === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); ls.set(META, JSON.stringify(meta)); MUSIC.sync(); }
     else if (['promoName', 'showName', 'bigEvents', 'notebook', 'wNotes', 'sNotes'].includes(k)) { save(); render(); }
   }
-  if (el.dataset.ew != null) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
+  if (el.dataset.ew != null && UI.modal?.draft) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
   if (el.dataset.es != null) { if (el.type === 'checkbox') UI.modal.draft.autoEnd = el.checked; else if (el.dataset.es === 'titleId') UI.modal.draft.titleId = el.value || null; else UI.modal.draft[el.dataset.es] = el.value; }
   if (el.dataset.rr && el.tagName === 'SELECT') { A.rrMove(el.dataset.rr, el.value); return; }
   if (el.dataset.tt && el.tagName === 'SELECT' && UI.modal?.draft?.titles?.[+el.dataset.i]) { const t = UI.modal.draft.titles[+el.dataset.i]; if (el.dataset.tt === 'holder') t.holder = el.value; else { t.mid = el.value === 'mid'; t.div = el.value === 'women' ? "Women's" : ''; if (/ (World|Television|Women's) Championship$/.test(t.name)) t.name = t.name.replace(/(World|Television|Women's) Championship$/, t.div ? "Women's Championship" : t.mid ? 'Television Championship' : 'World Championship'); } render(); return; }
