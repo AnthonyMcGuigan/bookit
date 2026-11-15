@@ -175,7 +175,13 @@ label.f > span { display: block; font-size: 12px; font-weight: 700; color: var(-
 .mo-rows { padding: 4px 12px; margin-bottom: 12px; }
 .mo-row { gap: 10px; padding: 6px 0; }
 .mo-row + .mo-row { border-top: 1px solid var(--line); }
-.mo-row input { margin: 0; flex: 1; min-width: 0; }
+.mo-row { align-items: flex-start; flex-wrap: wrap; }
+.mo-l { padding-top: 4px; }
+.mo-r { flex: 1; min-width: 0; }
+.mo-row input { margin: 0; width: 100%; }
+.mo-sig { flex-basis: 100%; }
+.mo-sig:not(:empty) { display: flex; gap: 6px; margin-top: -2px; }
+.mo-sig select { flex: 1; min-width: 0; margin: 0; min-height: 36px; padding: 4px 8px; font-size: 13.5px; }
 .mo-l { width: 52px; flex: none; }
 .mo-l b { font-family: var(--f-cond); text-transform: uppercase; letter-spacing: .06em; }
 .mo-l b.on { color: var(--accent-t); }
@@ -1336,6 +1342,8 @@ function bigOneWeek(from = 1) {
   return last || from;
 }
 const bigOneHtml = () => G.bigEvents.length > 1 ? `<label class="f"><span>The big one: your biggest event of the year</span><select data-in="bigOne">${G.bigEvents.map(n => `<option ${n === bigOne() ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : '';
+// after a month's name changes: light its label and redraw its signature picker, leaving focus where it is
+const moRowSig = (el, n, sig) => { const row = el.closest('.mo-row'); if (!row) return; row.querySelector('.mo-l b')?.classList.toggle('on', !!n); const box = row.querySelector('.mo-sig'); if (box) box.innerHTML = n ? iconize(sig(+el.dataset.i, n)) : ''; };
 const isBigOne = wk => bigWk(wk) && !!bigOne() && bigName(wk) === bigOne();
 const titlesOf = id => G.titles.filter(t => t.holder.includes(id));
 const storiesOf = id => G.stories.filter(s => s.status === 'active' && (s.a.includes(id) || s.b.includes(id)));
@@ -2512,7 +2520,12 @@ const monthLabel = k => `${MONTHS[k % 12]} · Year ${Math.floor(k / 12) - 2026}`
 const dayLabel = wk => { const d = dateOf(wk); return `${MONTHS[d.getUTCMonth()].slice(0, 3)} ${d.getUTCDate()}`; };
 // the date of the last show in each month of a year, for the by-month big event rows
 function monthEnds(day, yr) { const out = []; for (let w = 1; w < 60 * (yr - 2026) + 60; w++) { const d = new Date(BASE + ((w - 1) * 7 + (day || 0)) * 864e5); if (d.getUTCFullYear() === yr) out[d.getUTCMonth()] = d; else if (d.getUTCFullYear() > yr) break; } return out; }
-const monthRows = (vals, attr, day, yr) => { const ds = monthEnds(day, yr); return `<div class="card mo-rows">${MONTHS.map((m, i) => `<div class="row mo-row"><div class="mo-l"><b class="${vals[i] ? 'on' : ''}">${m.slice(0, 3)}</b><div class="tiny muted">${ds[i] ? m.slice(0, 3) + ' ' + ds[i].getUTCDate() : ''}</div></div><input type="text" ${attr} data-i="${i}" value="${esc(vals[i] || '')}" maxlength="40" placeholder="No big event, TV only" aria-label="${m} big event"></div>`).join('')}</div>`; };
+// each named month can carry its signature match right under its name; sig(i, name) draws the picker
+const monthRows = (vals, attr, day, yr, sig) => { const ds = monthEnds(day, yr); return `<div class="card mo-rows">${MONTHS.map((m, i) => `<div class="row mo-row"><div class="mo-l"><b class="${vals[i] ? 'on' : ''}">${m.slice(0, 3)}</b><div class="tiny muted">${ds[i] ? m.slice(0, 3) + ' ' + ds[i].getUTCDate() : ''}</div></div><div class="mo-r"><input type="text" ${attr} data-i="${i}" data-was="${esc(vals[i] || '')}" value="${esc(vals[i] || '')}" maxlength="40" placeholder="No big event, TV only" aria-label="${m} big event"></div><div class="mo-sig">${vals[i] && sig ? sig(i, vals[i]) : ''}</div></div>`).join('')}</div>`; };
+const sigSelects = (n, attr) => { const sg = sigFor(n) || {}, so = (v, cur, l) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
+  return `<select data-sig="mt" ${attr} aria-label="Signature match participants for ${esc(n)}">${so('', sg.mt || '', 'Signature: none')}${mtNames().map(k => so(k, sg.mt || '', k)).join('')}</select><select data-sig="gm" ${attr} aria-label="Signature match gimmick for ${esc(n)}">${so('', sg.gm || '', 'Gimmick: none')}${gmNames().filter(k => k !== 'Standard').map(k => so(k, sg.gm || '', k)).join('')}</select>`; };
+const officeMoSig = (i, n) => sigSelects(n, `data-n="${esc(n)}"`);
+const wzMoSig = z => (i, n) => `<select data-wz="sig" data-n="${esc(n)}" aria-label="Signature match for ${esc(n)}">${sigOptions(z.sig?.[n] || '', 'Signature match: none')}</select>`;
 function weeksInMonth(k) { const out = []; let w = 1; while (monthKey(w) < k) w++; while (monthKey(w) === k) out.push(w++); return out; }
 // card being edited on the booking screen (this week, or a week booked ahead)
 function BK() { const wk = UI.selWeek; if (wk === G.week) return G.card; return (G.future[wk] ||= []); }
@@ -5020,7 +5033,7 @@ function setupView() {
     <button class="btn block" style="margin-bottom:10px" data-act="shows">📺 ${manyShows() ? `Weekly shows and brands (${SHOWS().length})` : 'Add another weekly show or brand'}</button>
     <div class="sec">Big events</div>
     <label class="f"><span>Schedule</span><select data-in="bigEvery"><option value="month" ${G.settings.bigMode === 'month' ? 'selected' : ''}>By month</option>${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigMode !== 'month' && G.settings.bigEvery === n ? 'selected' : ''}>Every ${n} weeks</option>`).join('')}</select></label>
-    ${G.settings.bigMode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(G.bigMonths || [], 'data-in="bigMonth"', G.promo.day, dateOf(G.week).getUTCFullYear())}<div class="tiny muted" style="margin:-4px 0 12px">Each one takes the place of your last show of that month, every year. Leave a month empty for TV only.${byMonth() ? '' : ` With every month empty you get a big event every ${G.settings.bigEvery} weeks.`}</div>`
+    ${G.settings.bigMode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(G.bigMonths || [], 'data-in="bigMonth"', G.promo.day, dateOf(G.week).getUTCFullYear(), officeMoSig)}<div class="tiny muted" style="margin:-4px 0 12px">Each one takes the place of your last show of that month, every year. Leave a month empty for TV only. A signature match is one fans expect every year at that event, like a Rumble in January.${byMonth() ? '' : ` With every month empty you get a big event every ${G.settings.bigEvery} weeks.`}</div>`
     : `<label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>`}
     <div id="bigOneBox">${bigOneHtml()}</div>
     <div class="sec">Matches</div>
@@ -5405,15 +5418,15 @@ function modalMatchTypes(m) {
 
 // ----- segment editor -----
 // one select for a signature match at company setup: a participant type or a gimmick
-function sigOptions(cur) {
+function sigOptions(cur, none = 'None') {
   const o = (v, l) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
-  return o('', 'None') + `<optgroup label="Participants">${mtNames().filter(k => k !== 'Singles').map(k => o('mt:' + k, k)).join('')}</optgroup><optgroup label="Gimmick">${gmNames().filter(k => k !== 'Standard').map(k => o('gm:' + k, k)).join('')}</optgroup>`;
+  return o('', none) + `<optgroup label="Participants">${mtNames().filter(k => k !== 'Singles').map(k => o('mt:' + k, k)).join('')}</optgroup><optgroup label="Gimmick">${gmNames().filter(k => k !== 'Standard').map(k => o('gm:' + k, k)).join('')}</optgroup>`;
 }
 const sigFromVal = (name, v) => { v = String(v || ''); const x = v.slice(3); return v.startsWith('mt:') && mtNames().includes(x) ? { name, mt: x, gm: '' } : v.startsWith('gm:') && gmNames().includes(x) ? { name, mt: '', gm: x } : null; };
 // the big event names the setup has so far: the months' names in by-month mode, else the typed list
 const wzNames = z => z.mode === 'month' ? monthNames(cleanMonths(z.months)) : ppvList(z.ppv);
 // the setup's signature match picks, redrawn on its own so typing in the month rows keeps focus
-const wzSigHtml = z => wzNames(z).length ? `<div class="f"><span>Signature matches <span class="muted">(optional)</span></span><div class="tiny muted" style="margin:2px 0 8px">A match fans expect every year at that event, like a 30-person Rumble. It goes on the card for you.</div>
+const wzSigHtml = z => z.mode !== 'month' && wzNames(z).length ? `<div class="f"><span>Signature matches <span class="muted">(optional)</span></span><div class="tiny muted" style="margin:2px 0 8px">A match fans expect every year at that event, like a 30-person Rumble. It goes on the card for you.</div>
         ${wzNames(z).map((n, i) => `<div class="row" style="gap:8px;margin-bottom:6px"><span class="sp small clip">${esc(n)}</span><select data-wz="sig" data-i="${i}" style="width:auto;max-width:55%" aria-label="Signature match for ${esc(n)}">${sigOptions(z.sig?.[n] || '')}</select></div>`).join('')}</div>` : '';
 const sigsFromWiz = z => wzNames(z).map(n => sigFromVal(n, z.sig?.[n])).filter(Boolean);
 function blankSeg(kind) {
@@ -9095,8 +9108,8 @@ function viewWizard() {
       <div class="sec">Big events</div>
       ${z.add ? `<p class="small muted" style="margin-top:0">${z.mode === 'month' ? 'This world runs its big events by month.' : `This world has a big event every ${G.settings.bigEvery} weeks.`}</p>` : `<label class="f"><span>Schedule</span><div class="seg-ctl"><button class="${z.mode === 'month' ? 'on' : ''}" data-act="wzSet" data-f="mode" data-id="month">By month</button><button class="${z.mode !== 'month' ? 'on' : ''}" data-act="wzSet" data-f="mode" data-id="weeks">Every few weeks</button></div></label>
       ${z.mode === 'month' ? '' : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}`}
-      ${z.mode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(z.months || [], 'data-wz="month"', z.day, 2027)}
-      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">Each big event takes the place of your last show of that month, every year. Leave a month empty for TV only. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`
+      ${z.mode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(z.months || [], 'data-wz="month"', z.day, 2027, wzMoSig(z))}
+      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">Each big event takes the place of your last show of that month, every year. Leave a month empty for TV only. Under each name you can pick a signature match fans expect every year, like a Rumble. You can change all of it later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`
       : `<label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
       <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order, then start again from the top. Leave it empty for Big Event 1, 2, 3. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`}
       <div id="wzSig">${wzSigHtml(z)}</div>
@@ -9372,12 +9385,14 @@ document.addEventListener('change', e => {
     else if (k === 'xDay') { const x = z.extra?.[+el.dataset.i]; if (x) x.day = clamp(+el.value || 0, 0, 6); }
     else if (k === 'xSplit') { z.split = el.checked; render(); }
     else if (k === 'ppv') render();
-    else if (k === 'month') { el.closest('.mo-row')?.querySelector('.mo-l b')?.classList.toggle('on', !!el.value.trim()); const box = document.getElementById('wzSig'); if (box) box.innerHTML = iconize(wzSigHtml(z)); }
-    else if (k === 'sig') { const n = wzNames(z)[+el.dataset.i]; if (n) (z.sig ||= {})[n] = el.value; }
+    else if (k === 'month') { const was = el.dataset.was || '', now = ppvList(el.value)[0] || '', ms = cleanMonths(z.months);
+      if (was && now && was !== now && !ms.includes(was) && z.sig?.[was] && !z.sig[now]) { z.sig[now] = z.sig[was]; delete z.sig[was]; }
+      el.dataset.was = now; moRowSig(el, now, wzMoSig(z)); }
+    else if (k === 'sig') { const n = el.dataset.n ?? wzNames(z)[+el.dataset.i]; if (n) (z.sig ||= {})[n] = el.value; }
     return;
   }
   if (el.dataset.mt) { const d = UI.modal?.edit?.d; if (d) d[el.dataset.mt] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value; return; }
-  if (el.dataset.sig) { const n = G.bigEvents[+el.dataset.i]; if (!n) return; const cur = { mt: '', gm: '', ...(sigFor(n) || {}) }; cur[el.dataset.sig] = el.value;
+  if (el.dataset.sig) { const n = el.dataset.n ?? G.bigEvents[+el.dataset.i]; if (!n) return; const cur = { mt: '', gm: '', ...(sigFor(n) || {}) }; cur[el.dataset.sig] = el.value;
     G.ppvSig = (G.ppvSig || []).filter(x => x.name !== n); if (cur.mt || cur.gm) G.ppvSig.push({ name: n, mt: cur.mt, gm: cur.gm }); commit(cur.mt || cur.gm ? `${n}: the ${sigName(cur)} is its signature match.` : `${n} has no signature match.`); return; }
   if (el.dataset.seg) { const d = UI.modal.draft, k = el.dataset.seg;
     if (k === 'mtype') { d.mtype = el.value; const mt = MT(d.mtype), flat = [...new Set(d.sides.flat())];
@@ -9430,7 +9445,10 @@ document.addEventListener('change', e => {
     else if (k === 'soundOn') { meta.sound = el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) SFX.tap(); render(); }
     else if (k === 'musicOn') { meta.music = el.checked; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); ls.set(META, JSON.stringify(meta)); MUSIC.sync(); }
-    else if (k === 'bigMonth') { save(); el.closest('.mo-row')?.querySelector('.mo-l b')?.classList.toggle('on', !!el.value.trim()); const box = document.getElementById('bigOneBox'); if (box) box.innerHTML = bigOneHtml(); }
+    else if (k === 'bigMonth') { const was = el.dataset.was || '', now = G.bigMonths[+el.dataset.i] || '';
+      if (was && now && was !== now && !G.bigMonths.includes(was) && !sigFor(now)) for (const x of G.ppvSig || []) if (x.name === was) x.name = now;
+      if (G.bigOne === was && now && !G.bigMonths.includes(was)) G.bigOne = now;
+      el.dataset.was = now; save(); moRowSig(el, now, officeMoSig); const box = document.getElementById('bigOneBox'); if (box) box.innerHTML = bigOneHtml(); }
     else if (['promoName', 'showName', 'bigEvents', 'notebook', 'wNotes', 'sNotes'].includes(k)) { save(); render(); }
   }
   if (el.dataset.ew != null && UI.modal?.draft) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
@@ -9597,7 +9615,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.3';
+const VERSION = '1.9.4';
 const WHATS_NEW = [
   ['🏆 More belt shapes and centre pieces', 'The belt designer has 8 new plate shapes (Medallion, Starburst, Diamond, Cross, Flared, Twin, Arch and Feathered) and 13 new centre pieces, from an eagle, flame and skull to a laurel, trophy and maple leaf. They all take your metal and gem colours, and the text still fits. Five new templates use them.'],
   ['🏆 Better belts and belt photos', 'Every belt is redrawn in raised relief, with a bevelled rim, rivets, a curved top line and a ribbon nameplate, and text that always fits. Make any belt Ornate, try the new Oval plate, or upload a photo of a belt (pixel art or the real photo, like wrestler photos). Belts now show on title matches during the live show and on each champion\'s card.'],
