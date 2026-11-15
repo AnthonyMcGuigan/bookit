@@ -273,6 +273,16 @@ button.mrow:active { background: var(--card2); }
 .mchips .gold { color: var(--accent-t); background: none; padding: 0; }
 .mres { font-size: 12.5px; color: var(--dim); margin-top: 6px; }
 .mrow .ctl { display: flex; gap: 6px; margin-top: 8px; }
+.mslot { display: flex; align-items: stretch; position: relative; border-bottom: 1px solid var(--line); background: var(--card); }
+.mslot > .mrow { flex: 1; min-width: 0; border-bottom: 0; }
+.mgrip { flex: none; width: 40px; border: 0; background: none; color: var(--faint); display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.mgrip:hover { color: var(--ink); }
+.mcard.dragging .mslot { transition: transform .16s ease; }
+.mcard.dragging { overflow: visible; }
+.mcard.dragging, .mcard.dragging * { -webkit-user-select: none; user-select: none; cursor: grabbing; }
+.mcard.dragging .mslot.lift { transition: none; z-index: 5; box-shadow: 0 10px 28px rgba(0,0,0,.4), 0 0 0 2px var(--accent); border-radius: 8px; }
+.mcard.dragging .mslot.lift .mgrip { color: var(--accent-t); }
+@media (prefers-reduced-motion: reduce) { .mcard.dragging .mslot { transition: none; } }
 .addrow { display: grid; grid-template-columns: repeat(3, 1fr); }
 .addrow button { border: 0; border-right: 1px solid var(--line); background: none; padding: 12px 4px; font-weight: 700; color: var(--accent-t); font-size: 14px; }
 .addrow button:last-child { border-right: 0; }
@@ -466,6 +476,9 @@ nav.tabs .dot { background: var(--rope-r); font-family: system-ui, sans-serif; l
 @media (prefers-color-scheme: light) { :root:not([data-theme]) .vs { color: #c4202f; } }
 .mrow.me { padding: 14px 12px 12px; background:
   radial-gradient(80% 120% at 50% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 70%), linear-gradient(180deg, color-mix(in srgb, var(--gold) 6%, transparent), transparent); }
+/* with a drag handle the whole slot carries the main event glow */
+.mslot.me { background: radial-gradient(80% 120% at 50% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 70%), linear-gradient(180deg, color-mix(in srgb, var(--gold) 6%, transparent), transparent), var(--card); }
+.mslot.me > .mrow.me { background: none; }
 .mrow.me .mpos { color: var(--gold-ink); background: linear-gradient(180deg, #ffe99a, #f2c443 50%, #c48e14); padding: 2px 10px; border-radius: 4px; font-family: var(--f-display); font-weight: 400; font-size: 13px; letter-spacing: .08em; }
 .mrow.me .mw { font-size: 19px; }
 .mchips span { font-family: var(--f-cond); font-weight: 600; font-size: 12.5px; letter-spacing: .02em; }
@@ -4359,9 +4372,10 @@ function viewBookCard() {
   ${sg ? `<div class="warnline row"><span class="sp">⭐ Signature match: <b>${esc(sigName(sg))}</b>. ${sgMiss ? (card.some(s => isSig(s, sg)) ? 'Fans expect it. Put wrestlers in it.' : 'Fans expect it. Leaving it off costs a little.') : 'Fans will love it.'}</span>${sgMiss && !card.some(s => isSig(s, sg)) && card.length < maxSegs(wk) ? '<button class="btn sm" data-act="addSig">Add it</button>' : ''}</div>` : ''}
   ${bestIx >= 0 ? `<div class="warnline row"><span class="sp">⭐ Close the show with your best match.</span><button class="btn sm" data-act="segMain" data-id="${card[bestIx].id}">Make it the main event</button></div>` : ''}
   <div class="mcard">
+    ${card.length > 1 && !UI.reorder ? '<p id="grip-help" class="sr-only">Drag to move it. Or use the up and down arrow keys. Press Enter for move buttons.</p>' : ''}
     ${card.length ? `<div class="mcard-h"><span>Match card</span><span class="sp"></span><button class="link" data-act="reorder">${UI.reorder ? 'Done' : 'Reorder'}</button></div>` : ''}
     ${(() => { const nb = !big && nextBig(), pm = nb ? ppvMatches(nb) : [];
-      return card.map((s, i) => { const pr = prs[i]; const b = pm.some(m => buildsFor(s, m) === 2); return matchRow(s, i, card.length, { proj: pr.rating, hints: hintsOf(pr.why), builds: b ? bigName(nb) : '' }); }).join(''); })()}
+      return card.map((s, i) => { const pr = prs[i]; const b = pm.some(m => buildsFor(s, m) === 2); return matchRow(s, i, card.length, { proj: pr.rating, hints: hintsOf(pr.why), builds: b ? bigName(nb) : '', drag: card.length > 1 }); }).join(''); })()}
     ${card.length >= maxSegs(wk) ? `<div class="ghost">Card is full: ${maxSegs(wk)} segments. Remove one to add another.</div>` : `<div class="addrow">
       <button data-act="addSeg" data-id="match"><b>＋</b> Match</button><button data-act="addSeg" data-id="promo"><b>＋</b> Promo</button><button data-act="addSeg" data-id="angle"><b>＋</b> Angle</button>
     </div>`}
@@ -4384,8 +4398,9 @@ function tourneyCard() {
   }).join('');
 }
 // one row of the match card, used for booking and for results
+const cardPos = (i, n) => n > 1 && i === n - 1 ? 'Main Event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1);
 function matchRow(s, i, n, o) {
-  const pos = n > 1 && i === n - 1 ? 'Main Event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1);
+  const pos = cardPos(i, n);
   const rating = o.past ? o.rating : o.proj;
   const t = s.kind === 'match' && s.title && G.titles.find(x => x.id === s.title);
   const chips = [];
@@ -4413,13 +4428,21 @@ function matchRow(s, i, n, o) {
   else body = `<div class="mmulti">${nmList(s.who || [])}${(s.target || []).length ? '<span class="vs">→</span>' + nmList(s.target) : ''}</div>`;
   const tag = o.past ? 'button data-act="recap" data-id="' + (UI.selWeek) + '"' : UI.reorder ? 'div' : `button data-act="editSeg" data-id="${s.id}"`;
   const close = tag.split(' ')[0];
-  return `<${tag} class="mrow ${pos === 'Main Event' ? 'me' : ''} ${t ? 'title-m' : ''}">
+  const grip = o.drag && !o.past && !UI.reorder;
+  return `${grip ? `<div class="mslot ${pos === 'Main Event' ? 'me' : ''}" data-seg="${s.id}">` : ''}<${tag} class="mrow ${pos === 'Main Event' ? 'me' : ''} ${t ? 'title-m' : ''}">
     <div class="mrow-h"><span class="mpos">${pos}</span><span class="sp"></span>${rating ? `<span class="mrate" title="${o.past ? 'Rating' : 'Projected'}">${o.past ? '' : '<i>proj</i> '}<span class="stars">${starStr(rating)}</span></span>` : ''}</div>
     ${body}
     <div class="mchips">${chips.map(c => c.startsWith('<span class="belt"') || c.startsWith('<span class="hint"') ? c : `<span>${c}</span>`).join('')}</div>
     ${o.past && o.text ? `<div class="mres">${esc(o.text)}</div>` : ''}
     ${UI.reorder && !o.past ? `<div class="ctl"><button class="btn sm" data-act="segUp" data-id="${s.id}" ${i === 0 ? 'disabled' : ''}>↑ Up</button><button class="btn sm" data-act="segDown" data-id="${s.id}" ${i === n - 1 ? 'disabled' : ''}>↓ Down</button>${i < n - 1 ? `<button class="btn sm" data-act="segMain" data-id="${s.id}">★ Main event</button>` : ''}<span class="sp"></span><button class="btn sm bad" data-act="segDel" data-id="${s.id}">Remove</button></div>` : ''}
-  </${close}>`;
+  </${close}>${grip ? `<button class="mgrip" data-act="gripTap" data-id="${s.id}" aria-label="Move ${esc(segShort(s))}, ${pos}, ${i + 1} of ${n}" aria-describedby="grip-help"><svg viewBox="0 0 12 20" width="12" height="20" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.8"/><circle cx="9" cy="3" r="1.8"/><circle cx="3" cy="10" r="1.8"/><circle cx="9" cy="10" r="1.8"/><circle cx="3" cy="17" r="1.8"/><circle cx="9" cy="17" r="1.8"/></g></svg></button></div>` : ''}`;
+}
+// plain words for a segment, for screen reader labels and toasts
+function segShort(s) {
+  const ids = s.kind === 'match' ? (isFFA(s) ? entrants(s) : s.sides.flat()) : [...(s.who || []), ...(s.target || [])];
+  const who = ids.slice(0, 4).map(id => W(id) ? shortOf(id) : '').filter(Boolean).join(isFFA(s) || s.kind !== 'match' ? ', ' : ' vs ');
+  const what = s.kind === 'match' ? s.mtype : s.kind === 'promo' ? s.ptype + ' promo' : s.atype;
+  return who ? `${what}: ${who}${ids.length > 4 ? ' and more' : ''}` : what;
 }
 
 // ---------- roster ----------
@@ -5522,6 +5545,14 @@ const A = {
   calNav(d) { const k = (UI.calMonth ?? monthKey(UI.selWeek)) + +d; const ws = weeksInMonth(k); if (!ws.length || ws[ws.length - 1] < 1 || ws[0] > G.week + 16) return; UI.calMonth = k; render(); },
   calToday() { UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; render(); },
   reorder() { UI.reorder = !UI.reorder; render(); },
+  // tapping the drag handle (or Enter on it) turns on the Up / Down buttons
+  gripTap(id) {
+    if (Date.now() - (DRAG.end || 0) < 500) return;
+    UI.reorder = true; render();
+    const b = [...root.querySelectorAll(`[data-act="segUp"], [data-act="segDown"]`)].find(x => x.dataset.id === id && !x.disabled);
+    if (b) b.focus({ preventScroll: true });
+    toast('Move buttons are on. Tap Done when you finish.');
+  },
   brief() { autoTodo('brief'); save(); openModal({ type: 'brief' }); },
   dupLast() { const h = lastRec(); if (!h) return; const segs = h.results.map(r => ({ ...JSON.parse(JSON.stringify(r.seg)), id: uid() })).filter(s => { removeGone(s); return segPeople(s).length; }).slice(0, roomLeft(UI.selWeek, BK())); if (!segs.length) return toast(fullMsg(UI.selWeek)); BK().push(...segs); commit(`Copied ${segs.length} segments from last week.`); },
   runShow() {
@@ -8684,6 +8715,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('focusout', () => setTimeout(() => { if (COMM.pending && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) { COMM.pending = false; rerenderComm(); } }, 50));
 document.addEventListener('keydown', e => {
+  if (e.target.classList?.contains('mgrip') && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); moveSeg(e.target.dataset.id, e.key === 'ArrowUp' ? -1 : 1, true); return; }
   if (e.key === 'Enter' && e.target.id === 'todo-in') A.addTodo();
   if (e.key === 'Escape') { if (UI.picker) A.pickDone(); else if (UI.modal) closeModal(); }
   if (e.key === 'Tab') { // keep Tab inside the open sheet
@@ -8694,6 +8726,66 @@ document.addEventListener('keydown', e => {
     else if (!e.shiftKey && (a === last || !top.contains(a))) { e.preventDefault(); first.focus(); }
   }
 });
+// ---------- drag to reorder the match card ----------
+// Drag starts only on the handle, so a swipe on the rest of the row still scrolls the page.
+// Tapping the handle, or the Reorder link, gives Up / Down buttons for anyone who can't drag.
+function moveSeg(id, to, rel) {
+  const c = BK(), from = c.findIndex(x => x.id === id); if (from < 0) return;
+  const dest = clamp(rel ? from + to : to, 0, c.length - 1); if (dest === from) return;
+  const [x] = c.splice(from, 1); c.splice(dest, 0, x);
+  commit(`Moved to ${cardPos(dest, c.length).toLowerCase().replace('main event', 'the main event').replace('opener', 'the opener')}.`);
+  const g = [...root.querySelectorAll('.mgrip')].find(b => b.dataset.id === id); if (g && rel) g.focus({ preventScroll: true });
+}
+const DRAG = { s: null, end: 0 };
+document.addEventListener('pointerdown', e => {
+  const g = e.target.closest?.('.mgrip'); if (!g || e.button > 0 || DRAG.s) return;
+  const slot = g.closest('.mslot'), list = [...slot.parentElement.querySelectorAll(':scope > .mslot')];
+  if (list.length < 2) return;
+  e.preventDefault();
+  try { g.setPointerCapture(e.pointerId); } catch (x) {}
+  const rs = list.map(el => el.getBoundingClientRect()), from = list.indexOf(slot);
+  DRAG.s = { g, slot, list, from, to: from, pid: e.pointerId, y0: e.clientY, y: e.clientY, sy0: scrollY, tops: rs.map(r => r.top + scrollY), hs: rs.map(r => r.height), moved: false, raf: 0 };
+  slot.parentElement.classList.add('dragging');
+});
+function dragUpdate() {
+  const d = DRAG.s; if (!d) return;
+  const dy = d.y - d.y0 + scrollY - d.sy0;
+  if (!d.moved && Math.abs(dy) < 5) return;
+  if (!d.moved) { d.moved = true; d.slot.classList.add('lift'); navigator.vibrate?.(8); }
+  const mid = d.tops[d.from] + d.hs[d.from] / 2 + dy;
+  let to = d.from;
+  for (let i = 0; i < d.list.length; i++) { const m = d.tops[i] + d.hs[i] / 2; if (i < d.from && mid < m) { to = i; break; } if (i > d.from && mid > m) to = i; }
+  if (to !== d.to) { d.to = to; navigator.vibrate?.(4); }
+  d.slot.style.transform = `translateY(${dy}px)`;
+  const h = d.hs[d.from];
+  d.list.forEach((el, i) => { if (i !== d.from) el.style.transform = i > d.from && i <= to ? `translateY(${-h}px)` : i < d.from && i >= to ? `translateY(${h}px)` : ''; });
+}
+function dragTick() {
+  const d = DRAG.s; if (!d) return;
+  // scroll the page when the dragged row gets near the top bar or the tab bar
+  const topEdge = (document.querySelector('header.top')?.getBoundingClientRect().bottom || 0) + 40;
+  const botEdge = Math.min(document.querySelector('nav.tabs')?.getBoundingClientRect().top || innerHeight, document.querySelector('.runbar')?.getBoundingClientRect().top || innerHeight) - 40;
+  const v = d.y < topEdge ? -Math.min(18, (topEdge - d.y) / 3 + 2) : d.y > botEdge ? Math.min(18, (d.y - botEdge) / 3 + 2) : 0;
+  if (v && d.moved) { scrollBy(0, v); dragUpdate(); }
+  d.raf = requestAnimationFrame(dragTick);
+}
+document.addEventListener('pointermove', e => {
+  const d = DRAG.s; if (!d || e.pointerId !== d.pid) return;
+  e.preventDefault(); d.y = e.clientY;
+  if (!d.raf) d.raf = requestAnimationFrame(dragTick);
+  dragUpdate();
+}, { passive: false });
+function dragEnd(e, cancel) {
+  const d = DRAG.s; if (!d || e.pointerId !== d.pid) return;
+  cancelAnimationFrame(d.raf); DRAG.s = null;
+  d.slot.parentElement?.classList.remove('dragging');
+  if (d.moved) DRAG.end = Date.now();
+  if (d.moved && !cancel && d.to !== d.from) { moveSeg(d.slot.dataset.seg, d.to); return; }
+  d.list.forEach(el => { el.style.transform = ''; el.classList.remove('lift'); });
+}
+document.addEventListener('pointerup', e => dragEnd(e, false));
+document.addEventListener('pointercancel', e => dragEnd(e, true));
+
 // re-render while keeping the focused field and caret in place
 function reRender(el) {
   const sel = el.dataset.in, pos = el.selectionStart, end = el.selectionEnd, had = document.activeElement === el;
