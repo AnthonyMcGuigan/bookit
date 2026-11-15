@@ -523,6 +523,17 @@ nav.tabs .dot { background: var(--rope-r); font-family: system-ui, sans-serif; l
 .bd-metal { display: block; width: 100%; height: 30px; border-radius: 8px; }
 .bd-pane .swatches .sw { width: 34px; height: 34px; }
 .wz-title { padding: 10px 12px; margin: 0; }
+img.belt-ph { object-fit: contain; aspect-ratio: 12 / 5; height: auto; }
+img.belt-ph.px { image-rendering: pixelated; image-rendering: crisp-edges; }
+.bd-belt.belt-ph { width: 100%; max-width: 440px; display: block; margin: 0 auto; }
+.champ-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin: 0 0 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--gold, #f2c443) 45%, var(--line)); background: radial-gradient(circle at 20% 50%, color-mix(in srgb, var(--gold, #f2c443) 16%, var(--card)), var(--card) 70%); color: inherit; }
+.champ-belt { width: 128px; height: auto; flex: none; display: block; filter: drop-shadow(0 6px 12px rgba(0,0,0,.35)); }
+.cc-t { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.cc-t b { font-size: 15px; line-height: 1.2; }
+.cc-k { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-t); }
+.lv-belt { margin: 6px auto 4px; width: min(220px, 62%); }
+.lv-belt.main { width: min(320px, 84%); }
+.lv-belt-art { width: 100%; height: auto; display: block; filter: drop-shadow(0 8px 18px rgba(246,197,68,.25)); }
 .wz-belt { flex: none; width: 104px; padding: 0; border: 0; background: none; }
 .belt-th { width: 100%; height: auto; display: block; }
 .wz-add { margin-top: 10px; border-style: dashed !important; color: var(--accent-t); font-weight: 700; }
@@ -3740,7 +3751,7 @@ function liveScreen(m) {
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
     <div class="lv-seg ${main ? 'main' : ''}" style="--d:${t0(d0)}" data-lv="${i}">
       <div class="lv-k">${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${segTitle(r.seg)}</div>
-      ${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>
+      ${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.kind === 'match' && r.seg.title && G.titles.find(x => x.id === r.seg.title))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -4220,38 +4231,42 @@ function beltSVG(cls, label) {
   </svg>`;
 }
 // ---------- championship belt designer: a belt is a small spec (t.belt), drawn as SVG ----------
-const BMETAL = { // hi, mid, lo, edge, text on it
-  gold: ['Gold', '#fff3c2', '#f2c443', '#a8740a', '#5e4004', '#4a3200'],
-  silver: ['Silver', '#ffffff', '#d3d9e0', '#7f8a96', '#3e464f', '#262b31'],
-  bronze: ['Bronze', '#ffd9b0', '#cf8f4f', '#7a4a1c', '#45280c', '#3a2008'],
-  rose: ['Rose gold', '#ffe4dc', '#eaa999', '#a5625a', '#5e3430', '#4d2522'],
-  black: ['Black chrome', '#6a6a78', '#2a2a32', '#0c0c10', '#000000', '#f2c443'],
-  copper: ['Copper', '#ffd2b8', '#d9774a', '#8a3a18', '#4a1d0a', '#3d1606']
+const BMETAL = { // name, hi, mid, lo, edge, text on it
+  gold: ['Gold', '#fff6cf', '#f0c03a', '#a46f08', '#4f3502', '#3f2a00'],
+  silver: ['Silver', '#ffffff', '#d5dbe2', '#7c8794', '#353c45', '#20252b'],
+  bronze: ['Bronze', '#ffdcb5', '#cd8c4c', '#77461a', '#3c2209', '#331c06'],
+  rose: ['Rose gold', '#ffe7df', '#e9a797', '#a15e56', '#55302c', '#45221f'],
+  black: ['Black chrome', '#7a7a88', '#2c2c35', '#0b0b0f', '#000000', '#f0c03a'],
+  copper: ['Copper', '#ffd6bd', '#d8774a', '#873817', '#401807', '#361304']
 };
-const BPLATE = { // name, path (viewBox 320 x 130, centred on 160, 65)
-  classic: ['Classic', 'M112 8H208L236 36V94L208 122H112L84 94V36Z'],
-  winged: ['Winged', 'M120 8H200L218 26L256 30L282 46L264 56L280 72L258 84L218 88L200 122H120L102 88L62 84L40 72L56 56L38 46L64 30L102 26Z'],
-  shield: ['Shield', 'M98 8H222V58Q222 100 160 126Q98 100 98 58Z'],
-  round: ['Round', 'M160 4A61 61 0 1 1 159.9 4Z'],
-  crest: ['Crown', 'M100 34L118 26L132 4L148 22L160 0L172 22L188 4L202 26L220 34V92L192 122H128L100 92Z'],
-  hex: ['Hex', 'M118 6H202L240 65L202 124H118L80 65Z'],
-  wide: ['Big plate', 'M80 14H240Q256 14 256 30V100Q256 116 240 116H80Q64 116 64 100V30Q64 14 80 14Z']
+// each plate: name, outline (viewBox 360 x 150, centred on 180, 75), and where things go on it:
+// em = [y, r] of the centre piece, ban = [y, width] of the nameplate, top = [y, width, arc radius or 0] of the top line
+const BPLATE = {
+  classic: ['Classic', 'M126 10H234L270 42V108L234 140H126L90 108V42Z', { em: [68, 23], ban: [110, 168], top: [36, 116, 150] }],
+  oval: ['Oval', 'M180 8C236 8 278 38 278 75S236 142 180 142 82 112 82 75 124 8 180 8Z', { em: [68, 23], ban: [110, 176], top: [36, 120, 110] }],
+  winged: ['Winged', 'M180 10C210 10 232 26 240 46L262 38L300 30L330 40L310 52L336 62L310 72L332 84L300 92L262 88L240 102C232 124 210 140 180 140S128 124 120 102L98 88L60 92L28 84L50 72L24 62L50 52L30 40L60 30L98 38L120 46C128 26 150 10 180 10Z', { em: [66, 22], ban: [108, 170], top: [36, 92, 100] }],
+  shield: ['Shield', 'M106 10H254V66Q254 118 180 146Q106 118 106 66Z', { em: [66, 23], ban: [104, 150], top: [32, 124, 0] }],
+  round: ['Round', 'M180 6A69 69 0 1 1 179.9 6Z', { em: [70, 24], ban: [114, 172], top: [38, 112, 54] }],
+  crest: ['Crown', 'M112 44L128 34L142 10L160 30L180 4L200 30L218 10L232 34L248 44V110L216 144H144L112 110Z', { em: [80, 22], ban: [118, 158], top: [52, 120, 0] }],
+  hex: ['Hex', 'M132 8H228L276 75L228 142H132L84 75Z', { em: [68, 23], ban: [108, 172], top: [32, 96, 0] }],
+  wide: ['Big plate', 'M104 14H256Q280 14 280 38V112Q280 136 256 136H104Q80 136 80 112V38Q80 14 104 14Z', { em: [66, 24], ban: [110, 190], top: [34, 160, 0] }]
 };
 const BEMBLEM = { gem: 'Gem', globe: 'Globe', star: 'Star', crown: 'Crown', bell: 'Bell', logo: 'Initials', wings: 'Wings', none: 'None' };
 const BSTRAP = { leather: 'Stitched', snake: 'Snakeskin', studs: 'Studded', plain: 'Plain' };
 const BCARVE = { none: 'Smooth', lines: 'Brushed', sunburst: 'Sunburst', scroll: 'Scrollwork', dots: 'Hammered' };
-const BFONT = { block: ['Block', 'Anton, Impact, sans-serif', 1.5], tall: ['Condensed', '"Barlow Condensed", "Arial Narrow", sans-serif', 1], serif: ['Classic serif', 'Georgia, "Times New Roman", serif', .5] };
+// name, font, letter spacing, average capital width as a share of the font size (to fit text)
+const BFONT = { block: ['Block', 'Anton, Impact, sans-serif', 1.2, .5], tall: ['Condensed', '"Barlow Condensed", "Arial Narrow", sans-serif', .8, .5], serif: ['Classic serif', 'Georgia, "Times New Roman", serif', .4, .72] };
 const BSTRAPS = ['#1a1a1f', '#3b2416', '#6e1420', '#14306b', '#0f4a2c', '#4a1b5e', '#e9e4da', '#b8862b', '#c22a2a', '#1d7fb8'];
 const BGEMS = ['#d62839', '#2f6fe0', '#1f9e5a', '#8a3fd1', '#f2f2f2', '#f2b01e', '#111111', '#ff6aa8'];
 const BENAMEL = ['#9b1020', '#123a7a', '#0c5a35', '#1a1a1f', '#5a1a7a', '#f2f2f2', '#b8862b'];
 let beltN = 0;
 function beltDefault(t, i) {
-  if (i == null) return { plate: 'classic', metal: 'gold', trim: '', strap: '#1a1a1f', tex: 'leather', sides: 2, side: 'rect', emblem: 'gem', gem: '#d62839', ring: 0, carve: 'none', top: '', line: String(t?.short || 'Champion').toUpperCase().slice(0, 18), font: 'block', enamel: '#9b1020', banner: 0, sub: '' };
+  if (i == null) return { plate: 'classic', metal: 'gold', trim: '', strap: '#1a1a1f', tex: 'leather', sides: 2, side: 'rect', emblem: 'gem', gem: '#d62839', ring: 0, carve: 'none', top: '', line: String(t?.short || 'Champion').toUpperCase().slice(0, 18), font: 'block', enamel: '#9b1020', banner: 0, sub: '', orn: 0 };
   const k = String(t?.short || t?.name || '');
   const tag = !!t?.tag, women = /women/i.test(t?.name || '') || t?.division === "Women's";
   const p = [['classic', 'gold', '#1a1a1f', '#d62839'], ['shield', 'silver', '#14306b', '#2f6fe0'], ['winged', 'gold', '#6e1420', '#f2f2f2'], ['round', 'bronze', '#3b2416', '#1f9e5a']][(i ?? 0) % 4];
   return { plate: women ? 'crest' : tag ? 'winged' : p[0], metal: women ? 'rose' : p[1], trim: '', strap: women ? '#e9e4da' : p[2], tex: 'leather', sides: tag ? 4 : 2, side: 'rect',
-    emblem: tag ? 'star' : 'globe', gem: women ? '#ff6aa8' : p[3], ring: 0, carve: 'sunburst', top: '', line: (k || 'Champion').toUpperCase().slice(0, 16), font: 'block', enamel: '#9b1020', banner: 1, sub: '' };
+    emblem: tag ? 'star' : 'globe', gem: women ? '#ff6aa8' : p[3], ring: 0, carve: 'sunburst', top: '', line: (k || 'Champion').toUpperCase().slice(0, 16), font: 'block', enamel: '#9b1020', banner: 1, sub: '', orn: 0 };
 }
 function beltClean(b, t) {
   const d = beltDefault(t || {}), o = b && typeof b === 'object' ? b : {};
@@ -4259,60 +4274,98 @@ function beltClean(b, t) {
   const one = (v, m, f) => Object.hasOwn(m, String(v)) ? String(v) : f;
   return { plate: one(o.plate, BPLATE, d.plate), metal: one(o.metal, BMETAL, d.metal), trim: o.trim && Object.hasOwn(BMETAL, o.trim) ? o.trim : '', strap: col(o.strap, d.strap), tex: one(o.tex, BSTRAP, d.tex),
     sides: [0, 2, 4, 6].includes(+o.sides) ? +o.sides : d.sides, side: ['rect', 'round', 'shield'].includes(o.side) ? o.side : 'rect', emblem: one(o.emblem, BEMBLEM, d.emblem), gem: col(o.gem, d.gem),
-    ring: o.ring ? 1 : 0, carve: one(o.carve, BCARVE, d.carve), top: String(o.top ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 18), line: String(o.line ?? d.line).replace(/[<>`"]/g, '').toUpperCase().slice(0, 18),
-    font: one(o.font, BFONT, 'block'), enamel: col(o.enamel, d.enamel), banner: o.banner == null ? d.banner : o.banner ? 1 : 0, sub: String(o.sub ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 4) };
+    ring: o.ring ? 1 : 0, carve: one(o.carve, BCARVE, d.carve), top: String(o.top ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 30), line: String(o.line ?? d.line).replace(/[<>`"]/g, '').toUpperCase().slice(0, 30),
+    font: one(o.font, BFONT, 'block'), enamel: col(o.enamel, d.enamel), banner: o.banner == null ? d.banner : o.banner ? 1 : 0, sub: String(o.sub ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 4), orn: o.orn == null ? d.orn : o.orn ? 1 : 0 };
 }
-// the emblem in the middle of the plate, centred on (cx, cy) at radius r
-function beltEmblem(b, cx, cy, r, M, id, abbrTxt) {
-  const e = M[4], g = `url(#${id}g)`;
+// text that always fits: shrink to a floor, then squeeze the letters to the width
+function beltTxt(s, maxW, size, F, attrs) {
+  const n = s.length; if (!n) return { fs: size, a: '' };
+  const w = f => n * f * F[3] + (n - 1) * F[2];
+  let fs = size; if (w(fs) > maxW) fs = Math.max(7, size * maxW / w(size));
+  return { fs: +fs.toFixed(1), a: w(fs) > maxW ? `textLength="${maxW.toFixed(0)}" lengthAdjust="spacingAndGlyphs"` : '' };
+}
+// a gem: dark rim, coloured body, facets and a sparkle
+const beltGem = (cx, cy, r, id, e) => `<circle cx="${cx}" cy="${cy}" r="${r + 1.6}" fill="url(#${id}t)" stroke="${e}" stroke-width=".8"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${id}g)"/>${r >= 4 ? `<path d="M${cx - r * .6} ${cy - r * .1}L${cx} ${cy - r * .7}L${cx + r * .6} ${cy - r * .1}L${cx} ${cy + r * .62}Z" fill="#fff" opacity=".18"/>` : ''}<circle cx="${cx - r * .35}" cy="${cy - r * .38}" r="${Math.max(.8, r * .22)}" fill="#fff" opacity=".85"/>`;
+// the centre piece, centred on (cx, cy) at radius r, sitting in a raised bezel
+function beltEmblem(b, cx, cy, r, M, T, id, abbrTxt) {
+  const e = M[4], g = `url(#${id}g)`, m = `url(#${id}m)`, bez = `<circle cx="${cx}" cy="${cy}" r="${r + 5}" fill="url(#${id}t)" stroke="${e}" stroke-width="1.2"/><circle cx="${cx}" cy="${cy}" r="${r + 2.4}" fill="url(#${id}d)"/>`;
   switch (b.emblem) {
-    case 'gem': return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${g}" stroke="${e}" stroke-width="2"/><path d="M${cx - r * .55} ${cy - r * .1}L${cx} ${cy - r * .62}L${cx + r * .55} ${cy - r * .1}L${cx} ${cy + r * .6}Z" fill="#fff" opacity=".22"/>`;
-    case 'globe': return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${g}" stroke="${e}" stroke-width="2"/><g fill="none" stroke="${M[1]}" stroke-width="1.4" opacity=".85"><ellipse cx="${cx}" cy="${cy}" rx="${r * .45}" ry="${r}"/><path d="M${cx - r} ${cy}H${cx + r}M${cx - r * .86} ${cy - r * .5}H${cx + r * .86}M${cx - r * .86} ${cy + r * .5}H${cx + r * .86}M${cx} ${cy - r}V${cy + r}"/></g>`;
-    case 'star': { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .45 : r * 1.12; p.push(`${(cx + q * Math.cos(a)).toFixed(1)} ${(cy + q * Math.sin(a)).toFixed(1)}`); } return `<path d="M${p.join('L')}Z" fill="${g}" stroke="${e}" stroke-width="2" stroke-linejoin="round"/>`; }
-    case 'crown': return `<path d="M${cx - r} ${cy + r * .6}L${cx - r * 1.05} ${cy - r * .55}L${cx - r * .5} ${cy - r * .05}L${cx} ${cy - r * .9}L${cx + r * .5} ${cy - r * .05}L${cx + r * 1.05} ${cy - r * .55}L${cx + r} ${cy + r * .6}Z" fill="url(#${id}m)" stroke="${e}" stroke-width="2" stroke-linejoin="round"/>${[-1, 0, 1].map(k => `<circle cx="${cx + k * r * .55}" cy="${cy + r * .3}" r="${r * .17}" fill="${g}"/>`).join('')}`;
-    case 'bell': return `<path d="M${cx - r * .85} ${cy + r * .6}Q${cx - r * .85} ${cy - r * .95} ${cx} ${cy - r * .95}Q${cx + r * .85} ${cy - r * .95} ${cx + r * .85} ${cy + r * .6}H${cx + r}V${cy + r * .78}H${cx - r}V${cy + r * .6}Z" fill="url(#${id}m)" stroke="${e}" stroke-width="2"/><circle cx="${cx}" cy="${cy + r * .95}" r="${r * .2}" fill="${g}"/>`;
-    case 'logo': return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${b.enamel}" stroke="${e}" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${r * .82}" fill="none" stroke="${M[1]}" stroke-width="1.2"/><text x="${cx}" y="${cy + r * .32}" text-anchor="middle" font-family="${BFONT[b.font][1]}" font-size="${r * (String(b.sub || abbrTxt).length > 3 ? .62 : .85)}" fill="${M[1]}">${esc(b.sub || abbrTxt || 'BK')}</text>`;
-    case 'wings': return `<path d="M${cx} ${cy + r * .3}C${cx - r * .4} ${cy - r * .4} ${cx - r * 1.2} ${cy - r * .7} ${cx - r * 1.6} ${cy - r * .5}C${cx - r * 1.3} ${cy - r * .2} ${cx - r * 1.5} ${cy + r * .05} ${cx - r * 1.2} ${cy + r * .1}C${cx - r * 1.3} ${cy + r * .35} ${cx - r * .7} ${cy + r * .5} ${cx} ${cy + r * .55}C${cx + r * .7} ${cy + r * .5} ${cx + r * 1.3} ${cy + r * .35} ${cx + r * 1.2} ${cy + r * .1}C${cx + r * 1.5} ${cy + r * .05} ${cx + r * 1.3} ${cy - r * .2} ${cx + r * 1.6} ${cy - r * .5}C${cx + r * 1.2} ${cy - r * .7} ${cx + r * .4} ${cy - r * .4} ${cx} ${cy + r * .3}Z" fill="url(#${id}m)" stroke="${e}" stroke-width="1.6"/><circle cx="${cx}" cy="${cy}" r="${r * .42}" fill="${g}" stroke="${e}" stroke-width="1.5"/>`;
+    case 'gem': return `${bez}${beltGem(cx, cy, r, id, e)}`;
+    case 'globe': return `${bez}<circle cx="${cx}" cy="${cy}" r="${r}" fill="${g}"/><g fill="none" stroke="${M[1]}" stroke-width="1.5" opacity=".9"><ellipse cx="${cx}" cy="${cy}" rx="${r * .45}" ry="${r}"/><path d="M${cx - r} ${cy}H${cx + r}M${cx - r * .87} ${cy - r * .5}H${cx + r * .87}M${cx - r * .87} ${cy + r * .5}H${cx + r * .87}M${cx} ${cy - r}V${cy + r}"/></g><circle cx="${cx - r * .4}" cy="${cy - r * .45}" r="${r * .2}" fill="#fff" opacity=".5"/>`;
+    case 'star': { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .46 : r * 1.15; p.push(`${(cx + q * Math.cos(a)).toFixed(1)} ${(cy + q * Math.sin(a)).toFixed(1)}`); } return `<circle cx="${cx}" cy="${cy}" r="${r + 5}" fill="${g}" opacity=".9" stroke="${e}" stroke-width="1.2"/><path d="M${p.join('L')}Z" fill="${m}" stroke="${e}" stroke-width="1.6" stroke-linejoin="round"/><path d="M${p.slice(0, 6).join('L')}" fill="none" stroke="${M[1]}" stroke-width=".8" opacity=".8"/>`; }
+    case 'crown': return `${bez}<path d="M${cx - r * .95} ${cy + r * .55}L${cx - r} ${cy - r * .5}L${cx - r * .48} ${cy - r * .02}L${cx} ${cy - r * .85}L${cx + r * .48} ${cy - r * .02}L${cx + r} ${cy - r * .5}L${cx + r * .95} ${cy + r * .55}Z" fill="${m}" stroke="${e}" stroke-width="1.4" stroke-linejoin="round"/>${[-1, 0, 1].map(k => beltGem(cx + k * r * .5, cy + r * .3, r * .14, id, e)).join('')}`;
+    case 'bell': return `${bez}<path d="M${cx - r * .8} ${cy + r * .5}Q${cx - r * .8} ${cy - r * .85} ${cx} ${cy - r * .85}Q${cx + r * .8} ${cy - r * .85} ${cx + r * .8} ${cy + r * .5}H${cx + r * .95}V${cy + r * .7}H${cx - r * .95}V${cy + r * .5}Z" fill="${m}" stroke="${e}" stroke-width="1.4"/><circle cx="${cx}" cy="${cy + r * .82}" r="${r * .18}" fill="${g}"/><path d="M${cx - r * .45} ${cy - r * .3}Q${cx - r * .4} ${cy - r * .62} ${cx - r * .1} ${cy - r * .66}" stroke="#fff" stroke-opacity=".6" stroke-width="1.5" fill="none"/>`;
+    case 'logo': { const s = b.sub || abbrTxt || 'BK', F = BFONT[b.font], f = beltTxt(s, r * 1.5, r * .9, F); return `${bez}<circle cx="${cx}" cy="${cy}" r="${r}" fill="${b.enamel}"/><circle cx="${cx}" cy="${cy}" r="${r * .84}" fill="none" stroke="${M[1]}" stroke-width="1.2"/><text x="${cx}" y="${cy + f.fs * .35}" text-anchor="middle" font-family="${F[1]}" font-weight="700" font-size="${f.fs}" letter-spacing="${F[2]}" ${f.a} fill="${M[1]}">${esc(s)}</text>`; }
+    case 'wings': return `<path d="M${cx} ${cy + r * .3}C${cx - r * .4} ${cy - r * .4} ${cx - r * 1.2} ${cy - r * .75} ${cx - r * 1.7} ${cy - r * .5}C${cx - r * 1.35} ${cy - r * .2} ${cx - r * 1.55} ${cy + r * .05} ${cx - r * 1.25} ${cy + r * .1}C${cx - r * 1.35} ${cy + r * .35} ${cx - r * .7} ${cy + r * .5} ${cx} ${cy + r * .55}C${cx + r * .7} ${cy + r * .5} ${cx + r * 1.35} ${cy + r * .35} ${cx + r * 1.25} ${cy + r * .1}C${cx + r * 1.55} ${cy + r * .05} ${cx + r * 1.35} ${cy - r * .2} ${cx + r * 1.7} ${cy - r * .5}C${cx + r * 1.2} ${cy - r * .75} ${cx + r * .4} ${cy - r * .4} ${cx} ${cy + r * .3}Z" fill="${m}" stroke="${e}" stroke-width="1.4"/><path d="M${cx - r * .5} ${cy - r * .05}L${cx - r * 1.4} ${cy - r * .4}M${cx + r * .5} ${cy - r * .05}L${cx + r * 1.4} ${cy - r * .4}" stroke="${e}" stroke-opacity=".5"/>${beltGem(cx, cy, r * .42, id, e)}`;
   }
   return '';
 }
-function beltSide(b, x, M, T, id) {
-  const y = 65, sh = (w, h) => b.side === 'round' ? `<circle cx="${x}" cy="${y}" r="${h / 2}"` : b.side === 'shield' ? `<path d="M${x - w / 2} ${y - h / 2}H${x + w / 2}V${y}Q${x + w / 2} ${y + h * .4} ${x} ${y + h / 2 + 2}Q${x - w / 2} ${y + h * .4} ${x - w / 2} ${y}Z"` : `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${w / 5}"`;
-  return `${sh(30, 38)} fill="url(#${id}t)" stroke="${T[4]}" stroke-width="1.6"/>${sh(23, 30)} fill="url(#${id}m)"/><circle cx="${x}" cy="${y}" r="5" fill="url(#${id}g)" stroke="${T[4]}" stroke-width="1"/>`;
+// one side plate: a raised frame, a metal field and a gem
+function beltSide(b, x, id, T, orn) {
+  const y = 75, sh = (w, h) => b.side === 'round' ? `<circle cx="${x}" cy="${y}" r="${h / 2}"` : b.side === 'shield' ? `<path d="M${x - w / 2} ${y - h / 2}H${x + w / 2}V${y + h * .05}Q${x + w / 2} ${y + h * .38} ${x} ${y + h / 2 + 2}Q${x - w / 2} ${y + h * .38} ${x - w / 2} ${y + h * .05}Z"` : `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${w / 4.5}"`;
+  return `<g>${sh(36, 56)} fill="#000" opacity=".35" transform="translate(0 2.5)"/>${sh(36, 56)} fill="url(#${id}t)" stroke="${T[4]}" stroke-width="1.4"/>${sh(29, 48)} fill="url(#${id}d)"/>${sh(26, 44)} fill="url(#${id}m)"/>
+    ${orn ? `${sh(22, 40)} fill="none" stroke="${T[1]}" stroke-width="2" stroke-dasharray="0 4.2" stroke-linecap="round" opacity=".9"/>` : `${sh(22, 40)} fill="none" stroke="${T[1]}" stroke-opacity=".55" stroke-width=".9"/>`}
+    ${beltGem(x, y, 5.5, id, T[4])}</g>`;
 }
 function beltRender(raw, opt = {}) {
   const b = beltClean(raw, opt.title), id = 'bz' + (++beltN), M = BMETAL[b.metal], T = BMETAL[b.trim || b.metal];
-  const P = BPLATE[b.plate][1], F = BFONT[b.font];
-  const sx = { 0: [], 2: [44, 276], 4: [30, 70, 250, 290], 6: [22, 52, 82, 238, 268, 298] }[b.sides];
-  const strap = `<rect x="2" y="40" width="316" height="50" rx="16" fill="${b.strap}"/><rect x="2" y="40" width="316" height="50" rx="16" fill="url(#${id}s)"/>
-    ${b.tex === 'leather' ? `<path d="M10 47H310M10 83H310" stroke="#fff" stroke-opacity=".28" stroke-width="1.3" stroke-dasharray="5 4"/>` : ''}
-    ${b.tex === 'studs' ? [46, 84].map(y => Array.from({ length: 30 }, (_, i) => `<circle cx="${12 + i * 10.3}" cy="${y}" r="2.2" fill="url(#${id}t)"/>`).join('')).join('') : ''}
-    ${b.tex === 'snake' ? `<rect x="2" y="40" width="316" height="50" rx="16" fill="url(#${id}k)"/>` : ''}`;
-  const carve = { lines: `<g stroke="${M[3]}" stroke-opacity=".35" stroke-width="1">${Array.from({ length: 30 }, (_, i) => `<path d="M30 ${6 + i * 4.2}H290"/>`).join('')}</g>`,
-    sunburst: `<g stroke="${M[1]}" stroke-opacity=".45" stroke-width="2">${Array.from({ length: 36 }, (_, i) => { const a = i * Math.PI / 18; return `<path d="M160 52L${(160 + 200 * Math.cos(a)).toFixed(0)} ${(52 + 200 * Math.sin(a)).toFixed(0)}"/>`; }).join('')}</g>`,
-    scroll: `<g fill="none" stroke="${M[3]}" stroke-opacity=".5" stroke-width="1.3">${Array.from({ length: 12 }, (_, i) => { const x = 40 + (i % 6) * 48, y = i < 6 ? 22 : 104; return `<path d="M${x} ${y}c6-10 18-10 18 0s-12 8-12 2 6-4 6 0M${x + 24} ${y}c6 10 18 10 18 0s-12-8-12-2 6 4 6 0"/>`; }).join('')}</g>`,
-    dots: `<g fill="${M[3]}" fill-opacity=".3">${Array.from({ length: 160 }, (_, i) => `<circle cx="${40 + (i % 20) * 12 + (Math.floor(i / 20) % 2) * 6}" cy="${4 + Math.floor(i / 20) * 16}" r="1.4"/>`).join('')}</g>`, none: '' }[b.carve];
-  const hasBanner = b.banner && b.line, ty = b.plate === 'shield' ? 92 : 98, top = b.top;
-  const emY = top ? 58 : 52, emR = b.plate === 'wide' ? 20 : 17;
-  const ringGems = b.ring ? Array.from({ length: 10 }, (_, i) => { const a = i * Math.PI / 5; return `<circle cx="${(160 + (emR + 9) * Math.cos(a)).toFixed(1)}" cy="${(emY + (emR + 9) * Math.sin(a)).toFixed(1)}" r="2.6" fill="url(#${id}g)" stroke="${M[4]}" stroke-width=".8"/>`; }).join('') : '';
-  const fs = s => Math.min(15, 210 / Math.max(6, s.length) * (b.font === 'tall' ? 1.35 : 1));
-  return `<svg class="${opt.cls || 'belt-art'}" viewBox="${opt.vb || '0 0 320 130'}" role="img" aria-label="${esc(opt.label || 'Championship belt')}">
-  <defs><linearGradient id="${id}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${M[1]}"/><stop offset=".45" stop-color="${M[2]}"/><stop offset="1" stop-color="${M[3]}"/></linearGradient>
-  <linearGradient id="${id}t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${T[1]}"/><stop offset=".5" stop-color="${T[2]}"/><stop offset="1" stop-color="${T[3]}"/></linearGradient>
-  <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient>
-  <radialGradient id="${id}g" cx=".35" cy=".35" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".35" stop-color="${b.gem}"/><stop offset="1" stop-color="${b.gem}" stop-opacity=".95"/><stop offset="1" stop-color="#000"/></radialGradient>
-  <pattern id="${id}k" width="10" height="8" patternUnits="userSpaceOnUse"><path d="M0 4L5 0L10 4L5 8Z" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M2 4L5 2L8 4" stroke="#fff" stroke-opacity=".12" fill="none"/></pattern>
-  <clipPath id="${id}c"><path d="${P}"/></clipPath></defs>
+  const [, P, Z] = BPLATE[b.plate], F = BFONT[b.font], cx = 180, orn = b.orn;
+  const inner = (s, extra) => `transform="translate(180 75) scale(${s}) translate(-180 -75)"${extra || ''}`;
+  // side plates spread along the strap, behind the main plate
+  const sx = { 0: [], 2: [58, 302], 4: [36, 80, 280, 324], 6: [22, 58, 94, 266, 302, 338] }[b.sides].filter(x => b.plate !== 'winged' || x < 40 || x > 320 || b.sides === 2);
+  const sxw = b.plate === 'winged' && b.sides ? (b.sides === 2 ? [22, 338] : [20, 340]) : sx;
+  const strap = `<rect x="2" y="50" width="356" height="50" rx="14" fill="${b.strap}"/><rect x="2" y="50" width="356" height="50" rx="14" fill="url(#${id}s)"/>
+    ${b.tex === 'snake' ? `<rect x="2" y="50" width="356" height="50" rx="14" fill="url(#${id}k)"/>` : ''}
+    ${b.tex === 'leather' || b.tex === 'snake' ? `<path d="M12 57H348M12 93H348" stroke="#fff" stroke-opacity=".3" stroke-width="1.3" stroke-dasharray="5 3.5"/>` : ''}
+    ${b.tex === 'studs' ? [57, 93].map(y => Array.from({ length: 34 }, (_, i) => `<circle cx="${12 + i * 10.2}" cy="${y}" r="2.4" fill="url(#${id}t)" stroke="#000" stroke-opacity=".4" stroke-width=".5"/>`).join('')).join('') : ''}
+    <path d="M6 54Q2 75 6 96" stroke="#000" stroke-opacity=".35" stroke-width="2" fill="none"/><path d="M354 54Q358 75 354 96" stroke="#000" stroke-opacity=".35" stroke-width="2" fill="none"/>`;
+  const carve = { lines: `<g stroke="${M[3]}" stroke-opacity=".3" stroke-width=".9">${Array.from({ length: 36 }, (_, i) => `<path d="M60 ${4 + i * 4}H300"/>`).join('')}</g>`,
+    sunburst: `<g stroke="${M[1]}" stroke-opacity=".5" stroke-width="2.2">${Array.from({ length: 48 }, (_, i) => { const a = i * Math.PI / 24; return `<path d="M180 ${Z.em[0]}L${(180 + 220 * Math.cos(a)).toFixed(0)} ${(Z.em[0] + 220 * Math.sin(a)).toFixed(0)}"/>`; }).join('')}</g>`,
+    scroll: `<g fill="none" stroke="${M[3]}" stroke-opacity=".55" stroke-width="1.3">${Array.from({ length: 16 }, (_, i) => { const x = 76 + (i % 8) * 28, y = i < 8 ? 20 : 132; return `<path d="M${x} ${y}c5-9 15-9 15 0s-10 7-10 2 5-4 5 0M${x + 14} ${y}c5 9 15 9 15 0s-10-7-10-2 5 4 5 0"/>`; }).join('')}</g>`,
+    dots: `<g fill="${M[3]}" fill-opacity=".32">${Array.from({ length: 240 }, (_, i) => `<circle cx="${70 + (i % 24) * 9.6 + (Math.floor(i / 24) % 2) * 4.8}" cy="${4 + Math.floor(i / 24) * 15}" r="1.3"/>`).join('')}</g>`, none: '' }[b.carve];
+  // the nameplate: an enamel ribbon with folded tails, or letters engraved straight into the plate
+  const [by, bw] = Z.ban, lineTxt = b.line, lf = beltTxt(lineTxt, bw - 26, 15, F);
+  const ink = inkOn(b.enamel) === '#ffffff' ? (b.metal === 'black' ? M[5] : M[1]) : '#1a1306';
+  const ban = !lineTxt ? '' : b.banner ? `<g>
+      <path d="M${cx - bw / 2 - 4} ${by - 7}H${cx - bw / 2 + 12}V${by + 13}H${cx - bw / 2 - 4}L${cx - bw / 2 + 3} ${by + 3}Z" fill="${b.enamel}" stroke="${T[4]}" stroke-width="1"/><path d="M${cx - bw / 2 - 4} ${by - 7}H${cx - bw / 2 + 12}V${by + 13}H${cx - bw / 2 - 4}L${cx - bw / 2 + 3} ${by + 3}Z" fill="#000" opacity=".3"/>
+      <path d="M${cx + bw / 2 + 4} ${by - 7}H${cx + bw / 2 - 12}V${by + 13}H${cx + bw / 2 + 4}L${cx + bw / 2 - 3} ${by + 3}Z" fill="${b.enamel}" stroke="${T[4]}" stroke-width="1"/><path d="M${cx + bw / 2 + 4} ${by - 7}H${cx + bw / 2 - 12}V${by + 13}H${cx + bw / 2 + 4}L${cx + bw / 2 - 3} ${by + 3}Z" fill="#000" opacity=".3"/>
+      <path d="M${cx - bw / 2 + 6} ${by - 12}H${cx + bw / 2 - 6}L${cx + bw / 2 - 1} ${by}L${cx + bw / 2 - 6} ${by + 12}H${cx - bw / 2 + 6}L${cx - bw / 2 + 1} ${by}Z" fill="url(#${id}t)" stroke="${T[4]}" stroke-width="1.2"/>
+      <path d="M${cx - bw / 2 + 9} ${by - 9.5}H${cx + bw / 2 - 9}L${cx + bw / 2 - 5} ${by}L${cx + bw / 2 - 9} ${by + 9.5}H${cx - bw / 2 + 9}L${cx - bw / 2 + 5} ${by}Z" fill="${b.enamel}"/>
+      <path d="M${cx - bw / 2 + 9} ${by - 9.5}H${cx + bw / 2 - 9}L${cx + bw / 2 - 7} ${by - 5}H${cx - bw / 2 + 7}Z" fill="#fff" opacity=".18"/>
+      <text x="${cx}" y="${by + lf.fs * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${lf.fs}" letter-spacing="${F[2]}" font-weight="700" ${lf.a} fill="${ink}">${esc(lineTxt)}</text></g>`
+    : `<text x="${cx}" y="${by + lf.fs * .36 + .8}" text-anchor="middle" font-family="${F[1]}" font-size="${lf.fs}" letter-spacing="${F[2]}" font-weight="700" ${lf.a} fill="${M[1]}" opacity=".7">${esc(lineTxt)}</text><text x="${cx}" y="${by + lf.fs * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${lf.fs}" letter-spacing="${F[2]}" font-weight="700" ${lf.a} fill="${M[5]}">${esc(lineTxt)}</text>`;
+  // the top line: curved along the plate where the shape is round, straight otherwise
+  const [ty, tw, tr] = Z.top, tf = beltTxt(b.top, tr ? tw * 1.08 : tw, 10.5, F);
+  const arcD = tr ? (() => { const hw = Math.min(tw / 2 + 10, tr * .96), sag = tr - Math.sqrt(tr * tr - hw * hw); return `M${cx - hw} ${ty + 4 + sag}A${tr} ${tr} 0 0 1 ${cx + hw} ${ty + 4 + sag}`; })() : '';
+  const topT = !b.top ? '' : tr ? `<path id="${id}a" d="${arcD}" fill="none"/><text font-family="${F[1]}" font-size="${tf.fs}" letter-spacing="${F[2]}" font-weight="700" fill="${M[5]}"><textPath href="#${id}a" startOffset="50%" text-anchor="middle" ${tf.a}>${esc(b.top)}</textPath></text>`
+    : `<text x="${cx}" y="${ty + tf.fs * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${tf.fs}" letter-spacing="${F[2]}" font-weight="700" ${tf.a} fill="${M[5]}">${esc(b.top)}</text>`;
+  const [ey, er0] = Z.em, er = b.top ? Math.round(er0 * (b.ring ? .7 : .8)) : b.ring ? Math.round(er0 * .85) : er0, emY = b.top ? ey + 6 : ey;
+  const ringGems = b.ring ? Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return beltGem(+(cx + (er + 10) * Math.cos(a)).toFixed(1), +(emY + (er + 10) * Math.sin(a)).toFixed(1), 2.4, id, M[4]); }).join('') : '';
+  // ornate: a beaded rim, gems set into the plate edge and filigree around the centre
+  const ornate = orn ? `<path d="${P}" ${inner(.95)} fill="none" stroke="${T[1]}" stroke-width="3.2" stroke-dasharray="0 6" stroke-linecap="round"/>
+    <path d="${P}" ${inner(.95)} fill="none" stroke="${T[3]}" stroke-width="1.2" stroke-dasharray="0 6" stroke-dashoffset="3" stroke-linecap="round" opacity=".6"/>
+    <g fill="none" stroke="${M[4]}" stroke-opacity=".45" stroke-width="1.2">${[-1, 1].map(s => `<path d="M${cx + s * (er + 8)} ${emY - 6}c${s * 10}-10 ${s * 26}-6 ${s * 28} 4s${s * -10} 10 ${s * -14} 2"/><path d="M${cx + s * (er + 8)} ${emY + 6}c${s * 10} 10 ${s * 26} 6 ${s * 28}-4s${s * -10}-10 ${s * -14}-2"/>`).join('')}</g>` : '';
+  const rivets = `<path d="${P}" ${inner(.9)} fill="none" stroke="${M[4]}" stroke-width="3.4" stroke-dasharray="0 26" stroke-linecap="round" opacity=".55"/><path d="${P}" ${inner(.9)} fill="none" stroke="${M[1]}" stroke-width="1.6" stroke-dasharray="0 26" stroke-linecap="round"/>`;
+  return `<svg class="${opt.cls || 'belt-art'}" viewBox="${opt.vb || '0 0 360 150'}" role="img" aria-label="${esc(opt.label || 'Championship belt')}">
+  <defs><linearGradient id="${id}m" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="${M[1]}"/><stop offset=".42" stop-color="${M[2]}"/><stop offset=".7" stop-color="${M[3]}"/><stop offset="1" stop-color="${M[2]}"/></linearGradient>
+  <linearGradient id="${id}t" x1="0" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="${T[1]}"/><stop offset=".5" stop-color="${T[2]}"/><stop offset="1" stop-color="${T[3]}"/></linearGradient>
+  <linearGradient id="${id}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${T[3]}"/><stop offset="1" stop-color="${T[1]}"/></linearGradient>
+  <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".18" stop-color="#fff" stop-opacity=".04"/><stop offset=".8" stop-color="#000" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient>
+  <linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="1"><stop offset=".3" stop-color="#fff" stop-opacity="0"/><stop offset=".45" stop-color="#fff" stop-opacity=".38"/><stop offset=".52" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <radialGradient id="${id}g" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".3" stop-color="${b.gem}"/><stop offset=".85" stop-color="${b.gem}"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></radialGradient>
+  <pattern id="${id}k" width="10" height="8" patternUnits="userSpaceOnUse"><path d="M0 4L5 0L10 4L5 8Z" fill="none" stroke="#000" stroke-opacity=".38" stroke-width="1"/><path d="M2 4L5 2L8 4" stroke="#fff" stroke-opacity=".14" fill="none"/></pattern>
+  <clipPath id="${id}c"><path d="${P}" ${inner(.86)}/></clipPath></defs>
   ${strap}
-  ${sx.map(x => beltSide(b, x, M, T, id)).join('')}
-  <path d="${P}" fill="#000" opacity=".35" transform="translate(0 3)"/>
-  <path d="${P}" fill="url(#${id}t)" stroke="${T[4]}" stroke-width="2"/>
-  <g clip-path="url(#${id}c)"><path d="${P}" fill="url(#${id}m)" transform="translate(160 65) scale(.9) translate(-160 -65)"/>${carve}</g>
-  <path d="${P}" fill="none" stroke="${T[1]}" stroke-opacity=".7" stroke-width="1.3" transform="translate(160 65) scale(.9) translate(-160 -65)"/>
-  ${top ? `<text x="160" y="${b.plate === 'crest' ? 40 : 30}" text-anchor="middle" font-family="${F[1]}" font-size="${Math.min(11, fs(top) * .8)}" letter-spacing="${F[2]}" fill="${M[5]}" font-weight="700">${esc(top)}</text>` : ''}
-  ${ringGems}${beltEmblem(b, 160, emY, emR, M, id, opt.abbr)}
-  ${hasBanner ? `<path d="M${102} ${ty - 11}H218L226 ${ty}L218 ${ty + 11}H102L94 ${ty}Z" fill="${b.enamel}" stroke="${T[4]}" stroke-width="1.5"/><text x="160" y="${ty + fs(b.line) * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${fs(b.line)}" letter-spacing="${F[2]}" fill="${inkOn(b.enamel) === '#ffffff' ? (b.metal === 'black' ? M[5] : M[1]) : '#1a1306'}" font-weight="700">${esc(b.line)}</text>`
-    : b.line ? `<text x="160" y="${ty + 5}" text-anchor="middle" font-family="${F[1]}" font-size="${fs(b.line)}" letter-spacing="${F[2]}" fill="${M[5]}" font-weight="700">${esc(b.line)}</text>` : ''}
+  ${sxw.map(x => beltSide(b, x, id, T, orn)).join('')}
+  <path d="${P}" fill="#000" opacity=".4" transform="translate(1 4)"/>
+  <path d="${P}" fill="url(#${id}t)" stroke="${T[4]}" stroke-width="1.6"/>
+  <path d="${P}" ${inner(.93)} fill="url(#${id}d)"/>
+  <path d="${P}" ${inner(.86)} fill="url(#${id}m)"/>
+  <g clip-path="url(#${id}c)">${carve}<rect x="0" y="0" width="360" height="150" fill="url(#${id}h)"/></g>
+  <path d="${P}" ${inner(.86)} fill="none" stroke="${M[4]}" stroke-opacity=".55" stroke-width="1"/>
+  <path d="${P}" ${inner(.81)} fill="none" stroke="${M[1]}" stroke-opacity=".75" stroke-width="1.1"/>
+  ${orn ? ornate : rivets}
+  ${topT}${ringGems}${beltEmblem(b, cx, emY, er, M, T, id, opt.abbr)}${ban}
   </svg>`;
 }
 
@@ -4329,11 +4382,11 @@ const BTPL = [
   ['Classic', { plate: 'classic', metal: 'gold', strap: '#1a1a1f', emblem: 'gem', gem: '#d62839', carve: 'none', sides: 2, banner: 0 }]
 ];
 // a template's look with this title's own words kept
-const beltFromTpl = (i, cur) => { const c = beltClean(cur), x = BTPL[i]?.[1] || {}; return beltClean({ ...beltDefault(), trim: '', tex: 'leather', side: 'rect', ring: 0, font: 'block', banner: 1, ...x, top: c.top, line: c.line, sub: c.sub }); };
+const beltFromTpl = (i, cur) => { const c = beltClean(cur), x = BTPL[i]?.[1] || {}; return beltClean({ ...beltDefault(), trim: '', tex: 'leather', side: 'rect', ring: 0, font: 'block', banner: 1, ...x, top: c.top, line: c.line, sub: c.sub, orn: c.orn }); };
 function beltSurprise(cur) {
   const c = beltClean(cur), p = a => a[Math.floor(Math.random() * a.length)], k = o => p(Object.keys(o));
   return beltClean({ plate: k(BPLATE), metal: k(BMETAL), trim: Math.random() < .3 ? k(BMETAL) : '', strap: p(BSTRAPS), tex: k(BSTRAP), sides: p([0, 2, 2, 4, 4, 6]), side: p(['rect', 'round', 'shield']), emblem: p(Object.keys(BEMBLEM).filter(x => x !== 'none')),
-    gem: p(BGEMS), ring: Math.random() < .35 ? 1 : 0, carve: k(BCARVE), font: k(BFONT), enamel: p(BENAMEL), banner: Math.random() < .8 ? 1 : 0, top: c.top, line: c.line, sub: c.sub });
+    gem: p(BGEMS), ring: Math.random() < .35 ? 1 : 0, carve: k(BCARVE), font: k(BFONT), enamel: p(BENAMEL), banner: Math.random() < .8 ? 1 : 0, top: c.top, line: c.line, sub: c.sub, orn: c.orn });
 }
 // a title's belt as drawn everywhere in the game (titles with no design keep the classic gold belt)
 const titleBelt = (t, cls) => beltRender(t.belt, { title: t, cls, label: (t.name || 'Championship') + ' belt', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BookIt') });
@@ -4546,7 +4599,7 @@ function viewHome() {
   const last = G.history[G.history.length - 1];
   const nb = nextBig();
   const att = attention();
-  const champs = G.titles.map(t => `<div class="item" style="padding:8px 10px">${titleBelt(t, 'belt-sm')}<div class="main"><div class="t small">${esc(t.name)}</div><div class="d">${t.holder.length ? nmList(t.holder) + ` · since wk ${t.since} · ${t.defenses} defenses` : '<span class="muted">Vacant</span>'}</div></div><span class="tag gold">${Math.round(t.prestige)}</span></div>`).join('');
+  const champs = G.titles.map(t => `<div class="item" style="padding:8px 10px">${titleArt(t, 'belt-sm')}<div class="main"><div class="t small">${esc(t.name)}</div><div class="d">${t.holder.length ? nmList(t.holder) + ` · since wk ${t.since} · ${t.defenses} defenses` : '<span class="muted">Vacant</span>'}</div></div><span class="tag gold">${Math.round(t.prestige)}</span></div>`).join('');
   const hot = G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat).slice(0, 3);
   return `
   <div class="card ${isBig(G.week) ? 'big-ev' : ''}">
@@ -4884,7 +4937,7 @@ function viewOffice() {
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
   ${t === 'fa' ? faView(fa) : ''}
-  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleBelt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
+  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleArt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
@@ -5384,6 +5437,7 @@ function modalWrestler(m) {
   const sts = storiesOf(w.id);
   const recent = G.history.slice(-8).reverse().flatMap(h => h.results.filter(r => segPeople(r.seg).includes(w.id)).map(r => ({ wk: h.wk, r })));
   const body = `<div class="row" style="margin-bottom:10px">${av(w, 56)}<div class="sp"><div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag">Age ${w.age}</span><span class="tag gold">OVR ${overall(w)}</span></div></div></div>
+   ${titlesOf(w.id).map(t => `<button class="champ-card" data-act="editTitle" data-id="${t.id}" aria-label="${esc(t.name)}">${titleArt(t, 'champ-belt')}<div class="cc-t"><span class="cc-k">🏆 ${t.holder.length > 1 ? 'Co-champion' : 'Champion'}</span><b>${esc(t.name)}</b><span class="tiny muted">Since week ${t.since || 1} · ${t.defenses || 0} defense${t.defenses === 1 ? '' : 's'}${t.holder.length > 1 ? ' · with ' + esc(t.holder.filter(id => id !== w.id).map(nameOf).join(' & ')) : ''}</span></div></button>`).join('')}
    ${[w.hometown && '📍 ' + esc(w.hometown), (w.height || w.weight) && '📏 ' + esc([w.height, w.weight].filter(Boolean).join(' · ')), w.finisher && '💥 Finisher: <b>' + esc(w.finisher) + '</b>', w.signature && '✨ Signature: ' + esc(w.signature), w.theme && '🎵 ' + esc(w.theme)].filter(Boolean).map(x => `<div class="small" style="margin:2px 0">${x}</div>`).join('')}
    ${w.bio ? `<p class="small muted" style="margin:6px 0 10px">${esc(w.bio)}</p>` : ''}
    <div class="card">
@@ -5536,7 +5590,7 @@ function modalRankings(m) {
 function modalRecords(m) {
   const tab = m.tab || 'titles', legends = G.wrestlers.filter(w => w.retired).sort((a, b) => b.retired - a.retired);
   let body = tabsOf([['titles', 'Title history'], ['awards', 'Awards'], ['legends', 'Legends']], tab, 'recTab');
-  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${titleBelt(t, 'belt-sm')}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
+  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${titleArt(t, 'belt-sm')}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
   if (tab === 'awards') body += (G.awards || []).slice().reverse().map(a => `<div class="card aw"><div class="review-h">Year ${a.yr} awards · week ${a.wk}</div>${a.list.map(x => `<div class="aw-r"><span class="tiny muted">${esc(x.lbl)}</span><b>${esc(x.nm)}</b><span class="tiny muted">${esc(x.det || '')}</span></div>`).join('') || '<div class="tiny muted">No shows that year.</div>'}</div>`).join('') || `<div class="empty">Awards are handed out at the end of every year (week 52). ${52 - (G.week - 1) % 52} weeks to go.</div>`;
   if (tab === 'legends') body += legends.length ? `<div class="list">${legends.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">Retired week ${w.retired} at ${w.age} · ${recStr(w)} · ${reignsOfW(w.id).length} title reigns</div></div></button>`).join('')}</div>` : '<div class="empty">No one has retired yet. Older wrestlers start to slow down after 34 and may retire from 38.</div>';
   return modal('History', body);
@@ -5585,8 +5639,66 @@ function plainText(h) { return new DOMParser().parseFromString(String(h), 'text/
 function copyText(t, okMsg) { try { navigator.clipboard.writeText(t).then(() => toast(okMsg || 'Copied.'), () => toast('Copy was blocked by the browser.')); } catch (e) { toast('Copy was blocked by the browser.'); } }
 const segLine = s => { const who = s.kind === 'match' ? vsLine(s, sideLabel) : (s.who || []).map(nameOf).join(' & ') + ((s.target || []).length ? ' → ' + s.target.map(nameOf).join(' & ') : ''); return `${plainText(segTitle(s)).replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]\uFE0F?\s*/gu, '')}: ${who}`; };
 const canUndo = wk => !!UNDO && UNDO.created === G.created && UNDO.wk === wk && UNDO.bid === G.showId && UNDO.co === G.coId && G.history.at(-1)?.wk === wk && G.history.at(-1)?.bid === G.showId;
+
+// ---- a photo of a belt: the same looks as wrestler photos (pixel art or the real photo), cut to the belt's wide shape ----
+let BPX = null; // { draft, src (wide canvas), jpeg, mode, zoom, detail, colors, bg }
+const BPX_DEF = { mode: 'pixel', zoom: 1, detail: 48, colors: 10, bg: 'cut' };
+const BPX_ROWS = () => ({ mode: PX_ROWS.mode, zoom: ['Framing', [[1, 'As taken'], [0.8, 'Closer'], [0.64, 'Plate only']]], detail: PX_ROWS.detail, colors: PX_ROWS.colors, bg: ['Background', [['cut', 'Cut out'], ['keep', 'Keep photo']]] });
+function bpxRow(f) { const [label, opts] = BPX_ROWS()[f]; return `<label class="f"><span>${label}</span><div class="seg-ctl">${opts.map(([v, t]) => `<button class="${String(BPX[f]) === String(v) ? 'on' : ''}" data-act="bdPx" data-f="${f}" data-id="${v}">${t}</button>`).join('')}</div></label>`; }
+// the photo cropped to 12:5 around the middle, at a given width
+function beltCrop(img, W, zoom) {
+  const H = Math.round(W * 5 / 12), c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+  let sw = img.width * (zoom || 1), sh = sw * 5 / 12; if (sh > img.height * (zoom || 1)) { sh = img.height * (zoom || 1); sw = sh * 12 / 5; }
+  x.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, W, H); return c;
+}
+function pixelBelt(src, o) {
+  const N = o.detail * 3, H = Math.round(N * 5 / 12), n = N * H;
+  let cur = src;
+  if (o.zoom < 1) { const z = document.createElement('canvas'), w = Math.round(src.width * o.zoom), h = Math.round(w * 5 / 12); z.width = w; z.height = h; z.getContext('2d').drawImage(src, (src.width - w) / 2, (src.height - h) / 2, w, h, 0, 0, w, h); cur = z; }
+  while (cur.width / 2 >= N * 1.5) { const h = document.createElement('canvas'); h.width = Math.round(cur.width / 2); h.height = Math.round(cur.height / 2); const x = h.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, h.width, h.height); cur = h; }
+  const c = document.createElement('canvas'); c.width = N; c.height = H; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, N, H);
+  const id = x.getImageData(0, 0, N, H), px = id.data, P = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { let r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2]; const l = .299 * r + .587 * g + .114 * b; r = l + (r - l) * 1.35; g = l + (g - l) * 1.35; b = l + (b - l) * 1.35;
+    P[i * 3] = clamp((r - 128) * 1.15 + 128, 0, 255); P[i * 3 + 1] = clamp((g - 128) * 1.15 + 128, 0, 255); P[i * 3 + 2] = clamp((b - 128) * 1.15 + 128, 0, 255); }
+  const dist = (i, j) => Math.hypot(P[i * 3] - P[j * 3], P[i * 3 + 1] - P[j * 3 + 1], P[i * 3 + 2] - P[j * 3 + 2]);
+  // background: grow in from all four edges through similar colours; the plate in the middle is always kept
+  const bg = new Uint8Array(n);
+  if (o.bg === 'cut') {
+    const seed = new Int32Array(n).fill(-1), q = [], keep = i => { const xx = (i % N + .5) / N - .5, yy = (Math.floor(i / N) + .5) / H - .5; return (xx / .12) ** 2 + (yy / .22) ** 2 <= 1; };
+    for (let i = 0; i < N; i++) for (const k of [i, (H - 1) * N + i]) if (!bg[k] && !keep(k)) { bg[k] = 1; seed[k] = k; q.push(k); }
+    for (let i = 0; i < H; i++) for (const k of [i * N, i * N + N - 1]) if (!bg[k] && !keep(k)) { bg[k] = 1; seed[k] = k; q.push(k); }
+    for (let h = 0; h < q.length; h++) { const i = q[h], xx = i % N, yy = (i / N) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = xx + dx, Y = yy + dy; if (X < 0 || Y < 0 || X >= N || Y >= H) continue; const j = Y * N + X; if (bg[j] || keep(j)) continue;
+        if (dist(i, j) < 26 && dist(seed[i], j) < 62) { bg[j] = 1; seed[j] = seed[i]; q.push(j); } } }
+    let cnt = 0; for (let i = 0; i < n; i++) cnt += bg[i]; if (cnt > n * .85 || cnt < n * .04) bg.fill(0);
+  }
+  const anyBg = bg.some(v => v), fg = []; for (let i = 0; i < n; i++) if (!bg[i]) fg.push(i);
+  const lum = i => .299 * P[i * 3] + .587 * P[i * 3 + 1] + .114 * P[i * 3 + 2], sorted = fg.slice().sort((a, b) => lum(a) - lum(b)), k = Math.min(o.colors, sorted.length);
+  const C = []; for (let j = 0; j < k; j++) { const i = sorted[Math.floor((j + .5) / k * sorted.length)]; C.push([P[i * 3], P[i * 3 + 1], P[i * 3 + 2]]); }
+  const asg = new Int32Array(n);
+  for (let it = 0; it < 10; it++) { const sm = C.map(() => [0, 0, 0, 0]);
+    for (const i of fg) { let best = 0, bd = 1e9; for (let j = 0; j < k; j++) { const a = P[i * 3] - C[j][0], b = P[i * 3 + 1] - C[j][1], e = P[i * 3 + 2] - C[j][2], dd = a * a + b * b + e * e; if (dd < bd) { bd = dd; best = j; } } asg[i] = best; const t = sm[best]; t[0] += P[i * 3]; t[1] += P[i * 3 + 1]; t[2] += P[i * 3 + 2]; t[3]++; }
+    for (let j = 0; j < k; j++) if (sm[j][3]) C[j] = [sm[j][0] / sm[j][3], sm[j][1] / sm[j][3], sm[j][2] / sm[j][3]]; }
+  for (let i = 0; i < n; i++) {
+    if (bg[i]) { px[i * 4 + 3] = 0; continue; }
+    let [r, g, b] = C[asg[i]];
+    if (anyBg) { const xx = i % N, yy = (i / N) | 0; if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const X = xx + dx, Y = yy + dy; return X >= 0 && Y >= 0 && X < N && Y < H && bg[Y * N + X]; })) [r, g, b] = [16, 12, 20]; }
+    px[i * 4] = r; px[i * 4 + 1] = g; px[i * 4 + 2] = b; px[i * 4 + 3] = 255;
+  }
+  x.putImageData(id, 0, 0); return c.toDataURL('image/png');
+}
+function applyBPX() { const d = UI.modal?.draft; if (!BPX || !d || BPX.draft !== d) return; d.photo = BPX.mode === 'pixel' ? pixelBelt(BPX.src, BPX) : beltCrop(BPX.src, 360, BPX.zoom).toDataURL('image/jpeg', .82); }
+function pickBeltPhoto(cb) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => { const f = inp.files[0]; if (!f) return; const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => { URL.revokeObjectURL(url); const k = Math.min(1, 960 / img.width), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); cb(c); };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('That image could not be read.'); }; img.src = url; };
+  inp.click();
+}
+// a title's look: its photo when it has one, otherwise the drawn belt
+const titleArt = (t, cls) => { const ph = safePhoto(t.photo); return ph ? `<img class="${cls || 'belt-art'} belt-ph${ph.startsWith('data:image/png') ? ' px' : ''}" alt="${esc((t.name || 'Championship') + ' belt')}" src="${esc(ph)}">` : titleBelt(t, cls); };
 // the championship designer: a live belt on top, every part one tap away in tabs, and the title's rules
-const BD_TABS = [['shape', 'Shape'], ['metal', 'Metal'], ['strap', 'Strap'], ['plates', 'Plates'], ['centre', 'Centre'], ['text', 'Text'], ['rules', 'Rules']];
+const BD_TABS = [['shape', 'Shape'], ['metal', 'Metal'], ['strap', 'Strap'], ['plates', 'Plates'], ['centre', 'Centre'], ['text', 'Text'], ['photo', 'Photo'], ['rules', 'Rules']];
 function bdOpt(f, v, label, inner, cls) { const b = UI.modal.draft.belt, on = String(b[f]) === String(v); return `<button class="${cls || 'bd-tile'} ${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}" aria-label="${esc(label)}">${inner || ''}${cls === 'sw' ? '' : `<span>${esc(label)}</span>`}</button>`; }
 const bdSeg = (f, list) => `<div class="seg-ctl ${list.length > 4 ? 'bd-many' : ''}">${list.map(([v, l]) => { const on = String(UI.modal.draft.belt[f]) === String(v); return `<button class="${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`; }).join('')}</div>`;
 const bdSw = (f, list) => `<div class="swatches">${list.map(c => bdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}</div>`;
@@ -5594,22 +5706,30 @@ function bdPane(m) {
   const d = m.draft, b = d.belt, mini = x => beltRender({ ...b, sides: 0, top: '', line: '', banner: 0, ...x }, { cls: 'bd-mini', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') });
   switch (m.tab) {
     case 'shape': return `<div class="bd-lab">Centre plate</div><div class="bd-grid">${Object.entries(BPLATE).map(([k, [l]]) => bdOpt('plate', k, l, mini({ plate: k, emblem: 'none', carve: 'none' }))).join('')}</div>
-      <div class="bd-lab">Engraving</div>${bdSeg('carve', Object.entries(BCARVE))}`;
+      <div class="bd-lab">Engraving</div>${bdSeg('carve', Object.entries(BCARVE))}
+      <div class="bd-lab">Detail</div>${bdSeg('orn', [[0, 'Relief'], [1, 'Ornate']])}<div class="tiny muted" style="margin-top:4px">Ornate adds a beaded rim, filigree and beaded side plates.</div>`;
     case 'metal': return `<div class="bd-lab">Plate metal</div><div class="bd-grid">${Object.entries(BMETAL).map(([k, M]) => bdOpt('metal', k, M[0], `<i class="bd-metal" style="background:linear-gradient(${M[1]},${M[2]},${M[3]})"></i>`)).join('')}</div>
       <div class="bd-lab">Trim (the outer edge and side plates)</div>${bdSeg('trim', [['', 'Same'], ...Object.entries(BMETAL).filter(([k]) => k !== b.metal).map(([k, M]) => [k, M[0]])])}`;
     case 'strap': return `<div class="bd-lab">Strap colour</div>${bdSw('strap', BSTRAPS)}<div class="bd-lab">Strap style</div>${bdSeg('tex', Object.entries(BSTRAP))}`;
     case 'plates': return `<div class="bd-lab">Side plates</div>${bdSeg('sides', [[0, 'None'], [2, '2'], [4, '4'], [6, '6']])}
       ${b.sides ? `<div class="bd-lab">Side plate shape</div>${bdSeg('side', [['rect', 'Square'], ['round', 'Round'], ['shield', 'Shield']])}` : ''}
       <div class="bd-lab">Gem colour</div>${bdSw('gem', BGEMS)}<div class="tiny muted">Used on the side plates and the centre piece.</div>`;
-    case 'centre': return `<div class="bd-lab">Centre piece</div><div class="bd-grid">${Object.entries(BEMBLEM).map(([k, l]) => bdOpt('emblem', k, l, beltRender({ ...b, emblem: k, ring: 0, top: '' }, { cls: 'bd-mini', vb: '118 14 84 76', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') }))).join('')}</div>
+    case 'centre': return `<div class="bd-lab">Centre piece</div><div class="bd-grid">${Object.entries(BEMBLEM).map(([k, l]) => bdOpt('emblem', k, l, beltRender({ ...b, emblem: k, ring: 0, top: '' }, { cls: 'bd-mini', vb: '130 24 100 88', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') }))).join('')}</div>
       ${b.emblem === 'logo' ? `<label class="f" style="margin-top:10px"><span>Initials <span class="muted">(blank uses the company's)</span></span><input type="text" data-bt="sub" value="${esc(b.sub)}" maxlength="4" placeholder="${esc(abbr(UI.wiz?.name || G?.promo?.name || 'BK'))}"></label>` : ''}
       <div class="bd-lab">Gem colour</div>${bdSw('gem', BGEMS)}
       <label class="todo" style="margin-top:8px"><input type="checkbox" data-bt="ring" ${b.ring ? 'checked' : ''}><span>Ring of gems around the centre</span></label>`;
-    case 'text': return `<label class="f"><span>Top line <span class="muted">(optional)</span></span><input type="text" data-bt="top" value="${esc(b.top)}" maxlength="18" placeholder="e.g. ${esc(String(UI.wiz?.name || G?.promo?.name || 'Thunder Valley').toUpperCase().slice(0, 18))}"></label>
-      <label class="f"><span>Nameplate</span><input type="text" data-bt="line" value="${esc(b.line)}" maxlength="18" placeholder="e.g. WORLD CHAMPION"></label>
+    case 'text': return `<label class="f"><span>Top line <span class="muted">(optional)</span></span><input type="text" data-bt="top" value="${esc(b.top)}" maxlength="28" placeholder="e.g. ${esc(String(UI.wiz?.name || G?.promo?.name || 'Thunder Valley').toUpperCase().slice(0, 28))}"></label>
+      <label class="f"><span>Nameplate</span><input type="text" data-bt="line" value="${esc(b.line)}" maxlength="28" placeholder="e.g. WORLD CHAMPION"></label>
       <div class="bd-lab">Nameplate style</div>${bdSeg('banner', [[1, 'Enamel banner'], [0, 'Engraved']])}
       ${b.banner ? `<div class="bd-lab">Enamel colour</div>${bdSw('enamel', BENAMEL)}` : ''}
       <div class="bd-lab">Lettering</div>${bdSeg('font', Object.entries(BFONT).map(([k, v]) => [k, v[0]]))}`;
+  }
+  if (m.tab === 'photo') {
+    const ph = safePhoto(d.photo), live = BPX && BPX.draft === d;
+    return `<p class="small muted" style="margin-top:4px">Use a photo of a belt instead of the drawn one: a real belt, or one you made in another app. It shows on the live show, the champion's card and everywhere the title appears.</p>
+      <div class="row" style="gap:8px;margin-bottom:8px"><button class="btn ${ph ? '' : 'pri'}" data-act="bdPhoto">📷 ${ph ? 'Replace photo' : 'Upload a photo'}</button>${ph ? '<button class="btn bad" data-act="bdPhotoDel">Remove photo</button>' : ''}</div>
+      ${live ? `<div class="px-panel">${bpxRow('mode')}${bpxRow('zoom')}${BPX.mode === 'pixel' ? `${bpxRow('detail')}${bpxRow('colors')}${bpxRow('bg')}<div class="tiny muted" style="margin:-4px 0 6px">Made on this device. Only this version is saved, never your photo. Plain backgrounds cut out best.</div>` : ''}</div>`
+        : ph ? `<div class="tiny muted">${ph.startsWith('data:image/png') ? 'Pixel version' : 'Real photo'}. Upload it again to change the look.</div>` : `<div class="tiny muted">The same looks as wrestler photos: a pixel version with the background cut out, or the real photo.</div>`}`;
   }
   // rules: the title itself
   const wiz = m.wiz != null, tr = titleTier(d), ev = titleEvery(d);
@@ -5634,7 +5754,7 @@ const bdTabView = () => { const on = modals.querySelector('.bd-tabs .on'); if (o
 const bdKeep = m => { (m.undo ||= []).push(JSON.parse(JSON.stringify(m.draft.belt))); if (m.undo.length > 40) m.undo.shift(); };
 function modalTitle(m) {
   const d = m.draft; d.belt = beltClean(d.belt, d); m.tab ||= 'shape';
-  const body = `<div class="bd-prev" aria-live="off">${titleBelt(d, 'bd-belt')}</div>
+  const body = `<div class="bd-prev" aria-live="off">${titleArt(d, 'bd-belt')}</div>${safePhoto(d.photo) && m.tab !== 'photo' && m.tab !== 'rules' ? '<div class="tiny muted" style="text-align:center;margin:-4px 0 8px">This title uses its photo. Remove it in the Photo tab to show the drawn belt.</div>' : ''}
     <div class="row bd-tools"><button class="chip ${m.tpl ? 'on' : ''}" data-act="bdTpl" data-id="open" aria-expanded="${!!m.tpl}">Templates</button><button class="chip" data-act="bdRand">🎲 Surprise me</button><button class="chip" data-act="bdUndo" ${m.undo?.length ? '' : 'disabled'}>↶ Undo</button></div>
     ${m.tpl ? `<div class="bd-grid bd-tpls">${BTPL.map(([n, x], i) => `<button class="bd-tile" data-act="bdTpl" data-id="${i}" aria-label="${esc(n)} template">${beltRender({ ...x, top: '', line: '' }, { cls: 'bd-mini', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') })}<span>${esc(n)}</span></button>`).join('')}</div>` : ''}
     <div class="bd-tabs" role="tablist" aria-label="Belt parts">${BD_TABS.map(([k, l]) => `<button role="tab" class="${m.tab === k ? 'on' : ''}" aria-selected="${m.tab === k}" data-act="bdTab" data-id="${k}">${l}</button>`).join('')}</div>
@@ -6203,7 +6323,7 @@ const A = {
   saveTitle() {
     const m = UI.modal, d = m.draft; d.prestige = clamp(+d.prestige || 30, 1, 100); if (!d.tag) d.holder = d.holder.slice(0, 1);
     d.name = String(d.name || '').trim().slice(0, 50) || 'Championship'; d.short = String(d.short || '').trim().slice(0, 16) || abbr(d.name);
-    d.belt = beltClean(d.belt, d); d.tier = titleTier(d); d.cl = 1; d.every = titleEvery(d); d.dq = !!d.dq;
+    d.belt = beltClean(d.belt, d); d.photo = safePhoto(d.photo); if (!d.photo) delete d.photo; d.tier = titleTier(d); BPX = null; d.cl = 1; d.every = titleEvery(d); d.dq = !!d.dq;
     if (m.wiz != null) { const z = UI.wiz; if (!z) return closeModal(); d.division ||= 'Open'; if (m.wiz >= 0 && z.titles[m.wiz]) z.titles[m.wiz] = d; else z.titles.push(d); UI.modal = null; render(); return; }
     d.division = titleDiv(d); d.contenders = (d.contenders || []).filter(id => !d.holder.includes(id));
     const i = G.titles.findIndex(t => t.id === d.id);
@@ -6214,9 +6334,12 @@ const A = {
   delTitle() { const m = UI.modal, d = m.draft; if (m.wiz != null) { const z = UI.wiz; if (z && z.titles.length > 1) z.titles.splice(m.wiz, 1); UI.modal = null; return render(); } confirmBox('Retire ' + d.name + '?', 'The title will be removed.', 'Retire', () => { G.titles = G.titles.filter(t => t.id !== d.id); news(`🏆 The ${d.name} was retired.`, 'title'); commit(); }, true); },
   // the belt designer
   bdTab(v) { UI.modal.tab = v; UI.modal.tpl = false; render(); },
-  bdSet(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f; bdKeep(m); d.belt = beltClean({ ...d.belt, [f]: ['sides', 'ring', 'banner'].includes(f) ? +v : v }, d); render(); },
+  bdSet(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f; bdKeep(m); d.belt = beltClean({ ...d.belt, [f]: ['sides', 'ring', 'banner', 'orn'].includes(f) ? +v : v }, d); render(); },
   bdTpl(v) { const m = UI.modal; if (v === 'open') { m.tpl = !m.tpl; return render(); } bdKeep(m); m.draft.belt = beltFromTpl(+v, m.draft.belt); m.tpl = false; render(); },
   bdRand() { const m = UI.modal; bdKeep(m); m.draft.belt = beltSurprise(m.draft.belt); render(); },
+  bdPhoto() { const d = UI.modal.draft; pickBeltPhoto(src => { if (UI.modal?.draft !== d) return; BPX = { draft: d, src, ...BPX_DEF }; try { applyBPX(); } catch (e) { BPX.mode = 'photo'; applyBPX(); toast('Could not make a pixel version. Kept the photo.'); } if (!safePhoto(d.photo)) { d.photo = ''; toast('That photo is too big. Try a smaller one.'); } render(); }); },
+  bdPx(v, el) { const f = el.dataset.f; if (!BPX) return; BPX[f] = ['detail', 'colors', 'zoom'].includes(f) ? +v : v; applyBPX(); if (!safePhoto(UI.modal.draft.photo)) UI.modal.draft.photo = ''; render(); },
+  bdPhotoDel() { UI.modal.draft.photo = ''; BPX = null; render(); },
   bdUndo() { const m = UI.modal; if (m.undo?.length) { m.draft.belt = m.undo.pop(); render(); } },
   trTier(v) { const m = UI.modal, d = m.draft, L = TLEVELS.find(x => x[0] === v); if (!L) return; d.tier = v; d.cl = 1; d.prestige = m.isNew || m.wiz != null ? L[3] : clamp(+d.prestige || L[3], L[4], L[5]); render(); },
   trBrand(v) { const d = UI.modal.draft; d.brand = showById(v) ? v : ''; render(); },
@@ -8795,7 +8918,7 @@ function wizFinish() {
   if (z.titles?.length && !(z.world && z.take)) {
     const old = G.titles;
     G.titles = z.titles.slice(0, MAX_TITLES).map(x => ({ id: uid(), name: String(x.name || 'Championship').slice(0, 50), short: String(x.short || 'Title').slice(0, 16), tag: !!x.tag, tier: titleTier(x), cl: 1, ...(x.division && x.division !== 'Open' ? { division: x.division } : {}),
-      prestige: clamp(+x.prestige || 40, 1, 100), every: titleEvery(x), dq: !!x.dq, belt: beltClean(x.belt, x), holder: [], since: G.week, defenses: 0, lastDefense: G.week }));
+      prestige: clamp(+x.prestige || 40, 1, 100), every: titleEvery(x), dq: !!x.dq, belt: beltClean(x.belt, x), ...(safePhoto(x.photo) ? { photo: x.photo } : {}), holder: [], since: G.week, defenses: 0, lastDefense: G.week }));
     if (z.source === 'starter') { starterChamps(old, G.titles); const was = old[0]?.holder[0]; for (const st of G.stories) if (st.titleId) { const t = G.titles.find(t => !t.tag && t.holder.includes(was)); st.titleId = t?.id || null; if (!t) st.type = 'Feud'; } }
   }
   G.promo.day = z.day; G.promo.color = z.color; G.rivals = z.rivals || shuffle(RIVALS).slice(0, 2);
@@ -8969,7 +9092,7 @@ function viewWizard() {
     return `<div class="app wz">${wizSteps('titles')}
       <div class="wz-k">Step ${draft ? 5 : 4} · Championships</div><h2 class="wz-h">Create your titles</h2>
       <p class="muted small" style="margin-top:0">Name them, design the belts${draft ? ' and crown your first champions' : ''}. Start from these or build your own. Tap a belt to design it.</p>
-      <div class="list">${z.titles.map((t, k) => `<div class="card wz-title"><div class="row" style="gap:10px;align-items:center"><button class="wz-belt" data-act="wzTitle" data-id="${k}" aria-label="Design the ${esc(t.name)} belt">${titleBelt(t, 'belt-th')}</button>
+      <div class="list">${z.titles.map((t, k) => `<div class="card wz-title"><div class="row" style="gap:10px;align-items:center"><button class="wz-belt" data-act="wzTitle" data-id="${k}" aria-label="Design the ${esc(t.name)} belt">${titleArt(t, 'belt-th')}</button>
         <div class="sp" style="min-width:0"><b class="small">${esc(t.name)}</b><div class="tiny muted">${tierName(t)} · ${esc(t.division || 'Open')} · ${t.tag ? 'Tag team' : 'Singles'}${titleEvery(t) ? ` · every ${titleEvery(t)} wk` : ''}</div></div>
         <button class="btn sm" data-act="wzTitle" data-id="${k}">Design</button></div>
         ${draft ? `<label class="f" style="margin:8px 0 0"><span class="tiny">🏆 Champion${t.tag ? 's' : ''}</span>${t.tag ? `<div class="grid2">${sel(t, k, 0)}${sel(t, k, 1)}</div>` : sel(t, k, 0)}</label>` : ''}</div>`).join('')}</div>
@@ -9158,7 +9281,7 @@ document.addEventListener('input', e => {
   }
   if (el.dataset.es != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
   if (el.dataset.et != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.et] = el.value; }
-  if (el.dataset.bt != null && el.type !== 'checkbox' && UI.modal?.draft?.belt) { const d = UI.modal.draft; d.belt = beltClean({ ...d.belt, [el.dataset.bt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = titleBelt(d, 'bd-belt'); }
+  if (el.dataset.bt != null && el.type !== 'checkbox' && UI.modal?.draft?.belt) { const d = UI.modal.draft; d.belt = beltClean({ ...d.belt, [el.dataset.bt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = titleArt(d, 'bd-belt'); }
   if (el.dataset.tt === 'name' && UI.modal?.draft?.titles?.[+el.dataset.i]) UI.modal.draft.titles[+el.dataset.i].name = el.value;
 });
 document.addEventListener('change', e => {
@@ -9391,8 +9514,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9';
+const VERSION = '1.9.1';
 const WHATS_NEW = [
+  ['🏆 Better belts and belt photos', 'Every belt is redrawn in raised relief, with a bevelled rim, rivets, a curved top line and a ribbon nameplate, and text that always fits. Make any belt Ornate, try the new Oval plate, or upload a photo of a belt (pixel art or the real photo, like wrestler photos). Belts now show on title matches during the live show and on each champion\'s card.'],
   ['📚 Wrestler library', 'Keep Community wrestlers in your own library, no save needed. Tap 📚 on any wrestler or roster in Community, then add them to any save, now or later, from Community → Library or Roster tools.'],
   ['🏆 Design your championships', 'New companies get a Championships step: name your titles, crown champions and design every belt. The belt designer lets you pick the plate shape, metal and trim, strap colour and style, side plates, gems, the centre piece, engraving and lettering, or start from a template. Each title also has a level, a division and rules, like a defense deadline or the belt changing hands on a DQ. Edit any title in Office → Titles.'],
   ['🌍 A living world', 'Rival companies book their own shows, sign free agents, grow, shrink and can close, and new ones open. Edit any of them in Office → Rivals, build a whole world with Sandbox, and share worlds in Community.'],
