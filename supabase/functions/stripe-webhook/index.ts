@@ -1,4 +1,5 @@
 // BookIt Supporter: Stripe calls this after a checkout and whenever a subscription changes.
+// A one-time checkout (the $7.99 Supporter for life) records plan 'life', which never expires.
 // It records who is a supporter in public.supporters. Nothing else in the game can write that table.
 //
 // Secrets (Supabase → Edge Functions → Secrets, set them yourself and never share them):
@@ -45,6 +46,14 @@ Deno.serve(async req => {
         const sub = await stripe.subscriptions.retrieve(typeof s.subscription === 'string' ? s.subscription : s.subscription.id);
         const { error } = await db.from('supporters').upsert({ uid, ...row(sub) }, { onConflict: 'uid' });
         if (error && error.code !== '23503') throw error; // 23503: no such player, so there is nothing to retry
+      } else if (s.mode === 'payment' && s.payment_status === 'paid' && UUID.test(uid)) {
+        // Supporter for life: no subscription id, so later subscription events never touch this row
+        const { error } = await db.from('supporters').upsert({
+          uid, status: 'active', plan: 'life', period_end: '2999-12-31T00:00:00Z',
+          stripe_customer: String(typeof s.customer === 'string' ? s.customer : s.customer?.id ?? ''),
+          stripe_sub: '', updated: new Date().toISOString(),
+        }, { onConflict: 'uid' });
+        if (error && error.code !== '23503') throw error;
       }
     } else if (ev.type === 'customer.subscription.updated' || ev.type === 'customer.subscription.deleted') {
       const sub = ev.data.object as Stripe.Subscription;

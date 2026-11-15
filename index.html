@@ -5210,9 +5210,10 @@ ${displaySettings()}
 // ---- cloud saves (Supabase): one row per player in cloud1..cloud3, readable only by that player ----
 // ---- BookIt Supporter: an optional subscription through Stripe. The core game stays free. ----
 // Fill in the Payment Links from your Stripe dashboard. Leave them empty and the Supporter page says "opening soon".
-const SUP_LIVE = { month: 'https://buy.stripe.com/eVq7sN4BU7UZgB1gAGd3i00', year: 'https://buy.stripe.com/14A8wRb0i8Z33Of1FMd3i01' };
+// life: the one-time Supporter for life link. Once it is filled in, it replaces the monthly and yearly plans for new supporters.
+const SUP_LIVE = { month: 'https://buy.stripe.com/eVq7sN4BU7UZgB1gAGd3i00', year: 'https://buy.stripe.com/14A8wRb0i8Z33Of1FMd3i01', life: '' };
 // Stripe test-mode links show only when the game is opened with ?suptest (remembered for this tab), for trying a test card
-const SUP_TEST = { month: 'https://buy.stripe.com/test_9B65kEevJ9qj6cb4x92cg01', year: 'https://buy.stripe.com/test_cNi8wQgDRfOH1VV6Fh2cg02' };
+const SUP_TEST = { month: 'https://buy.stripe.com/test_9B65kEevJ9qj6cb4x92cg01', year: 'https://buy.stripe.com/test_cNi8wQgDRfOH1VV6Fh2cg02', life: '' };
 const supTesting = (() => { try { if (/[?&]suptest\b/.test(location.search)) sessionStorage.setItem('bookit.suptest', '1'); return sessionStorage.getItem('bookit.suptest') === '1'; } catch (e) { return false; } })();
 const SUP_LINKS = supTesting ? SUP_TEST : SUP_LIVE;
 // Google Play app (a Trusted Web Activity): it opens index.html?src=play, or arrives with an android-app:// referrer.
@@ -7621,20 +7622,21 @@ function modalCommunity(m) {
   return modal('🌐 Community', body);
 }
 // donations: a link out to the owner's tip page, plus free ways to help
-const SUP_PLANS = { month: { price: '$2.99', per: 'a month', note: 'Cancel any time' }, year: { price: '$24.99', per: 'a year', note: 'Save 30%' } };
+const SUP_PLANS = { month: { price: '$2.99', per: 'a month', note: 'Cancel any time' }, year: { price: '$24.99', per: 'a year', note: 'Save 30%' }, life: { price: '$7.99', per: 'once', note: 'Yours for good' } };
+const SUP_NAME = { month: 'Monthly', year: 'Yearly', life: 'For life' };
 function supporterHTML(m) {
   if (!sbOn()) return '';
   if (PLAY && !isSup()) return '';
-  const u = sbSess?.user, on = isSup(), plans = ['month', 'year'].filter(k => supUrl(SUP_LINKS[k], 'buy.stripe.com'));
+  const u = sbSess?.user, on = isSup(), plans = supUrl(SUP_LINKS.life, 'buy.stripe.com') ? ['life'] : ['month', 'year'].filter(k => supUrl(SUP_LINKS[k], 'buy.stripe.com')), life = SUP?.plan === 'life';
   const perks = (done) => `<div class="sup-perks">${SUP_PERKS.map(([ic, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${done ? '✓' : ic}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
   if (on) {
     const portal = supUrl(SUP_PORTAL, 'billing.stripe.com'), bad = SUP.status === 'past_due';
     return `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>You're a BookIt Supporter</h3><p>Thank you for keeping Community and cloud saves running.</p></div>
       <div class="card sup-status">
-        <div class="row" style="justify-content:space-between;gap:10px"><div><div class="tiny muted">Your plan</div><b>${PLAY ? 'Active' : SUP.plan === 'year' ? 'Yearly · $24.99' : 'Monthly · $2.99'}</b></div>
-        <div style="text-align:right"><div class="tiny muted">${bad ? 'Payment' : 'Renews'}</div><b>${bad ? 'Needs attention' : new Date(SUP.end).toLocaleDateString()}</b></div></div>
+        <div class="row" style="justify-content:space-between;gap:10px"><div><div class="tiny muted">Your plan</div><b>${PLAY ? 'Active' : life ? 'For life' : SUP.plan === 'year' ? 'Yearly · $24.99' : 'Monthly · $2.99'}</b></div>
+        <div style="text-align:right"><div class="tiny muted">${bad ? 'Payment' : life ? 'Expires' : 'Renews'}</div><b>${bad ? 'Needs attention' : life ? 'Never' : new Date(SUP.end).toLocaleDateString()}</b></div></div>
         ${bad ? '<div class="alert warn" style="margin-top:10px"><span class="ic">💳</span><div class="small">Your last payment didn\'t go through. Update your card to keep your perks.</div></div>' : ''}
-        ${portal && !PLAY ? `<button class="btn block" style="margin-top:12px" data-act="supManage">${bad ? 'Update card' : 'Manage or cancel'}</button>` : ''}
+        ${portal && !PLAY && !life ? `<button class="btn block" style="margin-top:12px" data-act="supManage">${bad ? 'Update card' : 'Manage or cancel'}</button>` : ''}
       </div>
       <div class="sec">Your perks</div>${perks(true)}`;
   }
@@ -7643,7 +7645,7 @@ function supporterHTML(m) {
   if (!plans.length) return h + `<div class="hs-off" style="margin-top:12px"><div class="small">Supporter opens soon. Check back shortly.</div></div>`;
   const pick = plans.includes(m.plan) ? m.plan : plans.includes('year') ? 'year' : plans[0];
   h += `<div class="sec">Choose a plan</div><div class="sup-plans" role="radiogroup" aria-label="Plan">${plans.map(k => { const p = SUP_PLANS[k];
-    return `<button class="sup-plan ${pick === k ? 'on' : ''}" role="radio" aria-checked="${pick === k}" data-act="supPlan" data-id="${k}">${k === 'year' ? '<span class="sup-best">Best value</span>' : ''}<span class="sup-pn">${k === 'year' ? 'Yearly' : 'Monthly'}</span><span class="sup-pp">${p.price}</span><span class="sup-pper">${p.per}</span><span class="sup-pnote">${p.note}</span></button>`; }).join('')}</div>`;
+    return `<button class="sup-plan ${pick === k ? 'on' : ''}" role="radio" aria-checked="${pick === k}" data-act="supPlan" data-id="${k}">${k === 'year' ? '<span class="sup-best">Best value</span>' : ''}<span class="sup-pn">${SUP_NAME[k]}</span><span class="sup-pp">${p.price}</span><span class="sup-pper">${p.per}</span><span class="sup-pnote">${p.note}</span></button>`; }).join('')}</div>`;
   if (!u?.email) {
     h += `<div class="card sup-step"><div class="sup-sn">Step 1 of 2</div><b>Add your email</b>
       <div class="small muted" style="margin:4px 0 8px">So your perks follow you to any phone or computer. We'll email you a link. Tap it and you'll come right back here to finish.</div>
@@ -7651,10 +7653,10 @@ function supporterHTML(m) {
       <button class="btn pri block" style="margin-top:8px" data-act="supEmail">Email me a sign-in link</button></div>
       <button class="btn block" disabled>Step 2: Checkout</button>`;
   } else {
-    h += `<button class="btn pri block sup-cta" data-act="supJoin" data-id="${pick}">Continue · ${SUP_PLANS[pick].price} ${SUP_PLANS[pick].per}</button>
+    h += `<button class="btn pri block sup-cta" data-act="supJoin" data-id="${pick}">Continue · ${SUP_PLANS[pick].price} ${pick === 'life' ? 'one time' : SUP_PLANS[pick].per}</button>
       <div class="tiny muted" style="text-align:center;margin-top:6px">Signed in as ${esc(u.email)}</div>`;
   }
-  return h + `<div class="tiny muted" style="text-align:center;margin-top:8px">🔒 Secure checkout by Stripe. Cancel any time. Your card never touches the game.</div>`;
+  return h + `<div class="tiny muted" style="text-align:center;margin-top:8px">🔒 Secure checkout by Stripe. ${pick === 'life' ? 'One payment, no renewals.' : 'Cancel any time.'} Your card never touches the game.</div>`;
 }
 function modalSupport(m) {
   setTimeout(commInit);
