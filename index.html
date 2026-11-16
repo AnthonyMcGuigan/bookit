@@ -7881,23 +7881,25 @@ const packWs = i => i._ws || (i._ws = cleanPack(pixPack(i))?.wrestlers || []);
 // ---- roster photos: a big roster's photos sit in their own gzipped row (pix1..pix10/<player id>), so they don't
 // fill the player's Community space, and Community only downloads them when someone opens that roster ----
 const PIX_SLOTS = 10, pixSlots = () => isSup() ? PIX_SLOTS : 3, pixMax = () => isSup() ? 790000 : 395000, PIX_INLINE = 40000;
-const PIX = new Map(), PIX_LOAD = new Map(), pixKey = i => i.author + '|' + i.id;
+const PIX = new Map(), PIX_LOAD = new Map(), PIX_FAIL = new Set(), pixKey = i => i.author + '|' + i.id;
 const pixWaiting = i => !!i?.px && !PIX.has(pixKey(i));
 function pixPack(i) {
   const a = i.px && PIX.get(pixKey(i)); if (!a || !Array.isArray(i.pack?.wrestlers)) return i.pack;
   return { ...i.pack, wrestlers: i.pack.wrestlers.map((w, k) => w && typeof w === 'object' && !w.photo && a[k] ? { ...w, photo: a[k] } : w) };
 }
-function pixLoad(i) {
+function pixLoad(i, retry) {
   if (!pixWaiting(i) || !cdb) return Promise.resolve();
-  const k = pixKey(i);
+  const k = pixKey(i); if (PIX_FAIL.has(k) && !retry) return Promise.resolve();
   if (!PIX_LOAD.has(k)) PIX_LOAD.set(k, (async () => {
     let a = null;
     try {
-      const d = (await cdb.doc('pix' + i.px + '/' + i.author).get()).data();
+      // photo rows are public, so read them with the public key alone: a stale sign-in can't block them
+      const d = sbOn() ? (r => Array.isArray(r) && r[0] ? r[0].data : null)(await sbFetch(`/rest/v1/docs?select=data&col=eq.pix${i.px}&id=eq.${sbQ(i.author)}`, {}, false)) : (await cdb.doc('pix' + i.px + '/' + i.author).get()).data();
       if (d && d.item === i.id && typeof d.z === 'string' && d.z.length < 1000000) { const x = JSON.parse(await ungz(d.z)); if (Array.isArray(x)) a = x.slice(0, 300).map(pixGrow); }
     } catch (e) {}
-    PIX_LOAD.delete(k); if (!a) return; // a failed load is tried again next time the roster opens
-    PIX.set(k, a); for (const x of COMM.items) if (pixKey(x) === k) x._ws = null;
+    PIX_LOAD.delete(k);
+    if (!a) { PIX_FAIL.add(k); if (UI.modal?.type === 'cview') render(); return; } // shows a Try again button
+    PIX_FAIL.delete(k); PIX.set(k, a); for (const x of COMM.items) if (pixKey(x) === k) x._ws = null;
     if (UI.modal?.type === 'cview') render();
   })());
   return PIX_LOAD.get(k);
@@ -8300,8 +8302,9 @@ function libFoot(m) {
   return `<button class="btn pri" data-act="libUse" ${n ? '' : 'disabled'}>${n ? `⬇ Add ${n} to ${esc(G.promo.name)}` : 'Pick wrestlers to add'}</button>`;
 }
 const LIB_ACTIONS = {
+  pixRetry(key) { const { i } = cItem(key); if (!i) return; PIX_FAIL.delete(pixKey(i)); render(); pixLoad(i, true); },
   async libAdd(key) {
-    const { i } = cItem(key); if (pixWaiting(i)) { toast('Getting the photos…'); await pixLoad(i); }
+    const { i } = cItem(key); if (pixWaiting(i)) { toast('Getting the photos…'); await pixLoad(i, true); }
     const r = libAdd(key); if (r.err) return toast(r.err);
     toast(r.added ? `📚 ${r.added === 1 ? 'Saved' : r.added + ' saved'} to your library. Add them to any save from Community → Library.` : 'Already in your library. Updated to the latest version.');
     render();
@@ -8526,7 +8529,7 @@ function modalCView(m) {
   }
   const body = `${cvHead(i, m.key, kindLbl({ ...i, count: p.wrestlers.length }))}
     ${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
-    ${pixWaiting(i) ? '<div class="tiny muted" style="margin-bottom:6px" role="status">Loading photos…</div>' : ''}
+    ${pixWaiting(i) ? (PIX_FAIL.has(pixKey(i)) ? `<div class="row small" style="margin-bottom:6px;gap:8px" role="status"><span class="sp muted">The photos didn't load.</span><button class="btn sm" data-act="pixRetry" data-id="${esc(m.key)}">Try again</button></div>` : '<div class="tiny muted" style="margin-bottom:6px" role="status">Loading photos…</div>') : ''}
     ${p.titles?.length ? `<div class="tiny muted" style="margin-bottom:6px">Includes ${p.titles.length} championships: ${p.titles.map(t => esc(t.short)).join(', ')}</div>` : ''}
     ${p.wrestlers.length > 1 ? `<div class="alert" style="margin-bottom:8px"><span class="ic">📚</span><div class="small sp">Keep any of them in your library to use in every save, no save needed.</div></div>` : ''}
     <div class="list">${p.wrestlers.map((w, k) => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : '', w.ring != null ? 'Ring ' + w.ring : '', w.finisher ? 'Finisher: ' + w.finisher : ''].filter(Boolean).join(' · '))}</div></div>${p.wrestlers.length > 1 ? (inLib(m.key + '|' + k) ? `<span class="tag" aria-label="In your library">✓ 📚</span>` : `<button class="btn sm" data-act="libAdd" data-id="${esc(m.key + '|' + k)}" aria-label="Save ${esc(w.name)} to your library">📚 +</button>`) : ''}</div>`).join('')}</div>`;
@@ -8746,7 +8749,7 @@ const CREATOR_ACTIONS = {
   privBack() { UI.modal = UI.modal.back || null; render(); },
   needNew() { UI.pendingGet = UI.modal?.key || null; UI.modal = null; A.wzStart(); },
   needLoad(n) { UI.pendingGet = UI.modal?.key || null; A.loadSlot(n); },
-  async cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const { i, base, n } = cItem(key); if (pixWaiting(i)) { toast('Getting the photos…'); await pixLoad(i); } let p = i && cleanPack(pixPack(i)); if (!p) return toast('This creation is damaged.'); if (n != null) { const w = packWs(i)[n]; if (!w) return toast('This wrestler was removed.'); p = { kind: 'wrestler', title: w.name, promo: p.promo, wrestlers: [w], titles: null }; } markUsed(base); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: n != null ? p.title : i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
+  async cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const { i, base, n } = cItem(key); if (pixWaiting(i)) { toast('Getting the photos…'); await pixLoad(i, true); } let p = i && cleanPack(pixPack(i)); if (!p) return toast('This creation is damaged.'); if (n != null) { const w = packWs(i)[n]; if (!w) return toast('This wrestler was removed.'); p = { kind: 'wrestler', title: w.name, promo: p.promo, wrestlers: [w], titles: null }; } markUsed(base); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: n != null ? p.title : i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
   async cPublish() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
     m.what = m.what || 'roster'; // the Share tab shows Whole roster selected before anything is tapped
@@ -10394,7 +10397,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.21';
+const VERSION = '1.9.22';
 const WHATS_NEW = [
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
   ['👥 Teams in the Office', 'Office → Teams is the new home for tag teams and factions. Start a team or faction, see their records, chemistry and titles, then edit, split up or disband them in one tap. A faction\'s leader is now picked from its own members.'],
