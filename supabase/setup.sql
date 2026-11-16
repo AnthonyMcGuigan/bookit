@@ -183,3 +183,126 @@ begin
   return new;
 end $$;
 revoke all on function public.docs_rowsize() from public, anon, authenticated;
+
+-- Play stats (added in v1.9.22, safe to run again). Anonymous: each device makes up a random id that is never
+-- linked to a Community account, an email or an IP address. The game sends small batches through log_play(),
+-- and only the owner can read them, through play_stats() (Community → Inbox → Stats) or the views below.
+create table if not exists public.play_devices (
+  dev text primary key check (dev ~ '^[a-z0-9]{16,40}$'),
+  first_at timestamptz not null default now(),
+  last_at timestamptz not null default now(),
+  plat text not null default 'web',
+  v text not null default '',
+  sessions int not null default 0,
+  shows int not null default 0
+);
+create table if not exists public.play_events (
+  id bigint generated always as identity primary key,
+  at timestamptz not null default now(),
+  dev text not null,
+  sid text not null default '',
+  ev text not null check (ev in ('open', 'time', 'show', 'new_game', 'feature', 'tutorial', 'crash')),
+  x text not null default '' check (length(x) <= 40),
+  n int not null default 0,
+  v text not null default '' check (length(v) <= 12),
+  plat text not null default 'web' check (plat in ('web', 'app', 'play'))
+);
+create index if not exists play_events_at on public.play_events (at);
+create index if not exists play_events_dev_at on public.play_events (dev, at);
+alter table public.play_devices enable row level security;
+alter table public.play_events enable row level security;
+-- no policies and no grants: players can't read or write these tables directly, only through the functions below
+revoke all on public.play_devices, public.play_events from anon, authenticated;
+
+-- p = {"d": device id, "s": session id, "v": version, "p": "web" | "app" | "play", "e": [[event, detail, number], ...]}
+create or replace function public.log_play(p jsonb) returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  d text := p->>'d'; s text := left(coalesce(p->>'s', ''), 24); ver text := left(coalesce(p->>'v', ''), 12);
+  pl text := case when p->>'p' in ('web', 'app', 'play') then p->>'p' else 'web' end;
+  e jsonb; ev text; nn int; opens int := 0; shows int := 0;
+begin
+  if d is null or d !~ '^[a-z0-9]{16,40}$' or jsonb_typeof(p->'e') <> 'array' then return; end if;
+  -- keep the free plan safe: nothing new past 400 MB, at most 300 events per device an hour and 3000 a minute overall
+  if pg_database_size(current_database()) > 400 * 1024 * 1024 then return; end if;
+  if (select count(*) from public.play_events where dev = d and at > now() - interval '1 hour') > 300 then return; end if;
+  if (select count(*) from public.play_events where at > now() - interval '1 minute') > 3000 then return; end if;
+  for e in select value from jsonb_array_elements(p->'e') limit 40 loop
+    ev := e->>0;
+    continue when ev is null or ev not in ('open', 'time', 'show', 'new_game', 'feature', 'tutorial', 'crash');
+    nn := case when jsonb_typeof(e->2) = 'number' then least(greatest((e->>2)::numeric, -1000000), 1000000)::int else 0 end;
+    if ev = 'time' then nn := least(greatest(nn, 0), 3600); end if;
+    insert into public.play_events (dev, sid, ev, x, n, v, plat)
+      values (d, s, ev, left(regexp_replace(coalesce(e->>1, ''), '[^A-Za-z0-9:_.-]', '', 'g'), 40), nn, ver, pl);
+    if ev = 'open' then opens := opens + 1; elsif ev = 'show' then shows := shows + 1; end if;
+  end loop;
+  insert into public.play_devices as t (dev, plat, v, sessions, shows) values (d, pl, ver, opens, shows)
+    on conflict (dev) do update set last_at = now(), plat = excluded.plat, v = case when excluded.v <> '' then excluded.v else t.v end,
+      sessions = t.sessions + excluded.sessions, shows = t.shows + excluded.shows;
+  -- now and then, drop events older than 400 days (the device list keeps first and last seen)
+  if random() < 0.01 then delete from public.play_events where at < now() - interval '400 days'; end if;
+end $$;
+revoke all on function public.log_play(jsonb) from public;
+grant execute on function public.log_play(jsonb) to anon, authenticated;
+
+-- The owner's dashboard: everything as one JSON answer, with days counted in the owner's time zone.
+create or replace function public.play_stats(days int default 30, tz text default 'UTC') returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare r jsonb; since timestamptz; z text := tz;
+begin
+  if not public.is_admin() then raise exception 'not allowed' using errcode = '42501'; end if;
+  if not exists (select 1 from pg_catalog.pg_timezone_names where name = z) then z := 'UTC'; end if;
+  days := least(greatest(coalesce(days, 30), 1), 365);
+  since := ((now() at time zone z)::date - (days - 1)) at time zone z;
+  with ev as (select e.*, (e.at at time zone z)::date as day from public.play_events e where e.at >= since),
+  dv as (select d.*, (d.first_at at time zone z)::date as fday from public.play_devices d),
+  today as (select (now() at time zone z)::date as t),
+  cal as (select generate_series((select t from today) - (days - 1), (select t from today), interval '1 day')::date as day),
+  daily as (
+    select c.day,
+      count(distinct ev.dev) as players,
+      count(distinct ev.dev) filter (where dv.fday = c.day) as new,
+      count(distinct ev.sid) filter (where ev.ev = 'open') as sessions,
+      count(*) filter (where ev.ev = 'show') as shows,
+      coalesce(sum(ev.n) filter (where ev.ev = 'time'), 0) as secs
+    from cal c left join ev on ev.day = c.day left join dv on dv.dev = ev.dev
+    group by c.day order by c.day)
+  select jsonb_build_object(
+    'tz', z, 'days', days,
+    'all_players', (select count(*) from dv),
+    'today', (select count(distinct dev) from ev where day = (select t from today)),
+    'active7', (select count(distinct dev) from ev where day > (select t from today) - 7),
+    'active30', (select count(distinct dev) from ev where day > (select t from today) - 30),
+    'new7', (select count(*) from dv where fday > (select t from today) - 7),
+    'shows_all', (select coalesce(sum(shows), 0) from dv),
+    'daily', (select coalesce(jsonb_agg(jsonb_build_object('d', day, 'p', players, 'n', new, 's', sessions, 'sh', shows, 'm', round(secs / 60.0))), '[]') from daily),
+    'plat', (select coalesce(jsonb_object_agg(plat, c), '{}') from (select plat, count(distinct dev) c from ev group by plat) x),
+    'ver', (select coalesce(jsonb_agg(jsonb_build_array(v, c) order by c desc), '[]') from (select v, count(distinct dev) c from ev where v <> '' group by v order by c desc limit 8) x),
+    'feat', (select coalesce(jsonb_agg(jsonb_build_array(x, p, u) order by p desc, u desc), '[]') from (select x, count(distinct dev) p, sum(greatest(n, 1)) u from ev where ev = 'feature' and x <> '' group by x order by p desc, u desc limit 40) f),
+    'kinds', (select coalesce(jsonb_object_agg(k, c), '{}') from (select ev || ':' || x as k, count(*) c from ev where ev in ('show', 'new_game', 'tutorial') group by 1) x),
+    'crashes', (select count(*) from ev where ev.ev = 'crash'),
+    -- of the players who started 2 to 60 days ago, how many came back on a later day, after a day, and after a week
+    'ret', (select jsonb_build_object('cohort', count(*),
+        'd1', count(*) filter (where exists (select 1 from public.play_events e where e.dev = c.dev and (e.at at time zone z)::date = c.fday + 1)),
+        'later', count(*) filter (where exists (select 1 from public.play_events e where e.dev = c.dev and (e.at at time zone z)::date > c.fday)),
+        'd7', count(*) filter (where c.fday <= (select t from today) - 8 and exists (select 1 from public.play_events e where e.dev = c.dev and (e.at at time zone z)::date >= c.fday + 7)),
+        'cohort7', count(*) filter (where c.fday <= (select t from today) - 8))
+      from dv c where c.fday between (select t from today) - 60 and (select t from today) - 2)
+  ) into r;
+  return r;
+end $$;
+revoke all on function public.play_stats(int, text) from public;
+grant execute on function public.play_stats(int, text) to authenticated;
+
+-- For the SQL Editor: select * from play_daily;  (owner only, players can't read these)
+create or replace view public.play_daily with (security_invoker = true) as
+  select (e.at at time zone 'UTC')::date as day, count(distinct e.dev) as players,
+    count(distinct e.sid) filter (where e.ev = 'open') as sessions, count(*) filter (where e.ev = 'show') as shows,
+    round(coalesce(sum(e.n) filter (where e.ev = 'time'), 0) / 60.0) as minutes
+  from public.play_events e group by 1 order by 1 desc;
+create or replace view public.play_features with (security_invoker = true) as
+  select x as feature, count(distinct dev) as players, sum(greatest(n, 1)) as uses
+  from public.play_events where ev = 'feature' and at > now() - interval '30 days' group by 1 order by 2 desc, 3 desc;
+revoke all on public.play_daily, public.play_features from anon, authenticated;
