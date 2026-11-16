@@ -917,6 +917,15 @@ html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw
 .seg-ctl.tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-ctl.quad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .seg-ctl.quad.tri { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg-ctl.office-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.seg-ctl.office-tabs button { font-size: 11.5px; padding: 6px 1px; }
+.grp-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+.grp-main { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 10px 12px 6px; background: none; border: 0; color: inherit; font: inherit; }
+.grp-main .main { flex: 1; min-width: 0; } .grp-main .t { font-weight: 800; } .grp-main .d { font-size: 13px; color: var(--dim); margin-top: 2px; }
+.grp-avs { display: flex; flex: none; padding-top: 2px; } .grp-avs > * { margin-left: -8px; } .grp-avs > *:first-child { margin-left: 0; }
+.grp-more { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--card2); margin-left: -8px; }
+.grp-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.grp-acts { display: flex; gap: 8px; justify-content: flex-end; padding: 0 12px 10px; }
 .brand-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .brand-col { padding: 10px; margin: 0; min-width: 0; }
 .brand-n { font-family: var(--f-display); font-size: 17px; text-transform: uppercase; line-height: 1.1; overflow-wrap: anywhere; }
@@ -1975,6 +1984,32 @@ function brandDraft() {
 }
 // ---------- Office → Brands: the split at a glance, wrestlers on both brands, brand titles and the draft ----------
 const showNight = x => DAYS[+(x.id === G.showId ? G.promo.day : x.day) || 0];
+// Office → Teams: build, edit, split up and disband tag teams and factions
+const teamChem = t => Math.round(3 + Math.min(4, (t.w || 0) / 4) + Math.min(2, (t.bond || 0) / 5));
+const grpTitles = g => G.titles.filter(ti => ti.holder.length >= 2 && ti.holder.every(id => g.members.includes(id)));
+function grpAvs(g, lead) { const ms = g.members.slice().sort((a, b) => (b === lead) - (a === lead)); return `<div class="grp-avs">${ms.slice(0, 5).map(id => W(id) ? av(W(id), 34, true) : '').join('')}${ms.length > 5 ? `<span class="grp-more">+${ms.length - 5}</span>` : ''}</div>`; }
+function grpWarn(g) { const gone = g.members.filter(id => !W(id)?.contract).length, hurt = g.members.filter(id => W(id)?.contract && W(id).injury > 0).length;
+  return [gone ? `<span class="tag" style="color:var(--bad)">${gone === g.members.length ? 'All gone' : gone + ' gone'}</span>` : '', hurt ? `<span class="tag" style="color:var(--warn)">${hurt} injured</span>` : ''].join(''); }
+function teamsView() {
+  const ts = (G.teams || []).slice().sort((a, b) => liveMembers(b).length - liveMembers(a).length || (b.w || 0) - (a.w || 0)), fs = (G.factions || []).slice().sort((a, b) => b.members.length - a.members.length);
+  const tCard = t => { const fc = (G.factions || []).find(f => f.tms.includes(t.id)), c = teamChem(t);
+    return `<div class="grp-card"><button class="grp-main" data-act="editTeam" data-id="${t.id}" aria-label="Edit ${esc(t.name)}">${grpAvs(t)}<div class="main"><div class="t">${esc(t.name)}</div>
+      <div class="d">${t.members.map(id => esc(nameOf(id))).join(' & ') || 'No members'}</div>
+      <div class="grp-tags"><span class="tag">${teamRec(t)}</span><span class="tag" title="Bonus when they team up">Chemistry +${c}</span>${grpTitles(t).map(ti => `<span class="tag gold">🏆 ${esc(ti.short || ti.name)}</span>`).join('')}${fc ? `<span class="tag">👑 ${esc(fc.name)}</span>` : ''}${grpWarn(t)}</div></div></button>
+      <div class="grp-acts"><button class="btn sm" data-act="editTeam" data-id="${t.id}">Edit</button><button class="btn sm bad" data-act="splitTeam" data-id="${t.id}">Split up</button></div></div>`; };
+  const fCard = f => { const tms = f.tms.map(TM).filter(Boolean), solo = f.members.filter(id => !tms.some(t => t.members.includes(id)));
+    return `<div class="grp-card"><button class="grp-main" data-act="editFaction" data-id="${f.id}" aria-label="Edit ${esc(f.name)}">${grpAvs(f, f.leader)}<div class="main"><div class="t">${esc(f.name)} <span class="tiny muted">${f.members.length}/8</span></div>
+      <div class="d">${f.leader ? `Led by <b>${esc(nameOf(f.leader))}</b>` : 'No leader'}${[...tms.map(t => ' · 👥 ' + esc(t.name)), ...solo.filter(id => id !== f.leader).map(id => ' · ' + esc(nameOf(id)))].join('')}</div>
+      <div class="grp-tags"><span class="tag">${teamRec(f)}</span>${grpTitles(f).map(ti => `<span class="tag gold">🏆 ${esc(ti.short || ti.name)}</span>`).join('')}${grpWarn(f)}</div></div></button>
+      <div class="grp-acts"><button class="btn sm" data-act="editFaction" data-id="${f.id}">Edit</button><button class="btn sm bad" data-act="disbandFaction" data-id="${f.id}">Disband</button></div></div>`; };
+  return `<div class="grid2" style="margin-bottom:10px"><button class="btn pri" data-act="editTeam" data-id="">＋ New tag team</button><button class="btn pri" data-act="editFaction" data-id="">＋ New faction</button></div>
+    <div class="small muted" style="margin-bottom:4px">Teams that stay together get better: their chemistry bonus grows with every win. Factions are bigger groups of up to 8 that can hold whole tag teams.</div>
+    <div class="sec">Tag teams <span class="tiny muted">${ts.length}</span></div>
+    ${ts.map(tCard).join('') || '<div class="empty">No tag teams yet. Pair up 2 to 4 wrestlers to start one.</div>'}
+    <div class="sec">Factions <span class="tiny muted">${fs.length}</span></div>
+    ${fs.map(fCard).join('') || '<div class="empty">No factions yet. Group up to 8 wrestlers, or whole tag teams, under one name.</div>'}`;
+}
+
 function brandsView() {
   const sh = SHOWS();
   if (sh.length < 2) return `<div class="small muted" style="margin-bottom:10px">Brands let you split your roster between weekly shows, each with its own stars and champions. Big events still use everyone, and money stays in one company account.</div>
@@ -5249,6 +5284,7 @@ function viewRoster() {
   if (f === 'face' || f === 'heel') list = list.filter(w => w.align === f);
   if (f === 'injured') list = list.filter(w => w.injury > 0);
   if (f === 'champs') list = list.filter(w => titlesOf(w.id).length);
+  if (f === 'teams') list = list.filter(w => teamFor(w) || factionsOfW(w.id).length);
   if (f === 'unhappy') list = list.filter(w => w.morale < 45);
   if (String(f).startsWith('b:')) list = list.filter(w => f === 'b:*' ? w.both : inBrand(w, f.slice(2)));
   if (q) list = list.filter(w => (w.name + ' ' + w.nick + ' ' + w.style).toLowerCase().includes(q));
@@ -5258,18 +5294,12 @@ function viewRoster() {
   list.sort((a, b) => rd * (s === 'wins' ? b.record.w - a.record.w : s === 'winpct' ? winPct(b) - winPct(a) : s === 'streak' ? (b.streak || 0) - (a.streak || 0) : s === 'name' ? a.name.localeCompare(b.name) : s === 'contract' ? a.contract.weeks - b.contract.weeks : s === 'morale' ? a.morale - b.morale : s === 'fatigue' ? b.fatigue - a.fatigue : b[s] - a[s]));
   const divs = DIVISIONS.filter(d => signed().some(w => (w.division || 'Open') === d));
   const filt = `<div class="filters">${[['all', 'All'], ['teams', 'Teams & factions'], ['face', 'Faces'], ['heel', 'Heels'], ['champs', 'Champions'], ['injured', 'Injured'], ['unhappy', 'Unhappy'], ...(splitOn() ? SHOWS().map(x => ['b:' + x.id, brandName(x.id)]) : []), ...(divs.length > 1 ? divs.map(d => [d, d]) : [])].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="rosterF" data-id="${k}">${l}</button>`).join('')}</div>`;
-  if (f === 'teams') return `<div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>${filt}
-    <div class="small muted" style="margin-bottom:8px">Teams that stay together get better. They earn a chemistry bonus that grows with every win.</div>
-    <div class="list">${(G.teams || []).map(t => { const gone = t.members.filter(id => !W(id)?.contract).length; return `<button class="item" data-act="editTeam" data-id="${t.id}"><div class="av" style="width:40px;height:40px;font-size:12px;background:var(--card2)">👥</div><div class="main"><div class="t">${esc(t.name)}</div><div class="d">${t.members.map(id => esc(nameOf(id))).join(' & ') || 'No members'} · <b>${teamRec(t)}</b>${gone ? ` · <span style="color:var(--bad)">${gone === t.members.length ? 'all gone' : gone + ' gone'}</span>` : ''}</div></div></button>`; }).join('') || '<div class="empty">No teams yet. Pair up two or more wrestlers.</div>'}</div>
-    <div class="grid2" style="margin-top:12px"><button class="btn pri" data-act="editTeam" data-id="">+ New team</button><button class="btn pri" data-act="editFaction" data-id="">+ New faction</button></div>
-    <div class="sec">Factions</div>
-    <div class="small muted" style="margin-bottom:8px">Bigger groups of up to 8. A faction can hold whole tag teams, and any 2 or more members on the same side fight as the faction.</div>
-    <div class="list">${(G.factions || []).map(f => { const ts = f.tms.map(TM).filter(Boolean), solo = f.members.filter(id => !ts.some(t => t.members.includes(id))); return `<button class="item" data-act="editFaction" data-id="${f.id}"><div class="av" style="width:40px;height:40px;font-size:12px;background:var(--card2);color:var(--accent-t)">👑</div><div class="main"><div class="t">${esc(f.name)} <span class="tiny muted">${f.members.length} members</span></div><div class="d">${[...ts.map(t => '<b>' + esc(t.name) + '</b>'), ...solo.map(id => esc(nameOf(id)) + (id === f.leader ? ' (leader)' : ''))].join(' · ') || 'No members'} · ${teamRec(f)}</div></div></button>`; }).join('') || '<div class="empty">No factions yet.</div>'}</div>`;
   return `
   <div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>
   <div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search roster" aria-label="Search roster" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1">
     <select data-in="rosterSort" style="width:auto;max-width:42%" aria-label="Sort roster by">${[['pop', 'Popularity'], ['ring', 'In-ring'], ['mic', 'Mic'], ['morale', 'Morale (low first)'], ['fatigue', 'Fatigue'], ...(CON() ? [['contract', 'Contract (ending first)']] : []), ['wins', 'Wins'], ['winpct', 'Win %'], ['streak', 'Win streak'], ['name', 'Name']].map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${revBtn('roster', 'roster')}</div>
   ${filt}
+  ${f === 'teams' ? `<button class="item" style="margin-bottom:10px" data-act="goTeams"><div class="av" style="width:36px;height:36px;font-size:15px;background:var(--card2)">👥</div><div class="main"><div class="t">Build and edit teams</div><div class="d">Tag teams and factions now live in Office → Teams</div></div></button>` : ''}
   <div class="small muted" style="margin-bottom:8px">${list.length} of ${signed().length} signed${CON() && MON() ? ` · payroll ${money(sum(signed().map(w => w.contract.salary)))}/wk` : ''}</div>
   <div class="list">${list.map(w => wItem(w)).join('') || (signed().length ? '<div class="empty">Nobody matches.</div>' : `<div class="empty">Your roster is empty. Build, import or grab one from Community.${lib().length ? `<br><button class="btn" style="margin-top:8px" data-act="library">📚 Add from my library (${lib().length})</button>` : ''}</div>`)}</div>`;
 }
@@ -5392,9 +5422,10 @@ function viewOffice() {
   const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop);
   return `
-  <div class="seg-ctl quad wrap tri" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
   ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'brands' ? brandsView() : ''}
+  ${t === 'teams' ? teamsView() : ''}
   ${t === 'setup' ? setupView() : ''}
   ${t === 'media' ? mediaView() : ''}
   ${t === 'staff' ? staffView() : ''}
@@ -5766,7 +5797,7 @@ function helpHTML() {
   <h3>Rival promotions</h3>
   <p>Office → <b>Rivals</b>. Rivals run weekly shows, sign free agents and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away.</p>
   <h3>Teams and tournaments</h3>
-  <p>Roster → <b>Teams &amp; factions</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
+  <p>Office → <b>Teams</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
   <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Bring a legend back from Office → Titles → History &amp; awards. Aging can be switched off in Settings.</p>
   <h3>Changed your mind?</h3>
@@ -6204,7 +6235,7 @@ function modalEditFaction(m) {
   const body = `<label class="f"><span>Faction name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="40" placeholder="e.g. The Black Hand"></label>
     ${ts.length ? `<div class="side"><div class="lbl">Tag teams in it</div><div class="filters" style="margin:0">${ts.map(t => `<button class="${d.tms.includes(t.id) ? 'on' : ''}" data-act="fTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">Adding a team adds its members.</div></div>` : ''}
     <div class="side"><div class="lbl">Members (2 to 8)</div>${chipsFor(d.members, 'members', 8)}</div>
-    <div class="side"><div class="lbl">Leader (optional)</div>${chipsFor(d.leader ? [d.leader] : [], 'leader', 1)}</div>
+    <div class="side"><div class="lbl">Leader (optional)</div>${d.members.length ? `<div class="filters" style="margin:0;flex-wrap:wrap;overflow:visible" role="group" aria-label="Pick a leader">${d.members.map(id => `<button class="${d.leader === id ? 'on' : ''}" aria-pressed="${d.leader === id}" data-act="fLeader" data-id="${id}">${d.leader === id ? '👑 ' : ''}${esc(nameOf(id))}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">Pick one of the members. Tap again to clear.</div>` : '<div class="tiny muted">Add members first, then pick the leader from them.</div>'}</div>
     ${m.isNew ? '' : `<div class="small" style="margin-bottom:8px">Record together: <b>${teamRec(d)}</b></div>`}
     <div class="tiny muted">Any 2 or more members on the same side fight as ${esc(d.name || 'the faction')}: a chemistry bonus that grows with wins, a faction record, and the faction name in results. Faction vs faction matches get a bonus. Six-person tags pick them in one tap.</div>`;
   return modal(m.isNew ? 'New faction' : esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="delFaction">Disband</button>'}<button class="btn pri" data-act="saveFaction">Save</button>`);
@@ -6926,6 +6957,10 @@ const A = {
     if (d.tms.includes(id)) { d.tms = d.tms.filter(x => x !== id); d.members = d.members.filter(x => !t.members.includes(x) || d.tms.some(o => TM(o)?.members.includes(x))); }
     else { const add = t.members.filter(x => !d.members.includes(x)); if (d.members.length + add.length > 8) return toast('A faction can have up to 8 members.'); d.tms.push(id); d.members.push(...add); }
     render(); },
+  splitTeam(id) { const t = TM(id); if (!t) return; confirmBox('Split up ' + t.name + '?', 'The team and its record are removed. The wrestlers stay.', 'Split up', () => { G.teams = G.teams.filter(x => x.id !== id); for (const f of G.factions || []) f.tms = f.tms.filter(x => x !== id); news(`👥 ${t.name} split up.`, 'story'); commit(); }, true); },
+  disbandFaction(id) { const f = FC(id); if (!f) return; confirmBox('Disband ' + f.name + '?', 'The faction and its record are removed. Its wrestlers and tag teams stay.', 'Disband', () => { G.factions = G.factions.filter(x => x.id !== id); news(`👑 ${f.name} has disbanded.`, 'story'); commit(); }, true); },
+  goTeams() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'teams'; render(); window.scrollTo(0, 0); },
+  fLeader(id) { const d = UI.modal.draft; if (!d.members.includes(id)) return; d.leader = d.leader === id ? null : id; render(); },
   saveFaction() {
     const d = UI.modal.draft; d.name = String(d.name || '').trim().slice(0, 40);
     if (!d.name) return toast('Give the faction a name.');
@@ -10208,8 +10243,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.17';
+const VERSION = '1.9.18';
 const WHATS_NEW = [
+  ['👥 Teams in the Office', 'Office → Teams is the new home for tag teams and factions. Start a team or faction, see their records, chemistry and titles, then edit, split up or disband them in one tap. A faction\'s leader is now picked from its own members.'],
   ['🎯 Filter and sort when booking', 'The wrestler picker now sorts by best fit, overall, popularity, momentum, freshest, in-ring, mic, salary or name, and remembers your choice. Every sort menu (picker, roster, free agents) now has a reverse button beside it. Tap chips to show only Men\'s or Women\'s, wrestlers free tonight, not tired, champions, people in a story, or teams and factions.'],
   ['🎟️ Title shot contracts', 'Tick Winner earns a title shot in the match editor and the winner gets a contract. Make it a #1 contender\'s match at an event you pick (it goes on that card for you), or a cash-in contract good for a year. To cash in, open any match the champion is in and choose how it goes. Office → Titles shows who holds one.'],
   ['💰 Per-appearance deals', 'Sign free agents show by show instead of full-time. Non-exclusive deals are cheaper but rivals can still sign them. Exclusive deals cost more per show, and nobody else can sign them until the deal ends. Book them from the new Per appearance tab when you pick wrestlers, and you only pay for the shows they\'re on. Retired legends can make a few appearances too, and you can book local enhancement talent for squash matches from $100 a show.'],
