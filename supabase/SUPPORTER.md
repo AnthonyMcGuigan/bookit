@@ -32,3 +32,14 @@ Do it all in Stripe's **Test mode** first, then repeat in live mode.
 - Apply the new sections of `setup.sql` to the live database.
 - Deploy `supabase/functions/stripe-webhook` with JWT verification turned off (Stripe signs its own requests).
 - Put the Payment Links and portal link into `SUP_LINKS` and `SUP_PORTAL` in `index.html`. Until then, the game says "Supporter opens soon."
+
+## Supporter for life ($7.99 one time)
+
+Since v1.9.5 the game sells a one-time Supporter for life once its link is filled in. Until then it keeps showing the monthly and yearly plans.
+
+1. **Redeploy the webhook.** In Supabase → Edge Functions → bright-service, replace the code with `functions/stripe-webhook/index.ts` from this repo and deploy (JWT verification stays off). It now also records one-time payments as plan `life`, which never expires.
+2. **Make the product in Stripe** (live mode): Product catalogue → Add product → name "BookIt Supporter for life", price $7.99, **One-off**.
+3. **Make a Payment Link** for it: Payment Links → New → that product. Under After payment, choose "Don't show confirmation page" and redirect to `https://anthonymcguigan.github.io/bookit/?supporter=done`. Turn off quantity changes.
+4. **Check the webhook events**: the endpoint already listens for `checkout.session.completed`, which covers one-time payments too. Nothing to add.
+5. **Send the buy.stripe.com link** to Claude. It goes into `SUP_LIVE.life`, and the Supporter page switches to the single $7.99 plan. People already on monthly or yearly keep their plans and can still manage them.
+6. Optional: archive the monthly and yearly Payment Links in Stripe so nobody new can find them. Don't cancel the existing subscriptions.

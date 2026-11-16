@@ -1,29 +1,22 @@
 {
+  "id": "./index.html",
   "name": "BookIt: Wrestling Booking Sim",
   "short_name": "BookIt",
-  "description": "BookIt: run your own pro wrestling promotion. Book shows, build storylines, sign contracts.",
+  "description": "Run your own pro wrestling promotion. Book shows, build storylines, sign contracts and chase the big event.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#14111c",
   "theme_color": "#14111c",
+  "categories": ["games", "sports", "entertainment"],
   "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }
