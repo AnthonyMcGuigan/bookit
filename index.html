@@ -4844,8 +4844,14 @@ function a11yAfter(fk) {
   const a = document.activeElement;
   if (!fk || (a && a !== document.body) || fk.tag === 'TEXTAREA') return;
   const el = findByKey(fk, scope);
-  if (el && !(el.tagName === 'INPUT' && /^(text|search|email|number|password|url|tel)$/.test(el.type))) go(el);
+  // a select only gets focus back for keyboard users: on phones (iOS Safari above all) focusing a select pops its menu open again
+  if (el && !(el.tagName === 'INPUT' && /^(text|search|email|number|password|url|tel)$/.test(el.type)) && !(el.tagName === 'SELECT' && !kbdNav)) go(el);
 }
+// how the player last moved around: keys (Tab, arrows) or touch / mouse
+let kbdNav = false;
+addEventListener('keydown', e => { if (!e.metaKey && !e.ctrlKey && /^(Tab|Arrow|Enter| |Escape|Home|End|Page)/.test(e.key)) kbdNav = true; }, { capture: true, passive: true });
+addEventListener('pointerdown', () => { kbdNav = false; }, { capture: true, passive: true });
+addEventListener('touchstart', () => { kbdNav = false; }, { capture: true, passive: true });
 
 // ---------- start screen ----------
 function viewStart() {
@@ -9963,7 +9969,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.11';
+const VERSION = '1.9.15';
 const WHATS_NEW = [
   ['🎟️ Title shot contracts', 'Tick Winner earns a title shot in the match editor and the winner gets a contract. Make it a #1 contender\'s match at an event you pick (it goes on that card for you), or a cash-in contract good for a year. To cash in, open any match the champion is in and choose how it goes. Office → Titles shows who holds one.'],
   ['💰 Per-appearance deals', 'Sign free agents show by show instead of full-time. Non-exclusive deals are cheaper but rivals can still sign them. Exclusive deals cost more per show, and nobody else can sign them until the deal ends. Book them from the new Per appearance tab when you pick wrestlers, and you only pay for the shows they\'re on. Retired legends can make a few appearances too, and you can book local enhancement talent for squash matches from $100 a show.'],
