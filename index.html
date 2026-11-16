@@ -772,6 +772,19 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .cstats > div { text-align: center; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 2px; }
 .cstats b { display: block; font-size: 17px; } .cstats span { font-size: 11px; color: var(--dim); }
 .cstats { gap: 6px; }
+.pst-chart { --st-new: #b88614; --st-ret: #3d8fe0; display: flex; align-items: flex-end; gap: 2px; height: 120px; padding-top: 4px; border-bottom: 1px solid var(--line); }
+.pst-col { flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; background: none; border: 0; padding: 0; cursor: pointer; }
+.pst-col:hover .pst-stack, .pst-col:focus-visible .pst-stack { filter: brightness(1.2); }
+.pst-stack { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 0; }
+.pst-stack i { display: block; min-height: 2px; } .pst-stack i:first-child { border-radius: 4px 4px 0 0; }
+.pst-new { background: var(--st-new, #b88614); } .pst-ret { background: var(--st-ret, #3d8fe0); }
+.pst-leg { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; } .pst-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.pst-leg, .pst-chart, .pst-ax { --st-new: #b88614; --st-ret: #3d8fe0; }
+.pst-ax { display: flex; justify-content: space-between; margin-top: 4px; }
+.pst-bar { height: 6px; background: var(--bg2); border-radius: 3px; margin-top: 3px; overflow: hidden; } .pst-bar i { display: block; height: 100%; background: var(--st-ret, #3d8fe0); border-radius: 3px; }
+.pst-tbl { width: 100%; border-collapse: collapse; margin-top: 6px; } .pst-tbl th, .pst-tbl td { text-align: right; padding: 3px 6px; border-bottom: 1px solid var(--line); } .pst-tbl th:first-child, .pst-tbl td:first-child { text-align: left; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .pst-leg, :root:not([data-theme="dark"]) .pst-chart, :root:not([data-theme="dark"]) .pst-ax, :root:not([data-theme="dark"]) .pst-bar { --st-new: #8a5c05; --st-ret: #1a66b3; } }
+:root[data-theme="light"] .pst-leg, :root[data-theme="light"] .pst-chart, :root[data-theme="light"] .pst-ax, :root[data-theme="light"] .pst-bar { --st-new: #8a5c05; --st-ret: #1a66b3; }
 .contend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; margin-top: 3px; }
 .lv-streak { margin-top: 6px; font-weight: 800; color: #ffb547; font-size: 14px; }
 
@@ -1352,6 +1365,7 @@ function newGame(opts) {
     { t: 'Plan a payoff match for "Chasing the Gold" at the first big event', done: false, auto: 'bigEvent' }
   ];
   news('Welcome to ' + g.promo.name + '. You are the booker now.', 'office');
+  PLAYLOG.ev('new_game', opts.roster === 'empty' ? 'empty' : 'starter');
   return g;
 }
 
@@ -2868,6 +2882,7 @@ function runShow(opts = {}) {
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
   const rec = { wk: G.week, name: showName(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: G.promo.day ?? 0, sname: G.promo.show, ...(special ? { special: true } : {}) };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
+  PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
   const best = results.slice().sort((a, b) => b.rating - a.rating)[0];
   const bestM = results.filter(r => r.seg.kind === 'match').sort((a, b) => b.rating - a.rating)[0];
@@ -5042,6 +5057,7 @@ function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><sp
 
 function render() {
   const fk = focusKey(document.activeElement);
+  try { PLAYLOG.seen(UI.modal?.type, UI.wiz ? 'wizard' : G ? UI.tab : 'start'); } catch (e) {}
   if (!G || UI.wiz) { const mo = modals.querySelector('.modal-bg .mb'), ko = lastModalKey, so = mo ? mo.scrollTop : 0;
     root.innerHTML = iconize('<main tabindex="-1">' + (UI.wiz ? viewWizard() : viewStart()) + '</main>'); modals.innerHTML = iconize(renderModal());
     const mn = modals.querySelector('.modal-bg .mb'); if (mn && so && ko === lastModalKey) mn.scrollTop = so; bdTabView(); a11yAfter(fk); MUSIC.sync(); return; }
@@ -5681,6 +5697,8 @@ const displaySettings = () => `
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
+    ${sbOn() ? `<div class="small muted" style="margin:14px 0 8px">Privacy</div>
+    <label class="todo"><input type="checkbox" data-in="statsOn" ${meta.stats === true || (meta.stats !== false && !navigator.globalPrivacyControl) ? 'checked' : ''}><span>Share anonymous play stats (how many play, shows run, screens used). No name, email or account. <button class="link" data-act="privacy">Details</button></span></label>` : ''}
 `;
 // before any company exists: cloud saves, restore, settings and help, so a new player (or a new phone) can get set up
 function modalStartMenu() {
@@ -5827,6 +5845,9 @@ function privacyHTML() {
   <p>If you add your email to keep your account, Supabase stores it to send you sign-in links. Other players never see it. Remove your posts and profile any time from Community → My profile.</p>
   <h3>Reports and feedback</h3>
   <p>Reports and feedback are private: only the game's owner can read them. Feedback includes the game version, your week number and your browser type, so bugs can be fixed. Crash reports include the error message.</p>
+  <h3>Anonymous play stats</h3>
+  <p>So the maker can see how many people play and what to improve, the game sends a few anonymous counts: when you open it, how long you play, shows you run and their rating, companies you start, tutorial steps, crashes, which screens you open, the game version, and whether you play in a browser, an installed app or the Google Play app. They are tied to a random id made on this device, never to your Community account, email or name, and IP addresses aren't stored with them. Only the owner can see them, and they are deleted after 400 days.</p>
+  <p>Turn this off any time in Menu → Settings → Share anonymous play stats. Turning it off also forgets this device's id. If your browser sends Global Privacy Control, it starts off.</p>
 ` : hosted() ? `  <h3>When you use Community</h3>
   <p>Community runs on claude.ai. Your account is your claude.ai sign-in, and we never see your password or email. What you post, your profile (name, bio, color), what you like, what you play or add, and who you follow are stored with an anonymous player id and can be seen by anyone who can open the game.</p>
   <h3>Reports and feedback</h3>
@@ -7749,6 +7770,57 @@ const sbUser = {
   can: async () => !!sbSess,
   profiles: async () => ({}),
 };
+// ---- anonymous play stats (hosted copy only). A random id for this device, never linked to an account or email.
+// Small batches go to log_play() in supabase/setup.sql; only the owner can read them (Community → Inbox → Stats).
+const PLAYLOG = (() => {
+  const DEV = 'bookit.dev', Q = [], feats = Object.create(null);
+  let sid = '', visAt = 0, secs = 0, hidAt = 0, lastFeat = '', lastTab = '', started = false, timer = 0;
+  const rnd = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a, b => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join(''); };
+  const on = () => { try { return sbOn() && !meta.statsOwner && (meta.stats === true || (meta.stats !== false && !navigator.globalPrivacyControl)) && (!navigator.webdriver || PLAYLOG.force); } catch (e) { return false; } };
+  const dev = () => { let d = ls.get(DEV); if (!/^[a-z0-9]{16,40}$/.test(d || '')) { d = rnd(24); ls.set(DEV, d); } return d; };
+  const plat = () => { try {
+    if (/[?&]src=play\b/.test(location.search) || /^android-app:\/\//.test(document.referrer) || sessionStorage.getItem('bookit.play')) { sessionStorage.setItem('bookit.play', '1'); return 'play'; }
+    return matchMedia('(display-mode: standalone)').matches || navigator.standalone ? 'app' : 'web';
+  } catch (e) { return 'web'; } };
+  const P = plat();
+  const tick = () => { if (visAt) { secs += (Date.now() - visAt) / 1000; visAt = Date.now(); } };
+  async function flush(leaving) {
+    if (!on()) { Q.length = 0; for (const k in feats) delete feats[k]; return; }
+    tick();
+    const e = Q.splice(0, 40);
+    for (const k of Object.keys(feats)) { if (e.length >= 40) break; e.push(['feature', k, feats[k]]); delete feats[k]; }
+    if (secs >= (leaving ? 5 : 60) && e.length < 40) { e.push(['time', '', Math.min(3600, Math.round(secs))]); secs = 0; }
+    if (!e.length) return;
+    try { await sbFetch('/rest/v1/rpc/log_play', { method: 'POST', keepalive: !!leaving, body: JSON.stringify({ d: dev(), s: sid, v: VERSION, p: P, e }) }, false); }
+    catch (x) { if (!leaving && Q.length < 200) Q.unshift(...e.filter(r => r[0] !== 'feature' && r[0] !== 'time')); } // a lost minute of features or time is fine
+  }
+  const open = () => { sid = rnd(12); Q.push(['open', '', 0]); };
+  return {
+    force: false,
+    on,
+    start() {
+      if (started || !on()) return; started = true;
+      open(); visAt = document.hidden ? 0 : Date.now();
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { tick(); visAt = 0; hidAt = Date.now(); flush(true); }
+        else { if (hidAt && Date.now() - hidAt > 30 * 60000) open(); visAt = Date.now(); hidAt = 0; } // away 30 minutes: a new session
+      });
+      addEventListener('pagehide', () => flush(true));
+      timer = setInterval(() => { if (!document.hidden) flush(); }, 60000);
+      setTimeout(flush, 5000);
+    },
+    // ev: 'show', 'new_game', 'tutorial', 'crash'. Features are counted and sent once a minute.
+    ev(ev, x = '', n = 0) { if (!started || !on()) return; Q.push([ev, String(x).slice(0, 40), +n || 0]); if (Q.length > 200) Q.shift(); if (ev === 'crash') flush(true); },
+    feat(name) { if (!started || !on() || !name) return; feats[name] = (feats[name] || 0) + 1; },
+    // called on every render: counts each screen or tab the player opens (not every redraw of it)
+    seen(modal, tab) {
+      const m = modal && modal !== 'confirm' ? modal : '';
+      if (m && m !== lastFeat) this.feat(m); lastFeat = m;
+      if (tab && tab !== lastTab) this.feat('tab:' + tab); lastTab = tab || '';
+    },
+    off() { Q.length = 0; for (const k in feats) delete feats[k]; secs = 0; ls.del(DEV); }, // a fresh id next time it's turned on
+  };
+})();
 // back from an email link: keep the session it carries, then tidy the address bar
 function sbFromLink() { if (sbOn() && /access_token=|error_description=/.test(location.hash)) sbLinkP = sbTakeLink(); }
 async function sbTakeLink() {
@@ -7800,6 +7872,7 @@ async function commInit() {
   else try { cdb = await window.claude.use('db'); cuser = await window.claude.use('user'); } catch (e) { cdb = null; }
   if (!cdb) { COMM.status = 'off'; return rerenderComm(); }
   try { COMM.me = cuser ? await cuser.id() : null; COMM.owner = cuser ? await cuser.isOwner() : false; COMM.canWrite = cuser ? await cuser.can('data.write') : null; } catch (e) {}
+  if (COMM.owner && sbOn() && meta.statsOwner == null) { meta.statsOwner = true; ls.set(META, JSON.stringify(meta)); } // the owner's own play isn't counted (Inbox → Stats can turn it back on)
   const timer = setTimeout(() => { if (COMM.status === 'loading') { COMM.status = 'slow'; rerenderComm(); } }, 10000);
   if (sbOn()) { supCheck(); sbFetch('/rest/v1/rpc/supporter_ids', { method: 'POST', body: '{}' }).then(r => { COMM.sups = new Set((Array.isArray(r) ? r : []).map(x => String(typeof x === 'object' && x ? Object.values(x)[0] : x)).filter(x => AUTHOR_ID.test(x))); rerenderComm(); }, () => {}); }
   if (COMM.owner) for (const col of ['reports', 'feedback']) {
@@ -8439,11 +8512,61 @@ function modalSupport(m) {
   return modal(sbOn() ? 'BookIt Supporter' : 'Support the game', body, '<button class="btn" data-act="closeModal">Close</button>');
 }
 // owner only: reports and feedback from players
+// ---- owner only: anonymous play stats (Community → Inbox → Stats) ----
+const PSTAT = { days: 30, data: null, status: 'idle', at: 0 };
+async function pstatLoad(force) {
+  if (!sbOn() || PSTAT.status === 'loading' || (!force && PSTAT.data && Date.now() - PSTAT.at < 120000)) return;
+  PSTAT.status = 'loading'; rerenderComm();
+  let tz = 'UTC'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) {}
+  try { const r = await sbFetch('/rest/v1/rpc/play_stats', { method: 'POST', body: JSON.stringify({ days: PSTAT.days, tz }) }); PSTAT.data = r && typeof r === 'object' ? r : null; PSTAT.status = 'ok'; PSTAT.at = Date.now(); }
+  catch (e) { PSTAT.status = e?.status === 404 ? 'setup' : e?.code === 'permission-denied' ? 'denied' : 'err'; }
+  rerenderComm();
+}
+const PSTAT_NAMES = { community: 'Community', cview: 'Community post', creator: 'Creator page', cloud: 'Cloud saves', support: 'Support page', menu: 'Menu', help: 'How to play', feedback: 'Send feedback', privacy: 'Privacy', whatsnew: 'What\'s new', inbox: 'Inbox', wrestler: 'Wrestler profile', match: 'Match editor', 'tab:book': 'Shows tab', 'tab:roster': 'Roster tab', 'tab:office': 'Office tab', 'tab:news': 'News tab', 'tab:start': 'Start screen', 'tab:wizard': 'New company setup' };
+const pstatName = k => PSTAT_NAMES[k] || (k.startsWith('tab:') ? k.slice(4).replace(/^./, c => c.toUpperCase()) + ' tab' : k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()));
+const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
+function pstatHTML() {
+  if (!sbOn()) return '<div class="empty">Play stats are collected on the hosted copy of the game only.</div>';
+  if (PSTAT.status === 'idle') setTimeout(pstatLoad);
+  const range = `<div class="row" style="gap:8px;margin-bottom:10px"><div class="seg-ctl sp" role="group" aria-label="Date range">${[7, 30, 90].map(d => `<button class="${PSTAT.days === d ? 'on' : ''}" data-act="pstatDays" data-id="${d}">${d} days</button>`).join('')}</div><button class="btn sm" data-act="pstatDays" data-id="${PSTAT.days}" aria-label="Refresh">↻</button></div>`;
+  const own = `<label class="todo" style="margin-top:12px"><input type="checkbox" data-in="statsMine" ${meta.statsOwner ? '' : 'checked'}><span>Count my own play on this device (off by default, so your testing doesn't skew the numbers)</span></label>`;
+  const d = PSTAT.data;
+  if (!d) return range + (PSTAT.status === 'setup' ? '<div class="empty">Stats aren\'t set up yet. Run the new Play stats part of supabase/setup.sql in Supabase → SQL Editor, then tap ↻.</div>'
+    : PSTAT.status === 'denied' ? '<div class="empty">Only the owner can see play stats.</div>' : PSTAT.status === 'err' ? '<div class="empty">Could not load stats. Tap ↻ to try again.</div>' : '<div class="empty">Loading stats…</div>') + own;
+  const daily = Array.isArray(d.daily) ? d.daily : [], n = v => (+v || 0).toLocaleString();
+  const tot = k => daily.reduce((a, x) => a + (+x[k] || 0), 0);
+  const tiles = (rows) => `<div class="grid3 cstats" style="margin-bottom:8px">${rows.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>`;
+  let h = range + tiles([[n(d.today), 'players today'], [n(d.active7), 'last 7 days'], [n(d.active30), 'last 30 days']]) + tiles([[n(d.all_players), 'players ever'], [n(d.new7), 'new this week'], [n(d.shows_all), 'shows run ever']]);
+  // daily players: returning at the bottom, new on top
+  const max = Math.max(1, ...daily.map(x => +x.p || 0)), dl = x => new Date(x.d + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const tip = x => `${dl(x)}: ${n(x.p)} player${x.p == 1 ? '' : 's'} (${n(x.n)} new), ${n(x.s)} session${x.s == 1 ? '' : 's'}, ${n(x.sh)} show${x.sh == 1 ? '' : 's'}, ${n(x.m)} min played`;
+  h += `<div class="sec">Daily players</div><div class="pst-leg tiny"><span><i class="pst-ret"></i>Returning</span><span><i class="pst-new"></i>New</span><span class="sp"></span><span class="muted">tap a bar</span></div>
+    <div class="pst-chart" role="img" aria-label="Daily players for the last ${daily.length} days, ${n(tot('p'))} player-days in all. A table is below.">${daily.map(x => { const p = +x.p || 0, nw = Math.min(p, +x.n || 0);
+      return `<button class="pst-col" data-act="pstatTip" data-id="${esc(tip(x))}" title="${esc(tip(x))}" aria-label="${esc(tip(x))}"><span class="pst-stack" style="height:${p / max * 100}%">${nw ? `<i class="pst-new" style="flex:${nw}"></i>` : ''}${p - nw ? `<i class="pst-ret" style="flex:${p - nw}"></i>` : ''}</span></button>`; }).join('')}</div>
+    <div class="pst-ax tiny muted"><span>${daily[0] ? dl(daily[0]) : ''}</span><span>peak ${n(max)}</span><span>${daily.length ? dl(daily.at(-1)) : ''}</span></div>
+    <div class="tiny" id="pstTip" aria-live="polite" style="min-height:1.4em;margin-top:4px"></div>`;
+  const pd = tot('p');
+  h += `<div class="sec">Engagement (${daily.length} days)</div>` + tiles([[n(tot('s')), 'sessions'], [n(tot('sh')), 'shows run'], [pd ? Math.round(tot('m') / pd) + ' min' : '–', 'per player a day']]);
+  const r = d.ret || {};
+  h += `<div class="sec">Do new players come back?</div><div class="card small">Of ${n(r.cohort)} players who started 2 to 60 days ago, <b>${pct(r.d1, r.cohort)}</b> came back the next day and <b>${pct(r.later, r.cohort)}</b> came back on a later day. Of the ${n(r.cohort7)} who started over a week ago, <b>${pct(r.d7, r.cohort7)}</b> were still playing a week later.</div>`;
+  const bars = (rows, total) => `<div class="list">${rows.map(([l, v, extra]) => `<div class="pst-row"><div class="row small"><span class="sp">${esc(l)}</span><b>${n(v)}</b>${extra ? `<span class="tiny muted" style="margin-left:6px">${extra}</span>` : ''}</div><div class="pst-bar"><i style="width:${total ? Math.max(2, v / total * 100) : 0}%"></i></div></div>`).join('') || '<div class="empty">Nothing yet.</div>'}</div>`;
+  const pl = d.plat || {}, ptot = (+pl.web || 0) + (+pl.app || 0) + (+pl.play || 0);
+  h += `<div class="sec">Where they play (players)</div>` + bars([['Web browser', +pl.web || 0], ['Installed from the browser', +pl.app || 0], ['Google Play app', +pl.play || 0]].filter(x => x[1] || ptot === 0), Math.max(1, ...Object.values(pl).map(Number)));
+  const ver = Array.isArray(d.ver) ? d.ver : [];
+  h += `<div class="sec">Versions (players)</div>` + bars(ver.map(([v, c]) => ['v' + v, +c || 0]), Math.max(1, ...ver.map(x => +x[1] || 0)));
+  const ft = (Array.isArray(d.feat) ? d.feat : []).filter(x => x[0] !== 'tab:start' && x[0] !== 'menu').slice(0, 20);
+  h += `<div class="sec">Most used screens (players)</div>` + bars(ft.map(([k, p, u]) => [pstatName(String(k)), +p || 0, n(u) + ' opens']), Math.max(1, ...ft.map(x => +x[1] || 0)));
+  const k = d.kinds || {}, g = x => +k[x] || 0, tutSkip = Object.keys(k).filter(x => x.startsWith('tutorial:skip')).reduce((a, x) => a + g(x), 0);
+  h += `<div class="sec">Shows and new games</div><div class="card small">Shows: <b>${n(g('show:tv'))}</b> weekly, <b>${n(g('show:big'))}</b> big events, <b>${n(g('show:special'))}</b> TV specials.<br>New companies: <b>${n(g('new_game:starter'))}</b> starter roster, <b>${n(g('new_game:empty'))}</b> empty, <b>${n(g('new_game:community'))}</b> from a Community save.<br>Tutorial: <b>${n(g('tutorial:done'))}</b> finished, <b>${n(tutSkip)}</b> skipped.<br>Crashes: <b>${n(d.crashes)}</b>${d.crashes ? ' (details come in through Feedback when players send them)' : ''}.</div>`;
+  h += `<details style="margin-top:10px"><summary class="small">Daily numbers as a table</summary><div style="overflow-x:auto"><table class="pst-tbl tiny"><thead><tr><th>Day</th><th>Players</th><th>New</th><th>Sessions</th><th>Shows</th><th>Minutes</th></tr></thead><tbody>${daily.slice().reverse().map(x => `<tr><td>${dl(x)}</td><td>${n(x.p)}</td><td>${n(x.n)}</td><td>${n(x.s)}</td><td>${n(x.sh)}</td><td>${n(x.m)}</td></tr>`).join('')}</tbody></table></div></details>`;
+  return h + own + `<div class="tiny muted" style="margin-top:8px">Anonymous: each device has a random id, with no name, email or account. Days are in your time zone (${esc(d.tz || 'UTC')}). Updated ${new Date(PSTAT.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.</div>`;
+}
 function modalInbox(m) {
   const t = m.tab || 'reports';
   const groups = Object.create(null); for (const r of COMM.reports) { const g = (groups[r.t] ||= []); if (!g.some(x => x.by === r.by)) g.push(r); } // one per player per target
-  let body = `<div class="seg-ctl" style="margin-bottom:12px"><button class="${t === 'reports' ? 'on' : ''}" data-act="inTab" data-id="reports">Reports${Object.keys(groups).length ? ` <span class="cnt">${Object.keys(groups).length}</span>` : ''}</button><button class="${t === 'feedback' ? 'on' : ''}" data-act="inTab" data-id="feedback">Feedback${COMM.feedback.length ? ` <span class="cnt">${COMM.feedback.length}</span>` : ''}</button></div>`;
-  if (t === 'reports') {
+  let body = `<div class="seg-ctl" style="margin-bottom:12px"><button class="${t === 'reports' ? 'on' : ''}" data-act="inTab" data-id="reports">Reports${Object.keys(groups).length ? ` <span class="cnt">${Object.keys(groups).length}</span>` : ''}</button><button class="${t === 'feedback' ? 'on' : ''}" data-act="inTab" data-id="feedback">Feedback${COMM.feedback.length ? ` <span class="cnt">${COMM.feedback.length}</span>` : ''}</button>${sbOn() ? `<button class="${t === 'stats' ? 'on' : ''}" data-act="inTab" data-id="stats">Stats</button>` : ''}</div>`;
+  if (t === 'stats') body += pstatHTML();
+  else if (t === 'reports') {
     const keys = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
     body += keys.length ? `<div class="list">${keys.map(k => {
       const rs = groups[k], prof = k.startsWith('p:'), item = !prof && COMM.items.find(i => i.author + '|' + i.id === k), who = prof ? k.slice(2) : k.split('|')[0];
@@ -8725,6 +8848,8 @@ const CREATOR_ACTIONS = {
   },
   inbox() { UI.modal = { type: 'inbox', tab: 'reports' }; render(); },
   inTab(t) { UI.modal.tab = t; render(); },
+  pstatDays(d) { PSTAT.days = [7, 30, 90].includes(+d) ? +d : 30; pstatLoad(true); },
+  pstatTip(t) { const el = document.getElementById('pstTip'); if (el) el.textContent = String(t || '').slice(0, 200); },
   async inDone(id, el) {
     if (!COMM.owner) return; const col = el.dataset.f;
     // remove the matching entries from each player's doc
@@ -8802,7 +8927,7 @@ const CREATOR_ACTIONS = {
       if (typeof DecompressionStream === 'undefined') return toast('This browser can\'t open shared saves. Try an up-to-date browser.');
       let g; try { g = sanitizeGame(JSON.parse(await ungz(i.save))); } catch (e) { return toast('This save is damaged and can\'t be opened.'); }
       if (G) save();
-      g.event = null; G = g; meta.slot = n; save(); markUsed(key);
+      g.event = null; G = g; meta.slot = n; save(); markUsed(key); PLAYLOG.ev('new_game', 'community');
       UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; render();
       toast(`Now playing ${G.promo.name} in slot ${n}.`);
     };
@@ -10006,7 +10131,7 @@ function tutSync() {
   // skip steps the player has already done (e.g. booked a match before reading the tip)
   while (tutOn() && G.tut < TUT_WIN && TUT[G.tut].done?.()) G.tut++;
   // the closing card bows out by itself once another show has run
-  if (tutOn() && G.tut === TUT_WIN && G.tutRes && G.week > G.tutRes.wk + 1) { delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; }
+  if (tutOn() && G.tut === TUT_WIN && G.tutRes && G.week > G.tutRes.wk + 1) { if (!G.tutReplay) PLAYLOG.ev('tutorial', 'done'); delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; }
 }
 function tutCard() {
   if (!tutOn() || UI.selWeek !== G.week) return '';
@@ -10044,6 +10169,7 @@ function tutShowDone(rec) {
   if (!tutOn() || G.tut >= TUT_WIN || rec.wk !== G.tutWk) return;
   G.tut = TUT_WIN; G.tutRes = { wk: rec.wk, rating: rec.rating };
   if (G.tutReplay) return;
+  PLAYLOG.ev('tutorial', 'first_show');
   G.fans += TUT_BONUS.fans; G.booker.xp += TUT_BONUS.xp; if (MON()) G.money += TUT_BONUS.money;
   G.tutRes.bonus = 1;
   news(`🎉 Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? `, +${money(TUT_BONUS.money)}` : ''} and +${TUT_BONUS.xp} XP.`, 'office');
@@ -10053,8 +10179,8 @@ function tutWin(h) {
   return `<div class="lv-tut"><b>🎉 First show in the books!</b>${r.bonus ? `<div class="small">Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? ` · +${money(TUT_BONUS.money)}` : ''} · +${TUT_BONUS.xp} XP</div>` : ''}</div>`;
 }
 const TUT_ACTIONS = {
-  tutNext() { if (!tutOn()) return; if (G.tut >= TUT_WIN) { delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; commit('Tutorial done. Have a great run!'); return; } G.tut++; commit(); },
-  tutSkip() { delete G.tut; delete G.tutRes; delete G.tutReplay; commit('Tutorial off. Replay it from Menu → How to play.'); },
+  tutNext() { if (!tutOn()) return; if (G.tut >= TUT_WIN) { if (!G.tutReplay) PLAYLOG.ev('tutorial', 'done'); delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; commit('Tutorial done. Have a great run!'); return; } G.tut++; commit(); },
+  tutSkip() { PLAYLOG.ev('tutorial', 'skip:' + (+G.tut || 0)); delete G.tut; delete G.tutRes; delete G.tutReplay; commit('Tutorial off. Replay it from Menu → How to play.'); },
   tutReplay() { if (!G) return; tutStart(true); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0); }
 };
 
@@ -10221,6 +10347,8 @@ document.addEventListener('change', e => {
     }
     else if (k === 'theme') { meta.theme = ['light', 'auto'].includes(el.value) ? el.value : 'dark'; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'motion') { meta.motion = ['reduce', 'full'].includes(el.value) ? el.value : ''; applyTheme(); ls.set(META, JSON.stringify(meta)); }
+    else if (k === 'statsMine') { meta.statsOwner = !el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) PLAYLOG.start(); toast(el.checked ? 'Your play on this device now counts.' : 'Your play on this device is no longer counted.'); }
+    else if (k === 'statsOn') { meta.stats = el.checked; if (!el.checked) PLAYLOG.off(); ls.set(META, JSON.stringify(meta)); if (el.checked) PLAYLOG.start(); }
     else if (k === 'soundOn') { meta.sound = el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) SFX.tap(); render(); }
     else if (k === 'musicOn') { meta.music = el.checked; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); ls.set(META, JSON.stringify(meta)); MUSIC.sync(); }
@@ -10394,8 +10522,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.21';
+const VERSION = '1.9.22';
 const WHATS_NEW = [
+  ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
   ['👥 Teams in the Office', 'Office → Teams is the new home for tag teams and factions. Start a team or faction, see their records, chemistry and titles, then edit, split up or disband them in one tap. A faction\'s leader is now picked from its own members.'],
   ['🎯 Filter and sort when booking', 'The wrestler picker now sorts by best fit, overall, popularity, momentum, freshest, in-ring, mic, salary or name, and remembers your choice. Every sort menu (picker, roster, free agents) now has a reverse button beside it. Tap chips to show only Men\'s or Women\'s, wrestlers free tonight, not tired, champions, people in a story, or teams and factions.'],
@@ -10437,6 +10566,7 @@ const WHATS_NEW = [
 let crashShown = false;
 function crash(msg) {
   if (crashShown) return; crashShown = true;
+  try { PLAYLOG.ev('crash', String(msg || '').replace(/[^A-Za-z]+/g, '_').slice(0, 40)); } catch (e) {}
   try { save(); } catch (e) {}
   const d = document.createElement('div'); d.className = 'crash';
   d.innerHTML = `<div class="crash-in"><div style="font-size:44px">${typeof ic === 'function' ? ic('medical') : ''}</div><h2>Something went wrong</h2>
@@ -10461,6 +10591,7 @@ try { const hadGame = [1, 2, 3].some(n => slotInfo(n)); if (meta.seen !== VERSIO
 try { render(); } catch (e) { crash(e && e.message); }
 sbFromLink(); addEventListener('hashchange', sbFromLink);
 if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); supResume(); }
+try { PLAYLOG.start(); } catch (e) {}
 // animated splash: once per app launch, tap to skip, skipped under automated tests (?splash forces it)
 try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   const sp = document.createElement('div'); sp.id = 'splash'; sp.setAttribute('role', 'presentation');
