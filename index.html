@@ -57,6 +57,9 @@ header.top { position: sticky; top: 0; z-index: 5; background: var(--bg); paddin
 .top .brand b { display: block; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top .brand span { font-size: 12px; color: var(--dim); }
 .money { font-weight: 700; font-variant-numeric: tabular-nums; }
+.sort-rev { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; color: var(--dim); }
+.sort-rev svg.i { --ic: currentColor; width: 20px; height: 20px; transform: rotate(90deg); }
+.sort-rev.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .iconbtn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; font-size: 18px; }
 nav.tabs { position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; background: var(--bg2); border-top: 1px solid var(--line);
   display: flex; justify-content: center; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
@@ -4375,7 +4378,7 @@ function storyIdea() {
 // =====================================================================
 //  UI
 // =====================================================================
-const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', pickSort: (() => { try { return localStorage.getItem('bookit-pickSort') || 'fit'; } catch (e) { return 'fit'; } })(), faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts' };
+const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', sortRev: (() => { try { return JSON.parse(localStorage.getItem('bookit-sortRev') || '{}') || {}; } catch (e) { return {}; } })(), pickSort: (() => { try { return localStorage.getItem('bookit-pickSort') || 'fit'; } catch (e) { return 'fit'; } })(), faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts' };
 const root = document.getElementById('root'), modals = document.getElementById('modals');
 // ---------- scroll lock: nothing behind an open sheet, picker or overlay may scroll ----------
 const LOCK_SEL = '.modal-bg, .live, .crash';
@@ -4409,6 +4412,9 @@ document.addEventListener('touchmove', e => {
 // ---------- minimal line icons: emoji in any rendered text become small SVG icons ----------
 const EMO = {"🌍": "globe", "🛠️": "ruler", "📉": "down", "🚑": "medical", "🖊️": "pen", "✂️": "door", "🏚️": "door", "🏢": "home", "🌱": "sparkles", "💎": "star", "🩸": "zap", "☁️": "upload", "🧪": "bulb", "🚫": "stop", "💳": "coin", "🔑": "lock", "❤️": "heart", "ℹ": "info", "😮‍💨": "tired", "🔥": "flame", "🏆": "trophy", "🩹": "medical", "🤕": "medical", "📝": "pen", "✍️": "pen", "✏️": "pen", "🎆": "sparkles", "✨": "sparkles", "🎉": "sparkles", "⭐": "star", "🌟": "star", "💾": "save", "📋": "clipboard", "🌐": "globe", "🌎": "globe", "🎲": "dice", "📈": "trend", "🥶": "snow", "🧊": "snow", "❄️": "snow", "🔄": "refresh", "🔁": "refresh", "🗞️": "news", "🏅": "medal", "🤝": "equal", "📦": "box", "📺": "tv", "📡": "tv", "😠": "frown", "😡": "frown", "🏁": "flag", "🚩": "flag", "🔇": "mute", "🔊": "sound", "🐞": "bug", "💬": "message", "🔔": "bell", "🎯": "target", "📅": "calendar", "👑": "crown", "📣": "megaphone", "🙌": "megaphone", "👏": "megaphone", "🔊": "megaphone", "💼": "briefcase", "🔒": "lock", "🛑": "stop", "✅": "checkc", "❌": "xc", "🆕": "userplus", "💸": "coin", "💰": "coin", "📕": "book", "📚": "book", "📖": "book", "👋": "door", "🚪": "door", "🎟️": "ticket", "🏟️": "home", "💡": "bulb", "🧠": "bulb", "👥": "users", "🤼": "wrestle", "🤯": "zap", "😱": "zap", "👊": "zap", "💥": "zap", "⚡": "bolt", "🎤": "mic", "🎬": "film", "⚠️": "alert", "⚠": "alert", "📷": "camera", "📇": "user", "📱": "phone", "🗣️": "message", "🎓": "cap", "🎭": "mask", "⏭": "skip", "⏩": "skip", "☰": "menu", "📓": "notebook", "↔️": "swap", "🏠": "home", "🗑": "trash", "📍": "pin", "📏": "ruler", "🎵": "music", "👾": "grid", "😇": "smile", "😈": "heel", "📄": "file", "⬇": "download", "⬆": "upload", "⇅": "swap", "🙂": "", "😐": "", "🍿": "", "😴": "", "🦗": "", "🥱": ""};
 const EMO_RE = new RegExp(Object.keys(EMO).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + '|️', 'g');
+// reverse button that sits beside every sort menu; k names which list it flips
+const revBtn = (k, what) => `<button class="sort-rev ${UI.sortRev[k] ? 'on' : ''}" data-act="sortRev" data-id="${k}" aria-pressed="${!!UI.sortRev[k]}" aria-label="Reverse the ${what} order" title="Reverse order">${ic('swap')}</button>`;
+const revDir = k => UI.sortRev[k] ? -1 : 1;
 const ic = n => n ? `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>` : '';
 // one-tap music on/off, shown on the start screen and in the top bar
 const musicOn = () => meta.sound !== false && meta.music !== false;
@@ -4744,7 +4750,8 @@ function faSorted(list, s) {
   const ak = new Map(CON() && (s === 'cheap' || s === 'price') ? list.map(w => [w.id, askFor(w, prefLen(w))]) : []);
   const f = { pop: (a, b) => b.pop - a.pop, ovr: (a, b) => overall(b) - overall(a), ring: (a, b) => b.ring - a.ring, mic: (a, b) => b.mic - a.mic, cheap: (a, b) => ak.get(a.id) - ak.get(b.id) || b.pop - a.pop, price: (a, b) => ak.get(b.id) - ak.get(a.id),
     young: (a, b) => a.age - b.age || b.pop - a.pop, old: (a, b) => b.age - a.age || b.pop - a.pop, pot: (a, b) => (b.pot || 0) - (a.pot || 0) || b.pop - a.pop, name: (a, b) => a.name.localeCompare(b.name) }[s];
-  return list.slice().sort(f);
+  const d = revDir('fa');
+  return list.slice().sort((a, b) => d * f(a, b));
 }
 function faView(all) {
   const q = (UI.faQ || '').toLowerCase().trim(), dv = UI.faDiv || 'all', s = UI.faSort || 'pop';
@@ -4757,7 +4764,7 @@ function faView(all) {
   return `<div class="small muted" style="margin-bottom:8px">Unsigned talent. Rivals sign them over time.${CON() ? ' Tag teams sign together. Anyone can also work per appearance: you pay only for the shows they\'re on.' : ''}</div>
   ${gl.length ? `<div class="sec">💰 Your per-appearance talent (${gl.length})</div><div class="list" style="margin-bottom:12px">${gl.map(({ w, d }) => wItem(w, 'guestDeal', `${d.excl ? 'exclusive' : 'non-exclusive'} · until week ${d.until} · ${d.apps} appearance${d.apps === 1 ? '' : 's'}${w.retired ? ' · legend' : ''}`)).join('')}</div>` : ''}
   ${all.length ? `<div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search free agents" aria-label="Search free agents" value="${esc(UI.faQ || '')}" data-in="faQ" style="flex:1">
-    <select data-in="faSort" style="width:auto;max-width:45%" aria-label="Sort free agents by">${FA_SORTS().map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <select data-in="faSort" style="width:auto;max-width:45%" aria-label="Sort free agents by">${FA_SORTS().map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${revBtn('fa', 'free agent')}</div>
   ${divs.length > 1 ? `<div class="filters">${[['all', 'All'], ...divs.map(d => [d, d])].map(([k, l]) => `<button class="${dv === k ? 'on' : ''}" data-act="faDiv" data-id="${esc(k)}">${l}</button>`).join('')}</div>` : ''}
   <div class="small muted" style="margin-bottom:8px">${list.length} of ${all.length} free agents</div>` : ''}
   <div class="list">${list.map(w => wItem(w, 'negotiate', extra(w))).join('') || `<div class="empty">${all.length ? 'Nobody matches.' : 'No free agents right now.'}</div>`}</div><button class="btn block" style="margin-top:12px" data-act="createW">+ Create a wrestler</button>`;
@@ -5080,7 +5087,8 @@ function viewRoster() {
   if (q) list = list.filter(w => (w.name + ' ' + w.nick + ' ' + w.style).toLowerCase().includes(q));
   let s = UI.rosterSort;
   if (s === 'contract' && !CON()) s = 'pop';
-  list.sort((a, b) => s === 'wins' ? b.record.w - a.record.w : s === 'winpct' ? winPct(b) - winPct(a) : s === 'streak' ? (b.streak || 0) - (a.streak || 0) : s === 'name' ? a.name.localeCompare(b.name) : s === 'contract' ? a.contract.weeks - b.contract.weeks : s === 'morale' ? a.morale - b.morale : s === 'fatigue' ? b.fatigue - a.fatigue : b[s] - a[s]);
+  const rd = revDir('roster');
+  list.sort((a, b) => rd * (s === 'wins' ? b.record.w - a.record.w : s === 'winpct' ? winPct(b) - winPct(a) : s === 'streak' ? (b.streak || 0) - (a.streak || 0) : s === 'name' ? a.name.localeCompare(b.name) : s === 'contract' ? a.contract.weeks - b.contract.weeks : s === 'morale' ? a.morale - b.morale : s === 'fatigue' ? b.fatigue - a.fatigue : b[s] - a[s]));
   const divs = DIVISIONS.filter(d => signed().some(w => (w.division || 'Open') === d));
   const filt = `<div class="filters">${[['all', 'All'], ['teams', 'Teams & factions'], ['face', 'Faces'], ['heel', 'Heels'], ['champs', 'Champions'], ['injured', 'Injured'], ['unhappy', 'Unhappy'], ...(splitOn() ? SHOWS().map(x => ['b:' + x.id, brandName(x.id)]) : []), ...(divs.length > 1 ? divs.map(d => [d, d]) : [])].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="rosterF" data-id="${k}">${l}</button>`).join('')}</div>`;
   if (f === 'teams') return `<div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>${filt}
@@ -5093,7 +5101,7 @@ function viewRoster() {
   return `
   <div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>
   <div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search roster" aria-label="Search roster" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1">
-    <select data-in="rosterSort" style="width:auto" aria-label="Sort roster by">${[['pop', 'Popularity'], ['ring', 'In-ring'], ['mic', 'Mic'], ['morale', 'Morale (low first)'], ['fatigue', 'Fatigue'], ...(CON() ? [['contract', 'Contract (ending first)']] : []), ['wins', 'Wins'], ['winpct', 'Win %'], ['streak', 'Win streak'], ['name', 'Name']].map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <select data-in="rosterSort" style="width:auto;max-width:42%" aria-label="Sort roster by">${[['pop', 'Popularity'], ['ring', 'In-ring'], ['mic', 'Mic'], ['morale', 'Morale (low first)'], ['fatigue', 'Fatigue'], ...(CON() ? [['contract', 'Contract (ending first)']] : []), ['wins', 'Wins'], ['winpct', 'Win %'], ['streak', 'Win streak'], ['name', 'Name']].map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${revBtn('roster', 'roster')}</div>
   ${filt}
   <div class="small muted" style="margin-bottom:8px">${list.length} of ${signed().length} signed${CON() && MON() ? ` · payroll ${money(sum(signed().map(w => w.contract.salary)))}/wk` : ''}</div>
   <div class="list">${list.map(w => wItem(w)).join('') || (signed().length ? '<div class="empty">Nobody matches.</div>' : `<div class="empty">Your roster is empty. Build, import or grab one from Community.${lib().length ? `<br><button class="btn" style="margin-top:8px" data-act="library">📚 Add from my library (${lib().length})</button>` : ''}</div>`)}</div>`;
@@ -5743,13 +5751,14 @@ function pickPass(p, w, onCard) {
 }
 function pickSortFn(s, fit, onCard) {
   const by = { ovr: (a, b) => overall(b) - overall(a), pop: (a, b) => b.pop - a.pop, mom: (a, b) => (b.momentum || 0) - (a.momentum || 0), fresh: (a, b) => (a.fatigue || 0) - (b.fatigue || 0), ring: (a, b) => b.ring - a.ring, mic: (a, b) => b.mic - a.mic, pay: (a, b) => pickPay(b) - pickPay(a), name: (a, b) => a.name.localeCompare(b.name) }[s];
-  // injured wrestlers always sink to the bottom; best fit also sinks anyone already on the card
-  return by ? (a, b) => (a.injury > 0) - (b.injury > 0) || by(a, b) || b.pop - a.pop : (a, b) => (a.injury > 0) - (b.injury > 0) || (onCard.has(a.id)) - (onCard.has(b.id)) || fit(b) - fit(a) || b.pop - a.pop;
+  // injured wrestlers always sink to the bottom, even reversed; best fit also sinks anyone already on the card
+  const d = revDir('pick');
+  return by ? (a, b) => (a.injury > 0) - (b.injury > 0) || d * (by(a, b) || b.pop - a.pop) : (a, b) => (a.injury > 0) - (b.injury > 0) || (onCard.has(a.id)) - (onCard.has(b.id)) || d * (fit(b) - fit(a) || b.pop - a.pop);
 }
 // the stat you sorted by, when the row doesn't already show it
 const pickStat = (s, w) => s === 'mom' ? ` · <b>Momentum ${w.momentum > 0 ? '+' : ''}${Math.round(w.momentum || 0)}</b>` : s === 'fresh' ? ` · <b>Fatigue ${Math.round(w.fatigue || 0)}</b>` : s === 'pay' && pickPay(w) ? ` · <b>${money(pickPay(w))}${w.contract ? '/wk' : '/show'}</b>` : '';
 const pickNF = p => (p.align ? 1 : 0) + (p.div ? 1 : 0) + (p.st || []).length;
-const pickSortSel = (s, cls) => `<select data-in="pickSort" class="${cls || ''}" style="width:auto;max-width:42%" aria-label="Sort wrestlers by">${PICK_SORTS().map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+const pickSortSel = (s, cls) => `<select data-in="pickSort" class="${cls || ''}" style="width:auto;max-width:38%" aria-label="Sort wrestlers by">${PICK_SORTS().map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 function pickControls(p, s, divs, brandF) {
   const chip = (on, act, id, l) => `<button class="${on ? 'on' : ''}" aria-pressed="${!!on}" data-act="${act}" data-id="${esc(id)}">${l}</button>`;
   const alignC = [['', 'All'], ['face', 'Faces'], ['heel', 'Heels']].map(([k, l]) => chip((p.align || '') === k, 'pickAlign', k, l)).join('');
@@ -5757,7 +5766,7 @@ function pickControls(p, s, divs, brandF) {
   const stC = PICK_ST.map(([k, l]) => chip((p.st || []).includes(k), 'pickSt', k, l)).join('');
   const brandC = brandF ? `<button class="${p.allB ? 'on' : ''}" aria-pressed="${!!p.allB}" data-act="pickAllB">Other brands</button>` : '';
   // search with the sort beside it, then alignment, division and brand chips, then status chips
-  return [`<div class="row" style="margin-bottom:8px;gap:6px"><input type="search" placeholder="Search" aria-label="Search wrestlers" value="${esc(p.q || '')}" data-in="pickQ" style="flex:1;min-width:0">${pickSortSel(s)}</div>`, `<div class="filters">${alignC}${divC}${brandC}</div><div class="filters" style="flex-wrap:wrap">${stC}</div>`];
+  return [`<div class="row" style="margin-bottom:8px;gap:6px"><input type="search" placeholder="Search" aria-label="Search wrestlers" value="${esc(p.q || '')}" data-in="pickQ" style="flex:1;min-width:0">${pickSortSel(s)}${revBtn('pick', 'wrestler')}</div>`, `<div class="filters">${alignC}${divC}${brandC}</div><div class="filters" style="flex-wrap:wrap">${stC}</div>`];
 }
 function renderPicker() {
   const p = UI.picker; if (!p) { lastPickerOpen = false; return ''; }
@@ -6525,6 +6534,7 @@ const A = {
   pickAllB() { UI.picker.allB = !UI.picker.allB; render(); },
   pickDiv(d) { const p = UI.picker; p.div = p.div === d ? '' : d || ''; render(); },
   pickSt(k) { const p = UI.picker, st = p.st ||= []; const i = st.indexOf(k); if (i >= 0) st.splice(i, 1); else st.push(k); render(); },
+  sortRev(k) { UI.sortRev[k] = !UI.sortRev[k]; if (!UI.sortRev[k]) delete UI.sortRev[k]; try { localStorage.setItem('bookit-sortRev', JSON.stringify(UI.sortRev)); } catch (e) { } render(); },
   pickClear() { Object.assign(UI.picker, { align: '', div: '', st: [] }); render(); },
   pickDone() {
     const p = UI.picker; if (!p) return; const m = UI.modal; const d = m.draft;
@@ -10000,7 +10010,7 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9.13';
 const WHATS_NEW = [
-  ['🎯 Filter and sort when booking', 'The wrestler picker now sorts by best fit, overall, popularity, momentum, freshest, in-ring, mic, salary or name, and remembers your choice. Tap chips to show only Men\'s or Women\'s, wrestlers free tonight, not tired, champions, people in a story, or teams and factions.'],
+  ['🎯 Filter and sort when booking', 'The wrestler picker now sorts by best fit, overall, popularity, momentum, freshest, in-ring, mic, salary or name, and remembers your choice. Every sort menu (picker, roster, free agents) now has a reverse button beside it. Tap chips to show only Men\'s or Women\'s, wrestlers free tonight, not tired, champions, people in a story, or teams and factions.'],
   ['🎟️ Title shot contracts', 'Tick Winner earns a title shot in the match editor and the winner gets a contract. Make it a #1 contender\'s match at an event you pick (it goes on that card for you), or a cash-in contract good for a year. To cash in, open any match the champion is in and choose how it goes. Office → Titles shows who holds one.'],
   ['💰 Per-appearance deals', 'Sign free agents show by show instead of full-time. Non-exclusive deals are cheaper but rivals can still sign them. Exclusive deals cost more per show, and nobody else can sign them until the deal ends. Book them from the new Per appearance tab when you pick wrestlers, and you only pay for the shows they\'re on. Retired legends can make a few appearances too, and you can book local enhancement talent for squash matches from $100 a show.'],
   ['🏆 More belt shapes and centre pieces', 'The belt designer has 8 new plate shapes (Medallion, Starburst, Diamond, Cross, Flared, Twin, Arch and Feathered) and 13 new centre pieces, from an eagle, flame and skull to a laurel, trophy and maple leaf. They all take your metal and gem colours, and the text still fits. Five new templates use them.'],
