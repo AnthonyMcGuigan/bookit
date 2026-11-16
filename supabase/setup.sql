@@ -154,3 +154,32 @@ end $$;
 drop trigger if exists docs_rowsize on public.docs;
 create trigger docs_rowsize before insert or update on public.docs for each row execute function public.docs_rowsize();
 revoke all on function public.docs_rowsize() from public, anon, authenticated;
+
+-- Roster photos (added in v1.9.21, safe to run again). A shared roster's photos sit in their own gzipped row,
+-- pix1/<player id> to pix10/<player id>, so a big roster with photos doesn't fill the player's Community space.
+-- Slots 1-3 are for everyone, 4-10 for supporters. Anyone can read them, like creations.
+alter table public.docs drop constraint if exists docs_col_check;
+alter table public.docs add constraint docs_col_check check (col in ('creations', 'reports', 'feedback', 'cloud1', 'cloud2', 'cloud3', 'cloud4', 'cloud5', 'cloud6',
+  'pix1', 'pix2', 'pix3', 'pix4', 'pix5', 'pix6', 'pix7', 'pix8', 'pix9', 'pix10'));
+drop policy if exists docs_read on public.docs;
+create policy docs_read on public.docs for select to anon, authenticated
+  using (col = 'creations' or col in ('pix1', 'pix2', 'pix3', 'pix4', 'pix5', 'pix6', 'pix7', 'pix8', 'pix9', 'pix10') or id = (select auth.uid())::text or (select public.is_admin()));
+drop policy if exists docs_insert on public.docs;
+create policy docs_insert on public.docs for insert to authenticated
+  with check ((id = (select auth.uid())::text and (col not in ('cloud4', 'cloud5', 'cloud6', 'pix4', 'pix5', 'pix6', 'pix7', 'pix8', 'pix9', 'pix10') or (select public.is_supporter()))) or (select public.is_admin()));
+drop policy if exists docs_update on public.docs;
+create policy docs_update on public.docs for update to authenticated
+  using (id = (select auth.uid())::text or (select public.is_admin()))
+  with check ((id = (select auth.uid())::text and (col not in ('cloud4', 'cloud5', 'cloud6', 'pix4', 'pix5', 'pix6', 'pix7', 'pix8', 'pix9', 'pix10') or (select public.is_supporter()))) or (select public.is_admin()));
+-- Row size: 400 KB for everyone, 800 KB for a supporter's Community space and photo rows.
+create or replace function public.docs_rowsize() returns trigger
+language plpgsql set search_path = ''
+as $$
+declare n int := octet_length(new.data::text);
+begin
+  if n >= 800000 or (n >= 400000 and not ((new.col = 'creations' or new.col like 'pix%') and public.is_supporter())) then
+    raise exception 'bookit_big' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+revoke all on function public.docs_rowsize() from public, anon, authenticated;
