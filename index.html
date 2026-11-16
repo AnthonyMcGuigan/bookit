@@ -151,7 +151,9 @@ button.item:active { background: var(--card2); }
 .news { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; display: flex; gap: 10px; }
 .news:last-child { border-bottom: 0; }
 .dirt-mast { text-align: center; padding: 6px 4px 10px; border-bottom: 3px double var(--line); margin-bottom: 8px; }
-.dirt-name { font-family: var(--f-display); font-size: 36px; line-height: 1; letter-spacing: .03em; text-transform: uppercase; }
+.dirt-name { font-family: var(--f-display); font-size: clamp(26px, 9vw, 36px); line-height: 1; letter-spacing: .03em; text-transform: uppercase; }
+
+.dirt-tag { font-style: italic; font-size: 15px; color: var(--accent-t); margin-top: 4px; }
 .dirt-sub { font-family: var(--f-cond); font-weight: 600; font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); margin-top: 6px; }
 .dirt-nav { gap: 8px; margin-bottom: 10px; }
 .dirt-nav .btn[disabled] { opacity: .4; }
@@ -2905,10 +2907,11 @@ function endOfWeek(card, world = true) {
   if (world) dirtWeek();
 }
 
-// ---------- the dirt sheet: a weekly newsletter about the whole wrestling world ----------
+// ---------- the dirt sheet (Wrestling, Observed): a weekly newsletter about the whole wrestling world ----------
 // Written once a week, after every company has run. Reviews, the ratings race, confirmed moves,
 // rumours (some true, some not: the source tag is a hint, not a promise), a hot take and monthly power rankings.
 const DIRT_KEEP = 12;
+const DIRT_NAME = 'Wrestling, Observed', DIRT_TAG = 'what’s the haps in graps';
 const DIRT_SRC = { solid: ['✅', 'Solid source'], hear: ['👂', "We're hearing"], spec: ['🤔', 'Speculation'] };
 const DIRT_VERDICT = [
   [85, ['A must-watch show.', 'Go out of your way to see this one.', 'One of the best shows of the year so far.']],
@@ -4958,7 +4961,7 @@ function render() {
     <main tabindex="-1">${({ book: viewBook, roster: viewRoster, stories: viewStories, office: viewOffice, notes: viewNotes })[UI.tab]()}</main>
   </div>
   <nav class="tabs" aria-label="Main"><div class="in">
-    ${[['book', '📅', 'Shows', 0], ['roster', '🤼', 'Roster', 0], ['stories', '🔥', 'Stories', 0], ['office', '💼', 'Office', CON() ? signed().filter(w => w.contract.weeks <= 4).length : 0], ['notes', '📓', 'Notes', dirtUnread(), 'new Dirt Sheet issue']]
+    ${[['book', '📅', 'Shows', 0], ['roster', '🤼', 'Roster', 0], ['stories', '🔥', 'Stories', 0], ['office', '💼', 'Office', CON() ? signed().filter(w => w.contract.weeks <= 4).length : 0], ['notes', '📓', 'Notes', dirtUnread(), `new issue of ${DIRT_NAME}`]]
       .map(([k, i, l, n, sr]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}" ${UI.tab === k ? 'aria-current="page"' : ''}><span class="ic">${i}</span>${l}${n ? `<span class="dot" aria-hidden="true">${n}</span><span class="sr-only">, ${sr ? sr : `${n} contract${n === 1 ? '' : 's'} ending soon`}</span>` : ''}</button>`).join('')}
   </div></nav>`);
   // keep the open sheet's scroll position when it re-renders (e.g. tapping options in the builder)
@@ -5431,19 +5434,19 @@ const dirtSrcTag = s => { const x = DIRT_SRC[s] || DIRT_SRC.spec; return `<span 
 function dirtAlert() {
   if (!dirtUnread()) return '';
   const x = G.dirt.list[0], h = x.revs?.[0]?.h || x.world?.[0] || 'The week in wrestling';
-  return `<button class="bs-alert dirt-alert" data-act="notesTab" data-id="dirt"><span class="bs-alert-i">🗞️</span><span class="sp"><span class="bs-alert-k">The Dirt Sheet · Issue ${+x.no}</span><b>${esc(h)}</b></span><span class="bs-alert-go">Read ›</span></button>`;
+  return `<button class="bs-alert dirt-alert" data-act="notesTab" data-id="dirt"><span class="bs-alert-i">🗞️</span><span class="sp"><span class="bs-alert-k">${DIRT_NAME} · Issue ${+x.no}</span><b>${esc(h)}</b></span><span class="bs-alert-go">Read ›</span></button>`;
 }
 function dirtView() {
   const L = G.dirt?.list || [];
-  const mast = (sub) => `<div class="dirt-mast"><div class="dirt-name">The Dirt Sheet</div><div class="dirt-sub">${sub}</div></div>`;
-  if (!L.length) return `<div class="card dirt">${mast("Wrestling's weekly insider")}<div class="empty">The first issue comes out after this week's shows. It covers every company: reviews, ratings, signings, title changes and the rumours going around.</div></div>`;
+  const mast = (sub) => `<div class="dirt-mast"><div class="dirt-name">${DIRT_NAME}</div><div class="dirt-tag">${DIRT_TAG}</div>${sub ? `<div class="dirt-sub">${sub}</div>` : ''}</div>`;
+  if (!L.length) return `<div class="card dirt">${mast('')}<div class="empty">The first issue comes out after this week's shows. It covers every company: reviews, ratings, signings, title changes and the rumours going around.</div></div>`;
   const i = clamp(+UI.dirtIx || 0, 0, L.length - 1), x = L[i];
   if (i === 0 && G.dirt.seen !== x.no) G.dirt.seen = x.no;
   const revs = x.revs || [], lead = revs[0];
   const stars = r => `<span class="dirt-stars">${starStr(+r || 0)}</span> <span class="tiny muted">${+r || 0}</span>`;
   const rev = (v, big) => `<div class="${big ? 'dirt-lead' : 'card dirt-rev'}"><div class="dirt-k">${v.me ? 'Review · ' : ''}${esc(v.co)}${v.big ? ' · Big event' : ''}</div><div class="dirt-h">${esc(v.h)}</div><div class="small" style="margin-bottom:4px">${stars(v.r)}</div><div class="dirt-b">${esc(v.b)}</div></div>`;
   const mv = m => m === 'new' ? '<span class="dirt-mv new">NEW</span>' : m > 0 ? `<span class="dirt-mv up">▲${m}</span>` : m < 0 ? `<span class="dirt-mv dn">▼${-m}</span>` : '<span class="dirt-mv">–</span>';
-  return `<div class="card dirt">${mast(`Issue ${+x.no} · Week ${+x.wk} · Wrestling's weekly insider`)}
+  return `<div class="card dirt">${mast(`Issue ${+x.no} · Week ${+x.wk}`)}
     <div class="row dirt-nav"><button class="btn sm" data-act="dirtIx" data-id="${i + 1}" ${i + 1 >= L.length ? 'disabled' : ''} aria-label="Older issue">‹ Older</button><span class="sp tiny muted" style="text-align:center">${i ? `${i} issue${i > 1 ? 's' : ''} back` : 'Latest issue'}</span><button class="btn sm" data-act="dirtIx" data-id="${i - 1}" ${i ? '' : 'disabled'} aria-label="Newer issue">Newer ›</button></div>
     ${lead ? rev(lead, 1) : `<div class="dirt-lead"><div class="dirt-k">Quiet week</div><div class="dirt-h">No shows to review this week</div></div>`}</div>
   ${revs.slice(1).map(v => rev(v)).join('')}
