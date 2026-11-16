@@ -1767,6 +1767,20 @@ const multi = () => !!(G && Array.isArray(G.cos) && G.cos.length);
 const waitingCos = () => (G.cos || []).filter(c => (c.ranWk || 0) < G.week);
 const doneThisWeek = () => multi() && (G.ranWk || 0) >= G.week;
 const coNews = (c, text, cat) => { c.news ||= []; c.news.unshift({ wk: G.week, text, cat: cat || 'office' }); if (c.news.length > 400) c.news.length = 400; };
+// duplicate checks: names are compared without case or extra spaces
+const nameKey = n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
+function wNameTaken(name, selfId) { const k = nameKey(name); if (!k || !G) return null;
+  for (const w of G.wrestlers) if (w.id !== selfId && nameKey(w.name) === k) return w.retired ? 'retired' : w.contract ? 'on your roster' : 'a free agent';
+  for (const c of G.cos || []) for (const w of c.roster || []) if (w.id !== selfId && nameKey(w.name) === k) return 'with ' + (c.promo?.name || 'your other company');
+  for (const r of G.rivalPromos || []) for (const w of r.roster || []) if (w.id !== selfId && nameKey(w.name) === k) return 'with ' + r.name;
+  for (const w of G.school?.trainees || []) if (w.id !== selfId && nameKey(w.name) === k) return 'at your school';
+  return null; }
+function grpNameTaken(name, selfId) { const k = nameKey(name);
+  const t = (G.teams || []).find(x => x.id !== selfId && nameKey(x.name) === k); if (t) return 'a tag team';
+  const f = (G.factions || []).find(x => x.id !== selfId && nameKey(x.name) === k); return f ? 'a faction' : null; }
+const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+// a wrestler can be in one tag team (but any number of factions)
+const otherTeamOf = (id, selfId) => (G.teams || []).find(t => t.id !== selfId && t.members.includes(id));
 const worldNames = () => new Set(G ? [...G.wrestlers, ...(G.cos || []).flatMap(c => c.roster || []), ...(G.rivalPromos || []).flatMap(r => r.roster || [])].map(w => w.name) : []);
 function coSnap() { const o = {}; for (const k of Object.keys(G)) if (!SHARED_KEYS.has(k)) o[k] = G[k]; o.roster = G.wrestlers.filter(w => w.contract); return o; }
 function switchCo(id) {
@@ -6028,7 +6042,8 @@ function renderPicker() {
    ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
    <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${pickNF(p) ? ` Showing ${list.length} of ${total}. <button class="link" data-act="pickClear">Clear filters</button>` : ''}${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear.' : ''}</div>
    ${list.map(w => { const g = gOn && guestDeal(w.id, UI.selWeek), sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
-     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
+     const tmLock = !sel && UI.modal?.type === 'editTeam' && otherTeamOf(w.id, UI.modal.draft.id);
+     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other || tmLock ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${tmLock ? `<span style="color:var(--warn)">👥 In ${esc(tmLock.name)}</span> · ` : ''}${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
    ${gOn ? `<button class="btn block" style="margin-top:10px" data-act="localTalent">+ Book local enhancement talent (${money(100)}–${money(250)})</button><div class="tiny muted" style="margin-top:6px">A local wrestler for one month, non-exclusive. Good for squash matches that make your stars look strong.</div>` : ''}`;
   return modal('Choose wrestlers', body, `<button class="btn pri" data-act="pickDone">Done (${p.sel.length})</button>`, { cls: 'picker-bg', closeAct: 'pickDone', anim });
 }
@@ -6225,7 +6240,7 @@ function modalRecords(m) {
 function modalEditTeam(m) {
   const d = m.draft;
   const body = `<label class="f"><span>Team name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="40" placeholder="e.g. The Iron Syndicate"></label>
-    <div class="side"><div class="lbl">Members (2 to 4)</div>${chipsFor(d.members, 'members', 4)}</div>
+    <div class="side"><div class="lbl">Members (2 to 4)</div>${chipsFor(d.members, 'members', 4)}${(() => { const c = d.members.map(id => [id, otherTeamOf(id, d.id)]).filter(x => x[1]); return c.length ? `<div class="small" style="color:var(--warn);margin-top:6px">⚠️ ${c.map(([id, t]) => `${esc(nameOf(id))} is already in ${esc(t.name)}`).join('. ')}. A wrestler can only be in one tag team.</div>` : '<div class="tiny muted" style="margin-top:4px">A wrestler can be in one tag team, and in any number of factions.</div>'; })()}</div>
     ${m.isNew ? '' : `<div class="small" style="margin-bottom:8px">Record together: <b>${teamRec(d)}</b></div>`}
     <div class="tiny muted">Book members on the same side and they fight as a team: a chemistry bonus that grows with their wins, their own record, and their name on the results. In a tag match, pick the team in one tap.</div>`;
   return modal(m.isNew ? 'New team' : esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="delTeam">Split up</button>'}<button class="btn pri" data-act="saveTeam">Save</button>`);
@@ -6688,6 +6703,7 @@ const A = {
   pickTog(id) {
     const p = UI.picker; if (p.others.has(id)) return toast('Already on the other side of this segment.');
     const i = p.sel.indexOf(id);
+    if (i < 0 && UI.modal?.type === 'editTeam') { const t = otherTeamOf(id, UI.modal.draft.id); if (t) return toast(`${nameOf(id)} is already in ${t.name}. A wrestler can only be in one tag team. Split up ${t.name} or remove them from it first.`); }
     if (i >= 0) p.sel.splice(i, 1);
     else { if (p.sel.length >= p.max) { if (p.max === 1) p.sel = []; else return toast('Maximum ' + p.max + ' here.'); } p.sel.push(id); }
     const sc = document.querySelector('.picker-bg .mb')?.scrollTop; render(); const el = document.querySelector('.picker-bg .mb'); if (el) el.scrollTop = sc;
@@ -6807,6 +6823,7 @@ const A = {
   editW(id) { const w = W(id); openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); },
   saveW() {
     const d = UI.modal.draft; if (!d.name.trim()) return toast('Give them a name.');
+    { const where = wNameTaken(d.name.trim().slice(0, 40), d.id); if (where) return toast(`There's already a wrestler called ${d.name.trim()} (${where}). Pick another name.`); }
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale']) d[k] = clamp(+d[k] || 1, 1, 100);
     for (const k of SK_ALL) if (d[k] != null) d[k] = clamp(+d[k] || 1, 1, 99);
     d.short = String(d.short || '').replace(/[<>&"'`]/g, '').trim().slice(0, 20); if (!d.short) delete d.short;
@@ -6947,6 +6964,9 @@ const A = {
     const d = UI.modal.draft; d.name = String(d.name || '').trim().slice(0, 40);
     if (!d.name) return toast('Give the team a name.');
     if (d.members.length < 2) return toast('A team needs at least two members.');
+    { const k = grpNameTaken(d.name, d.id); if (k) return toast(`There's already ${k} called ${d.name}. Pick another name.`); }
+    { const dup = (G.teams || []).find(t => t.id !== d.id && sameSet(t.members, d.members)); if (dup) return toast(`These wrestlers are already a team: ${dup.name}.`); }
+    { const c = d.members.map(id => [id, otherTeamOf(id, d.id)]).find(x => x[1]); if (c) return toast(`${nameOf(c[0])} is already in ${c[1].name}. A wrestler can only be in one tag team.`); }
     G.teams ||= []; const i = G.teams.findIndex(t => t.id === d.id);
     if (i >= 0) G.teams[i] = d; else { G.teams.push(d); news(`👥 ${d.members.map(nameOf).join(' & ')} are now ${d.name}.`, 'story'); }
     UI.modal = null; commit('Team saved.');
@@ -6966,6 +6986,8 @@ const A = {
     if (!d.name) return toast('Give the faction a name.');
     d.members = [...new Set(d.members)].slice(0, 8);
     if (d.members.length < 2) return toast('A faction needs at least two members.');
+    { const k = grpNameTaken(d.name, d.id); if (k) return toast(`There's already ${k} called ${d.name}. Pick another name.`); }
+    { const dup = (G.factions || []).find(f => f.id !== d.id && sameSet(f.members, d.members)); if (dup) return toast(`These wrestlers are already a faction: ${dup.name}.`); }
     d.tms = d.tms.filter(id => TM(id)?.members.every(x => d.members.includes(x)));
     if (d.leader && !d.members.includes(d.leader)) d.leader = null;
     G.factions ||= []; const i = G.factions.findIndex(f => f.id === d.id);
@@ -10243,8 +10265,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.18';
+const VERSION = '1.9.19';
 const WHATS_NEW = [
+  ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
   ['👥 Teams in the Office', 'Office → Teams is the new home for tag teams and factions. Start a team or faction, see their records, chemistry and titles, then edit, split up or disband them in one tap. A faction\'s leader is now picked from its own members.'],
   ['🎯 Filter and sort when booking', 'The wrestler picker now sorts by best fit, overall, popularity, momentum, freshest, in-ring, mic, salary or name, and remembers your choice. Every sort menu (picker, roster, free agents) now has a reverse button beside it. Tap chips to show only Men\'s or Women\'s, wrestlers free tonight, not tired, champions, people in a story, or teams and factions.'],
   ['🎟️ Title shot contracts', 'Tick Winner earns a title shot in the match editor and the winner gets a contract. Make it a #1 contender\'s match at an event you pick (it goes on that card for you), or a cash-in contract good for a year. To cash in, open any match the champion is in and choose how it goes. Office → Titles shows who holds one.'],
