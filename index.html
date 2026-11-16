@@ -110,6 +110,7 @@ nav.tabs .dot { position: absolute; top: 2px; right: calc(50% - 18px); min-width
 .sec { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); margin: 18px 2px 8px; display: flex; align-items: center; gap: 8px; }
 .sec .sp { flex: 1; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grp-new { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .stat .k { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
@@ -150,6 +151,32 @@ button.item:active { background: var(--card2); }
 .alert .ic { font-size: 18px; line-height: 1.2; }
 .news { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; display: flex; gap: 10px; }
 .news:last-child { border-bottom: 0; }
+.dirt-mast { text-align: center; padding: 6px 4px 10px; border-bottom: 3px double var(--line); margin-bottom: 8px; }
+.dirt-name { font-family: var(--f-display); font-size: clamp(26px, 9vw, 36px); line-height: 1; letter-spacing: .03em; text-transform: uppercase; }
+
+.dirt-tag { font-style: italic; font-size: 15px; color: var(--accent-t); margin-top: 4px; }
+.dirt-sub { font-family: var(--f-cond); font-weight: 600; font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); margin-top: 6px; }
+.dirt-nav { gap: 8px; margin-bottom: 10px; }
+.dirt-nav .btn[disabled] { opacity: .4; }
+.dirt-k { font-family: var(--f-cond); font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-t); }
+.dirt-h { font-family: var(--f-cond); font-weight: 800; font-size: 22px; line-height: 1.1; margin: 2px 0 6px; }
+.dirt-lead { border-top: 1px solid var(--line); padding-top: 10px; }
+.dirt-lead .dirt-h { font-size: 30px; }
+.dirt-b { font-size: 15px; line-height: 1.5; }
+.dirt-rev { margin-top: 10px; }
+.dirt-stars { color: var(--gold); font-weight: 800; letter-spacing: .04em; }
+.dirt-list { padding: 2px 14px; }
+.dirt-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.dirt-row:first-child { border-top: 0; }
+.dirt-row.me b { color: var(--accent-t); }
+.dirt-n { font-family: var(--f-display); font-weight: 400; font-size: 18px; width: 22px; text-align: center; color: var(--dim); }
+.dirt-src { display: inline-block; font-size: 11.5px; font-weight: 800; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); white-space: nowrap; }
+.dirt-src.solid { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.dirt-src.hear { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.dirt-src.spec { color: var(--dim); }
+.dirt-take { border-left: 4px solid var(--gold); }
+.dirt-mv { font-size: 12px; font-weight: 800; min-width: 34px; text-align: right; color: var(--faint); }
+.dirt-mv.up { color: var(--good); } .dirt-mv.dn { color: var(--bad); } .dirt-mv.new { color: var(--gold); }
 .news .wk { font-size: 11px; color: var(--faint); font-weight: 700; min-width: 34px; padding-top: 2px; }
 .stars { color: var(--accent-t); letter-spacing: 1px; font-weight: 700; white-space: nowrap; }
 .seg { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
@@ -745,6 +772,19 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .cstats > div { text-align: center; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 2px; }
 .cstats b { display: block; font-size: 17px; } .cstats span { font-size: 11px; color: var(--dim); }
 .cstats { gap: 6px; }
+.pst-chart { --st-new: #b88614; --st-ret: #3d8fe0; display: flex; align-items: flex-end; gap: 2px; height: 120px; padding-top: 4px; border-bottom: 1px solid var(--line); }
+.pst-col { flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; background: none; border: 0; padding: 0; cursor: pointer; }
+.pst-col:hover .pst-stack, .pst-col:focus-visible .pst-stack { filter: brightness(1.2); }
+.pst-stack { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 0; }
+.pst-stack i { display: block; min-height: 2px; } .pst-stack i:first-child { border-radius: 4px 4px 0 0; }
+.pst-new { background: var(--st-new, #b88614); } .pst-ret { background: var(--st-ret, #3d8fe0); }
+.pst-leg { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; } .pst-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.pst-leg, .pst-chart, .pst-ax { --st-new: #b88614; --st-ret: #3d8fe0; }
+.pst-ax { display: flex; justify-content: space-between; margin-top: 4px; }
+.pst-bar { height: 6px; background: var(--bg2); border-radius: 3px; margin-top: 3px; overflow: hidden; } .pst-bar i { display: block; height: 100%; background: var(--st-ret, #3d8fe0); border-radius: 3px; }
+.pst-tbl { width: 100%; border-collapse: collapse; margin-top: 6px; } .pst-tbl th, .pst-tbl td { text-align: right; padding: 3px 6px; border-bottom: 1px solid var(--line); } .pst-tbl th:first-child, .pst-tbl td:first-child { text-align: left; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .pst-leg, :root:not([data-theme="dark"]) .pst-chart, :root:not([data-theme="dark"]) .pst-ax, :root:not([data-theme="dark"]) .pst-bar { --st-new: #8a5c05; --st-ret: #1a66b3; } }
+:root[data-theme="light"] .pst-leg, :root[data-theme="light"] .pst-chart, :root[data-theme="light"] .pst-ax, :root[data-theme="light"] .pst-bar { --st-new: #8a5c05; --st-ret: #1a66b3; }
 .contend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; margin-top: 3px; }
 .lv-streak { margin-top: 6px; font-weight: 800; color: #ffb547; font-size: 14px; }
 
@@ -891,6 +931,15 @@ html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw
 .seg-ctl.tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-ctl.quad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .seg-ctl.quad.tri { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg-ctl.office-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.seg-ctl.office-tabs button { font-size: 11.5px; padding: 6px 1px; }
+.grp-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+.grp-main { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 10px 12px 6px; background: none; border: 0; color: inherit; font: inherit; }
+.grp-main .main { flex: 1; min-width: 0; } .grp-main .t { font-weight: 800; } .grp-main .d { font-size: 13px; color: var(--dim); margin-top: 2px; }
+.grp-avs { display: flex; flex: none; padding-top: 2px; } .grp-avs > * { margin-left: -8px; } .grp-avs > *:first-child { margin-left: 0; }
+.grp-more { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--card2); margin-left: -8px; }
+.grp-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.grp-acts { display: flex; gap: 8px; justify-content: flex-end; padding: 0 12px 10px; }
 .brand-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .brand-col { padding: 10px; margin: 0; min-width: 0; }
 .brand-n { font-family: var(--f-display); font-size: 17px; text-transform: uppercase; line-height: 1.1; overflow-wrap: anywhere; }
@@ -1030,6 +1079,13 @@ const mtNames = () => [...Object.keys(MATCH_TYPES), ...CM().types.map(x => x.nam
 const gmNames = () => [...Object.keys(STIPS), ...CM().gims.map(x => x.name)];
 const sideSize = (mt, i) => mt.ffa ? 1 : mt.sizes ? mt.sizes[i] || 1 : mt.size;
 const tagMT = mt => !mt.ffa && !mt.sizes && mt.sides === 2 && mt.size === 2;
+// championships come in three sizes: singles (1), tag team (2) and trios (3). A trios title is t.tag with t.size 3.
+const tsz = t => !t?.tag ? 1 : +t.size === 3 ? 3 : 2;
+const titleMT = mt => !mt.ffa && !mt.sizes && mt.sides === 2 && (mt.size === 2 || mt.size === 3) ? mt.size : 1;
+const titleFits = (t, mt) => tsz(t) === titleMT(mt);
+const sizeMT = n => n === 1 ? 'Singles' : n === 2 ? 'Tag Team' : 'Six-Person Tag';
+const TKINDS = [['one', 'Singles', 1], ['tag', 'Tag team (2)', 2], ['trios', 'Trios (3)', 3]];
+const tkindName = t => ['Singles', 'Tag team', 'Trios'][tsz(t) - 1];
 // tag matches come in four sizes; the editor shows them as one "Tag Team" entry with a size row
 const TAG_SIZES = { 2: 'Tag Team', 3: 'Six-Person Tag', 4: 'Eight-Person Tag', 5: 'Ten-Person Tag' };
 const tagSizeOf = k => +(Object.keys(TAG_SIZES).find(n => TAG_SIZES[n] === k) || 0);
@@ -1309,6 +1365,7 @@ function newGame(opts) {
     { t: 'Plan a payoff match for "Chasing the Gold" at the first big event', done: false, auto: 'bigEvent' }
   ];
   news('Welcome to ' + g.promo.name + '. You are the booker now.', 'office');
+  PLAYLOG.ev('new_game', opts.roster === 'empty' ? 'empty' : 'starter');
   return g;
 }
 
@@ -1561,7 +1618,7 @@ const shotWhen = s => s.use === 'any' ? `cash in any time before ${wkDay(s.exp)}
 const shotLine = s => { const t = shotTitle(s); return s.use === 'any' ? `💼 Cash-in contract for the ${t ? t.short : ''} title · ${shotWhen(s)}` : `🎟️ #1 contender for the ${t ? t.short : ''} title · ${shotWhen(s)}`; };
 function giveShot(ids, t, use, wk) {
   if (!t) return null;
-  ids = ids.filter(id => W(id) && !t.holder.includes(id)).slice(0, t.tag ? 2 : 1); if (!ids.length) return null;
+  ids = ids.filter(id => W(id) && !t.holder.includes(id)).slice(0, tsz(t)); if (!ids.length) return null;
   use = use === 'any' ? 'any' : 'event';
   if (use === 'event' && !(+wk > G.week && bigWk(+wk))) wk = bigsAfter(G.week, 1)[0] || G.week + 4;
   G.shots = SHOTS().filter(s => !(s.titleId === t.id && s.ids.some(id => ids.includes(id))));
@@ -1573,7 +1630,7 @@ const dropShot = s => { G.shots = SHOTS().filter(x => x !== s); };
 const shotMatch = (seg, s) => seg.kind === 'match' && seg.title === s.titleId && s.ids.every(id => segPeople(seg).includes(id));
 function shotSeg(s) {
   const t = shotTitle(s), opp = t.holder.length ? t.holder.slice() : contenders(t, 4).filter(w => !s.ids.includes(w.id)).slice(0, t.tag ? 0 : 1).map(w => w.id);
-  return { id: uid(), kind: 'match', mtype: t.tag ? 'Tag Team' : 'Singles', stip: 'Standard', sides: [opp, s.ids.slice()], winner: -1, finish: 'Clean', title: t.id, shotFor: s.id };
+  return { id: uid(), kind: 'match', mtype: sizeMT(tsz(t)), stip: 'Standard', sides: [opp, s.ids.slice()], winner: -1, finish: 'Clean', title: t.id, shotFor: s.id };
 }
 // a #1 contender's match goes on their event's card once; if the player takes it off, it stays off
 function seedShots(wk) {
@@ -1622,7 +1679,7 @@ function shotsAfterMatch(seg, res, before, notes) {
   }
   if (seg.shot && res.winners.length) {
     const st = G.titles.find(x => x.id === seg.shot.titleId);
-    const s = st && giveShot(st.tag ? res.winners.slice(0, 2) : [res.winners[0]], st, seg.shot.use, seg.shot.wk);
+    const s = st && giveShot(res.winners.slice(0, tsz(st)), st, seg.shot.use, seg.shot.wk);
     if (s) { notes.push(`${s.use === 'any' ? '💼' : '🎟️'} ${s.ids.map(nameOf).join(' & ')} won a ${st.short} title shot, ${shotWhen(s)}`); news(`${s.use === 'any' ? '💼' : '🎟️'} ${s.ids.map(nameOf).join(' & ')} won a shot at the ${st.name}, ${shotWhen(s)}.`, 'title'); }
     else if (st) notes.push(`${res.winners.map(nameOf).join(' & ')} already hold${res.winners.length > 1 ? '' : 's'} the ${st.short} title, so no title shot`);
   }
@@ -1645,7 +1702,9 @@ function reignsOfW(id) { return G.titles.flatMap(t => ensureReigns(t).filter(r =
 
 // ---------- tag teams and stables ----------
 const TM = id => (G.teams || []).find(t => t.id === id);
-function teamOf(ids) { return ids.length >= 2 ? (G.teams || []).find(t => ids.every(id => t.members.includes(id))) : null; }
+// a tag team and a trios team can share members; a side of three is named for its trios team first, a side of two for its tag team
+const isTrios = t => t?.kind === 'trios';
+function teamOf(ids) { if (ids.length < 2) return null; const ts = (G.teams || []).filter(t => ids.every(id => t.members.includes(id))); return ts.find(t => isTrios(t) === (ids.length >= 3)) || ts[0] || null; }
 // factions: bigger groups (up to 8) that can hold whole tag teams; any 2+ of them on one side fight as the faction
 const FC = id => (G.factions || []).find(f => f.id === id);
 function factionOf(ids) { return ids.length >= 2 ? (G.factions || []).find(f => ids.every(id => f.members.includes(id))) : null; }
@@ -1668,8 +1727,8 @@ function ranking(div, n = 10) {
   return signed().filter(w => (w.division || 'Open') === div && w.id !== c?.w.id).sort((a, b) => contenderScore(b) - contenderScore(a)).slice(0, n);
 }
 const teamScore = t => BR.team(t);
-function rankedTeams() { return (G.teams || []).filter(t => liveMembers(t).length >= 2).sort((a, b) => teamScore(b) - teamScore(a)); }
-function rankSnap() { const o = {}; for (const d of rankDivs()) ranking(d).forEach((w, i) => o[w.id] = i + 1); rankedTeams().slice(0, 10).forEach((t, i) => o[t.id] = i + 1); return o; }
+function rankedTeams(kind) { return (G.teams || []).filter(t => liveMembers(t).length >= (isTrios(t) ? 3 : 2) && (!kind || isTrios(t) === (kind === 'trios'))).sort((a, b) => teamScore(b) - teamScore(a)); }
+function rankSnap() { const o = {}; for (const d of rankDivs()) ranking(d).forEach((w, i) => o[w.id] = i + 1); for (const k of ['tag', 'trios']) rankedTeams(k).slice(0, 10).forEach((t, i) => o[t.id] = i + 1); return o; }
 function rankMove(id, now) {
   const was = G.rankPrev?.[id];
   if (!G.history.length) return '';
@@ -1726,12 +1785,27 @@ function tSeg(T, r, i) {
 // The company being booked lives in G as always. The player's other companies wait in G.cos as snapshots
 // holding their own roster, titles, stories, money and history. Free agents, retired legends, AI rivals,
 // settings and the calendar are shared. Every company runs one show a week; the week moves on after the last one.
-const SHARED_KEYS = new Set(['v', 'created', 'week', 'settings', 'wrestlers', 'rivalPromos', 'rivals', 'wlog', 'wseed', 'wseedN', 'cos', 'savedAt', 'customMatch']);
+const SHARED_KEYS = new Set(['v', 'created', 'week', 'settings', 'wrestlers', 'rivalPromos', 'rivals', 'wlog', 'dirt', 'wseed', 'wseedN', 'cos', 'savedAt', 'customMatch']);
 const MAX_COS = 4;
 const multi = () => !!(G && Array.isArray(G.cos) && G.cos.length);
 const waitingCos = () => (G.cos || []).filter(c => (c.ranWk || 0) < G.week);
 const doneThisWeek = () => multi() && (G.ranWk || 0) >= G.week;
 const coNews = (c, text, cat) => { c.news ||= []; c.news.unshift({ wk: G.week, text, cat: cat || 'office' }); if (c.news.length > 400) c.news.length = 400; };
+// duplicate checks: names are compared without case or extra spaces
+const nameKey = n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
+function wNameTaken(name, selfId) { const k = nameKey(name); if (!k || !G) return null;
+  for (const w of G.wrestlers) if (w.id !== selfId && nameKey(w.name) === k) return w.retired ? 'retired' : w.contract ? 'on your roster' : 'a free agent';
+  for (const c of G.cos || []) for (const w of c.roster || []) if (w.id !== selfId && nameKey(w.name) === k) return 'with ' + (c.promo?.name || 'your other company');
+  for (const r of G.rivalPromos || []) for (const w of r.roster || []) if (w.id !== selfId && nameKey(w.name) === k) return 'with ' + r.name;
+  for (const w of G.school?.trainees || []) if (w.id !== selfId && nameKey(w.name) === k) return 'at your school';
+  return null; }
+function grpNameTaken(name, selfId) { const k = nameKey(name);
+  const t = (G.teams || []).find(x => x.id !== selfId && nameKey(x.name) === k); if (t) return 'a tag team';
+  const f = (G.factions || []).find(x => x.id !== selfId && nameKey(x.name) === k); return f ? 'a faction' : null; }
+const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+// a wrestler can be in one tag team (but any number of factions)
+// the one-team rule counts each kind on its own: one tag team and one trios team per wrestler
+const otherTeamOf = (id, selfId, kind = 'tag') => (G.teams || []).find(t => t.id !== selfId && t.members.includes(id) && isTrios(t) === (kind === 'trios'));
 const worldNames = () => new Set(G ? [...G.wrestlers, ...(G.cos || []).flatMap(c => c.roster || []), ...(G.rivalPromos || []).flatMap(r => r.roster || [])].map(w => w.name) : []);
 function coSnap() { const o = {}; for (const k of Object.keys(G)) if (!SHARED_KEYS.has(k)) o[k] = G[k]; o.roster = G.wrestlers.filter(w => w.contract); return o; }
 function switchCo(id) {
@@ -1888,7 +1962,7 @@ function autoBookRest() {
 // lure a wrestler away from another of your companies
 function moveFromCo(c, w) {
   c.roster = (c.roster || []).filter(x => x !== w);
-  for (const t of c.titles || []) if (t.holder.includes(w.id)) { crown(t, []); t.holder = t.holder.filter(h => h !== w.id); if (t.holder.length) crown(t, t.holder); coNews(c, `🏆 The ${t.name} is vacant after ${w.name} left.`, 'title'); }
+  for (const t of c.titles || []) if (t.holder.includes(w.id)) { crown(t, []); t.holder = t.tag ? [] : t.holder.filter(h => h !== w.id); /* a team belt is vacated when one of its holders leaves */ if (t.holder.length) crown(t, t.holder); coNews(c, `🏆 The ${t.name} is vacant after ${w.name} left.`, 'title'); }
   for (const st of c.stories || []) if (st.status === 'active' && (st.a.includes(w.id) || st.b.includes(w.id))) { st.status = 'ended'; st.ended = G.week; }
   for (const seg of [...(c.card || []), ...Object.values(c.future || {}).flat()]) removeFromSeg(seg, w.id);
   for (const f of c.factions || []) { f.members = f.members.filter(x => x !== w.id); if (f.leader === w.id) f.leader = null; }
@@ -1949,6 +2023,34 @@ function brandDraft() {
 }
 // ---------- Office → Brands: the split at a glance, wrestlers on both brands, brand titles and the draft ----------
 const showNight = x => DAYS[+(x.id === G.showId ? G.promo.day : x.day) || 0];
+// Office → Teams: build, edit, split up and disband tag teams and factions
+const teamChem = t => Math.round(3 + Math.min(4, (t.w || 0) / 4) + Math.min(2, (t.bond || 0) / 5));
+const grpTitles = g => G.titles.filter(ti => ti.holder.length >= 2 && ti.holder.every(id => g.members.includes(id)) && (!(G.teams || []).includes(g) || tsz(ti) === (isTrios(g) ? 3 : 2)));
+function grpAvs(g, lead) { const ms = g.members.slice().sort((a, b) => (b === lead) - (a === lead)); return `<div class="grp-avs">${ms.slice(0, 5).map(id => W(id) ? av(W(id), 34, true) : '').join('')}${ms.length > 5 ? `<span class="grp-more">+${ms.length - 5}</span>` : ''}</div>`; }
+function grpWarn(g) { const gone = g.members.filter(id => !W(id)?.contract).length, hurt = g.members.filter(id => W(id)?.contract && W(id).injury > 0).length;
+  return [gone ? `<span class="tag" style="color:var(--bad)">${gone === g.members.length ? 'All gone' : gone + ' gone'}</span>` : '', hurt ? `<span class="tag" style="color:var(--warn)">${hurt} injured</span>` : ''].join(''); }
+function teamsView() {
+  const all = (G.teams || []).slice().sort((a, b) => liveMembers(b).length - liveMembers(a).length || (b.w || 0) - (a.w || 0)), ts = all.filter(t => !isTrios(t)), tr = all.filter(isTrios), fs = (G.factions || []).slice().sort((a, b) => b.members.length - a.members.length);
+  const tCard = t => { const fc = (G.factions || []).find(f => f.tms.includes(t.id)), c = teamChem(t);
+    return `<div class="grp-card"><button class="grp-main" data-act="editTeam" data-id="${t.id}" aria-label="Edit ${esc(t.name)}">${grpAvs(t)}<div class="main"><div class="t">${esc(t.name)}</div>
+      <div class="d">${t.members.map(id => esc(nameOf(id))).join(' & ') || 'No members'}</div>
+      <div class="grp-tags"><span class="tag">${teamRec(t)}</span><span class="tag" title="Bonus when they team up">Chemistry +${c}</span>${grpTitles(t).map(ti => `<span class="tag gold">🏆 ${esc(ti.short || ti.name)}</span>`).join('')}${fc ? `<span class="tag">👑 ${esc(fc.name)}</span>` : ''}${grpWarn(t)}</div></div></button>
+      <div class="grp-acts"><button class="btn sm" data-act="editTeam" data-id="${t.id}">Edit</button><button class="btn sm bad" data-act="splitTeam" data-id="${t.id}">Split up</button></div></div>`; };
+  const fCard = f => { const tms = f.tms.map(TM).filter(Boolean), solo = f.members.filter(id => !tms.some(t => t.members.includes(id)));
+    return `<div class="grp-card"><button class="grp-main" data-act="editFaction" data-id="${f.id}" aria-label="Edit ${esc(f.name)}">${grpAvs(f, f.leader)}<div class="main"><div class="t">${esc(f.name)} <span class="tiny muted">${f.members.length}/8</span></div>
+      <div class="d">${f.leader ? `Led by <b>${esc(nameOf(f.leader))}</b>` : 'No leader'}${[...tms.map(t => ' · 👥 ' + esc(t.name)), ...solo.filter(id => id !== f.leader).map(id => ' · ' + esc(nameOf(id)))].join('')}</div>
+      <div class="grp-tags"><span class="tag">${teamRec(f)}</span>${grpTitles(f).map(ti => `<span class="tag gold">🏆 ${esc(ti.short || ti.name)}</span>`).join('')}${grpWarn(f)}</div></div></button>
+      <div class="grp-acts"><button class="btn sm" data-act="editFaction" data-id="${f.id}">Edit</button><button class="btn sm bad" data-act="disbandFaction" data-id="${f.id}">Disband</button></div></div>`; };
+  return `<div class="grp-new" style="margin-bottom:10px"><button class="btn pri" data-act="editTeam" data-id="">＋ Tag team</button><button class="btn pri" data-act="editTeam" data-id="" data-k="trios">＋ Trios</button><button class="btn pri" data-act="editFaction" data-id="">＋ Faction</button></div>
+    <div class="small muted" style="margin-bottom:4px">Teams that stay together get better: their chemistry bonus grows with every win. A wrestler can be in one tag team and one trios team. Factions are bigger groups of up to 8 that can hold whole teams.</div>
+    <div class="sec">Tag teams <span class="tiny muted">${ts.length}</span></div>
+    ${ts.map(tCard).join('') || '<div class="empty">No tag teams yet. Pair up 2 to 4 wrestlers to start one.</div>'}
+    <div class="sec">Trios <span class="tiny muted">${tr.length}</span></div>
+    ${tr.map(tCard).join('') || '<div class="empty">No trios yet. Put 3 wrestlers together for six-person tags and trios titles. A tag team plus a partner works.</div>'}
+    <div class="sec">Factions <span class="tiny muted">${fs.length}</span></div>
+    ${fs.map(fCard).join('') || '<div class="empty">No factions yet. Group up to 8 wrestlers, or whole tag teams, under one name.</div>'}`;
+}
+
 function brandsView() {
   const sh = SHOWS();
   if (sh.length < 2) return `<div class="small muted" style="margin-bottom:10px">Brands let you split your roster between weekly shows, each with its own stars and champions. Big events still use everyone, and money stays in one company account.</div>
@@ -2255,7 +2357,7 @@ function simSegment(seg, ctx) {
       + (out.elim ? ` Eliminated in order: ${out.elim.order.map(nameOf).join(', ')}.${out.elim.team ? ` ${nameOf(out.elim.last)} was the sole survivor.` : ''}` : '');
     // a cash-in: the contract holder runs out after the bell, and the champion has to defend right there
     if (seg.cash && !draw) { const ct = G.titles.find(x => x.id === seg.cash.titleId), cz = ct && cashFor(ct), cw = cz ? cz.ids.map(W) : [];
-      const champ = !ct ? [] : ct === title && out.winners.length && !ct.holder.some(h => out.winners.includes(h)) && !(holderLost && fin.keep && !ct.dq) ? out.winners.slice(0, ct.tag ? 2 : 1) : ct.holder;
+      const champ = !ct ? [] : ct === title && out.winners.length && !ct.holder.some(h => out.winners.includes(h)) && !(holderLost && fin.keep && !ct.dq) ? out.winners.slice(0, tsz(ct)) : ct.holder;
       if (cz && cw.every(w => w && !(w.injury > 0) && !w.away && !people.includes(w)) && champ.length && champ.some(id => people.some(w => w.id === id))) {
         const o = seg.cash.o, cp = clamp(0.65 + (avg(cw.map(w => w.pop)) - avg(champ.map(id => W(id)?.pop || 50))) / 200, 0.35, 0.9);
         const win = o === 1 ? true : o === 0 ? false : ctx.proj ? true : Math.random() < cp;
@@ -2388,7 +2490,7 @@ function applySegment(seg, res, ctx) {
       const holderWon = t.holder.some(h => res.winners.includes(h));
       if (res.winners.length && !holderWon && !(res.fin?.keep && !t.dq && t.holder.some(h => res.losers.includes(h)))) {
         const old = t.holder.map(nameOf).join(' & ');
-        const newH = t.tag ? res.winners.slice(0, 2) : [res.winners[0]];
+        const newH = res.winners.slice(0, tsz(t));
         crown(t, newH); t.holder = newH; t.since = G.week; t.defenses = 0; t.lastDefense = G.week;
         t.prestige = clamp(t.prestige + (res.rating - 55) / 8, 5, 100);
         notes.push(`🏆 NEW CHAMPION: ${newH.map(nameOf).join(' & ')}`);
@@ -2780,6 +2882,7 @@ function runShow(opts = {}) {
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
   const rec = { wk: G.week, name: showName(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: G.promo.day ?? 0, sname: G.promo.show, ...(special ? { special: true } : {}) };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
+  PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
   const best = results.slice().sort((a, b) => b.rating - a.rating)[0];
   const bestM = results.filter(r => r.seg.kind === 'match').sort((a, b) => b.rating - a.rating)[0];
@@ -2878,6 +2981,139 @@ function endOfWeek(card, world = true) {
   teamPayWeek();
   personaWeek(booked);
   if (G.settings.finances && G.money < 0) news('💸 You are in the red. Cut payroll or run bigger events.', 'office');
+  if (world) dirtWeek();
+}
+
+// ---------- the dirt sheet (Wrestling, Observed): a weekly newsletter about the whole wrestling world ----------
+// Written once a week, after every company has run. Reviews, the ratings race, confirmed moves,
+// rumours (some true, some not: the source tag is a hint, not a promise), a hot take and monthly power rankings.
+const DIRT_KEEP = 12;
+const DIRT_NAME = 'Wrestling, Observed', DIRT_TAG = 'what’s the haps in graps';
+const DIRT_SRC = { solid: ['✅', 'Solid source'], hear: ['👂', "We're hearing"], spec: ['🤔', 'Speculation'] };
+const DIRT_VERDICT = [
+  [85, ['A must-watch show.', 'Go out of your way to see this one.', 'One of the best shows of the year so far.']],
+  [75, ['A strong night of wrestling.', 'Well worth your time.', 'Thumbs up from us.']],
+  [62, ['Solid, if not spectacular.', 'A decent show with a couple of highlights.', 'Nothing wrong with it, nothing special either.']],
+  [48, ['A flat night.', 'Skip it and read the results.', 'The crowd checked out early, and so did we.']],
+  [0, ['A mess from start to finish.', "One of the worst shows we've sat through this year.", 'Someone backstage needs to answer for that one.']]];
+const DIRT_HEAD = [
+  [85, ['{s} steals the week', '{s} is the talk of wrestling', 'Believe the hype: {s} delivered']],
+  [75, ['{s} delivers', 'A good night for {c}', '{s} hits the mark']],
+  [62, ['{s} does its job', 'A middle-of-the-road {s}', '{s}: fine, not memorable']],
+  [48, ['{s} falls flat', 'Tough night for {c}', 'Fans tune out of {s}']],
+  [0, ['{s} bombs', 'Disaster for {c}', 'What happened to {s}?']]];
+const dirtBand = (tbl, r) => pick(tbl.find(([m]) => r >= m)[1]);
+const dirtNoDot = s => String(s || '').replace(/[.!]$/, '');
+const dirtSrc = yes => { const x = Math.random(); return yes ? (x < .6 ? 'solid' : x < .9 ? 'hear' : 'spec') : (x < .1 ? 'solid' : x < .45 ? 'hear' : 'spec'); };
+function dirtShows() {
+  const mine = [G, ...(G.cos || [])].flatMap(c => (c.history || []).filter(h => h.wk === G.week && h.results?.length).map(h => ({ me: 1, co: c.promo.name, name: h.name, rating: h.rating, big: !!h.big, h })));
+  const riv = (G.rivalPromos || []).filter(r => r.card?.wk === G.week && r.card.segs?.length).map(r => ({ co: r.name, sh: r.short, name: r.card.name || r.show, rating: r.last, big: !!r.card.big, r }));
+  return [...mine, ...riv].sort((a, b) => b.rating - a.rating);
+}
+// your show, reviewed
+function dirtReview(x) {
+  const h = x.h, res = h.results, main = res.at(-1), best = res.slice().sort((a, b) => b.rating - a.rating)[0], worst = res.slice().sort((a, b) => a.rating - b.rating)[0];
+  const head = dirtBand(DIRT_HEAD, h.rating).replace('{s}', h.name).replace('{c}', x.co);
+  const b = [dirtBand(DIRT_VERDICT, h.rating)];
+  if (h.attendance) b.push(`${h.attendance.toLocaleString()} fans were in the building.`);
+  if (main && res.length > 1) b.push(`In the main event${main.seg.kind === 'match' ? '' : ' segment'}, ${dirtNoDot(main.text)}. ${main.rating >= 80 ? 'It was everything it needed to be.' : main.rating >= 65 ? 'It did its job.' : main.rating >= 50 ? 'It never really got going.' : 'It sent people home unhappy.'}`);
+  if (best && best !== main && best.rating >= 65) b.push(`Best of the night: ${dirtNoDot(best.text)} (${starStr(best.rating)}).`);
+  if (worst && worst !== best && worst.rating < 50) b.push(`The low point: ${dirtNoDot(worst.text)}.`);
+  return { me: 1, co: x.co, h: head, b: b.join(' '), r: h.rating, big: x.big };
+}
+// the best AI show of the week, in a couple of lines
+function dirtRivalReview(x) {
+  const r = x.r, segs = r.card.segs, main = segs.at(-1);
+  const won = s => s.won === s.a ? [s.an, s.bn] : [s.bn, s.an];
+  const [w, l] = won(main);
+  const b = [dirtBand(DIRT_VERDICT, x.rating)];
+  b.push(`${w} beat ${l} in the main event${main.title ? `${main.tn ? ` with the ${main.tn} title on the line` : ' for the gold'}` : ''}.`);
+  const top = segs.filter(s => s !== main).sort((a, b) => b.rating - a.rating)[0];
+  if (top && top.rating >= 70) { const [tw, tl] = won(top); b.push(`${tw} vs ${tl} was the pick of the undercard.`); }
+  return { co: r.name, h: dirtBand(DIRT_HEAD, x.rating).replace('{s}', x.name).replace('{c}', r.name), b: b.join(' '), r: x.rating, big: x.big };
+}
+// confirmed news: everything public that happened this week, theirs and yours
+function dirtWorld() {
+  const out = [];
+  for (const x of G.wlog || []) if (x.wk === G.week && !out.includes(x.t)) out.push(x.t);
+  const pub = /^(🏆 .* (won|cashed in and took)|💼 .*cashed in|👋|🎤|✍️|🩹|🔄|🛑|🚪|🏚️|🤝|🏟️)/u;
+  for (const c of [G, ...(G.cos || [])]) for (const n of c.news || []) { if (n.wk < G.week) break; if (n.wk === G.week && pub.test(n.text) && !out.includes(n.text)) out.push(n.text); }
+  const rank = t => /🏆|💼/u.test(t) ? 0 : /🏚️|🤝|🏟️|🚪/u.test(t) ? 1 : /✍️|💰|👋/u.test(t) ? 2 : 3;
+  return out.sort((a, b) => rank(a) - rank(b)).slice(0, 8);
+}
+// rumours: built from what's really going on, plus some noise
+function dirtRumours() {
+  const c = [], mine = signed().filter(w => !w.retired), rs = (G.rivalPromos || []).filter(r => r.roster.length);
+  const add = (t, yes, wt = 1) => c.push({ t, yes, wt: wt + Math.random() });
+  for (const w of mine) {
+    if (w.courted && w.contract.weeks <= 12) add(`${w.courted} has been in touch with ${w.name}'s people about their next deal.`, 1, 3);
+    if (w.morale < 30) add(`${w.name} is said to be unhappy with how ${G.promo.name} is using them.`, 1, 2.5);
+  }
+  const happy = mine.filter(w => w.morale >= 70 && w.pop >= 45);
+  if (happy.length) { const w = pick(happy); add(`${w.name} has quietly asked for their release from ${G.promo.name}.`, 0, 1.2); }
+  const champ = (G.titles || []).find(t => t.holder.length === 1 && W(t.holder[0])); if (champ && Math.random() < .5) add(`${nameOf(champ.holder[0])} wants out of the ${champ.short} title picture and has told management so.`, 0, .8);
+  for (const r of rs) {
+    if (r.money < 0) add(`Paychecks at ${r.name} are reportedly late. The locker room is nervous.`, 1, 2);
+    else if (r.money > payrollR(r) * 20 && Math.random() < .3) add(`${r.name} could be closing its doors before the year is out.`, 0, 1);
+    if (r.counter && r.counter > G.week) add(`${r.name} is stacking ${r.show} to go head to head with your ${bigName(r.counter)}.`, 1, 2.5);
+    const nd = !r.manual && rivalNeeds(r)[0]; if (nd) add(`${r.name} is shopping for ${nd.l}. Expect a signing soon.`, 1, 1.2);
+    const p = r.push.find(p => G.week - (p.wk || 0) <= 3), pw = p && rW(r, p.id); if (pw) add(`${r.name} management is very high on ${pw.name}. A push is coming.`, 1, 1.4);
+    const star = r.roster.slice().sort((a, b) => b.pop - a.pop)[0];
+    if (star && star.pop >= 50 && Math.random() < .35) add(`${star.name}'s deal with ${r.name} is almost up, and they may test free agency.`, (star.rWeeks || 99) <= 10 ? 1 : 0, 1);
+  }
+  const fa = freeAgents().filter(w => w.pop >= 45).sort((a, b) => b.pop - a.pop)[0];
+  if (fa && rs.length) add(`${fa.name} is weighing offers. ${courtFor(fa)} is said to be the front-runner.`, .5, 1.3);
+  c.sort((a, b) => b.wt - a.wt);
+  const picked = c.slice(0, 3);
+  if (!picked.some(x => !x.yes)) { const f = c.find(x => !x.yes); if (f && Math.random() < .5) picked[Math.min(2, picked.length)] = f; }
+  return picked.filter(Boolean).map(x => ({ t: x.t, s: dirtSrc(x.yes >= 1 || (x.yes && Math.random() < x.yes)) }));
+}
+// one opinion a week about your company
+function dirtTake() {
+  const opts = [], mine = signed(), held = new Set((G.titles || []).flatMap(t => t.holder));
+  const star = mine.filter(w => !held.has(w.id) && !w.injury).sort((a, b) => b.pop - a.pop)[0];
+  if (star && star.pop >= 60) opts.push(['Give them the gold', `${star.name} is one of the most popular names in ${G.promo.name} and has no title. What is everyone waiting for?`]);
+  for (const t of G.titles || []) {
+    const c = t.holder.length === 1 && W(t.holder[0]); if (!c) continue;
+    const wks = G.week - (t.since || G.week);
+    if (wks >= 20) opts.push(['Time for a change?', `${c.name} has held the ${t.name} for ${wks} weeks. Great reign, but fans are ready for someone new.`]);
+    if (!t.tag && c.pop < 45 && !t.mid) opts.push(['Not buying it', `${c.name} doesn't feel like a top champion yet. The ${t.short} title needs a bigger star or a bigger story.`]);
+  }
+  const hot = (G.stories || []).filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat)[0];
+  if (hot && hot.heat >= 70) opts.push(['Story of the year?', `"${hot.title}" is the hottest story in wrestling right now. Don't rush the payoff.`]);
+  const h = (G.history || []).filter(x => x.rating);
+  if (h.length >= 8) {
+    const a = avg(h.slice(-4).map(x => x.rating)), b = avg(h.slice(-8, -4).map(x => x.rating));
+    if (a >= b + 5) opts.push(['On the rise', `${G.promo.name} is on a roll: the last four shows averaged ${Math.round(a)}, up from ${Math.round(b)}. Whoever is booking, keep going.`]);
+    if (a <= b - 5) opts.push(['Slipping', `${G.promo.name} has gone cold: the last four shows averaged ${Math.round(a)}, down from ${Math.round(b)}. Something needs to change.`]);
+  }
+  const top = (G.rivalPromos || []).slice().sort((a, b) => b.fans - a.fans)[0];
+  if (top && top.fans > G.fans * 1.3) opts.push(['Chasing the leader', `${top.name} still draws far more fans than ${G.promo.name}. Beat them head to head on a big night and that can change.`]);
+  else if (top && G.fans > top.fans * 1.3) opts.push(['Top of the pile', `${G.promo.name} is the biggest company around right now. The hard part is staying there.`]);
+  const o = opts.length ? pick(opts) : null; return o ? { h: o[0], b: o[1] } : null;
+}
+// power rankings, once a month: the 10 hottest wrestlers anywhere
+function dirtRanks(prev) {
+  const all = [...signed().map(w => ({ w, co: G.promo.name, me: 1 })), ...(G.rivalPromos || []).flatMap(r => r.roster.map(w => ({ w, co: r.name })))].filter(x => !x.w.injury);
+  const old = prev?.pr || [];
+  return all.sort((a, b) => (b.w.pop + (b.w.momentum || 0) / 3) - (a.w.pop + (a.w.momentum || 0) / 3)).slice(0, 10).map((x, i) => {
+    const j = old.findIndex(o => o.id === x.w.id);
+    return { id: x.w.id, n: x.w.name, co: x.co, me: x.me || 0, mv: j < 0 ? 'new' : j - i };
+  });
+}
+function dirtWeek() {
+  try {
+    const D = G.dirt ||= { n: 0, seen: 0, list: [] };
+    if (D.list[0]?.wk === G.week) return;
+    const shows = dirtShows(), mine = shows.filter(x => x.me), riv = shows.filter(x => !x.me);
+    const iss = { no: ++D.n, wk: G.week, revs: [], table: shows.slice(0, 8).map(x => ({ co: x.co, n: x.name, r: x.rating, me: x.me || 0, big: x.big ? 1 : 0 })) };
+    for (const x of mine.slice(0, 2)) iss.revs.push(dirtReview(x));
+    if (riv[0]) iss.revs.push(dirtRivalReview(riv[0]));
+    iss.world = dirtWorld(); iss.rum = dirtRumours();
+    const tk = dirtTake(); if (tk) iss.take = tk;
+    if (G.week % 4 === 0) iss.pr = dirtRanks(D.list.find(x => x.pr));
+    D.list.unshift(iss); if (D.list.length > DIRT_KEEP) D.list.length = DIRT_KEEP;
+  } catch (e) { console.warn('dirt sheet', e); }
 }
 
 // ---------- the living world: rival promotions that book real shows, build stars, sign talent, grow, shrink, open and fold ----------
@@ -2926,6 +3162,10 @@ const rSalFor = (r, w) => Math.max(300, Math.round(asking(w) * TIERS[tierIx(r)][
 const payrollR = r => sum(r.roster.map(w => w.rSal || 0));
 const incomeR = r => Math.round((r.fans || 0) * [1.5, 1.25, 1.05, 0.9][tierIx(r)] * (0.55 + (r.last || 55) / 110));
 const rW = (r, id) => id ? r.roster.find(w => w.id === id) : null;
+// AI company titles: t.n is how many hold it (1 singles, 2 tag team, 3 trios)
+const rN = t => +t?.n === 3 ? 3 : +t?.n === 2 ? 2 : 1;
+const rHolders = (r, t) => t.holder.map(id => rW(r, id)).filter(Boolean);
+const rKind = t => ['', 'Tag team', 'Trios'][rN(t) - 1];
 const isWomen = w => w.division === "Women's";
 const fitsT = (r, t, w) => t.div === "Women's" ? isWomen(w) : !(r.titles || []).some(x => x.div === "Women's") || !isWomen(w);
 const rivBig = (r, wk) => (wk + (r.off || 0)) % 4 === 0;
@@ -2954,7 +3194,7 @@ function liven(r) {
   r.feuds = (Array.isArray(r.feuds) ? r.feuds : []).filter(f => f && f.a && f.b);
   r.push = (Array.isArray(r.push) ? r.push : []).filter(p => p && p.id);
   r.log = Array.isArray(r.log) ? r.log.slice(0, 14) : [];
-  r.titles = (Array.isArray(r.titles) ? r.titles : []).filter(t => t && t.id).map(t => ({ ...t, holder: Array.isArray(t.holder) ? t.holder.slice(0, 1) : [], reigns: Array.isArray(t.reigns) ? t.reigns.slice(-20) : [] }));
+  r.titles = (Array.isArray(r.titles) ? r.titles : []).filter(t => t && t.id).map(t => ({ ...t, holder: Array.isArray(t.holder) ? t.holder.slice(0, rN(t)) : [], reigns: Array.isArray(t.reigns) ? t.reigns.slice(-20) : [] }));
   if (r.safe === undefined) r.safe = !!r.custom;
   for (const w of r.roster) { w.rival = r.id; w.rSal ||= rSalFor(r, w); w.record ||= { w: 0, l: 0, d: 0 }; }
   r.lv = 2;
@@ -2970,29 +3210,45 @@ function rivTitles(r) {
   const has = s => r.titles.some(t => t.short === s);
   if (!has('TV') && r.roster.length >= 10) r.titles.push({ id: uid(), name: `${r.short} Television Championship`, short: 'TV', div: '', mid: true, holder: [], since: G.week, d: 0, reigns: [] });
   if (!has("Women's") && r.roster.filter(isWomen).length >= 4) r.titles.push({ id: uid(), name: `${r.short} Women's Championship`, short: "Women's", div: "Women's", mid: false, holder: [], since: G.week, d: 0, reigns: [] });
+  // team belts once there's a deep enough roster: tag titles first, then trios (sooner at a show-first company)
+  if (!has('Tag') && r.roster.length >= 14) r.titles.push({ id: uid(), name: `${r.short} Tag Team Championship`, short: 'Tag', n: 2, div: '', mid: true, holder: [], since: G.week, d: 0, reigns: [] });
+  if (!has('Trios') && r.roster.length >= (r.phil === 'ent' ? 18 : 22)) r.titles.push({ id: uid(), name: `${r.short} Trios Championship`, short: 'Trios', n: 3, div: '', mid: true, holder: [], since: G.week, d: 0, reigns: [] });
 }
 function crownR(r, t, w, why) {
+  const ws = (Array.isArray(w) ? w : w ? [w] : []).filter(Boolean), nm = ws.map(x => x.name).join(' & ');
   const cur = t.reigns.at(-1); if (cur && !cur.to) { cur.to = Math.max(cur.from, G.week); cur.d = t.d || 0; }
-  t.holder = w ? [w.id] : []; t.since = G.week; t.d = 0;
+  t.holder = ws.map(x => x.id); t.since = G.week; t.d = 0;
   const first = !t.reigns.length;
-  if (w) t.reigns.push({ nm: w.name, from: G.week, to: 0, d: 0 });
+  if (ws.length) t.reigns.push({ nm, from: G.week, to: 0, d: 0 });
   if (t.reigns.length > 20) t.reigns.splice(0, t.reigns.length - 20);
-  if (!t.mid && !t.div) r.champId = w ? w.id : null;
-  if (w && why && !(first && G.week <= 1)) wnews(`🏆 ${r.name}: ${w.name} ${why} the ${t.name}.`, r, !first && !t.mid && r.fans >= 15000);
+  if (!t.mid && !t.div && rN(t) === 1) r.champId = ws[0]?.id || null;
+  if (ws.length && why && !(first && G.week <= 1)) wnews(`🏆 ${r.name}: ${nm} ${why} the ${t.name}.`, r, !first && !t.mid && r.fans >= 15000);
+}
+// a team title goes to the best free wrestlers who fit it; team belts never share holders with another team belt
+function rTeamPick(r, t, used, n = rN(t)) {
+  return r.roster.filter(w => !w.injury && fitsT(r, t, w) && !used.has(w.id)).sort((a, b) => (b.pop + pushB(r, b) + rnd(0, 10)) - (a.pop + pushB(r, a) + rnd(0, 10))).filter((w, i, a) => sameDiv(w, a[0])).slice(0, n);
 }
 // titles always have a holder while the company has someone who can hold them
 function setRivalChamp(r) {
   liven(r); rivTitles(r);
   for (const t of r.titles) {
+    if (rN(t) > 1) {
+      const hs = rHolders(r, t); if (hs.length === rN(t) && hs.every(h => !(h.injury > 6))) continue;
+      if (t.holder.length) wnews(`🏆 ${r.name}'s ${t.name} came open${hs.some(h => h.injury > 6) ? ' after an injury' : ''}.`, r);
+      const used = new Set(r.titles.filter(x => x !== t && rN(x) > 1).flatMap(x => x.holder)), ws = rTeamPick(r, t, used);
+      if (ws.length === rN(t)) crownR(r, t, ws, t.holder.length || t.reigns.length ? 'won a tournament for' : 'became the first holders of');
+      else if (t.holder.length) crownR(r, t, null);
+      continue;
+    }
     const h = rW(r, t.holder[0]);
     if (h && !(h.injury > 6)) continue;
     if (h) wnews(`🚑 ${h.name} is hurt and gave up the ${t.name}.`, r);
-    const used = new Set(r.titles.filter(x => x !== t).flatMap(x => x.holder));
+    const used = new Set(r.titles.filter(x => x !== t && rN(x) === 1).flatMap(x => x.holder));
     const c = r.roster.filter(w => !w.injury && fitsT(r, t, w) && !used.has(w.id)).sort((a, b) => (b.pop + pushB(r, b)) - (a.pop + pushB(r, a)))[0];
     if (c) crownR(r, t, c, t.holder.length || t.reigns.length ? 'won a tournament for' : 'became the first holder of');
     else if (t.holder.length) crownR(r, t, null);
   }
-  r.champId = r.titles.find(t => !t.mid && !t.div)?.holder[0] || null;
+  r.champId = r.titles.find(t => !t.mid && !t.div && rN(t) === 1)?.holder[0] || null;
 }
 const pushB = (r, w) => r.push?.some(p => p.id === w.id) ? 22 : 0;
 function rivWrestler(w, r) { w.contract = null; delete w.courted; delete w._ask; delete w.loan; delete w.loanUntil; w.rival = r.id; w.rWeeks = rint(26, 156); w.division ||= 'Open'; w.rSal = rSalFor(r, w); w.record ||= { w: 0, l: 0, d: 0 }; return w; }
@@ -3088,9 +3344,19 @@ function rBout(r, a, b, o = {}) {
   if (t) { if (win === ch) t.d = (t.d || 0) + 1; else {
     crownR(r, t, win, `beat ${lose.name} for`);
     // one belt at a time: a new champion gives up any other title they held
-    for (const x of r.titles) if (x !== t && x.holder[0] === win.id) { crownR(r, x, null); wnews(`${win.name} gave up the ${x.name} after winning the ${t.name}.`, r); }
+    for (const x of r.titles) if (x !== t && rN(x) === 1 && x.holder[0] === win.id) { crownR(r, x, null); wnews(`${win.name} gave up the ${x.name} after winning the ${t.name}.`, r); }
   } }
   return { an: a.name, bn: b.name, a: a.id, b: b.id, won: win.id, title: !!t, ...(t ? { tn: t.short } : {}), ...(o.feud ? { f: 1 } : {}), rating, imp: (t ? (t.mid || t.div ? 30 : 60) : 0) + (o.feud ? 20 + heat / 5 : 0) + (a.pop + b.pop) / 10 };
+}
+// a team title match on an AI company's card: the champions' team against the challengers'
+function rTeamBout(r, t, A, B, o = {}) {
+  const sc = ws => avg(ws.map(w => w.pop * 0.5 + (w.momentum || 0) * 0.5 + pushB(r, w))) + (ws === A ? (o.big ? 6 : 12) : 0) + rnd(0, 38);
+  const win = sc(A) >= sc(B) ? A : B, lose = win === A ? B : A;
+  const rating = Math.round(clamp(avg([...A, ...B].map(w => perfR(r, w))) * 0.8 + 3 + (o.big ? 4 : 0) + r.prestige * 0.12 + 5 + rnd(-6, 6), 15, 98));
+  for (const w of win) { addPop(w, Math.max(0.05, 0.3 + (rating - 50) / 80)); w.momentum = clamp((w.momentum || 0) + 3, -50, 50); w.record ||= { w: 0, l: 0, d: 0 }; w.record.w++; w.fatigue = clamp((w.fatigue || 0) + 7, 0, 60); }
+  for (const w of lose) { w.momentum = clamp((w.momentum || 0) - 2, -50, 50); w.record ||= { w: 0, l: 0, d: 0 }; w.record.l++; w.fatigue = clamp((w.fatigue || 0) + 7, 0, 60); }
+  if (win === A) t.d = (t.d || 0) + 1; else crownR(r, t, B, `beat ${A.map(w => w.name).join(' & ')} for`);
+  return { an: A.map(w => w.name).join(' & '), bn: B.map(w => w.name).join(' & '), a: A[0].id, b: B[0].id, won: win[0].id, title: true, tn: t.short, rating, imp: 30 + avg([...A, ...B].map(w => w.pop)) / 5 };
 }
 // the card an AI company books this week: title defenses, feuds, its pushed stars and the rest of the roster
 function rivalCard(r, sup) {
@@ -3109,6 +3375,13 @@ function rivalCard(r, sup) {
   }
   // title defenses: every title at a big event, now and then on a weekly show
   for (const t of r.titles) {
+    if (rN(t) > 1) {
+      const A = rHolders(r, t); if (A.length !== rN(t) || !A.every(free) || segs.length >= slots) continue;
+      if (!big && Math.random() > 0.3) continue;
+      const B = rTeamPick(r, t, new Set([...used, ...t.holder]));
+      if (B.length === rN(t)) { take(...A, ...B); segs.push(rTeamBout(r, t, A, B, { big })); }
+      continue;
+    }
     const c = rW(r, t.holder[0]); if (!free(c) || segs.length >= slots) continue;
     if (!big && Math.random() > (t.mid ? 0.35 : 0.15)) continue;
     const ch = r.roster.filter(w => free(w) && w !== c && fitsT(r, t, w) && !r.titles.some(x => x !== t && x.holder.includes(w.id))).sort((x, y) => (y.pop + pushB(r, y) + (y.align !== c.align ? 6 : 0) + (y.momentum || 0) / 2 + rnd(0, 12)) - (x.pop + pushB(r, x) + (x.align !== c.align ? 6 : 0) + (x.momentum || 0) / 2 + rnd(0, 12)))[0];
@@ -3156,7 +3429,7 @@ function rivalPlan(r) {
   while (r.push.length < want) { const w = pickPush(); if (!w) break; r.push.push({ id: w.id, wk: G.week, p0: Math.round(w.pop) }); if (w.pop >= 35) wnews(`📣 ${r.name} is getting behind ${w.name}.`, r); }
   // new feuds, starting with a challenger for the top title
   const nf = [1, 2, 3, 3][T], busy = () => new Set(r.feuds.flatMap(f => [f.a, f.b]));
-  for (const t of r.titles.filter(t => t.holder.length)) {
+  for (const t of r.titles.filter(t => t.holder.length && rN(t) === 1)) {
     if (r.feuds.length >= nf) break;
     const c = rW(r, t.holder[0]); if (!c || busy().has(c.id) || c.injury) continue;
     const ch = r.roster.filter(w => w !== c && !busy().has(w.id) && !w.injury && fitsT(r, t, w) && !r.titles.some(x => x.holder.includes(w.id))).sort((a, b) => (b.pop + pushB(r, b) + (b.align !== c.align ? 8 : 0) + (b.momentum || 0) / 2) - (a.pop + pushB(r, a) + (a.align !== c.align ? 8 : 0) + (a.momentum || 0) / 2))[0];
@@ -3301,7 +3574,7 @@ function rivalWeek(world = true) {
   }
 }
 function leaveCompany(w, why) {
-  for (const t of G.titles) if (t.holder.includes(w.id)) { crown(t, []); t.holder = t.holder.filter(h => h !== w.id); if (t.holder.length) crown(t, t.holder); news(`🏆 The ${t.name} is vacant after ${w.name} left.`, 'title'); }
+  for (const t of G.titles) if (t.holder.includes(w.id)) { crown(t, []); t.holder = t.tag ? [] : t.holder.filter(h => h !== w.id); /* a team belt is vacated when one of its holders leaves */ if (t.holder.length) crown(t, t.holder); news(`🏆 The ${t.name} is vacant after ${w.name} left.`, 'title'); }
   for (const st of storiesOf(w.id)) { st.status = 'ended'; st.ended = G.week; news(`📕 "${st.title}" ended because ${w.name} left.`, 'story'); }
   [G.card, ...Object.values(G.future || {})].forEach(c => c.forEach(seg => removeFromSeg(seg, w.id)));
   w.contract = null; w.morale = 60; delete w.courted;
@@ -4274,7 +4547,9 @@ function autoFill(quiet) {
     if (any) filled++; take(s.sides.flat());
   }
   // teams with two members free tonight, best first
-  const availTeams = () => rankedTeams().map(t => t.members.filter(id => avail().some(w => w.id === id)).slice(0, 2)).filter(x => x.length === 2);
+  const availTeams = (n = 2) => rankedTeams(n === 3 ? 'trios' : 'tag').map(t => t.members.filter(id => avail().some(w => w.id === id)).slice(0, n)).filter(x => x.length === n);
+  // trios: real trios teams first, then three free members of a faction
+  const availTrios = () => [...availTeams(3), ...(G.factions || []).map(f => f.members.filter(id => avail().some(w => w.id === id)).slice(0, 3)).filter(x => x.length === 3)];
   const segs = [];
   // save announced PPV matches for the PPV: on weekly shows those opponents get promos instead
   const nb = !big && nextBig(), pms = nb && nb > wk ? ppvMatches(nb) : [];
@@ -4298,11 +4573,11 @@ function autoFill(quiet) {
     if (wk - t.lastDefense < 2 && !big) continue;
     const top = contenders(t, 6).filter(w => avail().includes(w) && !shotsOf(w.id).some(x => x.titleId === t.id && (x.use === 'any' || x.wk > wk))); // a #1 contender waits for their event, and a cash-in is the booker's call
     const pool = top.length ? top : avail().filter(w => !t.holder.includes(w.id) && divOk(t, w)).sort((a, b) => b.pop - a.pop).slice(0, 6);
-    const n = t.tag ? 2 : 1;
-    const tms = t.tag ? availTeams().filter(x => !x.some(id => t.holder.includes(id))) : [];
+    const n = tsz(t);
+    const tms = n === 3 ? availTrios().filter(x => !x.some(id => t.holder.includes(id))) : n === 2 ? availTeams().filter(x => !x.some(id => t.holder.includes(id))) : [];
     if (pool.length < n && !tms.length) continue;
     const ch = tms.length ? tms[Math.random() < 0.6 ? 0 : rint(0, Math.min(2, tms.length - 1))] : n === 1 ? [BR.challenger(t, pool.slice(0, 6)).id] : shuffle(pool).slice(0, n).map(w => w.id);
-    segs.push({ id: uid(), kind: 'match', mtype: t.tag ? 'Tag Team' : 'Singles', stip: 'Standard', sides: [t.holder.slice(), ch], winner: -1, finish: !big && W(t.holder[0])?.align === 'heel' && Math.random() < 0.25 ? pick(['DQ', 'Count-out', 'Cheating']) : 'Clean', title: t.id });
+    segs.push({ id: uid(), kind: 'match', mtype: sizeMT(n), stip: 'Standard', sides: [t.holder.slice(), ch], winner: -1, finish: !big && W(t.holder[0])?.align === 'heel' && Math.random() < 0.25 ? pick(['DQ', 'Count-out', 'Cheating']) : 'Clean', title: t.id });
     take([...t.holder, ...ch]);
   }
   // fill the rest with matches and a hype promo
@@ -4310,6 +4585,8 @@ function autoFill(quiet) {
   while (segs.length < target && guard++ < 20) {
     const pool = avail(); if (pool.length < 2) break;
     if ((segs.length >= Math.floor(target / 2) && ![...card, ...segs].some(s => s.kind !== 'match')) || Math.random() < 0.12) { const w = BR.speaker(pool); segs.push({ id: uid(), kind: 'promo', ptype: 'Hype Promo', who: [w.id], target: [] }); take([w.id]); continue; }
+    const tr3 = availTeams(3);
+    if (tr3.length >= 2 && Math.random() < 0.25) { const x = tr3[0], y = tr3.find(z => z !== x && !z.some(id => x.includes(id)) && sameDiv(W(x[0]), W(z[0]))); if (y) { segs.push({ id: uid(), kind: 'match', mtype: 'Six-Person Tag', stip: 'Standard', sides: [x, y], winner: -1, finish: 'Clean', title: null }); take([...x, ...y]); continue; } }
     const fa = (G.factions || []).map(f => f.members.filter(id => avail().some(w => w.id === id)).slice(0, 3)).filter(x => x.length === 3);
     if (fa.length && Math.random() < 0.15) { const x = pick(fa), opp = shuffle(fa.filter(y => y !== x && !y.some(id => x.includes(id)) && sameDiv(W(x[0]), W(y[0]))))[0] || shuffle(avail().filter(w => !x.includes(w.id) && sameDiv(W(x[0]), w) && !factionsOfW(w.id).some(f => x.every(id => f.members.includes(id))))).slice(0, 3).map(w => w.id); if (opp.length === 3) { segs.push({ id: uid(), kind: 'match', mtype: 'Six-Person Tag', stip: 'Standard', sides: [x, opp], winner: -1, finish: 'Clean', title: null }); take([...x, ...opp]); continue; } }
     const tt = availTeams();
@@ -4780,6 +5057,7 @@ function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><sp
 
 function render() {
   const fk = focusKey(document.activeElement);
+  try { PLAYLOG.seen(UI.modal?.type, UI.wiz ? 'wizard' : G ? UI.tab : 'start'); } catch (e) {}
   if (!G || UI.wiz) { const mo = modals.querySelector('.modal-bg .mb'), ko = lastModalKey, so = mo ? mo.scrollTop : 0;
     root.innerHTML = iconize('<main tabindex="-1">' + (UI.wiz ? viewWizard() : viewStart()) + '</main>'); modals.innerHTML = iconize(renderModal());
     const mn = modals.querySelector('.modal-bg .mb'); if (mn && so && ko === lastModalKey) mn.scrollTop = so; bdTabView(); a11yAfter(fk); MUSIC.sync(); return; }
@@ -4802,8 +5080,8 @@ function render() {
     <main tabindex="-1">${({ book: viewBook, roster: viewRoster, stories: viewStories, office: viewOffice, notes: viewNotes })[UI.tab]()}</main>
   </div>
   <nav class="tabs" aria-label="Main"><div class="in">
-    ${[['book', '📅', 'Shows', 0], ['roster', '🤼', 'Roster', 0], ['stories', '🔥', 'Stories', 0], ['office', '💼', 'Office', CON() ? signed().filter(w => w.contract.weeks <= 4).length : 0], ['notes', '📓', 'Notes', 0]]
-      .map(([k, i, l, n]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}" ${UI.tab === k ? 'aria-current="page"' : ''}><span class="ic">${i}</span>${l}${n ? `<span class="dot" aria-hidden="true">${n}</span><span class="sr-only">, ${n} contract${n === 1 ? '' : 's'} ending soon</span>` : ''}</button>`).join('')}
+    ${[['book', '📅', 'Shows', 0], ['roster', '🤼', 'Roster', 0], ['stories', '🔥', 'Stories', 0], ['office', '💼', 'Office', CON() ? signed().filter(w => w.contract.weeks <= 4).length : 0], ['notes', '📓', 'Notes', dirtUnread(), `new issue of ${DIRT_NAME}`]]
+      .map(([k, i, l, n, sr]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}" ${UI.tab === k ? 'aria-current="page"' : ''}><span class="ic">${i}</span>${l}${n ? `<span class="dot" aria-hidden="true">${n}</span><span class="sr-only">, ${sr ? sr : `${n} contract${n === 1 ? '' : 's'} ending soon`}</span>` : ''}</button>`).join('')}
   </div></nav>`);
   // keep the open sheet's scroll position when it re-renders (e.g. tapping options in the builder)
   const mbOld = modals.querySelector('.modal-bg:not(.picker-bg) .mb'), keyOld = lastModalKey, scOld = mbOld ? mbOld.scrollTop : 0;
@@ -4997,7 +5275,7 @@ function viewBookCard() {
   let bestIx = -1;
   if (card.length > 2) { const live = prs.map((r, i) => card[i].kind === 'match' ? r.rating : -1), mx = Math.max(...live.slice(0, -1)); if (mx > 0 && (card[card.length - 1].kind !== 'match' || live[live.length - 1] < mx - 5)) bestIx = live.indexOf(mx); }
   const isNow = wk === G.week;
-  return `${statusBar}${isNow ? eventAlert() : ''}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
+  return `${statusBar}${isNow ? eventAlert() + dirtAlert() : ''}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
   <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showName(wk))}</h2>
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
@@ -5090,6 +5368,7 @@ function viewRoster() {
   if (f === 'face' || f === 'heel') list = list.filter(w => w.align === f);
   if (f === 'injured') list = list.filter(w => w.injury > 0);
   if (f === 'champs') list = list.filter(w => titlesOf(w.id).length);
+  if (f === 'teams') list = list.filter(w => teamFor(w) || factionsOfW(w.id).length);
   if (f === 'unhappy') list = list.filter(w => w.morale < 45);
   if (String(f).startsWith('b:')) list = list.filter(w => f === 'b:*' ? w.both : inBrand(w, f.slice(2)));
   if (q) list = list.filter(w => (w.name + ' ' + w.nick + ' ' + w.style).toLowerCase().includes(q));
@@ -5099,18 +5378,12 @@ function viewRoster() {
   list.sort((a, b) => rd * (s === 'wins' ? b.record.w - a.record.w : s === 'winpct' ? winPct(b) - winPct(a) : s === 'streak' ? (b.streak || 0) - (a.streak || 0) : s === 'name' ? a.name.localeCompare(b.name) : s === 'contract' ? a.contract.weeks - b.contract.weeks : s === 'morale' ? a.morale - b.morale : s === 'fatigue' ? b.fatigue - a.fatigue : b[s] - a[s]));
   const divs = DIVISIONS.filter(d => signed().some(w => (w.division || 'Open') === d));
   const filt = `<div class="filters">${[['all', 'All'], ['teams', 'Teams & factions'], ['face', 'Faces'], ['heel', 'Heels'], ['champs', 'Champions'], ['injured', 'Injured'], ['unhappy', 'Unhappy'], ...(splitOn() ? SHOWS().map(x => ['b:' + x.id, brandName(x.id)]) : []), ...(divs.length > 1 ? divs.map(d => [d, d]) : [])].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="rosterF" data-id="${k}">${l}</button>`).join('')}</div>`;
-  if (f === 'teams') return `<div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>${filt}
-    <div class="small muted" style="margin-bottom:8px">Teams that stay together get better. They earn a chemistry bonus that grows with every win.</div>
-    <div class="list">${(G.teams || []).map(t => { const gone = t.members.filter(id => !W(id)?.contract).length; return `<button class="item" data-act="editTeam" data-id="${t.id}"><div class="av" style="width:40px;height:40px;font-size:12px;background:var(--card2)">👥</div><div class="main"><div class="t">${esc(t.name)}</div><div class="d">${t.members.map(id => esc(nameOf(id))).join(' & ') || 'No members'} · <b>${teamRec(t)}</b>${gone ? ` · <span style="color:var(--bad)">${gone === t.members.length ? 'all gone' : gone + ' gone'}</span>` : ''}</div></div></button>`; }).join('') || '<div class="empty">No teams yet. Pair up two or more wrestlers.</div>'}</div>
-    <div class="grid2" style="margin-top:12px"><button class="btn pri" data-act="editTeam" data-id="">+ New team</button><button class="btn pri" data-act="editFaction" data-id="">+ New faction</button></div>
-    <div class="sec">Factions</div>
-    <div class="small muted" style="margin-bottom:8px">Bigger groups of up to 8. A faction can hold whole tag teams, and any 2 or more members on the same side fight as the faction.</div>
-    <div class="list">${(G.factions || []).map(f => { const ts = f.tms.map(TM).filter(Boolean), solo = f.members.filter(id => !ts.some(t => t.members.includes(id))); return `<button class="item" data-act="editFaction" data-id="${f.id}"><div class="av" style="width:40px;height:40px;font-size:12px;background:var(--card2);color:var(--accent-t)">👑</div><div class="main"><div class="t">${esc(f.name)} <span class="tiny muted">${f.members.length} members</span></div><div class="d">${[...ts.map(t => '<b>' + esc(t.name) + '</b>'), ...solo.map(id => esc(nameOf(id)) + (id === f.leader ? ' (leader)' : ''))].join(' · ') || 'No members'} · ${teamRec(f)}</div></div></button>`; }).join('') || '<div class="empty">No factions yet.</div>'}</div>`;
   return `
   <div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>
   <div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search roster" aria-label="Search roster" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1">
     <select data-in="rosterSort" style="width:auto;max-width:42%" aria-label="Sort roster by">${[['pop', 'Popularity'], ['ring', 'In-ring'], ['mic', 'Mic'], ['morale', 'Morale (low first)'], ['fatigue', 'Fatigue'], ...(CON() ? [['contract', 'Contract (ending first)']] : []), ['wins', 'Wins'], ['winpct', 'Win %'], ['streak', 'Win streak'], ['name', 'Name']].map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${revBtn('roster', 'roster')}</div>
   ${filt}
+  ${f === 'teams' ? `<button class="item" style="margin-bottom:10px" data-act="goTeams"><div class="av" style="width:36px;height:36px;font-size:15px;background:var(--card2)">👥</div><div class="main"><div class="t">Build and edit teams</div><div class="d">Tag teams and factions now live in Office → Teams</div></div></button>` : ''}
   <div class="small muted" style="margin-bottom:8px">${list.length} of ${signed().length} signed${CON() && MON() ? ` · payroll ${money(sum(signed().map(w => w.contract.salary)))}/wk` : ''}</div>
   <div class="list">${list.map(w => wItem(w)).join('') || (signed().length ? '<div class="empty">Nobody matches.</div>' : `<div class="empty">Your roster is empty. Build, import or grab one from Community.${lib().length ? `<br><button class="btn" style="margin-top:8px" data-act="library">📚 Add from my library (${lib().length})</button>` : ''}</div>`)}</div>`;
 }
@@ -5140,7 +5413,7 @@ function rivalsView() {
   return `${SANDBOX() ? `<div class="alert good" style="margin-bottom:10px"><span class="ic">🛠️</span><div class="small"><b>Sandbox is on.</b> Edit any company, its titles and roster, build wrestlers and move anyone anywhere. Then share the world: players who start in it play normally. Switch it off in Menu → Settings.</div></div>` : ''}<div class="card" style="margin-bottom:10px"><div class="sec" style="margin-top:0">🌍 The wrestling world</div>
     <div class="row tiny muted" style="padding-bottom:4px"><span class="sp">Company</span><span style="width:64px;text-align:right">Fans</span><span style="width:44px;text-align:right">Show</span></div>
     ${all.map((x, i) => `<div class="row small" style="padding:3px 0"><span class="sp clip">${i + 1}. ${x.me ? `<b>${esc(x.name)} (you)</b>` : esc(x.name)} <span class="tag">${x.tier}</span></span><span style="width:64px;text-align:right">${kfmt(x.fans)}</span><b style="width:44px;text-align:right">${x.r || '–'}</b></div>`).join('')}
-    ${wl.length ? `<div class="sec">Around the world</div>${wl.map(x => `<div class="small" style="padding:3px 0">${esc(x.t)} <span class="tiny muted">wk ${x.wk}</span></div>`).join('')}<button class="btn sm block" style="margin-top:8px" data-act="worldNews">All world news</button>` : ''}</div>
+    ${wl.length ? `<div class="sec">Around the world</div>${wl.map(x => `<div class="small" style="padding:3px 0">${esc(x.t)} <span class="tiny muted">wk ${x.wk}</span></div>`).join('')}<div class="grid2" style="margin-top:8px"><button class="btn sm" data-act="worldNews">All world news</button><button class="btn sm" data-act="notesTab" data-id="dirt">🗞️ Dirt sheet</button></div>` : ''}</div>
   <div class="list">${rs.map(r => { const c = rivalW(r.champId), ph = philOf(r); return `<button class="item" data-act="openRival" data-id="${r.id}">${rivAv(r)}<div class="main"><div class="t">${esc(r.name)} <span class="tag">${tierOf(r)}</span></div><div class="d">${ph.ic} ${ph.n} · ${r.roster.length} wrestlers · ${kfmt(r.fans)} fans${c ? ' · champ ' + esc(c.name) : ''}</div></div></button>`; }).join('') || '<div class="empty">No rival promotions right now.</div>'}</div>
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newRival">+ Create a rival</button><button class="btn" data-act="community">From Community</button></div>
   <button class="btn block" style="margin-top:8px" data-act="shareWorld">🌍 Share this world</button>
@@ -5160,7 +5433,7 @@ function modalRival(m) {
       ${needs.length ? `<div class="row small"><span class="sp muted">Looking for</span><b style="text-align:right">${needs.slice(0, 3).map(n => esc(n.l)).join(', ')}</b></div>` : ''}</div>
     ${r.hist?.length ? `<div class="small" style="margin-bottom:6px">Recent shows: ${r.hist.slice(-6).map(x => `<b>${x}</b>`).join(' · ')}</div>` : ''}
     ${r.counter && r.counter >= G.week ? `<div class="alert warn"><span class="ic">📺</span><div class="small">Loaded show against <b>${esc(bigName(r.counter))}</b> in week ${r.counter}. Beat them that night or lose twice the fans.</div></div>` : ''}
-    <div class="sec">Championships</div><div class="card" style="padding:4px 12px">${r.titles.map((t, i) => { const h = rW(r, t.holder[0]), past = [...(t.past || []), ...t.reigns.slice(0, h ? -1 : undefined).map(x => x.nm)].slice(-3).reverse().map(esc); return `<div class="small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><div class="row"><span class="sp">🏆 ${esc(t.name)}</span><b>${h ? esc(h.name) : 'Vacant'}</b></div>${h ? `<div class="tiny muted">${lenLabel(Math.max(1, G.week - (t.since || G.week)))} · ${t.d || 0} defense${t.d === 1 ? '' : 's'}${past.length ? ' · before: ' + past.join(', ') : ''}</div>` : ''}</div>`; }).join('')}</div>
+    <div class="sec">Championships</div><div class="card" style="padding:4px 12px">${r.titles.map((t, i) => { const hs = rHolders(r, t), h = hs.length ? { name: hs.map(x => x.name).join(' & ') } : null, past = [...(t.past || []), ...t.reigns.slice(0, h ? -1 : undefined).map(x => x.nm)].slice(-3).reverse().map(esc); return `<div class="small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><div class="row"><span class="sp">🏆 ${esc(t.name)}</span><b>${h ? esc(h.name) : 'Vacant'}</b></div>${h ? `<div class="tiny muted">${lenLabel(Math.max(1, G.week - (t.since || G.week)))} · ${t.d || 0} defense${t.d === 1 ? '' : 's'}${past.length ? ' · before: ' + past.join(', ') : ''}</div>` : ''}</div>`; }).join('')}</div>
     ${r.feuds.length ? `<div class="sec">Feuds</div><div class="card" style="padding:4px 12px">${r.feuds.map((f, i) => { const t = f.tid && r.titles.find(x => x.id === f.tid); return `<div class="small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><div class="row"><span class="sp"><b>${esc(nameOf(f.a))}</b> vs <b>${esc(nameOf(f.b))}</b>${t ? ` <span class="tag gold">${esc(t.short)}</span>` : ''}</span><span class="muted">🔥 ${Math.round(f.heat)}</span></div><div class="bar" style="margin-top:4px"><i style="width:${clamp(f.heat, 0, 100)}%"></i></div></div>`; }).join('')}<div class="tiny muted" style="padding:2px 0 6px">They settle feuds at ${esc(ppvName(r, nb))}.</div></div>` : ''}
     ${r.push.length ? `<div class="sec">Stars they're building</div><div class="small">${r.push.map(p => { const w = rW(r, p.id); return w ? `⭐ <b>${esc(w.name)}</b> <span class="muted">Pop ${Math.round(p.p0 || w.pop)} → ${Math.round(w.pop)}</span>` : ''; }).filter(Boolean).join('<br>')}</div>` : ''}
     ${r.card?.segs?.length ? `<div class="sec">${esc(r.card.name || 'Last show')}${r.card.big ? ' (big event)' : r.card.sup ? ' (loaded)' : ''} · week ${r.card.wk}</div><div class="card" style="padding:4px 12px">${r.card.segs.map((x, i, a) => `<div class="row small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><span class="sp">${i === a.length - 1 ? '<b>Main event</b> · ' : ''}${x.title ? `🏆 ${x.tn ? esc(x.tn) + ' · ' : ''}` : x.f ? '🔥 ' : ''}<b>${esc(x.won === x.a ? x.an : x.bn)}</b> beat ${esc(x.won === x.a ? x.bn : x.an)}</span><span class="muted">${starStr(x.rating)}</span></div>`).join('')}</div>` : ''}
@@ -5190,8 +5463,8 @@ function modalEditRival(m) {
     <label class="f"><span>Big events, one per line</span><textarea data-et="ppvs" maxlength="600" style="min-height:80px" placeholder="Night of Glory">${esc(d.ppvs || '')}</textarea><div class="tiny muted" style="margin-top:4px">They run one a month, in this order.${d.bigOne ? ` Their big one, the biggest show of their year, is <b>${esc(d.bigOne)}</b>.` : ''}</div></label>
     ${r ? `<div class="sec">Championships</div>
     ${(d.titles || []).map((t, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px"><div class="row" style="gap:8px;margin-bottom:6px"><input type="text" data-tt="name" data-i="${i}" value="${esc(t.name)}" maxlength="50" aria-label="Title name" style="flex:1"><button class="btn sm" data-act="rtDel" data-id="${i}" aria-label="Remove this title">✕</button></div>
-      <div class="grid2"><select data-tt="holder" data-i="${i}" aria-label="Champion">${opts(t.holder)}</select><select data-tt="kind" data-i="${i}" aria-label="Kind of title"><option value="main" ${!t.mid && !t.div ? 'selected' : ''}>Top title</option><option value="mid" ${t.mid ? 'selected' : ''}>Secondary</option><option value="women" ${t.div ? 'selected' : ''}>Women's</option></select></div></div>`).join('')}
-    ${(d.titles || []).length < 4 ? '<button class="btn block" data-act="rtAdd" style="margin-bottom:12px">＋ Add a championship</button>' : ''}
+      <div class="grid2">${t.n > 1 ? `<div class="small" style="align-self:center">${t.hn ? esc(t.hn) : '<span class="muted">Vacant</span>'}<div class="tiny muted">They pick the team</div></div>` : `<select data-tt="holder" data-i="${i}" aria-label="Champion">${opts(t.holder)}</select>`}<select data-tt="kind" data-i="${i}" aria-label="Kind of title"><option value="main" ${!t.mid && !t.div && !(t.n > 1) ? 'selected' : ''}>Top title</option><option value="mid" ${t.mid && !(t.n > 1) ? 'selected' : ''}>Secondary</option><option value="women" ${t.div && !(t.n > 1) ? 'selected' : ''}>Women's</option><option value="tag" ${t.n === 2 ? 'selected' : ''}>Tag team</option><option value="trios" ${t.n === 3 ? 'selected' : ''}>Trios</option></select></div></div>`).join('')}
+    ${(d.titles || []).length < 6 ? '<button class="btn block" data-act="rtAdd" style="margin-bottom:12px">＋ Add a championship</button>' : ''}
     <div class="sec">Roster</div><button class="btn block" data-act="rivRoster" data-id="${r.id}" style="margin-bottom:12px">👥 Manage roster (${r.roster.length})</button>` : ''}
     <label class="todo"><input type="checkbox" data-et="auto" ${d.auto ? 'checked' : ''}><span>AI handles signings and releases<br><span class="tiny muted">Off: their roster only changes when you change it. Contracts roll over and other companies leave them alone.</span></span></label>
     <label class="todo"><input type="checkbox" data-et="canClose" ${d.canClose ? 'checked' : ''}><span>Can close down<br><span class="tiny muted">If it runs out of money, it closes or gets bought. Off: it always stays open.</span></span></label>
@@ -5233,9 +5506,10 @@ function viewOffice() {
   const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop);
   return `
-  <div class="seg-ctl quad wrap tri" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Free agents${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
   ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'brands' ? brandsView() : ''}
+  ${t === 'teams' ? teamsView() : ''}
   ${t === 'setup' ? setupView() : ''}
   ${t === 'media' ? mediaView() : ''}
   ${t === 'staff' ? staffView() : ''}
@@ -5243,7 +5517,7 @@ function viewOffice() {
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
   ${t === 'fa' ? faView(fa) : ''}
-  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleArt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${ti.tag ? 'tag' : 'singles'}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
+  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleArt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${tkindName(ti).toLowerCase()}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
@@ -5269,13 +5543,44 @@ function setupView() {
     <div class="tiny muted" style="margin-top:8px">Sim settings, sound and display are in Menu → Settings.</div>`;
 }
 
+// ---------- the dirt sheet ----------
+const dirtUnread = () => { const L = G.dirt?.list; return L?.length && L[0].no > (G.dirt.seen || 0) ? 1 : 0; };
+const dirtSrcTag = s => { const x = DIRT_SRC[s] || DIRT_SRC.spec; return `<span class="dirt-src ${DIRT_SRC[s] ? s : 'spec'}">${x[0]} ${x[1]}</span>`; };
+function dirtAlert() {
+  if (!dirtUnread()) return '';
+  const x = G.dirt.list[0], h = x.revs?.[0]?.h || x.world?.[0] || 'The week in wrestling';
+  return `<button class="bs-alert dirt-alert" data-act="notesTab" data-id="dirt"><span class="bs-alert-i">🗞️</span><span class="sp"><span class="bs-alert-k">${DIRT_NAME} · Issue ${+x.no}</span><b>${esc(h)}</b></span><span class="bs-alert-go">Read ›</span></button>`;
+}
+function dirtView() {
+  const L = G.dirt?.list || [];
+  const mast = (sub) => `<div class="dirt-mast"><div class="dirt-name">${DIRT_NAME}</div><div class="dirt-tag">${DIRT_TAG}</div>${sub ? `<div class="dirt-sub">${sub}</div>` : ''}</div>`;
+  if (!L.length) return `<div class="card dirt">${mast('')}<div class="empty">The first issue comes out after this week's shows. It covers every company: reviews, ratings, signings, title changes and the rumours going around.</div></div>`;
+  const i = clamp(+UI.dirtIx || 0, 0, L.length - 1), x = L[i];
+  if (i === 0 && G.dirt.seen !== x.no) G.dirt.seen = x.no;
+  const revs = x.revs || [], lead = revs[0];
+  const stars = r => `<span class="dirt-stars">${starStr(+r || 0)}</span> <span class="tiny muted">${+r || 0}</span>`;
+  const rev = (v, big) => `<div class="${big ? 'dirt-lead' : 'card dirt-rev'}"><div class="dirt-k">${v.me ? 'Review · ' : ''}${esc(v.co)}${v.big ? ' · Big event' : ''}</div><div class="dirt-h">${esc(v.h)}</div><div class="small" style="margin-bottom:4px">${stars(v.r)}</div><div class="dirt-b">${esc(v.b)}</div></div>`;
+  const mv = m => m === 'new' ? '<span class="dirt-mv new">NEW</span>' : m > 0 ? `<span class="dirt-mv up">▲${m}</span>` : m < 0 ? `<span class="dirt-mv dn">▼${-m}</span>` : '<span class="dirt-mv">–</span>';
+  return `<div class="card dirt">${mast(`Issue ${+x.no} · Week ${+x.wk}`)}
+    <div class="row dirt-nav"><button class="btn sm" data-act="dirtIx" data-id="${i + 1}" ${i + 1 >= L.length ? 'disabled' : ''} aria-label="Older issue">‹ Older</button><span class="sp tiny muted" style="text-align:center">${i ? `${i} issue${i > 1 ? 's' : ''} back` : 'Latest issue'}</span><button class="btn sm" data-act="dirtIx" data-id="${i - 1}" ${i ? '' : 'disabled'} aria-label="Newer issue">Newer ›</button></div>
+    ${lead ? rev(lead, 1) : `<div class="dirt-lead"><div class="dirt-k">Quiet week</div><div class="dirt-h">No shows to review this week</div></div>`}</div>
+  ${revs.slice(1).map(v => rev(v)).join('')}
+  ${x.table?.length > 1 ? `<div class="sec">📊 The ratings race</div><div class="card dirt-list">${x.table.map((t, j) => `<div class="dirt-row${t.me ? ' me' : ''}"><b class="dirt-n">${j + 1}</b><span class="sp"><b>${esc(t.n)}</b>${t.big ? ' <span class="tag gold">Big</span>' : ''}<span class="tiny muted" style="display:block">${esc(t.co)}${t.me ? ' (you)' : ''}</span></span><span style="text-align:right">${stars(t.r)}</span></div>`).join('')}</div>` : ''}
+  ${x.world?.length ? `<div class="sec">🌍 Confirmed this week</div><div class="card dirt-list">${x.world.map(t => `<div class="dirt-row"><span class="sp">${esc(t)}</span></div>`).join('')}</div>` : ''}
+  ${x.rum?.length ? `<div class="sec">👂 The rumour mill</div><div class="card dirt-list">${x.rum.map(r => `<div class="dirt-row dirt-rum"><span class="sp">${esc(r.t)}<span style="display:block;margin-top:4px">${dirtSrcTag(r.s)}</span></span></div>`).join('')}</div>` : ''}
+  ${x.take ? `<div class="sec">🎙️ Hot take</div><div class="card dirt-take"><div class="dirt-h" style="font-size:20px">${esc(x.take.h)}</div><div class="dirt-b">${esc(x.take.b)}</div></div>` : ''}
+  ${x.pr?.length ? `<div class="sec">👑 Power rankings</div><div class="card dirt-list">${x.pr.map((p, j) => `<div class="dirt-row${p.me ? ' me' : ''}"><b class="dirt-n">${j + 1}</b><span class="sp"><b>${esc(p.n)}</b><span class="tiny muted" style="display:block">${esc(p.co)}</span></span>${mv(p.mv)}</div>`).join('')}</div>` : ''}
+  <div class="tiny muted" style="margin:10px 2px 0">A new issue comes out after every week of shows. Rumours are rumours: the source tag says how much the sheet trusts them, and it can be wrong.</div>`;
+}
+
 // ---------- notes ----------
 function viewNotes() {
   const t = UI.notesTab;
   const cats = [['all', 'All'], ['show', 'Shows'], ['story', 'Stories'], ['title', 'Titles'], ['contract', 'Contracts'], ['injury', 'Injuries'], ['office', 'Office']];
   const nf = UI.newsF;
   return `
-  <div class="seg-ctl" style="margin-bottom:12px">${[['todo', 'To-do'], ['book', 'Notebook'], ['news', 'News log'], ['shows', 'Show history']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="notesTab" data-id="${k}">${l}</button>`).join('')}</div>
+  <div class="seg-ctl quad wrap tri" style="margin-bottom:12px">${[['todo', 'To-do'], ['book', 'Notebook'], ['news', 'News log'], ['dirt', 'Dirt sheet'], ['shows', 'Show history']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="notesTab" data-id="${k}">${l}${k === 'dirt' && dirtUnread() ? ' <span class="cnt">New</span>' : ''}</button>`).join('')}</div>
+  ${t === 'dirt' ? dirtView() : ''}
   ${t === 'todo' ? `<div class="card"><div class="row"><input type="text" id="todo-in" placeholder="Add a reminder, e.g. 'Turn Jax heel at the big event'" maxlength="140" style="flex:1"><button class="btn pri" data-act="addTodo">Add</button></div>
      <div style="margin-top:6px">${G.todos.map((x, i) => `<div class="todo ${x.done ? 'done' : ''}"><input type="checkbox" data-act="todoCk" data-id="${i}" aria-label="Done: ${esc(x.t)}" ${x.done ? 'checked' : ''}><span>${esc(x.t)}</span><button class="x" data-act="todoDel" data-id="${i}" aria-label="Delete">×</button></div>`).join('') || '<div class="empty">No reminders.</div>'}</div></div>
      ${G.todos.some(x => x.done) ? '<button class="btn sm" data-act="todoClear">Clear finished</button>' : ''}` : ''}
@@ -5392,6 +5697,8 @@ const displaySettings = () => `
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
+    ${sbOn() ? `<div class="small muted" style="margin:14px 0 8px">Privacy</div>
+    <label class="todo"><input type="checkbox" data-in="statsOn" ${meta.stats === true || (meta.stats !== false && !navigator.globalPrivacyControl) ? 'checked' : ''}><span>Share anonymous play stats (how many play, shows run, screens used). No name, email or account. <button class="link" data-act="privacy">Details</button></span></label>` : ''}
 `;
 // before any company exists: cloud saves, restore, settings and help, so a new player (or a new phone) can get set up
 function modalStartMenu() {
@@ -5543,6 +5850,9 @@ function privacyHTML() {
   <p>If you add your email to keep your account, Supabase stores it to send you sign-in links. Other players never see it. Remove your posts and profile any time from Community → My profile.</p>
   <h3>Reports and feedback</h3>
   <p>Reports and feedback are private: only the game's owner can read them. Feedback includes the game version, your week number and your browser type, so bugs can be fixed. Crash reports include the error message.</p>
+  <h3>Anonymous play stats</h3>
+  <p>So the maker can see how many people play and what to improve, the game sends a few anonymous counts: when you open it, how long you play, shows you run and their rating, companies you start, tutorial steps, crashes, which screens you open, the game version, and whether you play in a browser, an installed app or the Google Play app. They are tied to a random id made on this device, never to your Community account, email or name, and IP addresses aren't stored with them. Only the owner can see them, and they are deleted after 400 days.</p>
+  <p>Turn this off any time in Menu → Settings → Share anonymous play stats. Turning it off also forgets this device's id. If your browser sends Global Privacy Control, it starts off.</p>
 ` : hosted() ? `  <h3>When you use Community</h3>
   <p>Community runs on claude.ai. Your account is your claude.ai sign-in, and we never see your password or email. What you post, your profile (name, bio, color), what you like, what you play or add, and who you follow are stored with an anonymous player id and can be seen by anyone who can open the game.</p>
   <h3>Reports and feedback</h3>
@@ -5582,7 +5892,7 @@ function helpHTML() {
   <h3>Rival promotions</h3>
   <p>Office → <b>Rivals</b>. Rivals run weekly shows, sign free agents and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away.</p>
   <h3>Teams and tournaments</h3>
-  <p>Roster → <b>Teams &amp; factions</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
+  <p>Office → <b>Teams</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
   <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Bring a legend back from Office → Titles → History &amp; awards. Aging can be switched off in Settings.</p>
   <h3>Changed your mind?</h3>
@@ -5675,7 +5985,7 @@ function chipsFor(list, field, max) {
 // the match editor's title shot rows: what the winner gets, and a cash-in on a champion in this match
 function shotEditor(s, mt) {
   let h = '';
-  const shotTs = G.titles.filter(t => t.tag === tagMT(mt)), sh = s.shot, swk = UI.selWeek ?? G.week, inM = s.sides.flat();
+  const shotTs = G.titles.filter(t => titleFits(t, mt)), sh = s.shot, swk = UI.selWeek ?? G.week, inM = s.sides.flat();
   if (shotTs.length) {
     h += `<label class="todo" style="margin-bottom:12px"><input type="checkbox" data-act="segShot" data-id="${sh ? 0 : 1}" ${sh ? 'checked' : ''}><span>${ic('ticket')} Winner earns a title shot<br><span class="tiny muted">A #1 contender's match at an event, or a contract to cash in any time.</span></span></label>`;
     if (sh) {
@@ -5701,7 +6011,7 @@ function modalSeg(m) {
   let body = '';
   if (s.kind === 'match') {
     const mt = MT(s.mtype), gm = GM(s.stip);
-    const titleOpts = G.titles.filter(t => t.tag === tagMT(mt) && (titleOn(t) || s.title === t.id));
+    const titleOpts = G.titles.filter(t => titleFits(t, mt) && (titleOn(t) || s.title === t.id));
     const opt = (k, cur) => `<option value="${esc(k)}" ${k === cur ? 'selected' : ''}>${esc(k)}</option>`;
     const grp = (l, ks, cur) => ks.length ? `<optgroup label="${l}">${ks.map(k => opt(k, cur)).join('')}</optgroup>` : '';
     const bt = Object.keys(MATCH_TYPES), mine = CM().types.map(x => x.name), gmine = CM().gims.map(x => x.name);
@@ -5810,10 +6120,11 @@ function renderPicker() {
   const body = `${ctlSearch}
    ${gTab ? `<div class="seg-ctl" style="margin-bottom:10px"><button class="${gOn ? '' : 'on'}" data-act="pickTab" data-id="roster" aria-pressed="${!gOn}">🤼 Roster (${signed().length})</button><button class="${gOn ? 'on' : ''}" data-act="pickTab" data-id="guests" aria-pressed="${gOn}">💰 Per appearance (${nG})</button></div>` : ''}
    ${ctlChips}
-   ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
+   ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2 && (!isTrios(t) || p.max >= 3)), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}${isTrios(t) ? ' (trios)' : ''}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
    <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${pickNF(p) ? ` Showing ${list.length} of ${total}. <button class="link" data-act="pickClear">Clear filters</button>` : ''}${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear.' : ''}</div>
    ${list.map(w => { const g = gOn && guestDeal(w.id, UI.selWeek), sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
-     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
+     const tmLock = !sel && UI.modal?.type === 'editTeam' && otherTeamOf(w.id, UI.modal.draft.id, UI.modal.draft.kind);
+     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other || tmLock ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${tmLock ? `<span style="color:var(--warn)">👥 In ${esc(tmLock.name)}</span> · ` : ''}${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
    ${gOn ? `<button class="btn block" style="margin-top:10px" data-act="localTalent">+ Book local enhancement talent (${money(100)}–${money(250)})</button><div class="tiny muted" style="margin-top:6px">A local wrestler for one month, non-exclusive. Good for squash matches that make your stars look strong.</div>` : ''}`;
   return modal('Choose wrestlers', body, `<button class="btn pri" data-act="pickDone">Done (${p.sel.length})</button>`, { cls: 'picker-bg', closeAct: 'pickDone', anim });
 }
@@ -5985,12 +6296,12 @@ function lineage(t) {
 // ----- rankings, history, teams, tournaments -----
 function tabsOf(list, cur, act) { return `<div class="seg-ctl" style="margin-bottom:12px">${list.map(([k, l]) => `<button class="${cur === k ? 'on' : ''}" data-act="${act}" data-id="${k}">${l}</button>`).join('')}</div>`; }
 function modalRankings(m) {
-  const divs = rankDivs(), teams = rankedTeams();
-  const opts = [...divs.map(d => [d, d === 'Open' && divs.length === 1 ? 'Singles' : d]), ...(teams.length ? [['teams', 'Teams']] : [])];
+  const divs = rankDivs(), tags = rankedTeams('tag'), trios = rankedTeams('trios');
+  const opts = [...divs.map(d => [d, d === 'Open' && divs.length === 1 ? 'Singles' : d]), ...(tags.length ? [['teams', 'Tag teams']] : []), ...(trios.length ? [['trios', 'Trios']] : [])];
   const tab = opts.some(o => o[0] === m.tab) ? m.tab : opts[0]?.[0];
   let body = opts.length > 1 ? tabsOf(opts, tab, 'rankTab') : '';
   if (!tab) body += '<div class="empty">Sign some wrestlers first.</div>';
-  else if (tab === 'teams') body += `<div class="list">${teams.slice(0, 10).map((t, i) => `<button class="item rk" data-act="editTeam" data-id="${t.id}"><span class="rk-n">${i + 1}</span><div class="main"><div class="t">${esc(t.name)} ${rankMove(t.id, i + 1)}</div><div class="d">${liveMembers(t).map(w => esc(w.name)).join(' & ')} · ${teamRec(t)}</div></div></button>`).join('')}</div>`;
+  else if (tab === 'teams' || tab === 'trios') body += `<div class="list">${(tab === 'trios' ? trios : tags).slice(0, 10).map((t, i) => `<button class="item rk" data-act="editTeam" data-id="${t.id}"><span class="rk-n">${i + 1}</span><div class="main"><div class="t">${esc(t.name)} ${rankMove(t.id, i + 1)}</div><div class="d">${liveMembers(t).map(w => esc(w.name)).join(' & ')} · ${teamRec(t)}</div></div></button>`).join('')}</div>`;
   else {
     const c = divChamp(tab), list = ranking(tab);
     body += (c ? `<button class="item rk champ" data-act="openW" data-id="${c.w.id}"><span class="rk-n">C</span>${av(c.w, 36)}<div class="main"><div class="t">${esc(c.w.name)}</div><div class="d">${esc(c.t.name)} · ${recStr(c.w)} · ${reignLen(ensureReigns(c.t).at(-1) || { from: c.t.since || 1 })} wk</div></div></button>` : '')
@@ -6010,17 +6321,18 @@ function modalRecords(m) {
 function modalEditTeam(m) {
   const d = m.draft;
   const body = `<label class="f"><span>Team name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="40" placeholder="e.g. The Iron Syndicate"></label>
-    <div class="side"><div class="lbl">Members (2 to 4)</div>${chipsFor(d.members, 'members', 4)}</div>
+    <div class="bd-lab">Kind of team</div><div class="seg-ctl" role="group" aria-label="Kind of team">${[['tag', '👥 Tag team'], ['trios', '👥👤 Trios']].map(([k, l]) => `<button class="${isTrios(d) === (k === 'trios') ? 'on' : ''}" aria-pressed="${isTrios(d) === (k === 'trios')}" data-act="teamKind" data-id="${k}">${l}</button>`).join('')}</div>
+    <div class="side"><div class="lbl">Members (${isTrios(d) ? '3 to 4' : '2 to 4'})</div>${chipsFor(d.members, 'members', 4)}${(() => { const c = d.members.map(id => [id, otherTeamOf(id, d.id, d.kind)]).filter(x => x[1]); const k = isTrios(d) ? 'trios team' : 'tag team'; return c.length ? `<div class="small" style="color:var(--warn);margin-top:6px">⚠️ ${c.map(([id, t]) => `${esc(nameOf(id))} is already in ${esc(t.name)}`).join('. ')}. A wrestler can only be in one ${k}.</div>` : `<div class="tiny muted" style="margin-top:4px">A wrestler can be in one tag team and one trios team, and in any number of factions.${isTrios(d) ? ' A tag team plus a partner makes a good trios.' : ''}</div>`; })()}</div>
     ${m.isNew ? '' : `<div class="small" style="margin-bottom:8px">Record together: <b>${teamRec(d)}</b></div>`}
-    <div class="tiny muted">Book members on the same side and they fight as a team: a chemistry bonus that grows with their wins, their own record, and their name on the results. In a tag match, pick the team in one tap.</div>`;
-  return modal(m.isNew ? 'New team' : esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="delTeam">Split up</button>'}<button class="btn pri" data-act="saveTeam">Save</button>`);
+    <div class="tiny muted">Book members on the same side and they fight as a team: a chemistry bonus that grows with their wins, their own record, and their name on the results. In a ${isTrios(d) ? 'six-person tag' : 'tag'} match, pick the team in one tap.</div>`;
+  return modal(m.isNew ? (isTrios(d) ? 'New trios team' : 'New team') : esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="delTeam">Split up</button>'}<button class="btn pri" data-act="saveTeam">Save</button>`);
 }
 function modalEditFaction(m) {
   const d = m.draft, ts = (G.teams || []).filter(t => t.members.some(id => W(id)?.contract));
   const body = `<label class="f"><span>Faction name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="40" placeholder="e.g. The Black Hand"></label>
     ${ts.length ? `<div class="side"><div class="lbl">Tag teams in it</div><div class="filters" style="margin:0">${ts.map(t => `<button class="${d.tms.includes(t.id) ? 'on' : ''}" data-act="fTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">Adding a team adds its members.</div></div>` : ''}
     <div class="side"><div class="lbl">Members (2 to 8)</div>${chipsFor(d.members, 'members', 8)}</div>
-    <div class="side"><div class="lbl">Leader (optional)</div>${chipsFor(d.leader ? [d.leader] : [], 'leader', 1)}</div>
+    <div class="side"><div class="lbl">Leader (optional)</div>${d.members.length ? `<div class="filters" style="margin:0;flex-wrap:wrap;overflow:visible" role="group" aria-label="Pick a leader">${d.members.map(id => `<button class="${d.leader === id ? 'on' : ''}" aria-pressed="${d.leader === id}" data-act="fLeader" data-id="${id}">${d.leader === id ? '👑 ' : ''}${esc(nameOf(id))}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">Pick one of the members. Tap again to clear.</div>` : '<div class="tiny muted">Add members first, then pick the leader from them.</div>'}</div>
     ${m.isNew ? '' : `<div class="small" style="margin-bottom:8px">Record together: <b>${teamRec(d)}</b></div>`}
     <div class="tiny muted">Any 2 or more members on the same side fight as ${esc(d.name || 'the faction')}: a chemistry bonus that grows with wins, a faction record, and the faction name in results. Faction vs faction matches get a bonus. Six-person tags pick them in one tap.</div>`;
   return modal(m.isNew ? 'New faction' : esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="delFaction">Disband</button>'}<button class="btn pri" data-act="saveFaction">Save</button>`);
@@ -6150,14 +6462,15 @@ function bdPane(m) {
     <div class="bd-lab">Card level</div><div class="seg-ctl quad wrap">${TLEVELS.map(([k, l]) => `<button class="${tr === k ? 'on' : ''}" data-act="trTier" data-id="${k}" aria-pressed="${tr === k}">${l}</button>`).join('')}</div>
     <div class="tiny muted" style="margin-top:4px">${tierRow(d)[6]}</div>
     <div class="bd-lab">Division</div><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${(wiz ? d.division || 'Open' : titleDiv(d)) === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div>
-    <div class="bd-lab">Holders</div><div class="seg-ctl">${[['one', 'Singles'], ['tag', 'Tag team (2)']].map(([k, l]) => `<button class="${(k === 'tag') === !!d.tag ? 'on' : ''}" data-act="trTag" data-id="${k}">${l}</button>`).join('')}</div>
+    <div class="bd-lab">Holders</div><div class="seg-ctl">${TKINDS.map(([k, l, n]) => `<button class="${n === tsz(d) ? 'on' : ''}" aria-pressed="${n === tsz(d)}" data-act="trTag" data-id="${k}">${l}</button>`).join('')}</div>
+    ${tsz(d) > 1 ? `<div class="tiny muted" style="margin-top:4px">${tsz(d) === 3 ? 'Defended in six-person tag matches. Any three members of a trios team can hold it.' : 'Defended in tag team matches.'}</div>` : ''}
     <div class="bd-lab">Must be defended every</div><div class="seg-ctl">${[[0, 'Any time'], [4, '4 wk'], [8, '8 wk'], [12, '12 wk']].map(([k, l]) => `<button class="${ev === k ? 'on' : ''}" data-act="trEvery" data-id="${k}" aria-pressed="${ev === k}">${l}</button>`).join('')}</div>
     <div class="tiny muted" style="margin-top:4px">${ev ? `Miss it and the belt loses prestige each week until it's defended.` : 'No deadline. The Briefing still nudges you after 5 weeks.'}</div>
     <label class="todo" style="margin-top:10px"><input type="checkbox" data-et="dq" ${d.dq ? 'checked' : ''}><span>Belt changes hands on a DQ or count-out<br><span class="tiny muted">Off: the champion keeps it, like most titles.</span></span></label>
     ${!wiz && splitOn() ? `<div class="bd-lab">Brand</div><div class="seg-ctl">${[...SHOWS().map(x => [x.id, brandName(x.id)]), ['', 'Shared']].map(([k, l]) => `<button class="${(showById(d.brand) ? d.brand : '') === k ? 'on' : ''}" data-act="trBrand" data-id="${esc(k)}" aria-pressed="${(showById(d.brand) ? d.brand : '') === k}">${esc(l)}</button>`).join('')}</div>
     <div class="tiny muted" style="margin-top:4px">${showById(d.brand) ? `Defended on ${esc(brandName(d.brand))} and at big events.` : 'Shared titles can be defended on any show.'}</div>` : ''}
     <div class="tiny muted" style="margin-top:10px">Prestige ${m.isNew ? 'starts at' : 'now'} <b>${Math.round(d.prestige)}</b>. It rises with great title matches and falls when the belt is ignored.</div>
-    ${wiz ? '' : `<div class="side"><div class="lbl">Champion${d.tag ? 's' : ''}</div>${chipsFor(d.holder, 'holder', d.tag ? 2 : 1)}</div>
+    ${wiz ? '' : `<div class="side"><div class="lbl">Champion${tsz(d) > 1 ? 's' : ''}</div>${chipsFor(d.holder, 'holder', tsz(d))}</div>
     <div class="side"><div class="lbl">Contenders you pick</div>${chipsFor(d.contenders || [], 'contenders', 3)}<div class="tiny muted" style="margin-top:4px">Your picks go first, in order. The rest rank by record.</div></div>
     ${(() => { const c = contenders(d, 5); return c.length ? `<div class="contend" style="margin-top:4px">${c.map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)}${(d.contenders || []).includes(w.id) ? ' <span class="tag">picked</span>' : ''}</span>`).join('')}</div>` : '<div class="tiny muted">No eligible contenders in this division.</div>'; })()}
     ${m.isNew || !G.titles.some(t => t.id === d.id) ? '' : shotBlock(d, m)}
@@ -6225,8 +6538,8 @@ const A = {
   closeModal,
   openRival(id) { openModal({ type: 'rival', id }); },
   newRival() { openModal({ type: 'editRival', isNew: true, draft: { name: '', short: '', show: '', color: pick(RIV_COLORS), prestige: 45, size: '14', phil: pick(Object.keys(RPHIL)), canClose: false, auto: true, fans: 15000, money: 300000, ppvs: shuffle(RIV_PPVS).slice(0, 4).join('\n') } }); },
-  editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), bigOne: r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '', titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: t.holder[0] || '', mid: !!t.mid, div: t.div || '' })) } }); } },
-  rtAdd() { const d = UI.modal.draft; d.titles ||= []; if (d.titles.length >= 4) return; d.titles.push({ id: uid(), name: `${(d.short || abbr(d.name)).trim()} ${d.titles.some(t => !t.mid && !t.div) ? 'Television' : 'World'} Championship`, holder: '', mid: d.titles.some(t => !t.mid && !t.div), div: '', isNew: true }); render(); },
+  editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), bigOne: r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '', titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: rN(t) > 1 ? '' : t.holder[0] || '', ...(rN(t) > 1 ? { n: rN(t), hn: rHolders(r, t).map(w => w.name).join(' & ') } : {}), mid: !!t.mid, div: t.div || '' })) } }); } },
+  rtAdd() { const d = UI.modal.draft; d.titles ||= []; if (d.titles.length >= 6) return; d.titles.push({ id: uid(), name: `${(d.short || abbr(d.name)).trim()} ${d.titles.some(t => !t.mid && !t.div) ? 'Television' : 'World'} Championship`, holder: '', mid: d.titles.some(t => !t.mid && !t.div), div: '', isNew: true }); render(); },
   rtDel(i) { UI.modal.draft.titles.splice(+i, 1); render(); },
   rivRoster(id) { openModal({ type: 'rivalRoster', id }); },
   rrOut(id) { const r = RV(UI.modal.id), w = r?.roster.find(x => x.id === id); if (!w) return; outOfRival(w, r); w.contract = null; w.morale = 60; G.wrestlers.push(w); wnews(`✂️ ${r.name} released ${w.name}.`, r); commit(); },
@@ -6255,9 +6568,13 @@ const A = {
     if (Array.isArray(d.titles) && d.id) {
       // titles as the player set them: kept reigns for existing belts, quiet crowning for changed champions
       r.tset = 1;
-      r.titles = d.titles.slice(0, 4).map(x => {
+      r.titles = d.titles.slice(0, 6).map(x => {
         const t = r.titles.find(y => y.id === x.id) || { id: x.id, holder: [], since: G.week, d: 0, reigns: [] };
-        t.name = String(x.name || '').replace(/[<>`"]/g, '').trim().slice(0, 50) || 'Championship'; t.mid = !!x.mid; t.div = x.div ? "Women's" : '';
+        t.name = String(x.name || '').replace(/[<>`"]/g, '').trim().slice(0, 50) || 'Championship';
+        const n = +x.n === 3 ? 3 : +x.n === 2 ? 2 : 1;
+        if (n > 1) { if (rN(t) !== n) { if (t.holder.length) crownR(r, t, null); t.n = n; } t.mid = true; t.div = ''; t.short = n === 3 ? 'Trios' : 'Tag'; return t; }
+        if (rN(t) > 1) { if (t.holder.length) crownR(r, t, null); delete t.n; }
+        t.mid = !!x.mid; t.div = x.div ? "Women's" : '';
         t.short = t.div ? "Women's" : t.mid ? (t.short && t.short !== 'World' && t.short !== "Women's" ? t.short : 'TV') : 'World';
         const w = x.holder ? rW(r, x.holder) : null;
         if ((w?.id || '') !== (t.holder[0] || '')) crownR(r, t, w && fitsT(r, t, w) ? w : null);
@@ -6387,7 +6704,7 @@ const A = {
   segElim(i) { const d = UI.modal.draft; if (+i) d.elim = true; else delete d.elim; render(); },
   segTagSize(n) { const d = UI.modal.draft, k = TAG_SIZES[+n]; if (!k || d.mtype === k) return; const mt = MT(k); d.mtype = k;
     d.sides = Array.from({ length: 2 }, (_, i) => (d.sides[i] || []).slice(0, sideSize(mt, i))); d.winner = -1;
-    const t = d.title && G.titles.find(x => x.id === d.title); if (t && t.tag !== tagMT(mt)) d.title = null; render(); },
+    const t = d.title && G.titles.find(x => x.id === d.title); if (t && !titleFits(t, mt)) d.title = null; render(); },
   cornerDel(i) { const d = UI.modal.draft; fixCorners(d); d.corner[+i] = null; d.cplan[+i] = null; render(); },
   cornerPlan(v) { const d = UI.modal.draft, [i, pl] = String(v).split(':'); if (!CPLANS.includes(pl)) return; fixCorners(d); d.cplan[+i] = pl; render(); },
   segFill() { const d = UI.modal.draft, n = fillEntrants(d); render(); toast(n ? `Added ${n} entrant${n > 1 ? 's' : ''}.` : 'Nobody else is free to enter.'); },
@@ -6396,7 +6713,7 @@ const A = {
   shotUseNext(v) { UI.modal.shotUse = v === 'any' ? 'any' : 'event'; render(); },
   shotDel(id) { const s = SHOTS().find(x => x.id === id); if (!s) return; dropShot(s); commit(`${s.ids.map(nameOf).join(' & ')} no longer has a title shot.`); },
   segShot(v) { const d = UI.modal.draft; if (!+v) { d.shot = null; return render(); }
-    const ts = G.titles.filter(t => t.tag === tagMT(MT(d.mtype))), inM = d.sides.flat(), t = ts.find(x => !x.holder.some(h => inM.includes(h)) && x.id !== d.title) || ts[0];
+    const ts = G.titles.filter(t => titleFits(t, MT(d.mtype))), inM = d.sides.flat(), t = ts.find(x => !x.holder.some(h => inM.includes(h)) && x.id !== d.title) || ts[0];
     if (t) d.shot = { titleId: t.id, use: 'event', wk: bigsAfter(UI.selWeek ?? G.week, 1)[0] || 0 }; render(); },
   segShotUse(v) { const d = UI.modal.draft; if (!d.shot) return; d.shot.use = v === 'any' ? 'any' : 'event'; if (d.shot.use === 'event' && !bigWk(+d.shot.wk)) d.shot.wk = bigsAfter(UI.selWeek ?? G.week, 1)[0] || 0; render(); },
   segCash(v) { const d = UI.modal.draft, [tid, k] = String(v).split(':'); d.cash = k === 'n' || !G.titles.some(t => t.id === tid) ? null : { titleId: tid, o: k === 'w' ? 1 : k === 'f' ? 0 : -1 }; render(); },
@@ -6462,7 +6779,7 @@ const A = {
       else { cur = d[f]; max = 3; (f === 'who' ? d.target : d.who).forEach(x => others.add(x)); }
     } else if (m.type === 'wrestler') { const w = W(m.id); cur = w && w.manager && W(w.manager) ? [w.manager] : []; max = 1; others.add(m.id); }
     else if (m.type === 'editStory') { cur = d[f]; max = 5; (f === 'a' ? d.b : d.a).forEach(x => others.add(x)); }
-    else if (m.type === 'title') { if (f === 'contenders') { cur = d.contenders || []; max = 3; d.holder.forEach(x => others.add(x)); } else if (f === 'shot') { cur = []; max = d.tag ? 2 : 1; d.holder.forEach(x => others.add(x)); } else { cur = d.holder; max = d.tag ? 2 : 1; } }
+    else if (m.type === 'title') { if (f === 'contenders') { cur = d.contenders || []; max = 3; d.holder.forEach(x => others.add(x)); } else if (f === 'shot') { cur = []; max = tsz(d); d.holder.forEach(x => others.add(x)); } else { cur = d.holder; max = tsz(d); } }
     else if (m.type === 'community') { cur = m.sel || []; max = 60; }
     else if (m.type === 'editTeam') { cur = d.members; max = 4; }
     else if (m.type === 'editFaction') { if (f === 'leader') { cur = d.leader ? [d.leader] : []; max = 1; } else { cur = d.members; max = 8; } }
@@ -6473,6 +6790,7 @@ const A = {
   pickTog(id) {
     const p = UI.picker; if (p.others.has(id)) return toast('Already on the other side of this segment.');
     const i = p.sel.indexOf(id);
+    if (i < 0 && UI.modal?.type === 'editTeam') { const t = otherTeamOf(id, UI.modal.draft.id, UI.modal.draft.kind); if (t) return toast(`${nameOf(id)} is already in ${t.name}. A wrestler can only be in one ${isTrios(t) ? 'trios team' : 'tag team'}. Split up ${t.name} or remove them from it first.`); }
     if (i >= 0) p.sel.splice(i, 1);
     else { if (p.sel.length >= p.max) { if (p.max === 1) p.sel = []; else return toast('Maximum ' + p.max + ' here.'); } p.sel.push(id); }
     const sc = document.querySelector('.picker-bg .mb')?.scrollTop; render(); const el = document.querySelector('.picker-bg .mb'); if (el) el.scrollTop = sc;
@@ -6592,6 +6910,7 @@ const A = {
   editW(id) { const w = W(id); openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); },
   saveW() {
     const d = UI.modal.draft; if (!d.name.trim()) return toast('Give them a name.');
+    { const where = wNameTaken(d.name.trim().slice(0, 40), d.id); if (where) return toast(`There's already a wrestler called ${d.name.trim()} (${where}). Pick another name.`); }
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale']) d[k] = clamp(+d[k] || 1, 1, 100);
     for (const k of SK_ALL) if (d[k] != null) d[k] = clamp(+d[k] || 1, 1, 99);
     d.short = String(d.short || '').replace(/[<>&"'`]/g, '').trim().slice(0, 20); if (!d.short) delete d.short;
@@ -6727,11 +7046,15 @@ const A = {
   rankTab(t) { UI.modal.tab = t; render(); },
   records(t) { liveTimers.forEach(clearTimeout); openModal({ type: 'records', tab: t || 'titles' }); },
   recTab(t) { UI.modal.tab = t; render(); },
-  editTeam(id) { const t = id && TM(id); openModal({ type: 'editTeam', isNew: !t, draft: t ? JSON.parse(JSON.stringify(t)) : { id: uid(), name: '', members: [], w: 0, l: 0, d: 0 } }); },
+  editTeam(id, el) { const t = id && TM(id); openModal({ type: 'editTeam', isNew: !t, draft: t ? JSON.parse(JSON.stringify(t)) : { id: uid(), name: '', members: [], w: 0, l: 0, d: 0, ...(el?.dataset?.k === 'trios' ? { kind: 'trios' } : {}) } }); },
+  teamKind(v) { const d = UI.modal.draft; if (v === 'trios') d.kind = 'trios'; else delete d.kind; render(); },
   saveTeam() {
     const d = UI.modal.draft; d.name = String(d.name || '').trim().slice(0, 40);
     if (!d.name) return toast('Give the team a name.');
-    if (d.members.length < 2) return toast('A team needs at least two members.');
+    if (d.members.length < (isTrios(d) ? 3 : 2)) return toast(isTrios(d) ? 'A trios team needs at least three members.' : 'A team needs at least two members.'); if (!isTrios(d)) delete d.kind;
+    { const k = grpNameTaken(d.name, d.id); if (k) return toast(`There's already ${k} called ${d.name}. Pick another name.`); }
+    { const dup = (G.teams || []).find(t => t.id !== d.id && sameSet(t.members, d.members)); if (dup) return toast(`These wrestlers are already a team: ${dup.name}.`); }
+    { const c = d.members.map(id => [id, otherTeamOf(id, d.id, d.kind)]).find(x => x[1]); if (c) return toast(`${nameOf(c[0])} is already in ${c[1].name}. A wrestler can only be in one ${isTrios(d) ? 'trios team' : 'tag team'}.`); }
     G.teams ||= []; const i = G.teams.findIndex(t => t.id === d.id);
     if (i >= 0) G.teams[i] = d; else { G.teams.push(d); news(`👥 ${d.members.map(nameOf).join(' & ')} are now ${d.name}.`, 'story'); }
     UI.modal = null; commit('Team saved.');
@@ -6742,11 +7065,17 @@ const A = {
     if (d.tms.includes(id)) { d.tms = d.tms.filter(x => x !== id); d.members = d.members.filter(x => !t.members.includes(x) || d.tms.some(o => TM(o)?.members.includes(x))); }
     else { const add = t.members.filter(x => !d.members.includes(x)); if (d.members.length + add.length > 8) return toast('A faction can have up to 8 members.'); d.tms.push(id); d.members.push(...add); }
     render(); },
+  splitTeam(id) { const t = TM(id); if (!t) return; confirmBox('Split up ' + t.name + '?', 'The team and its record are removed. The wrestlers stay.', 'Split up', () => { G.teams = G.teams.filter(x => x.id !== id); for (const f of G.factions || []) f.tms = f.tms.filter(x => x !== id); news(`👥 ${t.name} split up.`, 'story'); commit(); }, true); },
+  disbandFaction(id) { const f = FC(id); if (!f) return; confirmBox('Disband ' + f.name + '?', 'The faction and its record are removed. Its wrestlers and tag teams stay.', 'Disband', () => { G.factions = G.factions.filter(x => x.id !== id); news(`👑 ${f.name} has disbanded.`, 'story'); commit(); }, true); },
+  goTeams() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'teams'; render(); window.scrollTo(0, 0); },
+  fLeader(id) { const d = UI.modal.draft; if (!d.members.includes(id)) return; d.leader = d.leader === id ? null : id; render(); },
   saveFaction() {
     const d = UI.modal.draft; d.name = String(d.name || '').trim().slice(0, 40);
     if (!d.name) return toast('Give the faction a name.');
     d.members = [...new Set(d.members)].slice(0, 8);
     if (d.members.length < 2) return toast('A faction needs at least two members.');
+    { const k = grpNameTaken(d.name, d.id); if (k) return toast(`There's already ${k} called ${d.name}. Pick another name.`); }
+    { const dup = (G.factions || []).find(f => f.id !== d.id && sameSet(f.members, d.members)); if (dup) return toast(`These wrestlers are already a faction: ${dup.name}.`); }
     d.tms = d.tms.filter(id => TM(id)?.members.every(x => d.members.includes(x)));
     if (d.leader && !d.members.includes(d.leader)) d.leader = null;
     G.factions ||= []; const i = G.factions.findIndex(f => f.id === d.id);
@@ -6807,7 +7136,7 @@ const A = {
   // titles
   editTitle(id) { const t = G.titles.find(x => x.id === id); openModal({ type: 'title', isNew: !t, tab: t ? 'rules' : 'shape', draft: t ? JSON.parse(JSON.stringify(t)) : { id: uid(), name: 'New Championship', short: 'New', tag: false, tier: 'mid', cl: 1, division: 'Open', contenders: [], prestige: 45, holder: [], since: G.week, defenses: 0, lastDefense: G.week, belt: beltFromTpl(8, { line: 'NEW' }) } }); },
   saveTitle() {
-    const m = UI.modal, d = m.draft; d.prestige = clamp(+d.prestige || 30, 1, 100); if (!d.tag) d.holder = d.holder.slice(0, 1);
+    const m = UI.modal, d = m.draft; d.prestige = clamp(+d.prestige || 30, 1, 100); d.holder = d.holder.slice(0, tsz(d)); if (tsz(d) !== 3) delete d.size;
     d.name = String(d.name || '').trim().slice(0, 50) || 'Championship'; d.short = String(d.short || '').trim().slice(0, 16) || abbr(d.name);
     d.belt = beltClean(d.belt, d); d.photo = safePhoto(d.photo); if (!d.photo) delete d.photo; d.tier = titleTier(d); BPX = null; d.cl = 1; d.every = titleEvery(d); d.dq = !!d.dq;
     if (m.wiz != null) { const z = UI.wiz; if (!z) return closeModal(); d.division ||= 'Open'; if (m.wiz >= 0 && z.titles[m.wiz]) z.titles[m.wiz] = d; else z.titles.push(d); UI.modal = null; render(); return; }
@@ -6829,7 +7158,7 @@ const A = {
   bdUndo() { const m = UI.modal; if (m.undo?.length) { m.draft.belt = m.undo.pop(); render(); } },
   trTier(v) { const m = UI.modal, d = m.draft, L = TLEVELS.find(x => x[0] === v); if (!L) return; d.tier = v; d.cl = 1; d.prestige = m.isNew || m.wiz != null ? L[3] : clamp(+d.prestige || L[3], L[4], L[5]); render(); },
   trBrand(v) { const d = UI.modal.draft; d.brand = showById(v) ? v : ''; render(); },
-  trTag(v) { const d = UI.modal.draft; d.tag = v === 'tag'; if (!d.tag && Array.isArray(d.holder)) d.holder = d.holder.slice(0, 1); render(); },
+  trTag(v) { const d = UI.modal.draft; d.tag = v !== 'one'; if (v === 'trios') d.size = 3; else delete d.size; if (Array.isArray(d.holder)) d.holder = d.holder.slice(0, tsz(d)); render(); },
   trEvery(v) { UI.modal.draft.every = +v || 0; render(); },
 
   // stories
@@ -6856,16 +7185,17 @@ const A = {
     const d = blankSeg(kind);
     if (kind === 'match') {
       const n = Math.min(A2.length, B2.length, 3) || 1;
-      d.mtype = n === 1 ? 'Singles' : n === 2 ? 'Tag Team' : 'Six-Person Tag';
+      d.mtype = sizeMT(n);
       d.sides = [A2.slice(0, n), B2.slice(0, n)];
-      if (s.titleId) { const t = G.titles.find(x => x.id === s.titleId); if (t && t.tag === (n === 2)) d.title = t.id; }
+      if (s.titleId) { const t = G.titles.find(x => x.id === s.titleId); if (t && tsz(t) === n) d.title = t.id; }
     } else { d.who = A2.slice(0, 1); d.target = B2.slice(0, 1); }
     UI.tab = 'book'; openModal({ type: 'seg', isNew: true, draft: d });
   },
 
   // notes
-  notesTab(t) { UI.tab = 'notes'; UI.notesTab = t; UI.modal = null; render(); window.scrollTo(0, 0); },
+  notesTab(t) { UI.tab = 'notes'; UI.notesTab = t; UI.modal = null; if (t === 'dirt') UI.dirtIx = 0; render(); if (t === 'dirt') save(); window.scrollTo(0, 0); },
   newsF(f) { UI.newsF = f; render(); },
+  dirtIx(i) { UI.dirtIx = Math.max(0, +i || 0); render(); window.scrollTo(0, 0); },
   addTodo() { const el = document.getElementById('todo-in'); const t = el.value.trim(); if (!t) return; G.todos.unshift({ t, done: false }); commit(); setTimeout(() => document.getElementById('todo-in')?.focus(), 0); },
   todoCk(i) { G.todos[+i].done = !G.todos[+i].done; commit(); },
   todoDel(i) { G.todos.splice(+i, 1); commit(); },
@@ -6910,16 +7240,16 @@ function cleanW(o) {
 function toPackW(w) { const o = {}; for (const k of PACK_FIELDS) { const v = w[k]; if (k === 'photo' && w.photoLocal) continue; if (v !== undefined && v !== null && v !== '') o[k] = typeof v === 'number' ? Math.round(v) : v; } return o; }
 function makePack(ws, opt) {
   const p = { rb: 1, kind: ws.length === 1 ? 'wrestler' : 'roster', title: opt?.title || (ws.length === 1 ? ws[0].name : G.promo.name + ' roster'), promo: G.promo.name, wrestlers: ws.map(toPackW) };
-  if (opt?.titles) p.titles = G.titles.map(t => ({ name: t.name, short: t.short, tag: t.tag, prestige: Math.round(t.prestige), holders: t.holder.map(nameOf) }));
+  if (opt?.titles) p.titles = G.titles.map(t => ({ name: t.name, short: t.short, tag: t.tag, ...(tsz(t) === 3 ? { size: 3 } : {}), prestige: Math.round(t.prestige), holders: t.holder.map(nameOf) }));
   return p;
 }
 const packCode = p => 'RB1:' + btoa(unescape(encodeURIComponent(JSON.stringify(p))));
 function cleanPack(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.wrestlers)) return null;
-  const ws = p.wrestlers.slice(0, 200).map(cleanW).filter(Boolean);
+  const ws = p.wrestlers.slice(0, 300).map(cleanW).filter(Boolean);
   for (const w of ws) for (const k of ['name', 'nick', 'bio', 'finisher', 'signature', 'theme', 'hometown']) if (w[k]) w[k] = maskRude(w[k]);
   if (!ws.length) return null;
-  const titles = Array.isArray(p.titles) ? p.titles.slice(0, 12).map(t => t && typeof t.name === 'string' ? { name: t.name.slice(0, 50), short: String(t.short || t.name).slice(0, 16), tag: !!t.tag, prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 2).map(h => String(h).slice(0, 40)) : [] } : null).filter(Boolean) : null;
+  const titles = Array.isArray(p.titles) ? p.titles.slice(0, 12).map(t => t && typeof t.name === 'string' ? { name: t.name.slice(0, 50), short: String(t.short || t.name).slice(0, 16), tag: !!t.tag, ...(t.tag && +t.size === 3 ? { size: 3 } : {}), prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 3).map(h => String(h).slice(0, 40)) : [] } : null).filter(Boolean) : null;
   return { kind: ws.length === 1 ? 'wrestler' : 'roster', title: String(p.title || '').slice(0, 60) || (ws.length === 1 ? ws[0].name : 'Imported roster'), promo: String(p.promo || '').slice(0, 40), wrestlers: ws, titles };
 }
 
@@ -6994,7 +7324,7 @@ function importPack(pack, mode) {
   }
   if (mode === 'replace' && pack.titles?.length) {
     const byName = n => G.wrestlers.find(w => w.name.toLowerCase() === String(n).toLowerCase())?.id;
-    G.titles = pack.titles.map(t => ({ id: uid(), name: t.name, short: t.short, tag: t.tag, prestige: t.prestige, holder: t.holders.map(byName).filter(Boolean).slice(0, t.tag ? 2 : 1), since: G.week, defenses: 0, lastDefense: G.week }));
+    G.titles = pack.titles.map(t => ({ id: uid(), name: t.name, short: t.short, tag: t.tag, ...(t.size === 3 ? { size: 3 } : {}), prestige: t.prestige, holder: t.holders.map(byName).filter(Boolean).slice(0, tsz(t)), since: G.week, defenses: 0, lastDefense: G.week }));
   }
   if (mode === 'replace') news(`📦 New roster loaded: "${pack.title}" (${added} wrestlers). Set your champions in Office → Titles.`, 'office');
   else news(`📦 Imported "${pack.title}": ${added} new${updated ? ', ' + updated + ' updated' : ''}${mode === 'free' ? ' (as free agents)' : ''}.`, 'contract');
@@ -7446,6 +7776,57 @@ const sbUser = {
   can: async () => !!sbSess,
   profiles: async () => ({}),
 };
+// ---- anonymous play stats (hosted copy only). A random id for this device, never linked to an account or email.
+// Small batches go to log_play() in supabase/setup.sql; only the owner can read them (Community → Inbox → Stats).
+const PLAYLOG = (() => {
+  const DEV = 'bookit.dev', Q = [], feats = Object.create(null);
+  let sid = '', visAt = 0, secs = 0, hidAt = 0, lastFeat = '', lastTab = '', started = false, timer = 0;
+  const rnd = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a, b => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join(''); };
+  const on = () => { try { return sbOn() && !meta.statsOwner && (meta.stats === true || (meta.stats !== false && !navigator.globalPrivacyControl)) && (!navigator.webdriver || PLAYLOG.force); } catch (e) { return false; } };
+  const dev = () => { let d = ls.get(DEV); if (!/^[a-z0-9]{16,40}$/.test(d || '')) { d = rnd(24); ls.set(DEV, d); } return d; };
+  const plat = () => { try {
+    if (/[?&]src=play\b/.test(location.search) || /^android-app:\/\//.test(document.referrer) || sessionStorage.getItem('bookit.play')) { sessionStorage.setItem('bookit.play', '1'); return 'play'; }
+    return matchMedia('(display-mode: standalone)').matches || navigator.standalone ? 'app' : 'web';
+  } catch (e) { return 'web'; } };
+  const P = plat();
+  const tick = () => { if (visAt) { secs += (Date.now() - visAt) / 1000; visAt = Date.now(); } };
+  async function flush(leaving) {
+    if (!on()) { Q.length = 0; for (const k in feats) delete feats[k]; return; }
+    tick();
+    const e = Q.splice(0, 40);
+    for (const k of Object.keys(feats)) { if (e.length >= 40) break; e.push(['feature', k, feats[k]]); delete feats[k]; }
+    if (secs >= (leaving ? 5 : 60) && e.length < 40) { e.push(['time', '', Math.min(3600, Math.round(secs))]); secs = 0; }
+    if (!e.length) return;
+    try { await sbFetch('/rest/v1/rpc/log_play', { method: 'POST', keepalive: !!leaving, body: JSON.stringify({ d: dev(), s: sid, v: VERSION, p: P, e }) }, false); }
+    catch (x) { if (!leaving && Q.length < 200) Q.unshift(...e.filter(r => r[0] !== 'feature' && r[0] !== 'time')); } // a lost minute of features or time is fine
+  }
+  const open = () => { sid = rnd(12); Q.push(['open', '', 0]); };
+  return {
+    force: false,
+    on,
+    start() {
+      if (started || !on()) return; started = true;
+      open(); visAt = document.hidden ? 0 : Date.now();
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { tick(); visAt = 0; hidAt = Date.now(); flush(true); }
+        else { if (hidAt && Date.now() - hidAt > 30 * 60000) open(); visAt = Date.now(); hidAt = 0; } // away 30 minutes: a new session
+      });
+      addEventListener('pagehide', () => flush(true));
+      timer = setInterval(() => { if (!document.hidden) flush(); }, 60000);
+      setTimeout(flush, 5000);
+    },
+    // ev: 'show', 'new_game', 'tutorial', 'crash'. Features are counted and sent once a minute.
+    ev(ev, x = '', n = 0) { if (!started || !on()) return; Q.push([ev, String(x).slice(0, 40), +n || 0]); if (Q.length > 200) Q.shift(); if (ev === 'crash') flush(true); },
+    feat(name) { if (!started || !on() || !name) return; feats[name] = (feats[name] || 0) + 1; },
+    // called on every render: counts each screen or tab the player opens (not every redraw of it)
+    seen(modal, tab) {
+      const m = modal && modal !== 'confirm' ? modal : '';
+      if (m && m !== lastFeat) this.feat(m); lastFeat = m;
+      if (tab && tab !== lastTab) this.feat('tab:' + tab); lastTab = tab || '';
+    },
+    off() { Q.length = 0; for (const k in feats) delete feats[k]; secs = 0; ls.del(DEV); }, // a fresh id next time it's turned on
+  };
+})();
 // back from an email link: keep the session it carries, then tidy the address bar
 function sbFromLink() { if (sbOn() && /access_token=|error_description=/.test(location.hash)) sbLinkP = sbTakeLink(); }
 async function sbTakeLink() {
@@ -7497,6 +7878,7 @@ async function commInit() {
   else try { cdb = await window.claude.use('db'); cuser = await window.claude.use('user'); } catch (e) { cdb = null; }
   if (!cdb) { COMM.status = 'off'; return rerenderComm(); }
   try { COMM.me = cuser ? await cuser.id() : null; COMM.owner = cuser ? await cuser.isOwner() : false; COMM.canWrite = cuser ? await cuser.can('data.write') : null; } catch (e) {}
+  if (COMM.owner && sbOn() && meta.statsOwner == null) { meta.statsOwner = true; ls.set(META, JSON.stringify(meta)); } // the owner's own play isn't counted (Inbox → Stats can turn it back on)
   const timer = setTimeout(() => { if (COMM.status === 'loading') { COMM.status = 'slow'; rerenderComm(); } }, 10000);
   if (sbOn()) { supCheck(); sbFetch('/rest/v1/rpc/supporter_ids', { method: 'POST', body: '{}' }).then(r => { COMM.sups = new Set((Array.isArray(r) ? r : []).map(x => String(typeof x === 'object' && x ? Object.values(x)[0] : x)).filter(x => AUTHOR_ID.test(x))); rerenderComm(); }, () => {}); }
   if (COMM.owner) for (const col of ['reports', 'feedback']) {
@@ -7510,7 +7892,7 @@ async function commInit() {
         if (!it || typeof it !== 'object') continue;
         if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 200000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {} }); continue; }
         if (!it.pack) continue;
-        items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack });
+        items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack, ...(Number.isInteger(it.px) && it.px >= 1 && it.px <= PIX_SLOTS ? { px: it.px } : {}) });
       }
       if (d.id === 'featured') COMM.support = cleanSupport(body.support);
       if (d.id === COMM.me) { COMM.mine = Array.isArray(body.items) ? body.items : []; COMM.body = body; }
@@ -7574,7 +7956,69 @@ const iFollow = id => myList('follows').includes(id);
 function creatorAv(id, s = 40) { const p = COMM.profiles[id] || {}, nm = id === 'featured' ? 'BI' : (p.name || COMM.names[id] || '?'); const ini = nm.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase(); return `<div class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s * .36)}px;background:${p.color || 'var(--card2)'};color:${p.color ? '#fff' : 'var(--accent)'}">${esc(ini)}</div>`; }
 // a key can also point at one wrestler inside a shared roster: author|id|n
 function cItem(key) { const [a, id, n] = String(key || '').split('|'); const i = COMM.items.find(x => x.author === a && x.id === id); return { i, base: a + '|' + id, n: i && /^\d{1,3}$/.test(n || '') ? +n : null }; }
-const packWs = i => i._ws || (i._ws = cleanPack(i.pack)?.wrestlers || []);
+const packWs = i => i._ws || (i._ws = cleanPack(pixPack(i))?.wrestlers || []);
+// ---- roster photos: a big roster's photos sit in their own gzipped row (pix1..pix10/<player id>), so they don't
+// fill the player's Community space, and Community only downloads them when someone opens that roster ----
+const PIX_SLOTS = 10, pixSlots = () => isSup() ? PIX_SLOTS : 3, pixMax = () => isSup() ? 790000 : 395000, PIX_INLINE = 40000;
+const PIX = new Map(), PIX_LOAD = new Map(), PIX_FAIL = new Set(), pixKey = i => i.author + '|' + i.id;
+const pixWaiting = i => !!i?.px && !PIX.has(pixKey(i));
+function pixPack(i) {
+  const a = i.px && PIX.get(pixKey(i)); if (!a || !Array.isArray(i.pack?.wrestlers)) return i.pack;
+  return { ...i.pack, wrestlers: i.pack.wrestlers.map((w, k) => w && typeof w === 'object' && !w.photo && a[k] ? { ...w, photo: a[k] } : w) };
+}
+function pixLoad(i, retry) {
+  if (!pixWaiting(i) || !cdb) return Promise.resolve();
+  const k = pixKey(i); if (PIX_FAIL.has(k) && !retry) return Promise.resolve();
+  if (!PIX_LOAD.has(k)) PIX_LOAD.set(k, (async () => {
+    let a = null;
+    try {
+      // photo rows are public, so read them with the public key alone: a stale sign-in can't block them
+      const d = sbOn() ? (r => Array.isArray(r) && r[0] ? r[0].data : null)(await sbFetch(`/rest/v1/docs?select=data&col=eq.pix${i.px}&id=eq.${sbQ(i.author)}`, {}, false)) : (await cdb.doc('pix' + i.px + '/' + i.author).get()).data();
+      if (d && d.item === i.id && typeof d.z === 'string' && d.z.length < 1000000) { const x = JSON.parse(await ungz(d.z)); if (Array.isArray(x)) a = x.slice(0, 300).map(pixGrow); }
+    } catch (e) {}
+    PIX_LOAD.delete(k);
+    if (!a) { PIX_FAIL.add(k); if (UI.modal?.type === 'cview') render(); return; } // shows a Try again button
+    PIX_FAIL.delete(k); PIX.set(k, a); for (const x of COMM.items) if (pixKey(x) === k) x._ws = null;
+    if (UI.modal?.type === 'cview') render();
+  })());
+  return PIX_LOAD.get(k);
+}
+// Pixel photos shrink a lot as a palette plus one character per pixel, gzipped together (about 1 KB each instead of 4).
+// Anything that won't fit that shape (a real photo, over 256 colours) stays as its data URL.
+const pixImg = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+async function pixShrink(src) {
+  if (!src) return '';
+  const im = await pixImg(src), w = im?.naturalWidth, h = im?.naturalHeight; if (!w || !h || w > 128 || h > 128) return src;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0);
+  const px = cx.getImageData(0, 0, w, h).data, pal = [], at = new Map(); let d = '';
+  for (let k = 0; k < px.length; k += 4) {
+    const c = ((px[k] << 24) | (px[k + 1] << 16) | (px[k + 2] << 8) | px[k + 3]) >>> 0;
+    let n = at.get(c); if (n === undefined) { if (pal.length >= 256) return src; n = pal.length; at.set(c, n); pal.push(c.toString(16).padStart(8, '0')); }
+    d += String.fromCharCode(0x100 + n);
+  }
+  return { w, h, p: pal, d };
+}
+function pixGrow(x) {
+  if (typeof x === 'string') return safePhoto(x);
+  if (!x || typeof x !== 'object' || !Array.isArray(x.p) || typeof x.d !== 'string') return '';
+  const w = Math.floor(+x.w), h = Math.floor(+x.h); if (!(w > 0 && h > 0 && w <= 128 && h <= 128) || x.d.length !== w * h || x.p.length > 256) return '';
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'), img = cx.createImageData(w, h), pal = x.p.map(c => parseInt(c, 16) >>> 0);
+  for (let k = 0; k < w * h; k++) { const c = pal[x.d.charCodeAt(k) - 0x100] || 0; img.data[k * 4] = c >>> 24; img.data[k * 4 + 1] = (c >>> 16) & 255; img.data[k * 4 + 2] = (c >>> 8) & 255; img.data[k * 4 + 3] = c & 255; }
+  cx.putImageData(img, 0, 0); return safePhoto(cv.toDataURL('image/png'));
+}
+// moves a pack's photos into a free photo slot when they are too big to sit in the player's space
+async function pixSplit(pack, itemId) {
+  const photos = pack.wrestlers.map(w => w.photo || '');
+  if (sum(photos.map(x => x.length)) <= PIX_INLINE || typeof CompressionStream === 'undefined') return 0;
+  const used = new Set(COMM.mine.map(x => x?.px)), px = Array.from({ length: pixSlots() }, (_, k) => k + 1).find(k => !used.has(k));
+  if (!px) throw { code: 'pix_slots' };
+  const z = await gz(JSON.stringify(await Promise.all(photos.map(pixShrink))));
+  if (z.length > pixMax()) throw { code: 'pix_big' };
+  await cdb.doc('pix' + px + '/' + COMM.me).set({ item: itemId, z, n: photos.length, updated: Date.now() });
+  for (const w of pack.wrestlers) delete w.photo;
+  return px;
+}
+const pixDrop = (author, px) => px ? cdb.doc('pix' + px + '/' + author).delete().catch(() => {}) : Promise.resolve();
 const kindLbl = i => i.kind === 'world' ? `🌍 World · ${Array.isArray(i.sum?.cos) ? i.sum.cos.length : 0} companies · ${+i.sum?.n || 0} wrestlers` : i.kind === 'roster' ? 'Roster · ' + (+i.count || 0) + ' wrestlers' : (+i.count || 1) > 1 ? (+i.count) + ' wrestlers' : 'Wrestler';
 const REPORT_WHY = [['rude', 'Rude or hateful'], ['spam', 'Spam or junk'], ['copied', 'Copied work or real photos'], ['personal', 'Personal details'], ['other', 'Something else']];
 // things this player reported: hidden for them right away
@@ -7640,7 +8084,7 @@ function worldW(w) {
 function worldCo(r) {
   liven(r);
   const c = { id: r.id, name: r.name, short: r.short, color: r.color, prestige: Math.round(r.prestige), fans: Math.round(r.fans), show: r.show, phil: r.phil, ppvs: r.ppvs, bigOne: r.ppvs?.includes(r.bigOne) ? r.bigOne : r.ppvs?.[0] || '', money: Math.max(50000, Math.round(r.money)), custom: !!r.custom, safe: !!r.safe, roster: r.roster.map(worldW), hist: [], last: 0 };
-  c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, 1), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
+  c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, ...(rN(t) > 1 ? { n: rN(t) } : {}), div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, rN(t)), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
   return c;
 }
 // a company the player runs, written as an AI company for the world
@@ -7651,9 +8095,11 @@ function coAsRival(g) {
   const a = k => avg(ros.map(w => +w[k] || 0));
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
   for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; r.roster.push(x); }
-  const sing = (g.titles || []).filter(t => !t.tag);
+  const sing = (g.titles || []).filter(t => !t.tag), teamT = [2, 3].map(n => (g.titles || []).find(t => tsz(t) === n)).filter(Boolean);
   r.titles = sing.slice(0, 3).map((t, i) => ({ id: t.id, name: t.name, short: t.short, div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
   if (r.titles.length && r.titles.every(t => t.mid || t.div)) r.titles[0].mid = false;
+  // its tag and trios belts come along too
+  for (const t of teamT) { const h = t.holder.filter(id => r.roster.some(w => w.id === id)); r.titles.push({ id: t.id, name: t.name, short: t.short, n: tsz(t), div: '', mid: true, holder: h.length === tsz(t) ? h : [], since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }); }
   r.titles.forEach(t => { const cur = t.reigns.at(-1); if (cur && !cur.to && t.holder.length) { t.past = t.reigns.slice(0, -1).map(x => x.nm); t.reigns = [{ nm: cur.nm, from: 1, to: 0, d: 0 }]; } else { t.past = t.reigns.map(x => x.nm); t.reigns = []; } });
   return liven(r);
 }
@@ -7676,7 +8122,7 @@ function cleanWorld(raw) {
   const cos = out.map(r => {
     r.name = String(r.name).slice(0, 40); r.short = String(r.short).slice(0, 5); r.show = String(r.show).slice(0, 40); r.color = safeColor(r.color) || pick(RIV_COLORS);
     r.roster = r.roster.slice(0, 60).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
-    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 4).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, 1), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
+    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 6).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
     for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
     r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
     return r;
@@ -7704,8 +8150,8 @@ function applyWorld(z) {
     G.wrestlers = [];
     for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156) }; delete x.rival; delete x.rWeeks; delete x.rSal; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
     const tag = G.titles.find(t => t.tag);
-    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: false, prestige: t.mid ? 50 : t.div ? 55 : 70, holder: t.holder.filter(id => W(id)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}) }));
-    if (tag) G.titles.push({ ...tag, holder: [] });
+    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70, holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}) }));
+    if (tag && !G.titles.some(t => t.tag)) G.titles.push({ ...tag, holder: [] });
     G.titles.forEach(t => ensureReigns(t));
     G.promo.prestige = take.prestige; G.fans = Math.max(5000, take.fans);
     if (Array.isArray(take.ppvs) && take.ppvs.length) { G.bigEvents = ppvList(take.ppvs.join('\n')); G.bigOne = take.bigOne; G.ppvSig = []; }
@@ -7819,6 +8265,7 @@ function scrubGame(raw) {
     .map(c => { fixCo(c); c.roster = (Array.isArray(c.roster) ? c.roster : []).filter(w => w && w.id && w.name).slice(0, 200); c.coId ||= uid(); return c; });
   if (!g.cos.length) delete g.cos; else g.coId ||= uid();
   for (const k of ['news', 'todos', 'bigEvents', 'rivals']) if (!Array.isArray(g[k])) delete g[k];
+  if (g.dirt !== undefined) { const D = g.dirt; if (!D || typeof D !== 'object' || !Array.isArray(D.list)) delete g.dirt; else { D.list = D.list.filter(x => x && typeof x === 'object' && !Array.isArray(x) && +x.no > 0).slice(0, DIRT_KEEP); D.n = Math.max(+D.n || 0, ...D.list.map(x => +x.no)); D.seen = +D.seen || 0; } }
   if (g.rivalPromos !== undefined) g.rivalPromos = (Array.isArray(g.rivalPromos) ? g.rivalPromos : []).filter(r => r && r.id).slice(0, 12).map(r => ({ ...r, name: r.name || 'Rival', short: r.short || 'RIV', show: r.show || 'Weekly Show', hist: Array.isArray(r.hist) ? r.hist.slice(-12) : [],
     roster: (Array.isArray(r.roster) ? r.roster : []).filter(w => w && w.id && w.name).slice(0, 150).map(w => ({ ...w, contract: null, align: w.align === 'heel' ? 'heel' : 'face', style: STYLES.includes(w.style) ? w.style : 'Brawler', pop: clamp(+w.pop || 30, 0, 100), ring: clamp(+w.ring || 40, 0, 100), mic: clamp(+w.mic || 40, 0, 100), cha: clamp(+w.cha || 40, 0, 100), stam: clamp(+w.stam || 50, 0, 100) })) }));
   if (!g.settings || typeof g.settings !== 'object' || Array.isArray(g.settings)) g.settings = {};
@@ -7934,7 +8381,9 @@ function libFoot(m) {
   return `<button class="btn pri" data-act="libUse" ${n ? '' : 'disabled'}>${n ? `⬇ Add ${n} to ${esc(G.promo.name)}` : 'Pick wrestlers to add'}</button>`;
 }
 const LIB_ACTIONS = {
-  libAdd(key) {
+  pixRetry(key) { const { i } = cItem(key); if (!i) return; PIX_FAIL.delete(pixKey(i)); render(); pixLoad(i, true); },
+  async libAdd(key) {
+    const { i } = cItem(key); if (pixWaiting(i)) { toast('Getting the photos…'); await pixLoad(i, true); }
     const r = libAdd(key); if (r.err) return toast(r.err);
     toast(r.added ? `📚 ${r.added === 1 ? 'Saved' : r.added + ' saved'} to your library. Add them to any save from Community → Library.` : 'Already in your library. Updated to the latest version.');
     render();
@@ -8075,11 +8524,61 @@ function modalSupport(m) {
   return modal(sbOn() && (!PLAY || isSup()) ? 'BookIt Supporter' : 'Support the game', body, '<button class="btn" data-act="closeModal">Close</button>');
 }
 // owner only: reports and feedback from players
+// ---- owner only: anonymous play stats (Community → Inbox → Stats) ----
+const PSTAT = { days: 30, data: null, status: 'idle', at: 0 };
+async function pstatLoad(force) {
+  if (!sbOn() || PSTAT.status === 'loading' || (!force && PSTAT.data && Date.now() - PSTAT.at < 120000)) return;
+  PSTAT.status = 'loading'; rerenderComm();
+  let tz = 'UTC'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) {}
+  try { const r = await sbFetch('/rest/v1/rpc/play_stats', { method: 'POST', body: JSON.stringify({ days: PSTAT.days, tz }) }); PSTAT.data = r && typeof r === 'object' ? r : null; PSTAT.status = 'ok'; PSTAT.at = Date.now(); }
+  catch (e) { PSTAT.status = e?.status === 404 ? 'setup' : e?.code === 'permission-denied' ? 'denied' : 'err'; }
+  rerenderComm();
+}
+const PSTAT_NAMES = { community: 'Community', cview: 'Community post', creator: 'Creator page', cloud: 'Cloud saves', support: 'Support page', menu: 'Menu', help: 'How to play', feedback: 'Send feedback', privacy: 'Privacy', whatsnew: 'What\'s new', inbox: 'Inbox', wrestler: 'Wrestler profile', match: 'Match editor', 'tab:book': 'Shows tab', 'tab:roster': 'Roster tab', 'tab:office': 'Office tab', 'tab:news': 'News tab', 'tab:start': 'Start screen', 'tab:wizard': 'New company setup' };
+const pstatName = k => PSTAT_NAMES[k] || (k.startsWith('tab:') ? k.slice(4).replace(/^./, c => c.toUpperCase()) + ' tab' : k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()));
+const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
+function pstatHTML() {
+  if (!sbOn()) return '<div class="empty">Play stats are collected on the hosted copy of the game only.</div>';
+  if (PSTAT.status === 'idle') setTimeout(pstatLoad);
+  const range = `<div class="row" style="gap:8px;margin-bottom:10px"><div class="seg-ctl sp" role="group" aria-label="Date range">${[7, 30, 90].map(d => `<button class="${PSTAT.days === d ? 'on' : ''}" data-act="pstatDays" data-id="${d}">${d} days</button>`).join('')}</div><button class="btn sm" data-act="pstatDays" data-id="${PSTAT.days}" aria-label="Refresh">↻</button></div>`;
+  const own = `<label class="todo" style="margin-top:12px"><input type="checkbox" data-in="statsMine" ${meta.statsOwner ? '' : 'checked'}><span>Count my own play on this device (off by default, so your testing doesn't skew the numbers)</span></label>`;
+  const d = PSTAT.data;
+  if (!d) return range + (PSTAT.status === 'setup' ? '<div class="empty">Stats aren\'t set up yet. Run the new Play stats part of supabase/setup.sql in Supabase → SQL Editor, then tap ↻.</div>'
+    : PSTAT.status === 'denied' ? '<div class="empty">Only the owner can see play stats.</div>' : PSTAT.status === 'err' ? '<div class="empty">Could not load stats. Tap ↻ to try again.</div>' : '<div class="empty">Loading stats…</div>') + own;
+  const daily = Array.isArray(d.daily) ? d.daily : [], n = v => (+v || 0).toLocaleString();
+  const tot = k => daily.reduce((a, x) => a + (+x[k] || 0), 0);
+  const tiles = (rows) => `<div class="grid3 cstats" style="margin-bottom:8px">${rows.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>`;
+  let h = range + tiles([[n(d.today), 'players today'], [n(d.active7), 'last 7 days'], [n(d.active30), 'last 30 days']]) + tiles([[n(d.all_players), 'players ever'], [n(d.new7), 'new this week'], [n(d.shows_all), 'shows run ever']]);
+  // daily players: returning at the bottom, new on top
+  const max = Math.max(1, ...daily.map(x => +x.p || 0)), dl = x => new Date(x.d + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const tip = x => `${dl(x)}: ${n(x.p)} player${x.p == 1 ? '' : 's'} (${n(x.n)} new), ${n(x.s)} session${x.s == 1 ? '' : 's'}, ${n(x.sh)} show${x.sh == 1 ? '' : 's'}, ${n(x.m)} min played`;
+  h += `<div class="sec">Daily players</div><div class="pst-leg tiny"><span><i class="pst-ret"></i>Returning</span><span><i class="pst-new"></i>New</span><span class="sp"></span><span class="muted">tap a bar</span></div>
+    <div class="pst-chart" role="img" aria-label="Daily players for the last ${daily.length} days, ${n(tot('p'))} player-days in all. A table is below.">${daily.map(x => { const p = +x.p || 0, nw = Math.min(p, +x.n || 0);
+      return `<button class="pst-col" data-act="pstatTip" data-id="${esc(tip(x))}" title="${esc(tip(x))}" aria-label="${esc(tip(x))}"><span class="pst-stack" style="height:${p / max * 100}%">${nw ? `<i class="pst-new" style="flex:${nw}"></i>` : ''}${p - nw ? `<i class="pst-ret" style="flex:${p - nw}"></i>` : ''}</span></button>`; }).join('')}</div>
+    <div class="pst-ax tiny muted"><span>${daily[0] ? dl(daily[0]) : ''}</span><span>peak ${n(max)}</span><span>${daily.length ? dl(daily.at(-1)) : ''}</span></div>
+    <div class="tiny" id="pstTip" aria-live="polite" style="min-height:1.4em;margin-top:4px"></div>`;
+  const pd = tot('p');
+  h += `<div class="sec">Engagement (${daily.length} days)</div>` + tiles([[n(tot('s')), 'sessions'], [n(tot('sh')), 'shows run'], [pd ? Math.round(tot('m') / pd) + ' min' : '–', 'per player a day']]);
+  const r = d.ret || {};
+  h += `<div class="sec">Do new players come back?</div><div class="card small">Of ${n(r.cohort)} players who started 2 to 60 days ago, <b>${pct(r.d1, r.cohort)}</b> came back the next day and <b>${pct(r.later, r.cohort)}</b> came back on a later day. Of the ${n(r.cohort7)} who started over a week ago, <b>${pct(r.d7, r.cohort7)}</b> were still playing a week later.</div>`;
+  const bars = (rows, total) => `<div class="list">${rows.map(([l, v, extra]) => `<div class="pst-row"><div class="row small"><span class="sp">${esc(l)}</span><b>${n(v)}</b>${extra ? `<span class="tiny muted" style="margin-left:6px">${extra}</span>` : ''}</div><div class="pst-bar"><i style="width:${total ? Math.max(2, v / total * 100) : 0}%"></i></div></div>`).join('') || '<div class="empty">Nothing yet.</div>'}</div>`;
+  const pl = d.plat || {}, ptot = (+pl.web || 0) + (+pl.app || 0) + (+pl.play || 0);
+  h += `<div class="sec">Where they play (players)</div>` + bars([['Web browser', +pl.web || 0], ['Installed from the browser', +pl.app || 0], ['Google Play app', +pl.play || 0]].filter(x => x[1] || ptot === 0), Math.max(1, ...Object.values(pl).map(Number)));
+  const ver = Array.isArray(d.ver) ? d.ver : [];
+  h += `<div class="sec">Versions (players)</div>` + bars(ver.map(([v, c]) => ['v' + v, +c || 0]), Math.max(1, ...ver.map(x => +x[1] || 0)));
+  const ft = (Array.isArray(d.feat) ? d.feat : []).filter(x => x[0] !== 'tab:start' && x[0] !== 'menu').slice(0, 20);
+  h += `<div class="sec">Most used screens (players)</div>` + bars(ft.map(([k, p, u]) => [pstatName(String(k)), +p || 0, n(u) + ' opens']), Math.max(1, ...ft.map(x => +x[1] || 0)));
+  const k = d.kinds || {}, g = x => +k[x] || 0, tutSkip = Object.keys(k).filter(x => x.startsWith('tutorial:skip')).reduce((a, x) => a + g(x), 0);
+  h += `<div class="sec">Shows and new games</div><div class="card small">Shows: <b>${n(g('show:tv'))}</b> weekly, <b>${n(g('show:big'))}</b> big events, <b>${n(g('show:special'))}</b> TV specials.<br>New companies: <b>${n(g('new_game:starter'))}</b> starter roster, <b>${n(g('new_game:empty'))}</b> empty, <b>${n(g('new_game:community'))}</b> from a Community save.<br>Tutorial: <b>${n(g('tutorial:done'))}</b> finished, <b>${n(tutSkip)}</b> skipped.<br>Crashes: <b>${n(d.crashes)}</b>${d.crashes ? ' (details come in through Feedback when players send them)' : ''}.</div>`;
+  h += `<details style="margin-top:10px"><summary class="small">Daily numbers as a table</summary><div style="overflow-x:auto"><table class="pst-tbl tiny"><thead><tr><th>Day</th><th>Players</th><th>New</th><th>Sessions</th><th>Shows</th><th>Minutes</th></tr></thead><tbody>${daily.slice().reverse().map(x => `<tr><td>${dl(x)}</td><td>${n(x.p)}</td><td>${n(x.n)}</td><td>${n(x.s)}</td><td>${n(x.sh)}</td><td>${n(x.m)}</td></tr>`).join('')}</tbody></table></div></details>`;
+  return h + own + `<div class="tiny muted" style="margin-top:8px">Anonymous: each device has a random id, with no name, email or account. Days are in your time zone (${esc(d.tz || 'UTC')}). Updated ${new Date(PSTAT.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.</div>`;
+}
 function modalInbox(m) {
   const t = m.tab || 'reports';
   const groups = Object.create(null); for (const r of COMM.reports) { const g = (groups[r.t] ||= []); if (!g.some(x => x.by === r.by)) g.push(r); } // one per player per target
-  let body = `<div class="seg-ctl" style="margin-bottom:12px"><button class="${t === 'reports' ? 'on' : ''}" data-act="inTab" data-id="reports">Reports${Object.keys(groups).length ? ` <span class="cnt">${Object.keys(groups).length}</span>` : ''}</button><button class="${t === 'feedback' ? 'on' : ''}" data-act="inTab" data-id="feedback">Feedback${COMM.feedback.length ? ` <span class="cnt">${COMM.feedback.length}</span>` : ''}</button></div>`;
-  if (t === 'reports') {
+  let body = `<div class="seg-ctl" style="margin-bottom:12px"><button class="${t === 'reports' ? 'on' : ''}" data-act="inTab" data-id="reports">Reports${Object.keys(groups).length ? ` <span class="cnt">${Object.keys(groups).length}</span>` : ''}</button><button class="${t === 'feedback' ? 'on' : ''}" data-act="inTab" data-id="feedback">Feedback${COMM.feedback.length ? ` <span class="cnt">${COMM.feedback.length}</span>` : ''}</button>${sbOn() ? `<button class="${t === 'stats' ? 'on' : ''}" data-act="inTab" data-id="stats">Stats</button>` : ''}</div>`;
+  if (t === 'stats') body += pstatHTML();
+  else if (t === 'reports') {
     const keys = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
     body += keys.length ? `<div class="list">${keys.map(k => {
       const rs = groups[k], prof = k.startsWith('p:'), item = !prof && COMM.items.find(i => i.author + '|' + i.id === k), who = prof ? k.slice(2) : k.split('|')[0];
@@ -8151,7 +8650,7 @@ function modalCView(m) {
       <div class="list">${slots.map(s => `<button class="item" data-act="cPlaySave" data-id="${esc(m.key)}" data-f="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">Slot ${s.n}${s.n === meta.slot && G ? ' (current game)' : ''}</div><div class="d">${s.info ? 'Replaces ' + esc(s.info.name) + ', week ' + s.info.week : 'Empty'}</div></div></button>`).join('')}</div>`;
     return modal(esc(i.title), body, COMM.owner && i.author !== COMM.me ? '<button class="btn bad" data-act="cDel" data-id="' + esc(m.key) + '">Remove</button>' : '');
   }
-  const p = cleanPack(i.pack);
+  const p = cleanPack(pixPack(i)); pixLoad(i);
   if (!p) return modal(esc(i.title), '<div class="empty">This creation is empty or damaged.</div>');
   if (n != null) { // one wrestler from a shared roster
     const w = packWs(i)[n]; if (!w) return modal('Community', '<div class="empty">This wrestler was removed.</div>');
@@ -8162,6 +8661,7 @@ function modalCView(m) {
   }
   const body = `${cvHead(i, m.key, kindLbl({ ...i, count: p.wrestlers.length }))}
     ${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
+    ${pixWaiting(i) ? (PIX_FAIL.has(pixKey(i)) ? `<div class="row small" style="margin-bottom:6px;gap:8px" role="status"><span class="sp muted">The photos didn't load.</span><button class="btn sm" data-act="pixRetry" data-id="${esc(m.key)}">Try again</button></div>` : '<div class="tiny muted" style="margin-bottom:6px" role="status">Loading photos…</div>') : ''}
     ${p.titles?.length ? `<div class="tiny muted" style="margin-bottom:6px">Includes ${p.titles.length} championships: ${p.titles.map(t => esc(t.short)).join(', ')}</div>` : ''}
     ${p.wrestlers.length > 1 ? `<div class="alert" style="margin-bottom:8px"><span class="ic">📚</span><div class="small sp">Keep any of them in your library to use in every save, no save needed.</div></div>` : ''}
     <div class="list">${p.wrestlers.map((w, k) => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : '', w.ring != null ? 'Ring ' + w.ring : '', w.finisher ? 'Finisher: ' + w.finisher : ''].filter(Boolean).join(' · '))}</div></div>${p.wrestlers.length > 1 ? (inLib(m.key + '|' + k) ? `<span class="tag" aria-label="In your library">✓ 📚</span>` : `<button class="btn sm" data-act="libAdd" data-id="${esc(m.key + '|' + k)}" aria-label="Save ${esc(w.name)} to your library">📚 +</button>`) : ''}</div>`).join('')}</div>`;
@@ -8317,7 +8817,7 @@ const CREATOR_ACTIONS = {
     UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Profile saved.');
   },
   cClearProfile(id) { confirmBox('Clear this profile?', 'Their name and bio go back to the default. Their uploads stay.', 'Clear', async () => { try { const cur = knownFields((await cdb.doc('creations/' + id).get()).data()); delete cur.profile; await cdb.doc('creations/' + id).set({ ...cur, updated: Date.now() }); toast('Cleared.'); } catch (e) { toast('Could not clear it.'); } }, true); },
-  cWipe(id) { if (!COMM.owner || !AUTHOR_ID.test(id) || id === 'featured') return; confirmBox('Remove everything from this creator?', 'Their uploads, profile, likes and follows are removed for everyone.', 'Remove all', async () => { try { await cdb.doc('creations/' + id).set({ items: [], updated: Date.now() }); UI.modal = { type: 'community', tab: 'browse' }; render(); toast('Removed.'); } catch (e) { toast('Could not remove it.'); } }, true); },
+  cWipe(id) { if (!COMM.owner || !AUTHOR_ID.test(id) || id === 'featured') return; confirmBox('Remove everything from this creator?', 'Their uploads, profile, likes and follows are removed for everyone.', 'Remove all', async () => { try { await cdb.doc('creations/' + id).set({ items: [], updated: Date.now() }); for (let k = 1; k <= PIX_SLOTS; k++) pixDrop(id, k); UI.modal = { type: 'community', tab: 'browse' }; render(); toast('Removed.'); } catch (e) { toast('Could not remove it.'); } }, true); },
   async sbLink() {
     if (!sbOn()) return;
     const email = (document.querySelector('[data-in=sbEmail]')?.value || UI.modal?.email || '').trim();
@@ -8341,7 +8841,7 @@ const CREATOR_ACTIONS = {
   sbWipe() {
     if (!COMM.me) return;
     confirmBox('Remove your Community posts?', `Your uploads, profile, likes, follows, reports and feedback${sbOn() ? ', and your cloud saves,' : ''} are deleted for everyone. This can't be undone.`, 'Remove', async () => {
-      try { for (const col of ['creations', 'reports', 'feedback', ...(sbOn() ? CLOUD_SLOTS.map(n => 'cloud' + n) : [])]) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
+      try { for (const col of ['creations', 'reports', 'feedback', ...(sbOn() ? CLOUD_SLOTS.map(n => 'cloud' + n) : []), ...Array.from({ length: PIX_SLOTS }, (_, k) => 'pix' + (k + 1))]) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
       catch (e) { toast('Could not remove it. Try again.'); }
     }, true);
   },
@@ -8361,6 +8861,8 @@ const CREATOR_ACTIONS = {
   },
   inbox() { UI.modal = { type: 'inbox', tab: 'reports' }; render(); },
   inTab(t) { UI.modal.tab = t; render(); },
+  pstatDays(d) { PSTAT.days = [7, 30, 90].includes(+d) ? +d : 30; pstatLoad(true); },
+  pstatTip(t) { const el = document.getElementById('pstTip'); if (el) el.textContent = String(t || '').slice(0, 200); },
   async inDone(id, el) {
     if (!COMM.owner) return; const col = el.dataset.f;
     // remove the matching entries from each player's doc
@@ -8382,7 +8884,7 @@ const CREATOR_ACTIONS = {
   privBack() { UI.modal = UI.modal.back || null; render(); },
   needNew() { UI.pendingGet = UI.modal?.key || null; UI.modal = null; A.wzStart(); },
   needLoad(n) { UI.pendingGet = UI.modal?.key || null; A.loadSlot(n); },
-  cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const { i, base, n } = cItem(key); let p = i && cleanPack(i.pack); if (!p) return toast('This creation is damaged.'); if (n != null) { const w = packWs(i)[n]; if (!w) return toast('This wrestler was removed.'); p = { kind: 'wrestler', title: w.name, promo: p.promo, wrestlers: [w], titles: null }; } markUsed(base); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: n != null ? p.title : i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
+  async cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const { i, base, n } = cItem(key); if (pixWaiting(i)) { toast('Getting the photos…'); await pixLoad(i, true); } let p = i && cleanPack(pixPack(i)); if (!p) return toast('This creation is damaged.'); if (n != null) { const w = packWs(i)[n]; if (!w) return toast('This wrestler was removed.'); p = { kind: 'wrestler', title: w.name, promo: p.promo, wrestlers: [w], titles: null }; } markUsed(base); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: n != null ? p.title : i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
   async cPublish() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
     m.what = m.what || 'roster'; // the Share tab shows Whole roster selected before anything is tapped
@@ -8391,8 +8893,12 @@ const CREATOR_ACTIONS = {
     if (!ws.length) return toast('Pick at least one wrestler.');
     const pack = makePack(ws, { titles: m.what === 'roster', title: (m.title || '').trim() || (m.what === 'roster' ? G.promo.name + ' roster' : ws.length === 1 ? ws[0].name : 'Custom wrestlers') });
     const item = { id: uid(), title: pack.title, desc: (m.desc || '').trim().slice(0, 300), kind: m.what === 'roster' ? 'roster' : 'wrestler', count: ws.length, created: Date.now(), pack };
-    try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.'); }
-    catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+    let px = 0;
+    try {
+      px = await pixSplit(pack, item.id); if (px) item.px = px;
+      await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.');
+    }
+    catch (e) { if (px) pixDrop(COMM.me, px); toast(e?.code === 'pix_slots' ? `You can share ${pixSlots()} rosters with photos${isSup() ? '' : ' (10 as a Supporter)'}. Delete an older one first.` : e?.code === 'pix_big' ? `Too many photos to share at once. ${isSup() ? 'Share the roster in two parts.' : 'Share fewer wrestlers, or become a Supporter for twice the room.'}` : e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   shareWorld() { if (G) openModal({ type: 'community', tab: 'share', what: 'world' }); },
   async cPublishWorld() {
@@ -8434,7 +8940,7 @@ const CREATOR_ACTIONS = {
       if (typeof DecompressionStream === 'undefined') return toast('This browser can\'t open shared saves. Try an up-to-date browser.');
       let g; try { g = sanitizeGame(JSON.parse(await ungz(i.save))); } catch (e) { return toast('This save is damaged and can\'t be opened.'); }
       if (G) save();
-      g.event = null; G = g; meta.slot = n; save(); markUsed(key);
+      g.event = null; G = g; meta.slot = n; save(); markUsed(key); PLAYLOG.ev('new_game', 'community');
       UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; render();
       toast(`Now playing ${G.promo.name} in slot ${n}.`);
     };
@@ -8444,7 +8950,7 @@ const CREATOR_ACTIONS = {
   cDel(key) {
     const [author, id] = key.split('|');
     confirmBox('Remove this creation?', 'It is removed for everyone. Copies already added stay.', 'Remove', async () => {
-      try { const cur = author === COMM.me ? COMM.mine : ((await cdb.doc('creations/' + author).get()).data()?.items || []); await commWrite(author, cur.filter(x => cleanItemId(x?.id) !== id)); UI.modal = { type: 'community', tab: author === COMM.me ? 'mine' : 'browse' }; render(); toast('Removed.'); }
+      try { const cur = author === COMM.me ? COMM.mine : ((await cdb.doc('creations/' + author).get()).data()?.items || []), gone = cur.find(x => cleanItemId(x?.id) === id); await commWrite(author, cur.filter(x => cleanItemId(x?.id) !== id)); if (Number.isInteger(gone?.px) && !cur.some(x => x !== gone && x?.px === gone.px)) await pixDrop(author, gone.px); UI.modal = { type: 'community', tab: author === COMM.me ? 'mine' : 'browse' }; render(); toast('Removed.'); }
       catch (e) { toast('Could not remove it.'); }
     }, true);
   }
@@ -9366,10 +9872,10 @@ function draftAuto(all) {
   render();
 }
 // titles a new company starts with, and the extra ones a booker can add with one tap
-const WZ_TITLE = (name, short, tier, division, tag, tpl, line, prestige) => ({ id: uid(), name, short, tier, cl: 1, division, tag, prestige, every: 0, dq: false, holder: [], belt: beltFromTpl(tpl, { line }) });
+const WZ_TITLE = (name, short, tier, division, tag, tpl, line, prestige) => ({ id: uid(), name, short, tier, cl: 1, division, tag: !!tag, ...(tag === 3 ? { size: 3 } : {}), prestige, every: 0, dq: false, holder: [], belt: beltFromTpl(tpl, { line }) });
 const wizTitles = () => [WZ_TITLE('World Heavyweight Championship', 'World', 'main', 'Open', false, 0, 'WORLD CHAMPION', 70), WZ_TITLE('National Championship', 'National', 'upper', 'Open', false, 2, 'NATIONAL', 50), WZ_TITLE('Tag Team Championship', 'Tag', 'upper', 'Open', true, 6, 'TAG TEAM', 45)];
 const WZ_MORE = [["Women's Championship", "Women's", 'main', "Women's", false, 3, "WOMEN'S", 65], ['Television Championship', 'TV', 'mid', 'Open', false, 4, 'TELEVISION', 45], ['Continental Championship', 'Continental', 'upper', 'Open', false, 1, 'CONTINENTAL', 50],
-  ['Cruiserweight Championship', 'Cruiser', 'mid', 'Open', false, 7, 'CRUISERWEIGHT', 35], ['Hardcore Championship', 'Hardcore', 'low', 'Open', false, 5, 'HARDCORE', 30], ["Women's Tag Team Championship", "Women's Tag", 'upper', "Women's", true, 6, "WOMEN'S TAG", 40], ['Tag Team Championship', 'Tag', 'upper', 'Open', true, 6, 'TAG TEAM', 45]];
+  ['Cruiserweight Championship', 'Cruiser', 'mid', 'Open', false, 7, 'CRUISERWEIGHT', 35], ['Hardcore Championship', 'Hardcore', 'low', 'Open', false, 5, 'HARDCORE', 30], ["Women's Tag Team Championship", "Women's Tag", 'upper', "Women's", true, 6, "WOMEN'S TAG", 40], ['Tag Team Championship', 'Tag', 'upper', 'Open', true, 6, 'TAG TEAM', 45], ['Trios Championship', 'Trios', 'mid', 'Open', 3, 6, 'TRIOS', 40]];
 const MAX_TITLES = 10;
 const wzTopIx = z => { const i = z.titles.findIndex(t => titleTier(t) === 'main' && !t.tag); return i >= 0 ? i : z.titles.findIndex(t => !t.tag); };
 function wizToChamps() {
@@ -9382,7 +9888,7 @@ function wizToChamps() {
   const order = z.titles.map((t, i) => i).sort((a, b) => (z.titles[b].prestige || 0) - (z.titles[a].prestige || 0));
   for (const i of order) {
     const t = z.titles[i]; if (t.holder.length) continue;
-    if (t.tag) { const h = free(w => w.align === 'heel'); const two = h.length >= 2 ? h.slice(1, 3).length === 2 ? h.slice(1, 3) : h.slice(0, 2) : free().slice(-2); if (two.length === 2) t.holder = two.map(take); }
+    if (t.tag) { const n = tsz(t), h = free(w => w.align === 'heel'); const grp = h.length >= n ? h.slice(1, n + 1).length === n ? h.slice(1, n + 1) : h.slice(0, n) : free().slice(-n); if (grp.length === n) t.holder = grp.map(take); }
     else if (i === wzTopIx(z)) t.holder = [take(free(w => w.align === 'heel')[0] || free()[0])].filter(Boolean);
     else t.holder = [take(free(w => w.align === 'face')[0] || free()[0])].filter(Boolean);
   }
@@ -9395,9 +9901,9 @@ function wizToChamps() {
 function starterChamps(old, nt) {
   const used = new Set(), ok = (t, w) => w && w.contract && !used.has(w.id) && (!t.division || t.division === 'Open' || (t.division === "Women's") === (w.division === "Women's"));
   const pool = signed().sort((a, b) => b.pop - a.pop);
-  const singles = nt.filter(t => !t.tag), tags = nt.filter(t => t.tag), oldS = old.filter(t => !t.tag), oldT = old.find(t => t.tag);
+  const singles = nt.filter(t => !t.tag), tags = nt.filter(t => t.tag), oldS = old.filter(t => !t.tag), oldT = old.find(t => tsz(t) === 2);
   singles.forEach((t, i) => { const w = W(oldS[i]?.holder[0]); const pk = ok(t, w) ? w : pool.find(x => ok(t, x)); if (pk) { t.holder = [pk.id]; used.add(pk.id); } });
-  tags.forEach((t, i) => { let ids = i === 0 && oldT ? oldT.holder.filter(id => ok(t, W(id))) : []; if (ids.length < 2) ids = pool.filter(x => ok(t, x) && x.align === 'heel').slice(0, 2).map(x => x.id); if (ids.length === 2) { t.holder = ids; ids.forEach(id => used.add(id)); } });
+  tags.forEach(t => { const n = tsz(t); let ids = n === 2 && oldT ? oldT.holder.filter(id => ok(t, W(id))) : []; if (n === 2 && oldT) oldT.holder = []; if (ids.length < n) ids = pool.filter(x => ok(t, x) && x.align === 'heel').slice(0, n).map(x => x.id); if (ids.length === n) { t.holder = ids; ids.forEach(id => used.add(id)); } });
 }
 function wizFinish() {
   const z = UI.wiz, host = z.add && G ? G : null;
@@ -9407,7 +9913,7 @@ function wizFinish() {
   // the championships made in the setup's Titles step
   if (z.titles?.length && !(z.world && z.take)) {
     const old = G.titles;
-    G.titles = z.titles.slice(0, MAX_TITLES).map(x => ({ id: uid(), name: String(x.name || 'Championship').slice(0, 50), short: String(x.short || 'Title').slice(0, 16), tag: !!x.tag, tier: titleTier(x), cl: 1, ...(x.division && x.division !== 'Open' ? { division: x.division } : {}),
+    G.titles = z.titles.slice(0, MAX_TITLES).map(x => ({ id: uid(), name: String(x.name || 'Championship').slice(0, 50), short: String(x.short || 'Title').slice(0, 16), tag: !!x.tag, ...(x.tag && +x.size === 3 ? { size: 3 } : {}), tier: titleTier(x), cl: 1, ...(x.division && x.division !== 'Open' ? { division: x.division } : {}),
       prestige: clamp(+x.prestige || 40, 1, 100), every: titleEvery(x), dq: !!x.dq, belt: beltClean(x.belt, x), ...(safePhoto(x.photo) ? { photo: x.photo } : {}), holder: [], since: G.week, defenses: 0, lastDefense: G.week }));
     if (z.source === 'starter') { starterChamps(old, G.titles); const was = old[0]?.holder[0]; for (const st of G.stories) if (st.titleId) { const t = G.titles.find(t => !t.tag && t.holder.includes(was)); st.titleId = t?.id || null; if (!t) st.type = 'Feud'; } }
   }
@@ -9422,7 +9928,7 @@ function wizFinish() {
     z.mine.forEach((w, i) => { delete w._ask; w.contract = { salary: asking(w), weeks: i < 6 ? rint(104, 156) : rint(52, 130) }; G.wrestlers.push(w); });
     // anyone nobody drafted is still out there as a free agent
     for (const w of z.pool.filter(x => !z.mine.includes(x) && !z.rivalTook[x.id])) { delete w._ask; G.wrestlers.push(w); }
-    (z.titles || []).slice(0, MAX_TITLES).forEach((x, i) => { const t = G.titles[i]; if (t) t.holder = x.holder.filter(id => W(id)).slice(0, t.tag ? 2 : 1); });
+    (z.titles || []).slice(0, MAX_TITLES).forEach((x, i) => { const t = G.titles[i]; if (t) t.holder = x.holder.filter(id => W(id)).slice(0, tsz(t)); });
     if (z.story?.on && W(z.story.a) && W(z.story.b)) G.stories.push({ id: uid(), title: z.story.title || 'Road to the Gold', type: 'Title Chase', a: [z.story.a], b: [z.story.b], titleId: G.titles[z.story.ti]?.holder.includes(z.story.b) ? G.titles[z.story.ti].id : null, heat: 25, start: 1, status: 'active', notes: 'Your first story. Pay it off at the first big event.', log: [] });
     // two short deals give a new booker an early renewal decision, but never a champion or a top pick
     G.wrestlers.filter(w => w.contract && !z.mine.slice(0, 6).includes(w) && !G.titles.some(t => t.holder.includes(w.id))).sort(() => Math.random() - .5).slice(0, 2).forEach((w, i) => w.contract.weeks = 14 + i * 6);
@@ -9540,7 +10046,7 @@ function viewWizard() {
     const tk = z.take && z.world.cos.find(c => c.id === z.take);
     return `<div class="app wz">${wizSteps('roster')}
       <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">${tk ? `Taking over ${esc(tk.name)}` : 'Where does your talent come from?'}</h2>
-      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(tk.roster.find(w => w.id === t.holder[0])?.name || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>
+      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(t.holder.map(id => tk.roster.find(w => w.id === id)?.name).filter(Boolean).join(' & ') || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>
       <div class="tip small" style="margin-top:10px">📅 You start at the beginning of the month leading to ${tk.bigOne ? `<b>${esc(tk.bigOne)}</b>, their big one` : 'their big one, the biggest show of their year'}.</div>`
       : `<div class="tip small" style="margin-bottom:10px">📅 You start at the beginning of the month leading to your big one: ${ppvList(z.ppv).length ? `<b>${esc(ppvList(z.ppv).at(-1))}</b>, the last big event you named` : 'your last big event of the year'}. Pick a different big one later in Office → Setup.</div><div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button>${tk ? '<button class="btn pri" data-act="wzFinish">Open for business</button>' : '<button class="btn pri" data-act="wzGo" data-id="titles">Next</button>'}</div></div>`;
@@ -9580,15 +10086,15 @@ function viewWizard() {
   if (z.step === 'titles') {
     const draft = z.source === 'draft', mine = draft ? z.mine.slice().sort((a, b) => overall(b) - overall(a)) : [];
     const sel = (t, k, i) => `<select data-wz="champ" data-k="${k}" data-i="${i}" aria-label="${esc(t.name)} champion${t.tag ? ' ' + (i + 1) : ''}"><option value="">Vacant</option>${mine.map(w => `<option value="${w.id}" ${t.holder[i] === w.id ? 'selected' : ''}>${esc(w.name)} (${overall(w)}, ${w.align})</option>`).join('')}</select>`;
-    const more = WZ_MORE.filter(x => !z.titles.some(t => t.name.toLowerCase() === x[0].toLowerCase())).slice(0, 6);
+    const more = WZ_MORE.filter(x => !z.titles.some(t => t.name.toLowerCase() === x[0].toLowerCase())).slice(0, 8);
     const st = z.story, stT = st && z.titles[st.ti];
     return `<div class="app wz">${wizSteps('titles')}
       <div class="wz-k">Step ${draft ? 5 : 4} · Championships</div><h2 class="wz-h">Create your titles</h2>
       <p class="muted small" style="margin-top:0">Name them, design the belts${draft ? ' and crown your first champions' : ''}. Start from these or build your own. Tap a belt to design it.</p>
       <div class="list">${z.titles.map((t, k) => `<div class="card wz-title"><div class="row" style="gap:10px;align-items:center"><button class="wz-belt" data-act="wzTitle" data-id="${k}" aria-label="Design the ${esc(t.name)} belt">${titleArt(t, 'belt-th')}</button>
-        <div class="sp" style="min-width:0"><b class="small">${esc(t.name)}</b><div class="tiny muted">${tierName(t)} · ${esc(t.division || 'Open')} · ${t.tag ? 'Tag team' : 'Singles'}${titleEvery(t) ? ` · every ${titleEvery(t)} wk` : ''}</div></div>
+        <div class="sp" style="min-width:0"><b class="small">${esc(t.name)}</b><div class="tiny muted">${tierName(t)} · ${esc(t.division || 'Open')} · ${tkindName(t)}${titleEvery(t) ? ` · every ${titleEvery(t)} wk` : ''}</div></div>
         <button class="btn sm" data-act="wzTitle" data-id="${k}">Design</button></div>
-        ${draft ? `<label class="f" style="margin:8px 0 0"><span class="tiny">🏆 Champion${t.tag ? 's' : ''}</span>${t.tag ? `<div class="grid2">${sel(t, k, 0)}${sel(t, k, 1)}</div>` : sel(t, k, 0)}</label>` : ''}</div>`).join('')}</div>
+        ${draft ? `<label class="f" style="margin:8px 0 0"><span class="tiny">🏆 Champion${t.tag ? 's' : ''}</span>${t.tag ? `<div class="grid2">${Array.from({ length: tsz(t) }, (_, i) => sel(t, k, i)).join('')}</div>` : sel(t, k, 0)}</label>` : ''}</div>`).join('')}</div>
       ${z.titles.length < MAX_TITLES ? `<button class="btn block wz-add" data-act="wzNewTitle">＋ Add a championship</button>
       ${more.length ? `<div class="chips" style="margin:8px 0 4px">${more.map(x => `<button class="chip" data-act="wzMoreTitle" data-id="${esc(x[0])}">＋ ${esc(x[0].replace(' Championship', ''))}</button>`).join('')}</div>` : ''}` : ''}
       <p class="tiny muted">${draft ? 'A heel champion gives fans someone to chase.' : z.source === 'starter' ? 'Champions are picked from the starter roster.' : 'Titles start vacant. Crown champions once you have a roster.'} Change titles and belts anytime in Office → Titles.</p>
@@ -9638,7 +10144,7 @@ function tutSync() {
   // skip steps the player has already done (e.g. booked a match before reading the tip)
   while (tutOn() && G.tut < TUT_WIN && TUT[G.tut].done?.()) G.tut++;
   // the closing card bows out by itself once another show has run
-  if (tutOn() && G.tut === TUT_WIN && G.tutRes && G.week > G.tutRes.wk + 1) { delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; }
+  if (tutOn() && G.tut === TUT_WIN && G.tutRes && G.week > G.tutRes.wk + 1) { if (!G.tutReplay) PLAYLOG.ev('tutorial', 'done'); delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; }
 }
 function tutCard() {
   if (!tutOn() || UI.selWeek !== G.week) return '';
@@ -9676,6 +10182,7 @@ function tutShowDone(rec) {
   if (!tutOn() || G.tut >= TUT_WIN || rec.wk !== G.tutWk) return;
   G.tut = TUT_WIN; G.tutRes = { wk: rec.wk, rating: rec.rating };
   if (G.tutReplay) return;
+  PLAYLOG.ev('tutorial', 'first_show');
   G.fans += TUT_BONUS.fans; G.booker.xp += TUT_BONUS.xp; if (MON()) G.money += TUT_BONUS.money;
   G.tutRes.bonus = 1;
   news(`🎉 Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? `, +${money(TUT_BONUS.money)}` : ''} and +${TUT_BONUS.xp} XP.`, 'office');
@@ -9685,8 +10192,8 @@ function tutWin(h) {
   return `<div class="lv-tut"><b>🎉 First show in the books!</b>${r.bonus ? `<div class="small">Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? ` · +${money(TUT_BONUS.money)}` : ''} · +${TUT_BONUS.xp} XP</div>` : ''}</div>`;
 }
 const TUT_ACTIONS = {
-  tutNext() { if (!tutOn()) return; if (G.tut >= TUT_WIN) { delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; commit('Tutorial done. Have a great run!'); return; } G.tut++; commit(); },
-  tutSkip() { delete G.tut; delete G.tutRes; delete G.tutReplay; commit('Tutorial off. Replay it from Menu → How to play.'); },
+  tutNext() { if (!tutOn()) return; if (G.tut >= TUT_WIN) { if (!G.tutReplay) PLAYLOG.ev('tutorial', 'done'); delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; commit('Tutorial done. Have a great run!'); return; } G.tut++; commit(); },
+  tutSkip() { PLAYLOG.ev('tutorial', 'skip:' + (+G.tut || 0)); delete G.tut; delete G.tutRes; delete G.tutReplay; commit('Tutorial off. Replay it from Menu → How to play.'); },
   tutReplay() { if (!G) return; tutStart(true); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0); }
 };
 
@@ -9804,8 +10311,8 @@ document.addEventListener('change', e => {
   if (el.dataset.seg) { const d = UI.modal.draft, k = el.dataset.seg;
     if (k === 'mtype') { if (el.value === 'Tag Team' && tagSizeOf(d.mtype)) return; d.mtype = el.value; const mt = MT(d.mtype), flat = [...new Set(d.sides.flat())]; if (!elimOK(mt)) delete d.elim;
       if (mt.ffa) { d.n = mt.def; d.sides = flat.slice(0, d.n).map(id => [id]); } else { delete d.n; d.sides = Array.from({ length: mt.sides }, (_, i) => (d.sides[i] || []).slice(0, sideSize(mt, i))); }
-      d.winner = -1; const t = d.title && G.titles.find(x => x.id === d.title); if (t && t.tag !== tagMT(mt)) d.title = null;
-      const st = d.shot && G.titles.find(x => x.id === d.shot.titleId); if (d.shot && (!st || st.tag !== tagMT(mt))) { const nt = G.titles.find(x => x.tag === tagMT(mt)); if (nt) d.shot.titleId = nt.id; else d.shot = null; } }
+      d.winner = -1; const t = d.title && G.titles.find(x => x.id === d.title); if (t && !titleFits(t, mt)) d.title = null;
+      const st = d.shot && G.titles.find(x => x.id === d.shot.titleId); if (d.shot && (!st || !titleFits(st, mt))) { const nt = G.titles.find(x => titleFits(x, mt)); if (nt) d.shot.titleId = nt.id; else d.shot = null; } }
     else if (k === 'n') { const mt = MT(d.mtype); d.n = clamp(Math.round(+el.value || mt.def), mt.min || 3, mt.max || 40); d.sides = d.sides.slice(0, d.n); if (d.winner >= d.sides.length) d.winner = -1; }
     else if (k === 'winner') d.winner = +el.value;
     else if (k === 'title') d.title = el.value || null;
@@ -9853,6 +10360,8 @@ document.addEventListener('change', e => {
     }
     else if (k === 'theme') { meta.theme = ['light', 'auto'].includes(el.value) ? el.value : 'dark'; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'motion') { meta.motion = ['reduce', 'full'].includes(el.value) ? el.value : ''; applyTheme(); ls.set(META, JSON.stringify(meta)); }
+    else if (k === 'statsMine') { meta.statsOwner = !el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) PLAYLOG.start(); toast(el.checked ? 'Your play on this device now counts.' : 'Your play on this device is no longer counted.'); }
+    else if (k === 'statsOn') { meta.stats = el.checked; if (!el.checked) PLAYLOG.off(); ls.set(META, JSON.stringify(meta)); if (el.checked) PLAYLOG.start(); }
     else if (k === 'soundOn') { meta.sound = el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) SFX.tap(); render(); }
     else if (k === 'musicOn') { meta.music = el.checked; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); ls.set(META, JSON.stringify(meta)); MUSIC.sync(); }
@@ -9865,7 +10374,7 @@ document.addEventListener('change', e => {
   if (el.dataset.ew != null && UI.modal?.draft) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
   if (el.dataset.es != null) { if (el.type === 'checkbox') UI.modal.draft.autoEnd = el.checked; else if (el.dataset.es === 'titleId') UI.modal.draft.titleId = el.value || null; else UI.modal.draft[el.dataset.es] = el.value; }
   if (el.dataset.rr && el.tagName === 'SELECT') { A.rrMove(el.dataset.rr, el.value); return; }
-  if (el.dataset.tt && el.tagName === 'SELECT' && UI.modal?.draft?.titles?.[+el.dataset.i]) { const t = UI.modal.draft.titles[+el.dataset.i]; if (el.dataset.tt === 'holder') t.holder = el.value; else { t.mid = el.value === 'mid'; t.div = el.value === 'women' ? "Women's" : ''; if (/ (World|Television|Women's) Championship$/.test(t.name)) t.name = t.name.replace(/(World|Television|Women's) Championship$/, t.div ? "Women's Championship" : t.mid ? 'Television Championship' : 'World Championship'); } render(); return; }
+  if (el.dataset.tt && el.tagName === 'SELECT' && UI.modal?.draft?.titles?.[+el.dataset.i]) { const t = UI.modal.draft.titles[+el.dataset.i]; if (el.dataset.tt === 'holder') t.holder = el.value; else { const n = el.value === 'trios' ? 3 : el.value === 'tag' ? 2 : 0; if (n) { if (t.n !== n) t.hn = ''; t.n = n; t.mid = true; t.div = ''; t.holder = ''; } else { if (t.n) { t.hn = ''; delete t.n; } t.mid = el.value === 'mid'; t.div = el.value === 'women' ? "Women's" : ''; } if (/ (World|Television|Women's|Tag Team|Trios) Championship$/.test(t.name)) t.name = t.name.replace(/(World|Television|Women's|Tag Team|Trios) Championship$/, n === 3 ? 'Trios Championship' : n === 2 ? 'Tag Team Championship' : t.div ? "Women's Championship" : t.mid ? 'Television Championship' : 'World Championship'); } render(); return; }
   if (el.dataset.bt === 'ring' && UI.modal?.draft?.belt) { const m = UI.modal; bdKeep(m); m.draft.belt = beltClean({ ...m.draft.belt, ring: el.checked ? 1 : 0 }, m.draft); render(); return; }
   if (el.dataset.et != null) { UI.modal.draft[el.dataset.et] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox') { if (!UI.modal.draft.tag && Array.isArray(UI.modal.draft.holder)) UI.modal.draft.holder = UI.modal.draft.holder.slice(0, 1); render(); } }
   if (el.dataset.act === 'todoCk') A.todoCk(el.dataset.id);
@@ -10026,8 +10535,11 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.17';
+const VERSION = '1.9.23';
 const WHATS_NEW = [
+  ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
+  ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
+  ['👥 Teams in the Office', 'Office → Teams is the new home for tag teams and factions. Start a team or faction, see their records, chemistry and titles, then edit, split up or disband them in one tap. A faction\'s leader is now picked from its own members.'],
   ['🎯 Filter and sort when booking', 'The wrestler picker now sorts by best fit, overall, popularity, momentum, freshest, in-ring, mic, salary or name, and remembers your choice. Every sort menu (picker, roster, free agents) now has a reverse button beside it. Tap chips to show only Men\'s or Women\'s, wrestlers free tonight, not tired, champions, people in a story, or teams and factions.'],
   ['🎟️ Title shot contracts', 'Tick Winner earns a title shot in the match editor and the winner gets a contract. Make it a #1 contender\'s match at an event you pick (it goes on that card for you), or a cash-in contract good for a year. To cash in, open any match the champion is in and choose how it goes. Office → Titles shows who holds one.'],
   ['💰 Per-appearance deals', 'Sign free agents show by show instead of full-time. Non-exclusive deals are cheaper but rivals can still sign them. Exclusive deals cost more per show, and nobody else can sign them until the deal ends. Book them from the new Per appearance tab when you pick wrestlers, and you only pay for the shows they\'re on. Retired legends can make a few appearances too, and you can book local enhancement talent for squash matches from $100 a show.'],
@@ -10067,6 +10579,7 @@ const WHATS_NEW = [
 let crashShown = false;
 function crash(msg) {
   if (crashShown) return; crashShown = true;
+  try { PLAYLOG.ev('crash', String(msg || '').replace(/[^A-Za-z]+/g, '_').slice(0, 40)); } catch (e) {}
   try { save(); } catch (e) {}
   const d = document.createElement('div'); d.className = 'crash';
   d.innerHTML = `<div class="crash-in"><div style="font-size:44px">${typeof ic === 'function' ? ic('medical') : ''}</div><h2>Something went wrong</h2>
@@ -10091,6 +10604,7 @@ try { const hadGame = [1, 2, 3].some(n => slotInfo(n)); if (meta.seen !== VERSIO
 try { render(); } catch (e) { crash(e && e.message); }
 sbFromLink(); addEventListener('hashchange', sbFromLink);
 if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); supResume(); }
+try { PLAYLOG.start(); } catch (e) {}
 // animated splash: once per app launch, tap to skip, skipped under automated tests (?splash forces it)
 try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   const sp = document.createElement('div'); sp.id = 'splash'; sp.setAttribute('role', 'presentation');

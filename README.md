@@ -146,6 +146,7 @@ After each show the game looks for a moment worth a story and starts at most one
 - The self-hosted copy ships a Content-Security-Policy (no outside scripts or images, and connections only to this game's own Supabase project). The service worker caches only this site's own good responses.
 - Save and roster files over 8 MB are refused before they are read, so a huge file can't freeze the page.
 - Supabase (`supabase/setup.sql`, v1.5.1): each row is capped at 400 KB of real JSON text (the old cap measured the compressed size), and the server sets the `updated` time so nobody can pin a post to the top of Community with a future date. Re-run `setup.sql` in the SQL Editor once to add these.
+- Roster photos (v1.9.21): a shared roster whose photos are over 40 KB keeps them in their own row, `pix1` to `pix10` per player (3 slots free, 10 for supporters). Pixel photos are stored as a palette plus one character per pixel and gzipped, about 1 KB each, so a 231-wrestler roster with photos fits even a free player. Community downloads them only when someone opens that roster. Shared rosters now import up to 300 wrestlers (was 200). Run the "Roster photos" block at the end of `setup.sql` once.
 - v1.5.1 security pass: every tab and two levels of buttons were rendered with booby-trapped names, notes, titles, shows, match types and Community posts; nothing ran.
 
 ## Packaging for the app stores (optional, later)
