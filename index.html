@@ -5634,7 +5634,7 @@ function shotEditor(s, mt) {
   let h = '';
   const shotTs = G.titles.filter(t => t.tag === tagMT(mt)), sh = s.shot, swk = UI.selWeek ?? G.week, inM = s.sides.flat();
   if (shotTs.length) {
-    h += `<label class="f"><span>Winner gets</span><div class="seg-ctl"><button class="${sh ? '' : 'on'}" data-act="segShot" data-id="0" aria-pressed="${!sh}">Nothing extra</button><button class="${sh ? 'on' : ''}" data-act="segShot" data-id="1" aria-pressed="${!!sh}">${ic('ticket')} A title shot</button></div></label>`;
+    h += `<label class="todo" style="margin-bottom:12px"><input type="checkbox" data-act="segShot" data-id="${sh ? 0 : 1}" ${sh ? 'checked' : ''}><span>${ic('ticket')} Winner earns a title shot<br><span class="tiny muted">A #1 contender's match at an event, or a contract to cash in any time.</span></span></label>`;
     if (sh) {
       const evs = bigsAfter(swk), any = sh.use === 'any', t = G.titles.find(x => x.id === sh.titleId);
       h += `<label class="f"><span>Shot at</span><select data-seg="shotT">${shotTs.map(x => `<option value="${x.id}" ${sh.titleId === x.id ? 'selected' : ''}>${esc(x.name)} (${x.holder.length ? esc(x.holder.map(nameOf).join(' & ')) : 'vacant'})</option>`).join('')}</select></label>`;
@@ -6087,7 +6087,7 @@ function bdPane(m) {
 // Office → Titles: who holds a title shot, cancel one, or hand one out
 function shotBlock(d, m) {
   const list = shotsFor(d), any = m.shotUse === 'any', nx = bigsAfter(G.week, 1)[0];
-  return `<div class="side"><div class="lbl">${ic('ticket')} Title shot contracts</div>${list.length ? list.map(s => `<div class="row small" style="gap:8px;margin-bottom:6px"><span class="sp">${ic(s.use === 'any' ? 'briefcase' : 'calendar')} <b>${esc(s.ids.map(nameOf).join(' & '))}</b> · ${esc(shotWhen(s))}</span><button class="chip" data-act="shotDel" data-id="${s.id}" aria-label="Cancel ${esc(s.ids.map(nameOf).join(' & '))}'s title shot">✕</button></div>`).join('') : '<div class="tiny muted" style="margin-bottom:6px">Nobody holds one. Wrestlers win them in matches: in the match editor, set Winner gets to A title shot.</div>'}
+  return `<div class="side"><div class="lbl">${ic('ticket')} Title shot contracts</div>${list.length ? list.map(s => `<div class="row small" style="gap:8px;margin-bottom:6px"><span class="sp">${ic(s.use === 'any' ? 'briefcase' : 'calendar')} <b>${esc(s.ids.map(nameOf).join(' & '))}</b> · ${esc(shotWhen(s))}</span><button class="chip" data-act="shotDel" data-id="${s.id}" aria-label="Cancel ${esc(s.ids.map(nameOf).join(' & '))}'s title shot">✕</button></div>`).join('') : '<div class="tiny muted" style="margin-bottom:6px">Nobody holds one. Wrestlers win them in matches: in the match editor, tick Winner earns a title shot.</div>'}
     <div class="seg-ctl" style="margin:6px 0 8px"><button class="${any ? '' : 'on'}" data-act="shotUseNext" data-id="event" aria-pressed="${!any}">${ic('calendar')} ${nx ? esc(bigName(nx)) : 'Next big event'}</button><button class="${any ? 'on' : ''}" data-act="shotUseNext" data-id="any" aria-pressed="${any}">${ic('briefcase')} Cash in any time</button></div>
     <div class="chips"><button class="chip add" data-act="pickFor" data-f="shot">+ Give a title shot</button></div></div>`;
 }
