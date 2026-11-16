@@ -4375,7 +4375,7 @@ function storyIdea() {
 // =====================================================================
 //  UI
 // =====================================================================
-const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts' };
+const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', pickSort: (() => { try { return localStorage.getItem('bookit-pickSort') || 'fit'; } catch (e) { return 'fit'; } })(), faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts' };
 const root = document.getElementById('root'), modals = document.getElementById('modals');
 // ---------- scroll lock: nothing behind an open sheet, picker or overlay may scroll ----------
 const LOCK_SEL = '.modal-bg, .live, .crash';
@@ -5731,7 +5731,34 @@ function modalSeg(m) {
   return modal(m.isNew ? `Add ${s.kind}` : `Edit ${s.kind}`, tutSegHint(s) + body, `${m.isNew ? '' : '<button class="btn bad" data-act="segDelModal">Remove</button>'}<button class="btn pri" data-act="segSave">${m.isNew ? 'Add to card' : 'Save'}</button>`);
 }
 
-// ----- wrestler picker -----
+// ----- wrestler picker: filters and sorts -----
+const PICK_SORTS = () => [['fit', 'Best fit'], ['ovr', 'Overall'], ['pop', 'Popularity'], ['mom', 'Momentum'], ['fresh', 'Freshest'], ['ring', 'In-ring'], ['mic', 'Mic'], ...(CON() ? [['pay', 'Salary']] : []), ['name', 'Name']];
+const PICK_ST = [['avail', '📋 Free tonight'], ['fresh', '😮‍💨 Not tired'], ['champ', '🏆 Champions'], ['story', '🔥 In a story'], ['team', '👥 Teams & factions']];
+const pickPay = w => w.contract?.salary || guestDeal(w.id, UI.selWeek)?.fee || 0;
+function pickPass(p, w, onCard) {
+  if (p.align && w.align !== p.align) return false;
+  if (p.div && (w.division || 'Open') !== p.div) return false;
+  return (p.st || []).every(k => k === 'avail' ? !(w.injury > 0) && !onCard.has(w.id) && !p.others.has(w.id) : k === 'fresh' ? !(w.fatigue >= 60) : k === 'champ' ? titlesOf(w.id).length > 0
+    : k === 'story' ? storiesOf(w.id).length > 0 : k === 'team' ? !!teamFor(w) || factionsOfW(w.id).length > 0 : true);
+}
+function pickSortFn(s, fit, onCard) {
+  const by = { ovr: (a, b) => overall(b) - overall(a), pop: (a, b) => b.pop - a.pop, mom: (a, b) => (b.momentum || 0) - (a.momentum || 0), fresh: (a, b) => (a.fatigue || 0) - (b.fatigue || 0), ring: (a, b) => b.ring - a.ring, mic: (a, b) => b.mic - a.mic, pay: (a, b) => pickPay(b) - pickPay(a), name: (a, b) => a.name.localeCompare(b.name) }[s];
+  // injured wrestlers always sink to the bottom; best fit also sinks anyone already on the card
+  return by ? (a, b) => (a.injury > 0) - (b.injury > 0) || by(a, b) || b.pop - a.pop : (a, b) => (a.injury > 0) - (b.injury > 0) || (onCard.has(a.id)) - (onCard.has(b.id)) || fit(b) - fit(a) || b.pop - a.pop;
+}
+// the stat you sorted by, when the row doesn't already show it
+const pickStat = (s, w) => s === 'mom' ? ` · <b>Momentum ${w.momentum > 0 ? '+' : ''}${Math.round(w.momentum || 0)}</b>` : s === 'fresh' ? ` · <b>Fatigue ${Math.round(w.fatigue || 0)}</b>` : s === 'pay' && pickPay(w) ? ` · <b>${money(pickPay(w))}${w.contract ? '/wk' : '/show'}</b>` : '';
+const pickNF = p => (p.align ? 1 : 0) + (p.div ? 1 : 0) + (p.st || []).length;
+const pickSortSel = (s, cls) => `<select data-in="pickSort" class="${cls || ''}" style="width:auto;max-width:42%" aria-label="Sort wrestlers by">${PICK_SORTS().map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+function pickControls(p, s, divs, brandF) {
+  const chip = (on, act, id, l) => `<button class="${on ? 'on' : ''}" aria-pressed="${!!on}" data-act="${act}" data-id="${esc(id)}">${l}</button>`;
+  const alignC = [['', 'All'], ['face', 'Faces'], ['heel', 'Heels']].map(([k, l]) => chip((p.align || '') === k, 'pickAlign', k, l)).join('');
+  const divC = divs.length > 1 ? divs.map(d => chip(p.div === d, 'pickDiv', d, d)).join('') : '';
+  const stC = PICK_ST.map(([k, l]) => chip((p.st || []).includes(k), 'pickSt', k, l)).join('');
+  const brandC = brandF ? `<button class="${p.allB ? 'on' : ''}" aria-pressed="${!!p.allB}" data-act="pickAllB">Other brands</button>` : '';
+  // search with the sort beside it, then alignment, division and brand chips, then status chips
+  return [`<div class="row" style="margin-bottom:8px;gap:6px"><input type="search" placeholder="Search" aria-label="Search wrestlers" value="${esc(p.q || '')}" data-in="pickQ" style="flex:1;min-width:0">${pickSortSel(s)}</div>`, `<div class="filters">${alignC}${divC}${brandC}</div><div class="filters" style="flex-wrap:wrap">${stC}</div>`];
+}
 function renderPicker() {
   const p = UI.picker; if (!p) { lastPickerOpen = false; return ''; }
   const anim = !lastPickerOpen; lastPickerOpen = true;
@@ -5746,20 +5773,24 @@ function renderPicker() {
   const gTab = UI.modal?.type === 'seg' && CON() && !p.free, gOn = gTab && p.tab === 'guests', nG = gTab ? guestList(UI.selWeek).length : 0;
   if (gOn) list = guestList(UI.selWeek).map(x => x.w).filter(w => !w.away);
   if (q) list = list.filter(w => (w.name + ' ' + w.nick + ' ' + w.style).toLowerCase().includes(q));
-  if (p.align) list = list.filter(w => w.align === p.align);
+  const divs = DIVISIONS.filter(d => list.some(w => (w.division || 'Open') === d)), total = list.length;
+  if (p.div && !divs.includes(p.div)) p.div = '';
+  list = list.filter(w => pickPass(p, w, onCard));
   // suggest story rivals and opposite-alignment opponents of whoever is already in the segment
   const opp = [...inDraft].map(W).filter(Boolean);
   const rival = new Set(G.stories.filter(st => st.status === 'active').flatMap(st => opp.some(o => st.a.includes(o.id)) ? st.b : opp.some(o => st.b.includes(o.id)) ? st.a : []));
   const oppAlign = opp.length && opp.every(o => o.align === opp[0].align) ? (opp[0].align === 'face' ? 'heel' : 'face') : '';
   const score = w => (rival.has(w.id) ? 3 : 0) + (opp.length && opp.every(o => sameDiv(o, w)) ? 2 : 0) + (oppAlign && w.align === oppAlign ? 1 : 0);
-  list.sort((a, b) => (a.injury > 0) - (b.injury > 0) || (onCard.has(a.id)) - (onCard.has(b.id)) || score(b) - score(a) || b.pop - a.pop);
-  const body = `<input type="search" placeholder="Search" aria-label="Search wrestlers" value="${esc(p.q || '')}" data-in="pickQ" style="margin-bottom:8px">
+  const srt = PICK_SORTS().some(([k]) => k === UI.pickSort) ? UI.pickSort : 'fit';
+  list.sort(pickSortFn(srt, score, onCard));
+  const [ctlSearch, ctlChips] = pickControls(p, srt, divs, brandF);
+  const body = `${ctlSearch}
    ${gTab ? `<div class="seg-ctl" style="margin-bottom:10px"><button class="${gOn ? '' : 'on'}" data-act="pickTab" data-id="roster" aria-pressed="${!gOn}">🤼 Roster (${signed().length})</button><button class="${gOn ? 'on' : ''}" data-act="pickTab" data-id="guests" aria-pressed="${gOn}">💰 Per appearance (${nG})</button></div>` : ''}
-   <div class="filters">${[['', 'All'], ['face', 'Faces'], ['heel', 'Heels']].map(([k, l]) => `<button class="${(p.align || '') === k ? 'on' : ''}" data-act="pickAlign" data-id="${k}">${l}</button>`).join('')}${brandF ? `<button class="${p.allB ? 'on' : ''}" data-act="pickAllB">Other brands</button>` : ''}</div>
+   ${ctlChips}
    ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
-   <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear.' : ''}</div>
+   <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${pickNF(p) ? ` Showing ${list.length} of ${total}. <button class="link" data-act="pickClear">Clear filters</button>` : ''}${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear.' : ''}</div>
    ${list.map(w => { const g = gOn && guestDeal(w.id, UI.selWeek), sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
-     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b> · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : 'Nobody matches.'}</div>`}
+     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
    ${gOn ? `<button class="btn block" style="margin-top:10px" data-act="localTalent">+ Book local enhancement talent (${money(100)}–${money(250)})</button><div class="tiny muted" style="margin-top:6px">A local wrestler for one month, non-exclusive. Good for squash matches that make your stars look strong.</div>` : ''}`;
   return modal('Choose wrestlers', body, `<button class="btn pri" data-act="pickDone">Done (${p.sel.length})</button>`, { cls: 'picker-bg', closeAct: 'pickDone', anim });
 }
@@ -6492,6 +6523,9 @@ const A = {
   },
   pickAlign(a) { UI.picker.align = a || ''; render(); },
   pickAllB() { UI.picker.allB = !UI.picker.allB; render(); },
+  pickDiv(d) { const p = UI.picker; p.div = p.div === d ? '' : d || ''; render(); },
+  pickSt(k) { const p = UI.picker, st = p.st ||= []; const i = st.indexOf(k); if (i >= 0) st.splice(i, 1); else st.push(k); render(); },
+  pickClear() { Object.assign(UI.picker, { align: '', div: '', st: [] }); render(); },
   pickDone() {
     const p = UI.picker; if (!p) return; const m = UI.modal; const d = m.draft;
     if (m.type === 'seg') {
@@ -9756,6 +9790,7 @@ document.addEventListener('change', e => {
   if (el.dataset.in) {
     const k = el.dataset.in;
     if (k === 'rosterSort') { UI.rosterSort = el.value; render(); }
+    else if (k === 'pickSort') { UI.pickSort = el.value; try { localStorage.setItem('bookit-pickSort', el.value); } catch (e) { } render(); }
     else if (k === 'faSort') { UI.faSort = el.value; try { localStorage.setItem('bookit-faSort', el.value); } catch (e) { } render(); }
     else if (k === 'shDay') { const x = showById(el.dataset.id); if (x) { x.day = clamp(+el.value || 0, 0, 6); if (x.id === G.showId) G.promo.day = x.day; commit(); } }
     else if (k === 'shAuto') { const x = showById(el.dataset.id); if (x) { if (el.checked && weekUnits().filter(u => !u.auto).length <= 1) { el.checked = false; return toast('Keep at least one show to book yourself.'); } x.auto = el.checked; commit(el.checked ? `${x.id === G.showId ? G.promo.show : x.name} will book itself.` : ''); } }
@@ -9963,8 +9998,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.11';
+const VERSION = '1.9.13';
 const WHATS_NEW = [
+  ['🎯 Filter and sort when booking', 'The wrestler picker now sorts by best fit, overall, popularity, momentum, freshest, in-ring, mic, salary or name, and remembers your choice. Tap chips to show only Men\'s or Women\'s, wrestlers free tonight, not tired, champions, people in a story, or teams and factions.'],
   ['🎟️ Title shot contracts', 'Tick Winner earns a title shot in the match editor and the winner gets a contract. Make it a #1 contender\'s match at an event you pick (it goes on that card for you), or a cash-in contract good for a year. To cash in, open any match the champion is in and choose how it goes. Office → Titles shows who holds one.'],
   ['💰 Per-appearance deals', 'Sign free agents show by show instead of full-time. Non-exclusive deals are cheaper but rivals can still sign them. Exclusive deals cost more per show, and nobody else can sign them until the deal ends. Book them from the new Per appearance tab when you pick wrestlers, and you only pay for the shows they\'re on. Retired legends can make a few appearances too, and you can book local enhancement talent for squash matches from $100 a show.'],
   ['🏆 More belt shapes and centre pieces', 'The belt designer has 8 new plate shapes (Medallion, Starburst, Diamond, Cross, Flared, Twin, Arch and Feathered) and 13 new centre pieces, from an eagle, flame and skull to a laurel, trophy and maple leaf. They all take your metal and gem colours, and the text still fits. Five new templates use them.'],
