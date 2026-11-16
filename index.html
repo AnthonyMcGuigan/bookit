@@ -7219,7 +7219,7 @@ function makePack(ws, opt) {
 const packCode = p => 'RB1:' + btoa(unescape(encodeURIComponent(JSON.stringify(p))));
 function cleanPack(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.wrestlers)) return null;
-  const ws = p.wrestlers.slice(0, 200).map(cleanW).filter(Boolean);
+  const ws = p.wrestlers.slice(0, 300).map(cleanW).filter(Boolean);
   for (const w of ws) for (const k of ['name', 'nick', 'bio', 'finisher', 'signature', 'theme', 'hometown']) if (w[k]) w[k] = maskRude(w[k]);
   if (!ws.length) return null;
   const titles = Array.isArray(p.titles) ? p.titles.slice(0, 12).map(t => t && typeof t.name === 'string' ? { name: t.name.slice(0, 50), short: String(t.short || t.name).slice(0, 16), tag: !!t.tag, ...(t.tag && +t.size === 3 ? { size: 3 } : {}), prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 3).map(h => String(h).slice(0, 40)) : [] } : null).filter(Boolean) : null;
@@ -7813,7 +7813,7 @@ async function commInit() {
         if (!it || typeof it !== 'object') continue;
         if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 200000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {} }); continue; }
         if (!it.pack) continue;
-        items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack });
+        items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack, ...(Number.isInteger(it.px) && it.px >= 1 && it.px <= PIX_SLOTS ? { px: it.px } : {}) });
       }
       if (d.id === 'featured') COMM.support = cleanSupport(body.support);
       if (d.id === COMM.me) { COMM.mine = Array.isArray(body.items) ? body.items : []; COMM.body = body; }
@@ -7877,7 +7877,67 @@ const iFollow = id => myList('follows').includes(id);
 function creatorAv(id, s = 40) { const p = COMM.profiles[id] || {}, nm = id === 'featured' ? 'BI' : (p.name || COMM.names[id] || '?'); const ini = nm.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase(); return `<div class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s * .36)}px;background:${p.color || 'var(--card2)'};color:${p.color ? '#fff' : 'var(--accent)'}">${esc(ini)}</div>`; }
 // a key can also point at one wrestler inside a shared roster: author|id|n
 function cItem(key) { const [a, id, n] = String(key || '').split('|'); const i = COMM.items.find(x => x.author === a && x.id === id); return { i, base: a + '|' + id, n: i && /^\d{1,3}$/.test(n || '') ? +n : null }; }
-const packWs = i => i._ws || (i._ws = cleanPack(i.pack)?.wrestlers || []);
+const packWs = i => i._ws || (i._ws = cleanPack(pixPack(i))?.wrestlers || []);
+// ---- roster photos: a big roster's photos sit in their own gzipped row (pix1..pix10/<player id>), so they don't
+// fill the player's Community space, and Community only downloads them when someone opens that roster ----
+const PIX_SLOTS = 10, pixSlots = () => isSup() ? PIX_SLOTS : 3, pixMax = () => isSup() ? 790000 : 395000, PIX_INLINE = 40000;
+const PIX = new Map(), PIX_LOAD = new Map(), pixKey = i => i.author + '|' + i.id;
+const pixWaiting = i => !!i?.px && !PIX.has(pixKey(i));
+function pixPack(i) {
+  const a = i.px && PIX.get(pixKey(i)); if (!a || !Array.isArray(i.pack?.wrestlers)) return i.pack;
+  return { ...i.pack, wrestlers: i.pack.wrestlers.map((w, k) => w && typeof w === 'object' && !w.photo && a[k] ? { ...w, photo: a[k] } : w) };
+}
+function pixLoad(i) {
+  if (!pixWaiting(i) || !cdb) return Promise.resolve();
+  const k = pixKey(i);
+  if (!PIX_LOAD.has(k)) PIX_LOAD.set(k, (async () => {
+    let a = null;
+    try {
+      const d = (await cdb.doc('pix' + i.px + '/' + i.author).get()).data();
+      if (d && d.item === i.id && typeof d.z === 'string' && d.z.length < 1000000) { const x = JSON.parse(await ungz(d.z)); if (Array.isArray(x)) a = x.slice(0, 300).map(pixGrow); }
+    } catch (e) {}
+    PIX_LOAD.delete(k); if (!a) return; // a failed load is tried again next time the roster opens
+    PIX.set(k, a); for (const x of COMM.items) if (pixKey(x) === k) x._ws = null;
+    if (UI.modal?.type === 'cview') render();
+  })());
+  return PIX_LOAD.get(k);
+}
+// Pixel photos shrink a lot as a palette plus one character per pixel, gzipped together (about 1 KB each instead of 4).
+// Anything that won't fit that shape (a real photo, over 256 colours) stays as its data URL.
+const pixImg = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+async function pixShrink(src) {
+  if (!src) return '';
+  const im = await pixImg(src), w = im?.naturalWidth, h = im?.naturalHeight; if (!w || !h || w > 128 || h > 128) return src;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0);
+  const px = cx.getImageData(0, 0, w, h).data, pal = [], at = new Map(); let d = '';
+  for (let k = 0; k < px.length; k += 4) {
+    const c = ((px[k] << 24) | (px[k + 1] << 16) | (px[k + 2] << 8) | px[k + 3]) >>> 0;
+    let n = at.get(c); if (n === undefined) { if (pal.length >= 256) return src; n = pal.length; at.set(c, n); pal.push(c.toString(16).padStart(8, '0')); }
+    d += String.fromCharCode(0x100 + n);
+  }
+  return { w, h, p: pal, d };
+}
+function pixGrow(x) {
+  if (typeof x === 'string') return safePhoto(x);
+  if (!x || typeof x !== 'object' || !Array.isArray(x.p) || typeof x.d !== 'string') return '';
+  const w = Math.floor(+x.w), h = Math.floor(+x.h); if (!(w > 0 && h > 0 && w <= 128 && h <= 128) || x.d.length !== w * h || x.p.length > 256) return '';
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'), img = cx.createImageData(w, h), pal = x.p.map(c => parseInt(c, 16) >>> 0);
+  for (let k = 0; k < w * h; k++) { const c = pal[x.d.charCodeAt(k) - 0x100] || 0; img.data[k * 4] = c >>> 24; img.data[k * 4 + 1] = (c >>> 16) & 255; img.data[k * 4 + 2] = (c >>> 8) & 255; img.data[k * 4 + 3] = c & 255; }
+  cx.putImageData(img, 0, 0); return safePhoto(cv.toDataURL('image/png'));
+}
+// moves a pack's photos into a free photo slot when they are too big to sit in the player's space
+async function pixSplit(pack, itemId) {
+  const photos = pack.wrestlers.map(w => w.photo || '');
+  if (sum(photos.map(x => x.length)) <= PIX_INLINE || typeof CompressionStream === 'undefined') return 0;
+  const used = new Set(COMM.mine.map(x => x?.px)), px = Array.from({ length: pixSlots() }, (_, k) => k + 1).find(k => !used.has(k));
+  if (!px) throw { code: 'pix_slots' };
+  const z = await gz(JSON.stringify(await Promise.all(photos.map(pixShrink))));
+  if (z.length > pixMax()) throw { code: 'pix_big' };
+  await cdb.doc('pix' + px + '/' + COMM.me).set({ item: itemId, z, n: photos.length, updated: Date.now() });
+  for (const w of pack.wrestlers) delete w.photo;
+  return px;
+}
+const pixDrop = (author, px) => px ? cdb.doc('pix' + px + '/' + author).delete().catch(() => {}) : Promise.resolve();
 const kindLbl = i => i.kind === 'world' ? `🌍 World · ${Array.isArray(i.sum?.cos) ? i.sum.cos.length : 0} companies · ${+i.sum?.n || 0} wrestlers` : i.kind === 'roster' ? 'Roster · ' + (+i.count || 0) + ' wrestlers' : (+i.count || 1) > 1 ? (+i.count) + ' wrestlers' : 'Wrestler';
 const REPORT_WHY = [['rude', 'Rude or hateful'], ['spam', 'Spam or junk'], ['copied', 'Copied work or real photos'], ['personal', 'Personal details'], ['other', 'Something else']];
 // things this player reported: hidden for them right away
@@ -8240,7 +8300,8 @@ function libFoot(m) {
   return `<button class="btn pri" data-act="libUse" ${n ? '' : 'disabled'}>${n ? `⬇ Add ${n} to ${esc(G.promo.name)}` : 'Pick wrestlers to add'}</button>`;
 }
 const LIB_ACTIONS = {
-  libAdd(key) {
+  async libAdd(key) {
+    const { i } = cItem(key); if (pixWaiting(i)) { toast('Getting the photos…'); await pixLoad(i); }
     const r = libAdd(key); if (r.err) return toast(r.err);
     toast(r.added ? `📚 ${r.added === 1 ? 'Saved' : r.added + ' saved'} to your library. Add them to any save from Community → Library.` : 'Already in your library. Updated to the latest version.');
     render();
@@ -8454,7 +8515,7 @@ function modalCView(m) {
       <div class="list">${slots.map(s => `<button class="item" data-act="cPlaySave" data-id="${esc(m.key)}" data-f="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">Slot ${s.n}${s.n === meta.slot && G ? ' (current game)' : ''}</div><div class="d">${s.info ? 'Replaces ' + esc(s.info.name) + ', week ' + s.info.week : 'Empty'}</div></div></button>`).join('')}</div>`;
     return modal(esc(i.title), body, COMM.owner && i.author !== COMM.me ? '<button class="btn bad" data-act="cDel" data-id="' + esc(m.key) + '">Remove</button>' : '');
   }
-  const p = cleanPack(i.pack);
+  const p = cleanPack(pixPack(i)); pixLoad(i);
   if (!p) return modal(esc(i.title), '<div class="empty">This creation is empty or damaged.</div>');
   if (n != null) { // one wrestler from a shared roster
     const w = packWs(i)[n]; if (!w) return modal('Community', '<div class="empty">This wrestler was removed.</div>');
@@ -8465,6 +8526,7 @@ function modalCView(m) {
   }
   const body = `${cvHead(i, m.key, kindLbl({ ...i, count: p.wrestlers.length }))}
     ${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
+    ${pixWaiting(i) ? '<div class="tiny muted" style="margin-bottom:6px" role="status">Loading photos…</div>' : ''}
     ${p.titles?.length ? `<div class="tiny muted" style="margin-bottom:6px">Includes ${p.titles.length} championships: ${p.titles.map(t => esc(t.short)).join(', ')}</div>` : ''}
     ${p.wrestlers.length > 1 ? `<div class="alert" style="margin-bottom:8px"><span class="ic">📚</span><div class="small sp">Keep any of them in your library to use in every save, no save needed.</div></div>` : ''}
     <div class="list">${p.wrestlers.map((w, k) => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : '', w.ring != null ? 'Ring ' + w.ring : '', w.finisher ? 'Finisher: ' + w.finisher : ''].filter(Boolean).join(' · '))}</div></div>${p.wrestlers.length > 1 ? (inLib(m.key + '|' + k) ? `<span class="tag" aria-label="In your library">✓ 📚</span>` : `<button class="btn sm" data-act="libAdd" data-id="${esc(m.key + '|' + k)}" aria-label="Save ${esc(w.name)} to your library">📚 +</button>`) : ''}</div>`).join('')}</div>`;
@@ -8619,7 +8681,7 @@ const CREATOR_ACTIONS = {
     UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Profile saved.');
   },
   cClearProfile(id) { confirmBox('Clear this profile?', 'Their name and bio go back to the default. Their uploads stay.', 'Clear', async () => { try { const cur = knownFields((await cdb.doc('creations/' + id).get()).data()); delete cur.profile; await cdb.doc('creations/' + id).set({ ...cur, updated: Date.now() }); toast('Cleared.'); } catch (e) { toast('Could not clear it.'); } }, true); },
-  cWipe(id) { if (!COMM.owner || !AUTHOR_ID.test(id) || id === 'featured') return; confirmBox('Remove everything from this creator?', 'Their uploads, profile, likes and follows are removed for everyone.', 'Remove all', async () => { try { await cdb.doc('creations/' + id).set({ items: [], updated: Date.now() }); UI.modal = { type: 'community', tab: 'browse' }; render(); toast('Removed.'); } catch (e) { toast('Could not remove it.'); } }, true); },
+  cWipe(id) { if (!COMM.owner || !AUTHOR_ID.test(id) || id === 'featured') return; confirmBox('Remove everything from this creator?', 'Their uploads, profile, likes and follows are removed for everyone.', 'Remove all', async () => { try { await cdb.doc('creations/' + id).set({ items: [], updated: Date.now() }); for (let k = 1; k <= PIX_SLOTS; k++) pixDrop(id, k); UI.modal = { type: 'community', tab: 'browse' }; render(); toast('Removed.'); } catch (e) { toast('Could not remove it.'); } }, true); },
   async sbLink() {
     if (!sbOn()) return;
     const email = (document.querySelector('[data-in=sbEmail]')?.value || UI.modal?.email || '').trim();
@@ -8643,7 +8705,7 @@ const CREATOR_ACTIONS = {
   sbWipe() {
     if (!COMM.me) return;
     confirmBox('Remove your Community posts?', `Your uploads, profile, likes, follows, reports and feedback${sbOn() ? ', and your cloud saves,' : ''} are deleted for everyone. This can't be undone.`, 'Remove', async () => {
-      try { for (const col of ['creations', 'reports', 'feedback', ...(sbOn() ? CLOUD_SLOTS.map(n => 'cloud' + n) : [])]) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
+      try { for (const col of ['creations', 'reports', 'feedback', ...(sbOn() ? CLOUD_SLOTS.map(n => 'cloud' + n) : []), ...Array.from({ length: PIX_SLOTS }, (_, k) => 'pix' + (k + 1))]) await cdb.doc(col + '/' + COMM.me).delete(); UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Removed.'); }
       catch (e) { toast('Could not remove it. Try again.'); }
     }, true);
   },
@@ -8684,7 +8746,7 @@ const CREATOR_ACTIONS = {
   privBack() { UI.modal = UI.modal.back || null; render(); },
   needNew() { UI.pendingGet = UI.modal?.key || null; UI.modal = null; A.wzStart(); },
   needLoad(n) { UI.pendingGet = UI.modal?.key || null; A.loadSlot(n); },
-  cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const { i, base, n } = cItem(key); let p = i && cleanPack(i.pack); if (!p) return toast('This creation is damaged.'); if (n != null) { const w = packWs(i)[n]; if (!w) return toast('This wrestler was removed.'); p = { kind: 'wrestler', title: w.name, promo: p.promo, wrestlers: [w], titles: null }; } markUsed(base); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: n != null ? p.title : i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
+  async cGet(key) { if (!G) { UI.modal = { type: 'needGame', key }; return render(); } const { i, base, n } = cItem(key); if (pixWaiting(i)) { toast('Getting the photos…'); await pixLoad(i); } let p = i && cleanPack(pixPack(i)); if (!p) return toast('This creation is damaged.'); if (n != null) { const w = packWs(i)[n]; if (!w) return toast('This wrestler was removed.'); p = { kind: 'wrestler', title: w.name, promo: p.promo, wrestlers: [w], titles: null }; } markUsed(base); UI.modal = { type: 'rtools', tab: 'import', parsed: { ...p, title: n != null ? p.title : i.title }, mode: signed().length ? 'sign' : 'replace', text: '' }; render(); },
   async cPublish() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
     m.what = m.what || 'roster'; // the Share tab shows Whole roster selected before anything is tapped
@@ -8693,8 +8755,12 @@ const CREATOR_ACTIONS = {
     if (!ws.length) return toast('Pick at least one wrestler.');
     const pack = makePack(ws, { titles: m.what === 'roster', title: (m.title || '').trim() || (m.what === 'roster' ? G.promo.name + ' roster' : ws.length === 1 ? ws[0].name : 'Custom wrestlers') });
     const item = { id: uid(), title: pack.title, desc: (m.desc || '').trim().slice(0, 300), kind: m.what === 'roster' ? 'roster' : 'wrestler', count: ws.length, created: Date.now(), pack };
-    try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.'); }
-    catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+    let px = 0;
+    try {
+      px = await pixSplit(pack, item.id); if (px) item.px = px;
+      await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.');
+    }
+    catch (e) { if (px) pixDrop(COMM.me, px); toast(e?.code === 'pix_slots' ? `You can share ${pixSlots()} rosters with photos${isSup() ? '' : ' (10 as a Supporter)'}. Delete an older one first.` : e?.code === 'pix_big' ? `Too many photos to share at once. ${isSup() ? 'Share the roster in two parts.' : 'Share fewer wrestlers, or become a Supporter for twice the room.'}` : e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   shareWorld() { if (G) openModal({ type: 'community', tab: 'share', what: 'world' }); },
   async cPublishWorld() {
@@ -8746,7 +8812,7 @@ const CREATOR_ACTIONS = {
   cDel(key) {
     const [author, id] = key.split('|');
     confirmBox('Remove this creation?', 'It is removed for everyone. Copies already added stay.', 'Remove', async () => {
-      try { const cur = author === COMM.me ? COMM.mine : ((await cdb.doc('creations/' + author).get()).data()?.items || []); await commWrite(author, cur.filter(x => cleanItemId(x?.id) !== id)); UI.modal = { type: 'community', tab: author === COMM.me ? 'mine' : 'browse' }; render(); toast('Removed.'); }
+      try { const cur = author === COMM.me ? COMM.mine : ((await cdb.doc('creations/' + author).get()).data()?.items || []), gone = cur.find(x => cleanItemId(x?.id) === id); await commWrite(author, cur.filter(x => cleanItemId(x?.id) !== id)); if (Number.isInteger(gone?.px) && !cur.some(x => x !== gone && x?.px === gone.px)) await pixDrop(author, gone.px); UI.modal = { type: 'community', tab: author === COMM.me ? 'mine' : 'browse' }; render(); toast('Removed.'); }
       catch (e) { toast('Could not remove it.'); }
     }, true);
   }
@@ -10328,7 +10394,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.20';
+const VERSION = '1.9.21';
 const WHATS_NEW = [
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
   ['👥 Teams in the Office', 'Office → Teams is the new home for tag teams and factions. Start a team or faction, see their records, chemistry and titles, then edit, split up or disband them in one tap. A faction\'s leader is now picked from its own members.'],
