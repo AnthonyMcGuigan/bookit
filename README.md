@@ -187,6 +187,7 @@ Hosted capabilities: `db` rules `creations` (read view, write owner), `creations
 - **Run-ins:** pick who runs in to help the winner. Leave it empty and the winner's manager does it. A run-in with no history starts a new feud.
 - **Turns during a match:** anyone in the match (or the run-in) can turn heel or face. Turning on a tag partner starts a Betrayal story. Turning again within 8 weeks is less believable.
 - **Managers:** set one from a wrestler's profile. Managers talk for weak speakers in promos and add a little at ringside. Managers aren't included in shared Community packs.
+- **Title shot contracts:** in the match editor, tick *Winner earns a title shot*. Pick the title, then *At an event* (the winner is #1 contender and the match goes on that event's card) or *Any time* (a cash-in contract good for a year). To cash in, open any match the champion is in and pick an outcome in the *Cash-in contract* box. Office → Titles shows who holds one and lets you hand one out or cancel it.
 - **Auto-fill** now mixes finishes: clean payoffs at big shows, dirtier finishes in hot weekly feuds, and heel champions sometimes keeping the belt by DQ.
 
 ## Version 1.9: Brands tab, brand draft and card levels
