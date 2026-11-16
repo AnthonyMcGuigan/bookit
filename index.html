@@ -150,6 +150,30 @@ button.item:active { background: var(--card2); }
 .alert .ic { font-size: 18px; line-height: 1.2; }
 .news { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; display: flex; gap: 10px; }
 .news:last-child { border-bottom: 0; }
+.dirt-mast { text-align: center; padding: 6px 4px 10px; border-bottom: 3px double var(--line); margin-bottom: 8px; }
+.dirt-name { font-family: var(--f-display); font-size: 36px; line-height: 1; letter-spacing: .03em; text-transform: uppercase; }
+.dirt-sub { font-family: var(--f-cond); font-weight: 600; font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); margin-top: 6px; }
+.dirt-nav { gap: 8px; margin-bottom: 10px; }
+.dirt-nav .btn[disabled] { opacity: .4; }
+.dirt-k { font-family: var(--f-cond); font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-t); }
+.dirt-h { font-family: var(--f-cond); font-weight: 800; font-size: 22px; line-height: 1.1; margin: 2px 0 6px; }
+.dirt-lead { border-top: 1px solid var(--line); padding-top: 10px; }
+.dirt-lead .dirt-h { font-size: 30px; }
+.dirt-b { font-size: 15px; line-height: 1.5; }
+.dirt-rev { margin-top: 10px; }
+.dirt-stars { color: var(--gold); font-weight: 800; letter-spacing: .04em; }
+.dirt-list { padding: 2px 14px; }
+.dirt-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.dirt-row:first-child { border-top: 0; }
+.dirt-row.me b { color: var(--accent-t); }
+.dirt-n { font-family: var(--f-display); font-weight: 400; font-size: 18px; width: 22px; text-align: center; color: var(--dim); }
+.dirt-src { display: inline-block; font-size: 11.5px; font-weight: 800; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); white-space: nowrap; }
+.dirt-src.solid { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.dirt-src.hear { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.dirt-src.spec { color: var(--dim); }
+.dirt-take { border-left: 4px solid var(--gold); }
+.dirt-mv { font-size: 12px; font-weight: 800; min-width: 34px; text-align: right; color: var(--faint); }
+.dirt-mv.up { color: var(--good); } .dirt-mv.dn { color: var(--bad); } .dirt-mv.new { color: var(--gold); }
 .news .wk { font-size: 11px; color: var(--faint); font-weight: 700; min-width: 34px; padding-top: 2px; }
 .stars { color: var(--accent-t); letter-spacing: 1px; font-weight: 700; white-space: nowrap; }
 .seg { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
@@ -1726,7 +1750,7 @@ function tSeg(T, r, i) {
 // The company being booked lives in G as always. The player's other companies wait in G.cos as snapshots
 // holding their own roster, titles, stories, money and history. Free agents, retired legends, AI rivals,
 // settings and the calendar are shared. Every company runs one show a week; the week moves on after the last one.
-const SHARED_KEYS = new Set(['v', 'created', 'week', 'settings', 'wrestlers', 'rivalPromos', 'rivals', 'wlog', 'wseed', 'wseedN', 'cos', 'savedAt', 'customMatch']);
+const SHARED_KEYS = new Set(['v', 'created', 'week', 'settings', 'wrestlers', 'rivalPromos', 'rivals', 'wlog', 'dirt', 'wseed', 'wseedN', 'cos', 'savedAt', 'customMatch']);
 const MAX_COS = 4;
 const multi = () => !!(G && Array.isArray(G.cos) && G.cos.length);
 const waitingCos = () => (G.cos || []).filter(c => (c.ranWk || 0) < G.week);
@@ -2878,6 +2902,138 @@ function endOfWeek(card, world = true) {
   teamPayWeek();
   personaWeek(booked);
   if (G.settings.finances && G.money < 0) news('💸 You are in the red. Cut payroll or run bigger events.', 'office');
+  if (world) dirtWeek();
+}
+
+// ---------- the dirt sheet: a weekly newsletter about the whole wrestling world ----------
+// Written once a week, after every company has run. Reviews, the ratings race, confirmed moves,
+// rumours (some true, some not: the source tag is a hint, not a promise), a hot take and monthly power rankings.
+const DIRT_KEEP = 12;
+const DIRT_SRC = { solid: ['✅', 'Solid source'], hear: ['👂', "We're hearing"], spec: ['🤔', 'Speculation'] };
+const DIRT_VERDICT = [
+  [85, ['A must-watch show.', 'Go out of your way to see this one.', 'One of the best shows of the year so far.']],
+  [75, ['A strong night of wrestling.', 'Well worth your time.', 'Thumbs up from us.']],
+  [62, ['Solid, if not spectacular.', 'A decent show with a couple of highlights.', 'Nothing wrong with it, nothing special either.']],
+  [48, ['A flat night.', 'Skip it and read the results.', 'The crowd checked out early, and so did we.']],
+  [0, ['A mess from start to finish.', "One of the worst shows we've sat through this year.", 'Someone backstage needs to answer for that one.']]];
+const DIRT_HEAD = [
+  [85, ['{s} steals the week', '{s} is the talk of wrestling', 'Believe the hype: {s} delivered']],
+  [75, ['{s} delivers', 'A good night for {c}', '{s} hits the mark']],
+  [62, ['{s} does its job', 'A middle-of-the-road {s}', '{s}: fine, not memorable']],
+  [48, ['{s} falls flat', 'Tough night for {c}', 'Fans tune out of {s}']],
+  [0, ['{s} bombs', 'Disaster for {c}', 'What happened to {s}?']]];
+const dirtBand = (tbl, r) => pick(tbl.find(([m]) => r >= m)[1]);
+const dirtNoDot = s => String(s || '').replace(/[.!]$/, '');
+const dirtSrc = yes => { const x = Math.random(); return yes ? (x < .6 ? 'solid' : x < .9 ? 'hear' : 'spec') : (x < .1 ? 'solid' : x < .45 ? 'hear' : 'spec'); };
+function dirtShows() {
+  const mine = [G, ...(G.cos || [])].flatMap(c => (c.history || []).filter(h => h.wk === G.week && h.results?.length).map(h => ({ me: 1, co: c.promo.name, name: h.name, rating: h.rating, big: !!h.big, h })));
+  const riv = (G.rivalPromos || []).filter(r => r.card?.wk === G.week && r.card.segs?.length).map(r => ({ co: r.name, sh: r.short, name: r.card.name || r.show, rating: r.last, big: !!r.card.big, r }));
+  return [...mine, ...riv].sort((a, b) => b.rating - a.rating);
+}
+// your show, reviewed
+function dirtReview(x) {
+  const h = x.h, res = h.results, main = res.at(-1), best = res.slice().sort((a, b) => b.rating - a.rating)[0], worst = res.slice().sort((a, b) => a.rating - b.rating)[0];
+  const head = dirtBand(DIRT_HEAD, h.rating).replace('{s}', h.name).replace('{c}', x.co);
+  const b = [dirtBand(DIRT_VERDICT, h.rating)];
+  if (h.attendance) b.push(`${h.attendance.toLocaleString()} fans were in the building.`);
+  if (main && res.length > 1) b.push(`In the main event${main.seg.kind === 'match' ? '' : ' segment'}, ${dirtNoDot(main.text)}. ${main.rating >= 80 ? 'It was everything it needed to be.' : main.rating >= 65 ? 'It did its job.' : main.rating >= 50 ? 'It never really got going.' : 'It sent people home unhappy.'}`);
+  if (best && best !== main && best.rating >= 65) b.push(`Best of the night: ${dirtNoDot(best.text)} (${starStr(best.rating)}).`);
+  if (worst && worst !== best && worst.rating < 50) b.push(`The low point: ${dirtNoDot(worst.text)}.`);
+  return { me: 1, co: x.co, h: head, b: b.join(' '), r: h.rating, big: x.big };
+}
+// the best AI show of the week, in a couple of lines
+function dirtRivalReview(x) {
+  const r = x.r, segs = r.card.segs, main = segs.at(-1);
+  const won = s => s.won === s.a ? [s.an, s.bn] : [s.bn, s.an];
+  const [w, l] = won(main);
+  const b = [dirtBand(DIRT_VERDICT, x.rating)];
+  b.push(`${w} beat ${l} in the main event${main.title ? `${main.tn ? ` with the ${main.tn} title on the line` : ' for the gold'}` : ''}.`);
+  const top = segs.filter(s => s !== main).sort((a, b) => b.rating - a.rating)[0];
+  if (top && top.rating >= 70) { const [tw, tl] = won(top); b.push(`${tw} vs ${tl} was the pick of the undercard.`); }
+  return { co: r.name, h: dirtBand(DIRT_HEAD, x.rating).replace('{s}', x.name).replace('{c}', r.name), b: b.join(' '), r: x.rating, big: x.big };
+}
+// confirmed news: everything public that happened this week, theirs and yours
+function dirtWorld() {
+  const out = [];
+  for (const x of G.wlog || []) if (x.wk === G.week && !out.includes(x.t)) out.push(x.t);
+  const pub = /^(🏆 .* (won|cashed in and took)|💼 .*cashed in|👋|🎤|✍️|🩹|🔄|🛑|🚪|🏚️|🤝|🏟️)/u;
+  for (const c of [G, ...(G.cos || [])]) for (const n of c.news || []) { if (n.wk < G.week) break; if (n.wk === G.week && pub.test(n.text) && !out.includes(n.text)) out.push(n.text); }
+  const rank = t => /🏆|💼/u.test(t) ? 0 : /🏚️|🤝|🏟️|🚪/u.test(t) ? 1 : /✍️|💰|👋/u.test(t) ? 2 : 3;
+  return out.sort((a, b) => rank(a) - rank(b)).slice(0, 8);
+}
+// rumours: built from what's really going on, plus some noise
+function dirtRumours() {
+  const c = [], mine = signed().filter(w => !w.retired), rs = (G.rivalPromos || []).filter(r => r.roster.length);
+  const add = (t, yes, wt = 1) => c.push({ t, yes, wt: wt + Math.random() });
+  for (const w of mine) {
+    if (w.courted && w.contract.weeks <= 12) add(`${w.courted} has been in touch with ${w.name}'s people about their next deal.`, 1, 3);
+    if (w.morale < 30) add(`${w.name} is said to be unhappy with how ${G.promo.name} is using them.`, 1, 2.5);
+  }
+  const happy = mine.filter(w => w.morale >= 70 && w.pop >= 45);
+  if (happy.length) { const w = pick(happy); add(`${w.name} has quietly asked for their release from ${G.promo.name}.`, 0, 1.2); }
+  const champ = (G.titles || []).find(t => t.holder.length === 1 && W(t.holder[0])); if (champ && Math.random() < .5) add(`${nameOf(champ.holder[0])} wants out of the ${champ.short} title picture and has told management so.`, 0, .8);
+  for (const r of rs) {
+    if (r.money < 0) add(`Paychecks at ${r.name} are reportedly late. The locker room is nervous.`, 1, 2);
+    else if (r.money > payrollR(r) * 20 && Math.random() < .3) add(`${r.name} could be closing its doors before the year is out.`, 0, 1);
+    if (r.counter && r.counter > G.week) add(`${r.name} is stacking ${r.show} to go head to head with your ${bigName(r.counter)}.`, 1, 2.5);
+    const nd = !r.manual && rivalNeeds(r)[0]; if (nd) add(`${r.name} is shopping for ${nd.l}. Expect a signing soon.`, 1, 1.2);
+    const p = r.push.find(p => G.week - (p.wk || 0) <= 3), pw = p && rW(r, p.id); if (pw) add(`${r.name} management is very high on ${pw.name}. A push is coming.`, 1, 1.4);
+    const star = r.roster.slice().sort((a, b) => b.pop - a.pop)[0];
+    if (star && star.pop >= 50 && Math.random() < .35) add(`${star.name}'s deal with ${r.name} is almost up, and they may test free agency.`, (star.rWeeks || 99) <= 10 ? 1 : 0, 1);
+  }
+  const fa = freeAgents().filter(w => w.pop >= 45).sort((a, b) => b.pop - a.pop)[0];
+  if (fa && rs.length) add(`${fa.name} is weighing offers. ${courtFor(fa)} is said to be the front-runner.`, .5, 1.3);
+  c.sort((a, b) => b.wt - a.wt);
+  const picked = c.slice(0, 3);
+  if (!picked.some(x => !x.yes)) { const f = c.find(x => !x.yes); if (f && Math.random() < .5) picked[Math.min(2, picked.length)] = f; }
+  return picked.filter(Boolean).map(x => ({ t: x.t, s: dirtSrc(x.yes >= 1 || (x.yes && Math.random() < x.yes)) }));
+}
+// one opinion a week about your company
+function dirtTake() {
+  const opts = [], mine = signed(), held = new Set((G.titles || []).flatMap(t => t.holder));
+  const star = mine.filter(w => !held.has(w.id) && !w.injury).sort((a, b) => b.pop - a.pop)[0];
+  if (star && star.pop >= 60) opts.push(['Give them the gold', `${star.name} is one of the most popular names in ${G.promo.name} and has no title. What is everyone waiting for?`]);
+  for (const t of G.titles || []) {
+    const c = t.holder.length === 1 && W(t.holder[0]); if (!c) continue;
+    const wks = G.week - (t.since || G.week);
+    if (wks >= 20) opts.push(['Time for a change?', `${c.name} has held the ${t.name} for ${wks} weeks. Great reign, but fans are ready for someone new.`]);
+    if (!t.tag && c.pop < 45 && !t.mid) opts.push(['Not buying it', `${c.name} doesn't feel like a top champion yet. The ${t.short} title needs a bigger star or a bigger story.`]);
+  }
+  const hot = (G.stories || []).filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat)[0];
+  if (hot && hot.heat >= 70) opts.push(['Story of the year?', `"${hot.title}" is the hottest story in wrestling right now. Don't rush the payoff.`]);
+  const h = (G.history || []).filter(x => x.rating);
+  if (h.length >= 8) {
+    const a = avg(h.slice(-4).map(x => x.rating)), b = avg(h.slice(-8, -4).map(x => x.rating));
+    if (a >= b + 5) opts.push(['On the rise', `${G.promo.name} is on a roll: the last four shows averaged ${Math.round(a)}, up from ${Math.round(b)}. Whoever is booking, keep going.`]);
+    if (a <= b - 5) opts.push(['Slipping', `${G.promo.name} has gone cold: the last four shows averaged ${Math.round(a)}, down from ${Math.round(b)}. Something needs to change.`]);
+  }
+  const top = (G.rivalPromos || []).slice().sort((a, b) => b.fans - a.fans)[0];
+  if (top && top.fans > G.fans * 1.3) opts.push(['Chasing the leader', `${top.name} still draws far more fans than ${G.promo.name}. Beat them head to head on a big night and that can change.`]);
+  else if (top && G.fans > top.fans * 1.3) opts.push(['Top of the pile', `${G.promo.name} is the biggest company around right now. The hard part is staying there.`]);
+  const o = opts.length ? pick(opts) : null; return o ? { h: o[0], b: o[1] } : null;
+}
+// power rankings, once a month: the 10 hottest wrestlers anywhere
+function dirtRanks(prev) {
+  const all = [...signed().map(w => ({ w, co: G.promo.name, me: 1 })), ...(G.rivalPromos || []).flatMap(r => r.roster.map(w => ({ w, co: r.name })))].filter(x => !x.w.injury);
+  const old = prev?.pr || [];
+  return all.sort((a, b) => (b.w.pop + (b.w.momentum || 0) / 3) - (a.w.pop + (a.w.momentum || 0) / 3)).slice(0, 10).map((x, i) => {
+    const j = old.findIndex(o => o.id === x.w.id);
+    return { id: x.w.id, n: x.w.name, co: x.co, me: x.me || 0, mv: j < 0 ? 'new' : j - i };
+  });
+}
+function dirtWeek() {
+  try {
+    const D = G.dirt ||= { n: 0, seen: 0, list: [] };
+    if (D.list[0]?.wk === G.week) return;
+    const shows = dirtShows(), mine = shows.filter(x => x.me), riv = shows.filter(x => !x.me);
+    const iss = { no: ++D.n, wk: G.week, revs: [], table: shows.slice(0, 8).map(x => ({ co: x.co, n: x.name, r: x.rating, me: x.me || 0, big: x.big ? 1 : 0 })) };
+    for (const x of mine.slice(0, 2)) iss.revs.push(dirtReview(x));
+    if (riv[0]) iss.revs.push(dirtRivalReview(riv[0]));
+    iss.world = dirtWorld(); iss.rum = dirtRumours();
+    const tk = dirtTake(); if (tk) iss.take = tk;
+    if (G.week % 4 === 0) iss.pr = dirtRanks(D.list.find(x => x.pr));
+    D.list.unshift(iss); if (D.list.length > DIRT_KEEP) D.list.length = DIRT_KEEP;
+  } catch (e) { console.warn('dirt sheet', e); }
 }
 
 // ---------- the living world: rival promotions that book real shows, build stars, sign talent, grow, shrink, open and fold ----------
@@ -4802,8 +4958,8 @@ function render() {
     <main tabindex="-1">${({ book: viewBook, roster: viewRoster, stories: viewStories, office: viewOffice, notes: viewNotes })[UI.tab]()}</main>
   </div>
   <nav class="tabs" aria-label="Main"><div class="in">
-    ${[['book', '📅', 'Shows', 0], ['roster', '🤼', 'Roster', 0], ['stories', '🔥', 'Stories', 0], ['office', '💼', 'Office', CON() ? signed().filter(w => w.contract.weeks <= 4).length : 0], ['notes', '📓', 'Notes', 0]]
-      .map(([k, i, l, n]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}" ${UI.tab === k ? 'aria-current="page"' : ''}><span class="ic">${i}</span>${l}${n ? `<span class="dot" aria-hidden="true">${n}</span><span class="sr-only">, ${n} contract${n === 1 ? '' : 's'} ending soon</span>` : ''}</button>`).join('')}
+    ${[['book', '📅', 'Shows', 0], ['roster', '🤼', 'Roster', 0], ['stories', '🔥', 'Stories', 0], ['office', '💼', 'Office', CON() ? signed().filter(w => w.contract.weeks <= 4).length : 0], ['notes', '📓', 'Notes', dirtUnread(), 'new Dirt Sheet issue']]
+      .map(([k, i, l, n, sr]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}" ${UI.tab === k ? 'aria-current="page"' : ''}><span class="ic">${i}</span>${l}${n ? `<span class="dot" aria-hidden="true">${n}</span><span class="sr-only">, ${sr ? sr : `${n} contract${n === 1 ? '' : 's'} ending soon`}</span>` : ''}</button>`).join('')}
   </div></nav>`);
   // keep the open sheet's scroll position when it re-renders (e.g. tapping options in the builder)
   const mbOld = modals.querySelector('.modal-bg:not(.picker-bg) .mb'), keyOld = lastModalKey, scOld = mbOld ? mbOld.scrollTop : 0;
@@ -4997,7 +5153,7 @@ function viewBookCard() {
   let bestIx = -1;
   if (card.length > 2) { const live = prs.map((r, i) => card[i].kind === 'match' ? r.rating : -1), mx = Math.max(...live.slice(0, -1)); if (mx > 0 && (card[card.length - 1].kind !== 'match' || live[live.length - 1] < mx - 5)) bestIx = live.indexOf(mx); }
   const isNow = wk === G.week;
-  return `${statusBar}${isNow ? eventAlert() : ''}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
+  return `${statusBar}${isNow ? eventAlert() + dirtAlert() : ''}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
   <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showName(wk))}</h2>
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
@@ -5140,7 +5296,7 @@ function rivalsView() {
   return `${SANDBOX() ? `<div class="alert good" style="margin-bottom:10px"><span class="ic">🛠️</span><div class="small"><b>Sandbox is on.</b> Edit any company, its titles and roster, build wrestlers and move anyone anywhere. Then share the world: players who start in it play normally. Switch it off in Menu → Settings.</div></div>` : ''}<div class="card" style="margin-bottom:10px"><div class="sec" style="margin-top:0">🌍 The wrestling world</div>
     <div class="row tiny muted" style="padding-bottom:4px"><span class="sp">Company</span><span style="width:64px;text-align:right">Fans</span><span style="width:44px;text-align:right">Show</span></div>
     ${all.map((x, i) => `<div class="row small" style="padding:3px 0"><span class="sp clip">${i + 1}. ${x.me ? `<b>${esc(x.name)} (you)</b>` : esc(x.name)} <span class="tag">${x.tier}</span></span><span style="width:64px;text-align:right">${kfmt(x.fans)}</span><b style="width:44px;text-align:right">${x.r || '–'}</b></div>`).join('')}
-    ${wl.length ? `<div class="sec">Around the world</div>${wl.map(x => `<div class="small" style="padding:3px 0">${esc(x.t)} <span class="tiny muted">wk ${x.wk}</span></div>`).join('')}<button class="btn sm block" style="margin-top:8px" data-act="worldNews">All world news</button>` : ''}</div>
+    ${wl.length ? `<div class="sec">Around the world</div>${wl.map(x => `<div class="small" style="padding:3px 0">${esc(x.t)} <span class="tiny muted">wk ${x.wk}</span></div>`).join('')}<div class="grid2" style="margin-top:8px"><button class="btn sm" data-act="worldNews">All world news</button><button class="btn sm" data-act="notesTab" data-id="dirt">🗞️ Dirt sheet</button></div>` : ''}</div>
   <div class="list">${rs.map(r => { const c = rivalW(r.champId), ph = philOf(r); return `<button class="item" data-act="openRival" data-id="${r.id}">${rivAv(r)}<div class="main"><div class="t">${esc(r.name)} <span class="tag">${tierOf(r)}</span></div><div class="d">${ph.ic} ${ph.n} · ${r.roster.length} wrestlers · ${kfmt(r.fans)} fans${c ? ' · champ ' + esc(c.name) : ''}</div></div></button>`; }).join('') || '<div class="empty">No rival promotions right now.</div>'}</div>
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newRival">+ Create a rival</button><button class="btn" data-act="community">From Community</button></div>
   <button class="btn block" style="margin-top:8px" data-act="shareWorld">🌍 Share this world</button>
@@ -5269,13 +5425,44 @@ function setupView() {
     <div class="tiny muted" style="margin-top:8px">Sim settings, sound and display are in Menu → Settings.</div>`;
 }
 
+// ---------- the dirt sheet ----------
+const dirtUnread = () => { const L = G.dirt?.list; return L?.length && L[0].no > (G.dirt.seen || 0) ? 1 : 0; };
+const dirtSrcTag = s => { const x = DIRT_SRC[s] || DIRT_SRC.spec; return `<span class="dirt-src ${DIRT_SRC[s] ? s : 'spec'}">${x[0]} ${x[1]}</span>`; };
+function dirtAlert() {
+  if (!dirtUnread()) return '';
+  const x = G.dirt.list[0], h = x.revs?.[0]?.h || x.world?.[0] || 'The week in wrestling';
+  return `<button class="bs-alert dirt-alert" data-act="notesTab" data-id="dirt"><span class="bs-alert-i">🗞️</span><span class="sp"><span class="bs-alert-k">The Dirt Sheet · Issue ${+x.no}</span><b>${esc(h)}</b></span><span class="bs-alert-go">Read ›</span></button>`;
+}
+function dirtView() {
+  const L = G.dirt?.list || [];
+  const mast = (sub) => `<div class="dirt-mast"><div class="dirt-name">The Dirt Sheet</div><div class="dirt-sub">${sub}</div></div>`;
+  if (!L.length) return `<div class="card dirt">${mast("Wrestling's weekly insider")}<div class="empty">The first issue comes out after this week's shows. It covers every company: reviews, ratings, signings, title changes and the rumours going around.</div></div>`;
+  const i = clamp(+UI.dirtIx || 0, 0, L.length - 1), x = L[i];
+  if (i === 0 && G.dirt.seen !== x.no) G.dirt.seen = x.no;
+  const revs = x.revs || [], lead = revs[0];
+  const stars = r => `<span class="dirt-stars">${starStr(+r || 0)}</span> <span class="tiny muted">${+r || 0}</span>`;
+  const rev = (v, big) => `<div class="${big ? 'dirt-lead' : 'card dirt-rev'}"><div class="dirt-k">${v.me ? 'Review · ' : ''}${esc(v.co)}${v.big ? ' · Big event' : ''}</div><div class="dirt-h">${esc(v.h)}</div><div class="small" style="margin-bottom:4px">${stars(v.r)}</div><div class="dirt-b">${esc(v.b)}</div></div>`;
+  const mv = m => m === 'new' ? '<span class="dirt-mv new">NEW</span>' : m > 0 ? `<span class="dirt-mv up">▲${m}</span>` : m < 0 ? `<span class="dirt-mv dn">▼${-m}</span>` : '<span class="dirt-mv">–</span>';
+  return `<div class="card dirt">${mast(`Issue ${+x.no} · Week ${+x.wk} · Wrestling's weekly insider`)}
+    <div class="row dirt-nav"><button class="btn sm" data-act="dirtIx" data-id="${i + 1}" ${i + 1 >= L.length ? 'disabled' : ''} aria-label="Older issue">‹ Older</button><span class="sp tiny muted" style="text-align:center">${i ? `${i} issue${i > 1 ? 's' : ''} back` : 'Latest issue'}</span><button class="btn sm" data-act="dirtIx" data-id="${i - 1}" ${i ? '' : 'disabled'} aria-label="Newer issue">Newer ›</button></div>
+    ${lead ? rev(lead, 1) : `<div class="dirt-lead"><div class="dirt-k">Quiet week</div><div class="dirt-h">No shows to review this week</div></div>`}</div>
+  ${revs.slice(1).map(v => rev(v)).join('')}
+  ${x.table?.length > 1 ? `<div class="sec">📊 The ratings race</div><div class="card dirt-list">${x.table.map((t, j) => `<div class="dirt-row${t.me ? ' me' : ''}"><b class="dirt-n">${j + 1}</b><span class="sp"><b>${esc(t.n)}</b>${t.big ? ' <span class="tag gold">Big</span>' : ''}<span class="tiny muted" style="display:block">${esc(t.co)}${t.me ? ' (you)' : ''}</span></span><span style="text-align:right">${stars(t.r)}</span></div>`).join('')}</div>` : ''}
+  ${x.world?.length ? `<div class="sec">🌍 Confirmed this week</div><div class="card dirt-list">${x.world.map(t => `<div class="dirt-row"><span class="sp">${esc(t)}</span></div>`).join('')}</div>` : ''}
+  ${x.rum?.length ? `<div class="sec">👂 The rumour mill</div><div class="card dirt-list">${x.rum.map(r => `<div class="dirt-row dirt-rum"><span class="sp">${esc(r.t)}<span style="display:block;margin-top:4px">${dirtSrcTag(r.s)}</span></span></div>`).join('')}</div>` : ''}
+  ${x.take ? `<div class="sec">🎙️ Hot take</div><div class="card dirt-take"><div class="dirt-h" style="font-size:20px">${esc(x.take.h)}</div><div class="dirt-b">${esc(x.take.b)}</div></div>` : ''}
+  ${x.pr?.length ? `<div class="sec">👑 Power rankings</div><div class="card dirt-list">${x.pr.map((p, j) => `<div class="dirt-row${p.me ? ' me' : ''}"><b class="dirt-n">${j + 1}</b><span class="sp"><b>${esc(p.n)}</b><span class="tiny muted" style="display:block">${esc(p.co)}</span></span>${mv(p.mv)}</div>`).join('')}</div>` : ''}
+  <div class="tiny muted" style="margin:10px 2px 0">A new issue comes out after every week of shows. Rumours are rumours: the source tag says how much the sheet trusts them, and it can be wrong.</div>`;
+}
+
 // ---------- notes ----------
 function viewNotes() {
   const t = UI.notesTab;
   const cats = [['all', 'All'], ['show', 'Shows'], ['story', 'Stories'], ['title', 'Titles'], ['contract', 'Contracts'], ['injury', 'Injuries'], ['office', 'Office']];
   const nf = UI.newsF;
   return `
-  <div class="seg-ctl" style="margin-bottom:12px">${[['todo', 'To-do'], ['book', 'Notebook'], ['news', 'News log'], ['shows', 'Show history']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="notesTab" data-id="${k}">${l}</button>`).join('')}</div>
+  <div class="seg-ctl quad wrap tri" style="margin-bottom:12px">${[['todo', 'To-do'], ['book', 'Notebook'], ['news', 'News log'], ['dirt', 'Dirt sheet'], ['shows', 'Show history']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="notesTab" data-id="${k}">${l}${k === 'dirt' && dirtUnread() ? ' <span class="cnt">New</span>' : ''}</button>`).join('')}</div>
+  ${t === 'dirt' ? dirtView() : ''}
   ${t === 'todo' ? `<div class="card"><div class="row"><input type="text" id="todo-in" placeholder="Add a reminder, e.g. 'Turn Jax heel at the big event'" maxlength="140" style="flex:1"><button class="btn pri" data-act="addTodo">Add</button></div>
      <div style="margin-top:6px">${G.todos.map((x, i) => `<div class="todo ${x.done ? 'done' : ''}"><input type="checkbox" data-act="todoCk" data-id="${i}" aria-label="Done: ${esc(x.t)}" ${x.done ? 'checked' : ''}><span>${esc(x.t)}</span><button class="x" data-act="todoDel" data-id="${i}" aria-label="Delete">×</button></div>`).join('') || '<div class="empty">No reminders.</div>'}</div></div>
      ${G.todos.some(x => x.done) ? '<button class="btn sm" data-act="todoClear">Clear finished</button>' : ''}` : ''}
@@ -6858,8 +7045,9 @@ const A = {
   },
 
   // notes
-  notesTab(t) { UI.tab = 'notes'; UI.notesTab = t; UI.modal = null; render(); window.scrollTo(0, 0); },
+  notesTab(t) { UI.tab = 'notes'; UI.notesTab = t; UI.modal = null; if (t === 'dirt') UI.dirtIx = 0; render(); if (t === 'dirt') save(); window.scrollTo(0, 0); },
   newsF(f) { UI.newsF = f; render(); },
+  dirtIx(i) { UI.dirtIx = Math.max(0, +i || 0); render(); window.scrollTo(0, 0); },
   addTodo() { const el = document.getElementById('todo-in'); const t = el.value.trim(); if (!t) return; G.todos.unshift({ t, done: false }); commit(); setTimeout(() => document.getElementById('todo-in')?.focus(), 0); },
   todoCk(i) { G.todos[+i].done = !G.todos[+i].done; commit(); },
   todoDel(i) { G.todos.splice(+i, 1); commit(); },
@@ -7813,6 +8001,7 @@ function scrubGame(raw) {
     .map(c => { fixCo(c); c.roster = (Array.isArray(c.roster) ? c.roster : []).filter(w => w && w.id && w.name).slice(0, 200); c.coId ||= uid(); return c; });
   if (!g.cos.length) delete g.cos; else g.coId ||= uid();
   for (const k of ['news', 'todos', 'bigEvents', 'rivals']) if (!Array.isArray(g[k])) delete g[k];
+  if (g.dirt !== undefined) { const D = g.dirt; if (!D || typeof D !== 'object' || !Array.isArray(D.list)) delete g.dirt; else { D.list = D.list.filter(x => x && typeof x === 'object' && !Array.isArray(x) && +x.no > 0).slice(0, DIRT_KEEP); D.n = Math.max(+D.n || 0, ...D.list.map(x => +x.no)); D.seen = +D.seen || 0; } }
   if (g.rivalPromos !== undefined) g.rivalPromos = (Array.isArray(g.rivalPromos) ? g.rivalPromos : []).filter(r => r && r.id).slice(0, 12).map(r => ({ ...r, name: r.name || 'Rival', short: r.short || 'RIV', show: r.show || 'Weekly Show', hist: Array.isArray(r.hist) ? r.hist.slice(-12) : [],
     roster: (Array.isArray(r.roster) ? r.roster : []).filter(w => w && w.id && w.name).slice(0, 150).map(w => ({ ...w, contract: null, align: w.align === 'heel' ? 'heel' : 'face', style: STYLES.includes(w.style) ? w.style : 'Brawler', pop: clamp(+w.pop || 30, 0, 100), ring: clamp(+w.ring || 40, 0, 100), mic: clamp(+w.mic || 40, 0, 100), cha: clamp(+w.cha || 40, 0, 100), stam: clamp(+w.stam || 50, 0, 100) })) }));
   if (!g.settings || typeof g.settings !== 'object' || Array.isArray(g.settings)) g.settings = {};
@@ -10016,7 +10205,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.16';
+const VERSION = '1.9.17';
 const WHATS_NEW = [
   ['🎯 Filter and sort when booking', 'The wrestler picker now sorts by best fit, overall, popularity, momentum, freshest, in-ring, mic, salary or name, and remembers your choice. Every sort menu (picker, roster, free agents) now has a reverse button beside it. Tap chips to show only Men\'s or Women\'s, wrestlers free tonight, not tired, champions, people in a story, or teams and factions.'],
   ['🎟️ Title shot contracts', 'Tick Winner earns a title shot in the match editor and the winner gets a contract. Make it a #1 contender\'s match at an event you pick (it goes on that card for you), or a cash-in contract good for a year. To cash in, open any match the champion is in and choose how it goes. Office → Titles shows who holds one.'],
