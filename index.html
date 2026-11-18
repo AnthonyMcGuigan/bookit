@@ -5001,8 +5001,8 @@ function av(w, size, lazy) {
   const s = size || 38;
   const ph = safePhoto(w.photo);
   const ac = w.align === 'face' || w.align === 'heel' ? ' av-' + w.align : '';
-  // PNG photos are pixel art (real photos are saved as JPEG), so keep their pixels crisp
-  if (ph) return `<img class="av${ac}${ph.startsWith('data:image/png') ? ' px' : ''}" alt="" src="${esc(lazy ? photoURL(ph) : ph)}"${lazy ? ' loading="lazy" decoding="async"' : ''} style="width:${s}px;height:${s}px;object-fit:cover">`;
+  // small PNG photos are pixel art, so keep their pixels crisp
+  if (ph) return `<img class="av${ac}${isPixPng(ph) ? ' px' : ''}" alt="" src="${esc(lazy ? photoURL(ph) : ph)}"${lazy ? ' loading="lazy" decoding="async"' : ''} style="width:${s}px;height:${s}px;object-fit:cover">`;
   return `<div class="av${ac}" style="width:${s}px;height:${s}px;font-size:${Math.round(s * .37)}px;background:${safeColor(w.color) || `hsl(${hue(w.name || '?')} 45% 32%)`}${safeColor(w.color) ? ';color:' + inkOn(safeColor(w.color)) : ''}">${esc(initials(w.name || '?'))}</div>`;
 }
 function wTags(w) {
@@ -6382,12 +6382,15 @@ function pixelBelt(src, o) {
   while (cur.width / 2 >= N * 1.5) { const h = document.createElement('canvas'); h.width = Math.round(cur.width / 2); h.height = Math.round(cur.height / 2); const x = h.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, h.width, h.height); cur = h; }
   const c = document.createElement('canvas'); c.width = N; c.height = H; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, N, H);
   const id = x.getImageData(0, 0, N, H), px = id.data, P = new Float32Array(n * 3);
+  // see-through pixels in the upload stay see-through; if there are a few, the background is already cut out
+  const clear = new Uint8Array(n); let nClear = 0; for (let i = 0; i < n; i++) if (px[i * 4 + 3] < 128) { clear[i] = 1; nClear++; }
+  const cutAlready = nClear > n * .02;
   for (let i = 0; i < n; i++) { let r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2]; const l = .299 * r + .587 * g + .114 * b; r = l + (r - l) * 1.35; g = l + (g - l) * 1.35; b = l + (b - l) * 1.35;
     P[i * 3] = clamp((r - 128) * 1.15 + 128, 0, 255); P[i * 3 + 1] = clamp((g - 128) * 1.15 + 128, 0, 255); P[i * 3 + 2] = clamp((b - 128) * 1.15 + 128, 0, 255); }
   const dist = (i, j) => Math.hypot(P[i * 3] - P[j * 3], P[i * 3 + 1] - P[j * 3 + 1], P[i * 3 + 2] - P[j * 3 + 2]);
   // background: grow in from all four edges through similar colours; the plate in the middle is always kept
   const bg = new Uint8Array(n);
-  if (o.bg === 'cut') {
+  if (o.bg === 'cut' && !cutAlready) {
     const seed = new Int32Array(n).fill(-1), q = [], keep = i => { const xx = (i % N + .5) / N - .5, yy = (Math.floor(i / N) + .5) / H - .5; return (xx / .12) ** 2 + (yy / .22) ** 2 <= 1; };
     for (let i = 0; i < N; i++) for (const k of [i, (H - 1) * N + i]) if (!bg[k] && !keep(k)) { bg[k] = 1; seed[k] = k; q.push(k); }
     for (let i = 0; i < H; i++) for (const k of [i * N, i * N + N - 1]) if (!bg[k] && !keep(k)) { bg[k] = 1; seed[k] = k; q.push(k); }
@@ -6396,6 +6399,7 @@ function pixelBelt(src, o) {
         if (dist(i, j) < 26 && dist(seed[i], j) < 62) { bg[j] = 1; seed[j] = seed[i]; q.push(j); } } }
     let cnt = 0; for (let i = 0; i < n; i++) cnt += bg[i]; if (cnt > n * .85 || cnt < n * .04) bg.fill(0);
   }
+  for (let i = 0; i < n; i++) if (clear[i]) bg[i] = 1;
   const anyBg = bg.some(v => v), fg = []; for (let i = 0; i < n; i++) if (!bg[i]) fg.push(i);
   const lum = i => .299 * P[i * 3] + .587 * P[i * 3 + 1] + .114 * P[i * 3 + 2], sorted = fg.slice().sort((a, b) => lum(a) - lum(b)), k = Math.min(o.colors, sorted.length);
   const C = []; for (let j = 0; j < k; j++) { const i = sorted[Math.floor((j + .5) / k * sorted.length)]; C.push([P[i * 3], P[i * 3 + 1], P[i * 3 + 2]]); }
@@ -6411,7 +6415,7 @@ function pixelBelt(src, o) {
   }
   x.putImageData(id, 0, 0); return c.toDataURL('image/png');
 }
-function applyBPX() { const d = UI.modal?.draft; if (!BPX || !d || BPX.draft !== d) return; d.photo = BPX.mode === 'pixel' ? pixelBelt(BPX.src, BPX) : beltCrop(BPX.src, 360, BPX.zoom).toDataURL('image/jpeg', .82); }
+function applyBPX() { const d = UI.modal?.draft; if (!BPX || !d || BPX.draft !== d) return; d.photo = BPX.mode === 'pixel' ? pixelBelt(BPX.src, BPX) : photoData(beltCrop(BPX.src, 360, BPX.zoom), .82); }
 function pickBeltPhoto(cb) {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
   inp.onchange = () => { const f = inp.files[0]; if (!f) return; const img = new Image(), url = URL.createObjectURL(f);
@@ -6420,7 +6424,7 @@ function pickBeltPhoto(cb) {
   inp.click();
 }
 // a title's look: its photo when it has one, otherwise the drawn belt
-const titleArt = (t, cls) => { const ph = safePhoto(t.photo); return ph ? `<img class="${cls || 'belt-art'} belt-ph${ph.startsWith('data:image/png') ? ' px' : ''}" alt="${esc((t.name || 'Championship') + ' belt')}" src="${esc(ph)}">` : titleBelt(t, cls); };
+const titleArt = (t, cls) => { const ph = safePhoto(t.photo); return ph ? `<img class="${cls || 'belt-art'} belt-ph${isPixPng(ph, 160) ? ' px' : ''}" alt="${esc((t.name || 'Championship') + ' belt')}" src="${esc(ph)}">` : titleBelt(t, cls); };
 // the championship designer: a live belt on top, every part one tap away in tabs, and the title's rules
 const BD_TABS = [['shape', 'Shape'], ['metal', 'Metal'], ['strap', 'Strap'], ['plates', 'Plates'], ['centre', 'Centre'], ['text', 'Text'], ['photo', 'Photo'], ['rules', 'Rules']];
 function bdOpt(f, v, label, inner, cls) { const b = UI.modal.draft.belt, on = String(b[f]) === String(v); return `<button class="${cls || 'bd-tile'} ${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}" aria-label="${esc(label)}">${inner || ''}${cls === 'sw' ? '' : `<span>${esc(label)}</span>`}</button>`; }
@@ -6453,7 +6457,7 @@ function bdPane(m) {
     return `<p class="small muted" style="margin-top:4px">Use a photo of a belt instead of the drawn one: a real belt, or one you made in another app. It shows on the live show, the champion's card and everywhere the title appears.</p>
       <div class="row" style="gap:8px;margin-bottom:8px"><button class="btn ${ph ? '' : 'pri'}" data-act="bdPhoto">📷 ${ph ? 'Replace photo' : 'Upload a photo'}</button>${ph ? '<button class="btn bad" data-act="bdPhotoDel">Remove photo</button>' : ''}</div>
       ${live ? `<div class="px-panel">${bpxRow('mode')}${bpxRow('zoom')}${BPX.mode === 'pixel' ? `${bpxRow('detail')}${bpxRow('colors')}${bpxRow('bg')}<div class="tiny muted" style="margin:-4px 0 6px">Made on this device. Only this version is saved, never your photo. Plain backgrounds cut out best.</div>` : ''}</div>`
-        : ph ? `<div class="tiny muted">${ph.startsWith('data:image/png') ? 'Pixel version' : 'Real photo'}. Upload it again to change the look.</div>` : `<div class="tiny muted">The same looks as wrestler photos: a pixel version with the background cut out, or the real photo.</div>`}`;
+        : ph ? `<div class="tiny muted">${isPixPng(ph, 160) ? 'Pixel version' : 'Real photo'}. Upload it again to change the look.</div>` : `<div class="tiny muted">The same looks as wrestler photos: a pixel version with the background cut out, or the real photo.</div>`}`;
   }
   // rules: the title itself
   const wiz = m.wiz != null, tr = titleTier(d), ev = titleEvery(d);
@@ -7217,6 +7221,29 @@ const ARCHETYPES = {
 const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
+// true when a canvas has see-through pixels (a PNG with its background already cut out)
+function hasAlpha(c) { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let k = 3; k < d.length; k += 4) if (d[k] < 250) return true; return false; }
+// a real photo as a data URL: JPEG as before, but a photo with a see-through background keeps it
+// (WebP where the browser can make one, else PNG), stepped down until it fits a save
+function photoData(c, q, max) {
+  max = max || 60000; if (!hasAlpha(c)) return c.toDataURL('image/jpeg', q);
+  let cur = c, url = '';
+  for (let t = 0; t < 8; t++) {
+    url = cur.toDataURL('image/webp', q); if (!url.startsWith('data:image/webp')) url = cur.toDataURL('image/png');
+    if (url.length <= max || cur.width < 48) break;
+    const h = document.createElement('canvas'); h.width = Math.round(cur.width * .85); h.height = Math.round(cur.height * .85); const x = h.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, h.width, h.height); cur = h;
+  }
+  return url;
+}
+// PNG photos up to `w` wide are pixel art (keep them crisp); a bigger PNG is a real photo with a see-through background.
+// The width is read straight from the PNG header, so nothing is decoded.
+const PXW = new Map();
+function isPixPng(ph, w) {
+  if (!ph || !ph.startsWith('data:image/png;base64,')) return false;
+  let pw = PXW.get(ph);
+  if (pw === undefined) { try { const b = atob(ph.slice(22, 22 + 32)); pw = ((b.charCodeAt(16) << 24) | (b.charCodeAt(17) << 16) | (b.charCodeAt(18) << 8) | b.charCodeAt(19)) >>> 0; } catch (e) { pw = 0; } if (PXW.size > 2000) PXW.clear(); PXW.set(ph, pw); }
+  return pw > 0 && pw <= (w || 64);
+}
 const safeColor = c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
 
 // ---- clean anything that comes from a paste, a file or another player ----
@@ -7341,7 +7368,7 @@ function pickPhoto(cb) {
     img.onload = () => {
       const sq = S => { const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
         const s = Math.min(img.width, img.height); x.drawImage(img, (img.width - s) / 2, (img.height - s) / 2 * 0.6, s, s, 0, 0, S, S); return c; };
-      URL.revokeObjectURL(url); cb(sq(112).toDataURL('image/jpeg', 0.78), sq(256));
+      URL.revokeObjectURL(url); cb(photoData(sq(112), 0.78), sq(256));
     };
     img.onerror = () => toast('That image could not be read.');
     img.src = url;
@@ -7444,6 +7471,9 @@ function pixelize(src, o, color) {
   while (cur.width / 2 >= N * 1.5) { const h = document.createElement('canvas'); h.width = h.height = Math.round(cur.width / 2); const x = h.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, h.width, h.height); cur = h; }
   const c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, N, N);
   const id = x.getImageData(0, 0, N, N), px = id.data, n = N * N;
+  // see-through pixels in the upload stay see-through; if there are a few, the background is already cut out
+  const clear = new Uint8Array(n); let nClear = 0; for (let i = 0; i < n; i++) if (px[i * 4 + 3] < 128) { clear[i] = 1; nClear++; }
+  const cutAlready = nClear > n * .02;
   // color: contrast + saturation
   const sat = 1.45, con = 1.18; // vivid
   const P = new Float32Array(n * 3);
@@ -7456,7 +7486,7 @@ function pixelize(src, o, color) {
   const dist = (i, j) => { const a = P[i * 3] - P[j * 3], b = P[i * 3 + 1] - P[j * 3 + 1], e = P[i * 3 + 2] - P[j * 3 + 2]; return Math.sqrt(a * a + b * b + e * e); };
   // background: grow from the edges through similar colors; the middle of the frame is always kept
   const bg = new Uint8Array(n);
-  if (o.bg === 'color') {
+  if (o.bg === 'color' && !cutAlready) {
     const seed = new Int32Array(n).fill(-1), q = [];
     const keep = i => { const xx = (i % N + .5) / N - .5, yy = (Math.floor(i / N) + .5) / N - .5; return (xx / .2) ** 2 + ((yy + .06) / .26) ** 2 <= 1 || (yy > .2 && Math.abs(xx) < .3); };
     for (let i = 0; i < N; i++) for (const k of [i, (N - 1) * N + i, i * N, i * N + N - 1]) {
@@ -7480,9 +7510,9 @@ function pixelize(src, o, color) {
     let cnt = 0; for (let i = 0; i < n; i++) cnt += bg[i];
     if (cnt > n * .8 || cnt < n * .04) bg.fill(0); // no clear background found: keep the photo's own
   }
-  const anyBg = bg.some(v => v);
+  const anyBg = bg.some(v => v) || nClear > 0;
   // palette: k-means over the person's pixels, seeded across the light-to-dark range
-  const fg = []; for (let i = 0; i < n; i++) if (!bg[i]) fg.push(i);
+  const fg = []; for (let i = 0; i < n; i++) if (!bg[i] && !clear[i]) fg.push(i);
   const lum = i => .299 * P[i * 3] + .587 * P[i * 3 + 1] + .114 * P[i * 3 + 2];
   const sorted = fg.slice().sort((a, b) => lum(a) - lum(b));
   const k = Math.min(K, sorted.length);
@@ -7502,6 +7532,7 @@ function pixelize(src, o, color) {
   const out = [16, 12, 20];
   for (let i = 0; i < n; i++) {
     let r, g, b;
+    if (clear[i]) { px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = px[i * 4 + 3] = 0; continue; }
     if (bg[i]) {
       const xx = (i % N + .5) / N - .5, yy = (Math.floor(i / N) + .5) / N - .3, d = Math.hypot(xx, yy);
       const f = d < .32 ? .62 : d < .5 ? .44 : .3; [r, g, b] = base.map(v => v * f);
@@ -7510,7 +7541,7 @@ function pixelize(src, o, color) {
       [r, g, b] = C[asg[i]];
       if (anyBg) { // outline where the person meets the background
         const xx = i % N, yy = (i / N) | 0;
-        if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const X = xx + dx, Y = yy + dy; return X >= 0 && Y >= 0 && X < N && Y < N && bg[Y * N + X]; })) [r, g, b] = out;
+        if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const X = xx + dx, Y = yy + dy; return X >= 0 && Y >= 0 && X < N && Y < N && (bg[Y * N + X] || clear[Y * N + X]); })) [r, g, b] = out;
       }
     }
     px[i * 4] = r; px[i * 4 + 1] = g; px[i * 4 + 2] = b; px[i * 4 + 3] = 255;
@@ -7544,7 +7575,7 @@ function photoSquares(f) {
     img.onload = () => {
       const sq = S => { const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
         const s = Math.min(img.width, img.height); x.drawImage(img, (img.width - s) / 2, (img.height - s) / 2 * 0.6, s, s, 0, 0, S, S); return c; };
-      URL.revokeObjectURL(url); ok({ src: sq(256), jpeg: sq(112).toDataURL('image/jpeg', 0.78) });
+      URL.revokeObjectURL(url); ok({ src: sq(256), jpeg: photoData(sq(112), 0.78) });
     };
     img.onerror = () => { URL.revokeObjectURL(url); no(new Error('unreadable')); };
     img.src = url;
@@ -10535,7 +10566,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.23';
+const VERSION = '1.9.24';
 const WHATS_NEW = [
   ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
