@@ -7225,12 +7225,12 @@ const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);ba
 function hasAlpha(c) { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let k = 3; k < d.length; k += 4) if (d[k] < 250) return true; return false; }
 // a real photo as a data URL: JPEG as before, but a photo with a see-through background keeps it
 // (WebP where the browser can make one, else PNG), stepped down until it fits a save
-function photoData(c, q, max) {
-  max = max || 60000; if (!hasAlpha(c)) return c.toDataURL('image/jpeg', q);
+function photoData(c, q, max, minW) {
+  max = max || 60000; minW = minW || 48; if (!hasAlpha(c)) return c.toDataURL('image/jpeg', q);
   let cur = c, url = '';
   for (let t = 0; t < 8; t++) {
     url = cur.toDataURL('image/webp', q); if (!url.startsWith('data:image/webp')) url = cur.toDataURL('image/png');
-    if (url.length <= max || cur.width < 48) break;
+    if (url.length <= max || cur.width * .85 < minW) break;
     const h = document.createElement('canvas'); h.width = Math.round(cur.width * .85); h.height = Math.round(cur.height * .85); const x = h.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, h.width, h.height); cur = h;
   }
   return url;
@@ -7242,7 +7242,7 @@ function isPixPng(ph, w) {
   if (!ph || !ph.startsWith('data:image/png;base64,')) return false;
   let pw = PXW.get(ph);
   if (pw === undefined) { try { const b = atob(ph.slice(22, 22 + 32)); pw = ((b.charCodeAt(16) << 24) | (b.charCodeAt(17) << 16) | (b.charCodeAt(18) << 8) | b.charCodeAt(19)) >>> 0; } catch (e) { pw = 0; } if (PXW.size > 2000) PXW.clear(); PXW.set(ph, pw); }
-  return pw > 0 && pw <= (w || 64);
+  return pw > 0 && pw <= (w || 56);
 }
 const safeColor = c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
 
@@ -7368,7 +7368,7 @@ function pickPhoto(cb) {
     img.onload = () => {
       const sq = S => { const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
         const s = Math.min(img.width, img.height); x.drawImage(img, (img.width - s) / 2, (img.height - s) / 2 * 0.6, s, s, 0, 0, S, S); return c; };
-      URL.revokeObjectURL(url); cb(photoData(sq(112), 0.78), sq(256));
+      URL.revokeObjectURL(url); cb(photoData(sq(112), 0.78, 14000, 72), sq(256));
     };
     img.onerror = () => toast('That image could not be read.');
     img.src = url;
@@ -7575,7 +7575,7 @@ function photoSquares(f) {
     img.onload = () => {
       const sq = S => { const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
         const s = Math.min(img.width, img.height); x.drawImage(img, (img.width - s) / 2, (img.height - s) / 2 * 0.6, s, s, 0, 0, S, S); return c; };
-      URL.revokeObjectURL(url); ok({ src: sq(256), jpeg: photoData(sq(112), 0.78) });
+      URL.revokeObjectURL(url); ok({ src: sq(256), jpeg: photoData(sq(112), 0.78, 14000, 72) });
     };
     img.onerror = () => { URL.revokeObjectURL(url); no(new Error('unreadable')); };
     img.src = url;
@@ -10566,7 +10566,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.24';
+const VERSION = '1.9.25';
 const WHATS_NEW = [
   ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
