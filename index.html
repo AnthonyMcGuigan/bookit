@@ -1115,7 +1115,7 @@ const finOK = (stip, f) => { const g = GM(stip); return Object.hasOwn(FINISHES, 
 const finFallback = stip => GM(stip).rule === 'sub' ? 'Submission' : 'Clean';
 function finOf(seg) { let k = OLD_FIN[seg.finish] || seg.finish; if (!Object.hasOwn(FINISHES, k)) k = 'Clean'; if (!finOK(seg.stip, k)) k = finFallback(seg.stip); return k; }
 // a manager only helps while they are on the roster and healthy
-function mgrOf(w) { const m = w && w.manager && W(w.manager); return m && m.id !== w.id && m.contract && !m.retired && !m.away && !(m.injury > 0) ? m : null; }
+function mgrOf(w) { const m = w && w.manager && W(w.manager); return m && m.id !== w.id && m.contract && !m.retired && !m.away && !offTV(m) && !(m.injury > 0) ? m : null; }
 const managing = id => G.wrestlers.filter(w => w.manager === id && w.contract && !w.retired);
 // ringside corners for a match: seg.corner[i] = manager id, or null for nobody. With no pick, a side's regular manager comes out.
 // seg.cplan[i] = 'cheer' or 'involve' (no pick: heels get involved, faces cheer on). Free-for-alls have no corners.
@@ -1139,7 +1139,7 @@ function fixCorners(d) {
   d.cplan = d.sides.map((_, i) => cs[i] ? cs[i].plan : null);
 }
 // who actually runs in: the booker's pick, or else a winner-side manager (decided once the winner is known)
-function runinPick(seg, inMatch) { const id = Array.isArray(seg.runin) ? seg.runin[0] : null, w = id && W(id); return w && !inMatch.has(w.id) && w.contract && !w.retired && !w.away && !(w.injury > 0) ? w : null; }
+function runinPick(seg, inMatch) { const id = Array.isArray(seg.runin) ? seg.runin[0] : null, w = id && W(id); return w && !inMatch.has(w.id) && w.contract && !w.retired && !w.away && !offTV(w) && !(w.injury > 0) ? w : null; }
 const turnedSoon = w => w.turnWk && G.week - w.turnWk < 8;
 // a plain-words read on how a planned promo tone suits the speakers
 function promoOdds(s) {
@@ -1374,6 +1374,13 @@ const W = id => G.wrestlers.find(w => w.id === id);
 const rivalW = id => { for (const r of G.rivalPromos || []) { const w = r.roster.find(x => x.id === id); if (w) return w; } return null; };
 const nameOf = id => W(id)?.name || rivalW(id)?.name || 'Unknown';
 const signed = () => G.wrestlers.filter(w => w.contract);
+// roster jobs: no role (or 'wrestler') wrestles; everyone else is off-ring talent. They can manage, talk,
+// stand at ringside and appear in angles, but never wrestle, get ranked or hold a title. Inactive = kept off TV.
+const ROLES = { wrestler: { ic: '🤼', n: 'Wrestler' }, manager: { ic: '💼', n: 'Manager', d: 'Manages wrestlers, talks for them and stands at ringside.' }, valet: { ic: '📣', n: 'Valet', d: 'Walks wrestlers to the ring, cheers them on and gets involved.' }, authority: { ic: '👑', n: 'Authority figure', d: 'A GM or owner on screen. Makes matches, cuts promos, starts angles.' }, commentator: { ic: '🎤', n: 'Commentator', d: 'Calls the action. Can cut promos and get pulled into angles.' }, inactive: { ic: '🚪', n: 'Inactive', d: 'Under contract but kept off TV. Not booked at all until you change it.' } };
+const roleOf = w => (w && Object.hasOwn(ROLES, w.role) ? w.role : 'wrestler');
+const isNW = w => roleOf(w) !== 'wrestler', inRing = w => !!w && !isNW(w), offTV = w => roleOf(w) === 'inactive';
+const ringers = () => signed().filter(inRing);
+const roleTag = w => isNW(w) ? `<span class="tag gold">${ROLES[roleOf(w)].ic} ${ROLES[roleOf(w)].n}</span>` : '';
 // optional systems: money (bank, payroll, profits) and contracts (salaries, expiry, renewals)
 const MON = () => !!G?.settings?.finances, CON = () => G?.settings?.contracts !== false;
 const freeAgents = () => G.wrestlers.filter(w => !w.contract && !w.retired);
@@ -1415,7 +1422,7 @@ function seedSig(wk) {
 function fillEntrants(d, wk = UI.selWeek ?? G.week) {
   const mt = MT(d.mtype), n = clamp(Math.round(+d.n || mt.def || 10), mt.min || 3, mt.max || 40);
   const have = entrants(d).filter(id => W(id)).slice(0, n);
-  let pool = (mt.wide ? signed() : bookable(wk)).filter(w => !have.includes(w.id) && !w.away && !(w.injury > 0) && w.fatigue < 85);
+  let pool = (mt.wide ? signed() : bookable(wk)).filter(w => inRing(w) && !have.includes(w.id) && !w.away && !(w.injury > 0) && w.fatigue < 85);
   let ref = have.length ? W(have[0]) : null;
   if (!ref) { const by = {}; for (const w of pool) by[w.division || 'Open'] = (by[w.division || 'Open'] || 0) + 1; const top = Object.keys(by).sort((a, b) => by[b] - by[a])[0]; ref = pool.find(w => (w.division || 'Open') === top) || null; }
   pool = pool.filter(w => sameDiv(ref, w)).map(w => [w, w.pop + rnd(0, 25)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
@@ -1588,7 +1595,7 @@ function titleDiv(t) {
 }
 const divOk = (t, w) => { const d = titleDiv(t); return d === 'Open' || !w.division || w.division === 'Open' || w.division === d; };
 function contenders(t, n = 5) {
-  const ok = w => w && w.contract && !t.holder.includes(w.id) && !w.injury && !w.away && divOk(t, w);
+  const ok = w => w && w.contract && inRing(w) && !t.holder.includes(w.id) && !w.injury && !w.away && divOk(t, w);
   const picked = [...new Set([...(t.tag || !Array.isArray(G.shots) ? [] : shotsFor(t).flatMap(s => s.ids)), ...(t.contenders || [])])].map(W).filter(w => w && w.contract && !t.holder.includes(w.id) && !w.injury && !w.away); // the booker's picks skip the division check A title shot contract goes first.
   // auto ranks: other singles champions and the top 3 of more prestigious titles go chase those instead
   const busy = new Set();
@@ -1717,14 +1724,14 @@ const teamRec = t => `${t.w || 0}–${t.l || 0}${t.d ? '–' + t.d : ''}`;
 const liveMembers = t => t.members.map(W).filter(w => w && w.contract);
 
 // ---------- rankings ----------
-function rankDivs() { return DIVISIONS.filter(d => signed().some(w => (w.division || 'Open') === d)); }
+function rankDivs() { return DIVISIONS.filter(d => ringers().some(w => (w.division || 'Open') === d)); }
 function divChamp(div) {
   const t = G.titles.filter(t => !t.tag && t.holder.length && titleDiv(t) === div).sort((a, b) => b.prestige - a.prestige)[0];
   return t && W(t.holder[0]) ? { w: W(t.holder[0]), t } : null;
 }
 function ranking(div, n = 10) {
   const c = divChamp(div);
-  return signed().filter(w => (w.division || 'Open') === div && w.id !== c?.w.id).sort((a, b) => contenderScore(b) - contenderScore(a)).slice(0, n);
+  return ringers().filter(w => (w.division || 'Open') === div && w.id !== c?.w.id).sort((a, b) => contenderScore(b) - contenderScore(a)).slice(0, n);
 }
 const teamScore = t => BR.team(t);
 function rankedTeams(kind) { return (G.teams || []).filter(t => liveMembers(t).length >= (isTrios(t) ? 3 : 2) && (!kind || isTrios(t) === (kind === 'trios'))).sort((a, b) => teamScore(b) - teamScore(a)); }
@@ -1849,7 +1856,7 @@ const brandLabel = w => w?.both && splitOn() ? allBrands() : brandName(brandOf(w
 const showRanNow = () => (curShow()?.ran || 0) >= G.week;
 // with the brand split on, a weekly show books its own brand; a big event can use anyone
 const onBrand = (w, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || inBrand(w, G.showId);
-const bookable = wk => signed().filter(w => !w.away && onBrand(w, wk));
+const bookable = wk => signed().filter(w => !w.away && !offTV(w) && onBrand(w, wk));
 const titleOn = (t, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || !showById(t.brand) || t.brand === G.showId;
 const brandName = id => showById(id)?.id === G.showId ? G.promo.show : showById(id)?.name || '';
 // history records carry the show they belong to (old records belong to the main show)
@@ -2148,7 +2155,7 @@ function yearEnd(world = true) {
     const apps = id => segs.filter(r => segPeople(r.seg).includes(id)).length;
     const woy = top(() => true);
     if (woy) list.push({ lbl: 'Wrestler of the Year', nm: nameOf(woy), det: `${apps(woy)} appearances`, wid: woy });
-    const wd = signed().some(w => w.division === "Women's") && top(w => w.division === "Women's");
+    const wd = ringers().some(w => w.division === "Women's") && top(w => w.division === "Women's");
     if (wd && wd !== woy) list.push({ lbl: "Women's Wrestler of the Year", nm: nameOf(wd), det: `${apps(wd)} appearances`, wid: wd });
     const motm = segs.filter(r => r.seg.kind === 'match').sort((a, b) => b.rating - a.rating)[0];
     if (motm) list.push({ lbl: 'Match of the Year', nm: vsLine(motm.seg), det: `${starStr(motm.rating)} · week ${motm.wk}` });
@@ -2159,7 +2166,7 @@ function yearEnd(world = true) {
     const tw = {}; for (const r of segs) if (r.seg.kind === 'match' && r.winners?.length) for (const sd of r.seg.sides) { const tm = teamOf(sd); if (tm && sd.some(id => r.winners.includes(id))) tw[tm.id] = (tw[tm.id] || 0) + 1; }
     const tt = Object.entries(tw).sort((a, b) => b[1] - a[1])[0];
     if (tt && TM(tt[0])) list.push({ lbl: 'Tag Team of the Year', nm: TM(tt[0]).name, det: `${tt[1]} wins this year` });
-    const br = signed().map(w => [w, w.pop - (G.popAt[w.id] ?? w.pop)]).filter(x => x[1] >= 3 && x[0].id !== woy).sort((a, b) => b[1] - a[1])[0];
+    const br = ringers().map(w => [w, w.pop - (G.popAt[w.id] ?? w.pop)]).filter(x => x[1] >= 3 && x[0].id !== woy).sort((a, b) => b[1] - a[1])[0];
     if (br) list.push({ lbl: 'Breakout Star', nm: br[0].name, det: `+${Math.round(br[1])} popularity`, wid: br[0].id });
     for (const a of list) if (a.wid) { const w = W(a.wid); if (w) { addPop(w, 2); w.morale = clamp(w.morale + 8, 0, 100); } }
     G.awards.push({ yr, wk: G.week, list });
@@ -2641,7 +2648,7 @@ const BR = {
     const k = BR.key(ids), n = G.history.slice(-10, -2).filter(h => (h.keys || []).includes(k)).length;
     return n >= 2 ? -Math.min(6, n * 1.5) * (st ? 0.5 : 1) : 0;
   },
-  crew(wk) { return (typeof bookable === 'function' ? bookable(wk ?? G.week) : signed()).filter(w => !w.injury); },
+  crew(wk) { return (typeof bookable === 'function' ? bookable(wk ?? G.week) : signed()).filter(w => !w.injury && inRing(w)); },
   topPops(wk) { return BR.crew(wk).map(w => w.pop).sort((a, b) => b - a); },
   // card placement: who closes, who opens, and how tonight's earlier segments have worn the crowd
   placement(seg, people, ctx, add) {
@@ -2924,7 +2931,7 @@ function endOfWeek(card, world = true) {
     else if (w.injury > 0) w.injury = Math.max(0, w.injury - 0.5) | 0;
     w.momentum *= 0.92;
     if (!w.contract) { if (!booked.has(w.id)) w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
-    if (!booked.has(w.id) && w.injury === 0 && !w.away && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
+    if (!booked.has(w.id) && w.injury === 0 && !w.away && inRing(w) && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
     if (CON() && w.contract.salary < asking(w) * 0.75) w.morale = clamp(w.morale - 1, 0, 100);
     w.morale += (65 + room + (PER() ? ((w.trust ?? 50) - 50) / 5 : 0) - w.morale) * 0.02;
   }
@@ -3070,7 +3077,7 @@ function dirtRumours() {
 }
 // one opinion a week about your company
 function dirtTake() {
-  const opts = [], mine = signed(), held = new Set((G.titles || []).flatMap(t => t.holder));
+  const opts = [], mine = ringers(), held = new Set((G.titles || []).flatMap(t => t.holder));
   const star = mine.filter(w => !held.has(w.id) && !w.injury).sort((a, b) => b.pop - a.pop)[0];
   if (star && star.pop >= 60) opts.push(['Give them the gold', `${star.name} is one of the most popular names in ${G.promo.name} and has no title. What is everyone waiting for?`]);
   for (const t of G.titles || []) {
@@ -3094,7 +3101,7 @@ function dirtTake() {
 }
 // power rankings, once a month: the 10 hottest wrestlers anywhere
 function dirtRanks(prev) {
-  const all = [...signed().map(w => ({ w, co: G.promo.name, me: 1 })), ...(G.rivalPromos || []).flatMap(r => r.roster.map(w => ({ w, co: r.name })))].filter(x => !x.w.injury);
+  const all = [...ringers().map(w => ({ w, co: G.promo.name, me: 1 })), ...(G.rivalPromos || []).flatMap(r => r.roster.map(w => ({ w, co: r.name })))].filter(x => !x.w.injury && inRing(x.w));
   const old = prev?.pr || [];
   return all.sort((a, b) => (b.w.pop + (b.w.momentum || 0) / 3) - (a.w.pop + (a.w.momentum || 0) / 3)).slice(0, 10).map((x, i) => {
     const j = old.findIndex(o => o.id === x.w.id);
@@ -3295,7 +3302,7 @@ function wantR(r, w, needs = rivalNeeds(r)) { return worth(r, w) + (needs.some(n
 function canSignR(r, w) {
   const sal = rSalFor(r, w), T = TIERS[tierIx(r)];
   if (w.cutBy === r.id && G.week - (w.cutWk || 0) < 30) return false;
-  if (exclAny(w.id)) return false;
+  if (exclAny(w.id) || isNW(w)) return false;
   return (payrollR(r) + sal < incomeR(r) * 0.9 || r.money > sal * 60 || (r.roster.length < T[2] - 2 && r.money > sal * 30)) && w.pop <= r.prestige + 32 && r.roster.length < Math.min(34, T[2] + 5);
 }
 // a rival promotion that would come calling for one of your wrestlers
@@ -3653,12 +3660,12 @@ const GOALS = {
   main: { mk() { const T = clamp(Math.round((G.history.length ? avg(G.history.slice(-3).map(h => h.results.at(-1)?.rating || 55)) : 55) + 4), 55, 82); return { T, text: `Main event rates ${T}+` }; }, ok: (g, rec) => rec.results.length > 1 && rec.results.at(-1).rating >= g.T },
   hot: { mk() { const n = isBig(G.week) ? 3 : 2; return { n, text: `Get ${n} segments rated 70+` }; }, ok: (g, rec) => rec.results.filter(r => r.rating >= 70).length >= g.n },
   defend: { mk() { const t = G.titles.filter(t => t.holder.length).sort((a, b) => a.lastDefense - b.lastDefense)[0]; return t && { id: t.id, text: `Put the ${t.short} title on the line` }; }, ok: (g, rec) => rec.results.some(r => r.seg.kind === 'match' && r.seg.title === g.id) },
-  cold: { mk() { const w = signed().filter(w => !w.injury && (w.momentum < -3 || w.morale < 45)).sort((a, b) => a.momentum - b.momentum)[0]; return w && { id: w.id, text: `Give ${w.name} a win` }; }, ok: (g, rec) => rec.results.some(r => r.seg.kind === 'match' && (r.winners || []).includes(g.id)) },
+  cold: { mk() { const w = ringers().filter(w => !w.injury && (w.momentum < -3 || w.morale < 45)).sort((a, b) => a.momentum - b.momentum)[0]; return w && { id: w.id, text: `Give ${w.name} a win` }; }, ok: (g, rec) => rec.results.some(r => r.seg.kind === 'match' && (r.winners || []).includes(g.id)) },
   story: { mk() { const st = G.stories.filter(s => s.status === 'active' && s.heat < 85).sort((a, b) => b.heat - a.heat)[0]; if (!st) return null; const T = Math.min(100, Math.round(st.heat + 12)); return { id: st.id, T, text: `Heat up "${st.title}" to ${T}` }; }, ok: g => (G.stories.find(s => s.id === g.id)?.heat || 0) >= g.T },
   crowd: { mk() { const last = G.history.at(-1); if (!last) return null; const n = Math.round(last.attendance * (isBig(G.week) && !last.big ? 1.5 : 1.06) / 100) * 100; return { n, text: `Draw ${n.toLocaleString()} fans` }; }, ok: (g, rec) => rec.attendance >= g.n },
   hype: { mk() { const nb = nextBig(); if (!nb || nb === G.week) return null; const m = ppvMatches(nb).sort((a, b) => (a.hype || 0) - (b.hype || 0))[0]; if (!m) return null; const T = Math.min(100, hypeOf(m) + 12); return { id: m.id, wk: nb, T, text: `Build ${m.sides.map(sd => sd.map(id => shortOf(id)).join(' & ')).join(' vs ')} hype to ${T}` }; }, ok: g => (ppvMatches(g.wk).find(x => x.id === g.id)?.hype || 0) >= g.T },
-  streak: { mk() { const w = signed().filter(w => !w.injury && (w.streak || 0) >= 2).sort((a, b) => b.streak - a.streak)[0]; return w && { id: w.id, n: w.streak + 1, text: `Extend ${w.name}'s win streak to ${w.streak + 1}` }; }, ok: g => (W(g.id)?.streak || 0) >= g.n },
-  debut: { mk() { const w = signed().filter(w => w.joined >= G.week - 4 && w.joined > 1 && !G.history.some(h => h.wk >= w.joined && h.results.some(r => segPeople(r.seg).includes(w.id))))[0]; return w && { id: w.id, text: `Debut ${w.name} on the show` }; }, ok: (g, rec) => rec.results.some(r => segPeople(r.seg).includes(g.id)) }
+  streak: { mk() { const w = ringers().filter(w => !w.injury && (w.streak || 0) >= 2).sort((a, b) => b.streak - a.streak)[0]; return w && { id: w.id, n: w.streak + 1, text: `Extend ${w.name}'s win streak to ${w.streak + 1}` }; }, ok: g => (W(g.id)?.streak || 0) >= g.n },
+  debut: { mk() { const w = ringers().filter(w => w.joined >= G.week - 4 && w.joined > 1 && !G.history.some(h => h.wk >= w.joined && h.results.some(r => segPeople(r.seg).includes(w.id))))[0]; return w && { id: w.id, text: `Debut ${w.name} on the show` }; }, ok: (g, rec) => rec.results.some(r => segPeople(r.seg).includes(g.id)) }
 };
 function ensureGoals() {
   const b = G.booker ||= { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0 }; if (b.goalsWk === G.week && b.goals.length) return;
@@ -3963,7 +3970,7 @@ function crowdLine(r) {
 // the one name a tight spot shows: the wrestler's own short name if set (Moxley), else their last word
 const lastName = w => !w ? '' : (typeof w.short === 'string' && w.short.trim()) || String(w.name || '').split(' ').pop();
 const shortOf = id => W(id) ? lastName(W(id)) : String(nameOf(id) || '').split(' ').pop();
-const healthy = () => signed().filter(w => !w.injury && !w.away);
+const healthy = () => ringers().filter(w => !w.injury && !w.away);
 const EVENTS = {
   // ---- company level unlocks ----
   sponsor: {
@@ -4531,7 +4538,7 @@ function autoFill(quiet) {
   const target = Math.max(0, (big ? 8 : 6) - card.length);
   if (!target) return quiet ? undefined : toast(card.length >= maxSegs(wk) ? fullMsg(wk) : 'This show already has a full card. Clear it to auto-fill from scratch.');
   const used = new Set(card.filter(s => !wideSeg(s)).flatMap(segPeople));
-  const avail = () => bookable(wk).filter(w => w.injury === 0 && !used.has(w.id) && w.fatigue < 70);
+  const avail = () => bookable(wk).filter(w => inRing(w) && w.injury === 0 && !used.has(w.id) && w.fatigue < 70);
   const take = ids => ids.forEach(id => used.add(id));
   // the big event's signature match: fill in anyone missing
   let filled = 0;
@@ -4647,7 +4654,7 @@ function storyIdea() {
   const busy = new Set(G.stories.filter(s => s.status === 'active').flatMap(s => [...s.a, ...s.b]));
   // don't re-suggest a feud that just ended; fresh pairings first
   const recent = new Set(G.stories.filter(s => s.status !== 'active' && s.ended >= G.week - 3).flatMap(s => [...s.a, ...s.b]));
-  const base = signed().filter(w => !busy.has(w.id) && w.injury === 0).sort((a, b) => b.pop - a.pop);
+  const base = ringers().filter(w => !busy.has(w.id) && w.injury === 0).sort((a, b) => b.pop - a.pop);
   const fresh = base.filter(w => !recent.has(w.id));
   const pool = fresh.some(w => w.align === 'face') && fresh.some(w => w.align === 'heel') ? fresh : base;
   const f = pool.find(w => w.align === 'face'), h = pool.find(w => w.align === 'heel');
@@ -5007,6 +5014,7 @@ function av(w, size, lazy) {
 }
 function wTags(w) {
   const t = [`<span class="tag ${w.align}">${w.align === 'face' ? 'Face' : 'Heel'}</span>`];
+  if (isNW(w)) t.push(roleTag(w));
   if (splitOn() && w.contract) t.push(`<span class="tag">${ic(w.both ? 'layers' : 'tv')} ${esc(brandLabel(w))}</span>`);
   for (const ti of titlesOf(w.id)) t.push(belt(ti.short));
   if (G.leader === w.id && w.contract) t.push('<span class="tag">👑 Leader</span>');
@@ -5048,9 +5056,15 @@ function faView(all) {
   <div class="small muted" style="margin-bottom:8px">${list.length} of ${all.length} free agents</div>` : ''}
   <div class="list">${list.map(w => wItem(w, 'negotiate', extra(w))).join('') || `<div class="empty">${all.length ? 'Nobody matches.' : 'No free agents right now.'}</div>`}</div><button class="btn block" style="margin-top:12px" data-act="createW">+ Create a wrestler</button>`;
 }
+// off-ring talent: what matters is the mic, charisma and who they look after
+function nwLine(w) {
+  if (offTV(w)) return `Off TV · OVR <b>${overall(w)}</b> · Pop ${Math.round(w.pop)}`;
+  const mg = w.contract ? managing(w.id).map(lastName) : [];
+  return `Mic <b>${w.mic}</b> · Charisma ${w.cha} · Pop ${Math.round(w.pop)}${mg.length ? ' · manages ' + esc(mg.join(', ')) : ''}`;
+}
 function wItem(w, act, extra) {
   return `<button class="item" data-act="${act || 'openW'}" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div>
-  <div class="d">OVR <b>${overall(w)}</b> · ${esc(w.style)} · ${recStr(w)} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${extra ? ' · ' + extra : ''}</div><div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}</div></div></button>`;
+  <div class="d">${isNW(w) ? nwLine(w) : `OVR <b>${overall(w)}</b> · ${esc(w.style)} · ${recStr(w)} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}`}${extra ? ' · ' + extra : ''}</div><div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}</div></div></button>`;
 }
 function heatBar(h) { return `<div class="heat">🔥<div class="bar"><i style="width:${clamp(h, 0, 100)}%"></i></div><b>${Math.round(h)}</b></div>`; }
 function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><span class="${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${v > 0 && !/^Base/.test(t) ? '+' : ''}${v}</span> ${esc(t)}</div>`).join('')}</div>`; }
@@ -5360,9 +5374,22 @@ function segShort(s) {
 }
 
 // ---------- roster ----------
+// off-ring talent tab: managers, valets, authority figures, commentators and inactive people, grouped by job
+function offRingView(q) {
+  const all = signed().filter(isNW), list = q ? all.filter(w => (w.name + ' ' + w.nick).toLowerCase().includes(q)) : all;
+  const grp = (lbl, rs) => { const g = list.filter(w => rs.includes(roleOf(w))).sort((a, b) => b.pop - a.pop); return g.length ? `<div class="sec">${lbl} (${g.length})</div><div class="list">${g.map(w => wItem(w)).join('')}</div>` : ''; };
+  return `${all.length ? '' : `<div class="card small" style="margin-bottom:10px">Managers, valets, GMs, commentators and anyone you're keeping off TV live here. They can manage, cut promos, stand at ringside and appear in angles, but they're never booked in a match, ranked or given a title. Set someone's job on their profile, or build a new one.</div>`}
+  ${grp('💼 Managers & valets', ['manager', 'valet'])}${grp('👑 Authority figures', ['authority'])}${grp('🎤 Commentary', ['commentator'])}${grp('🚪 Inactive', ['inactive'])}
+  ${all.length && !list.length ? '<div class="empty">Nobody matches.</div>' : ''}
+  <button class="btn block" style="margin-top:12px" data-act="createNW">＋ Add a manager, GM or commentator</button>`;
+}
 function viewRoster() {
   const q = UI.rosterQ.toLowerCase();
-  let list = signed();
+  const off = UI.rosterTab === 'off', nNW = signed().filter(isNW).length;
+  const tabs = `<div class="seg-ctl" style="margin-bottom:10px"><button class="${off ? '' : 'on'}" data-act="rosterTab" data-id="ring" aria-pressed="${!off}">🤼 Wrestlers (${signed().length - nNW})</button><button class="${off ? 'on' : ''}" data-act="rosterTab" data-id="off" aria-pressed="${off}">💼 Off-ring talent (${nNW})</button></div>`;
+  const tools = `<div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>`;
+  if (off) return `${tools}${tabs}<div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search off-ring talent" aria-label="Search off-ring talent" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1"></div>${offRingView(q)}`;
+  let list = signed().filter(inRing);
   const f = UI.rosterF;
   if (DIVISIONS.includes(f)) list = list.filter(w => (w.division || 'Open') === f);
   if (f === 'face' || f === 'heel') list = list.filter(w => w.align === f);
@@ -5379,12 +5406,12 @@ function viewRoster() {
   const divs = DIVISIONS.filter(d => signed().some(w => (w.division || 'Open') === d));
   const filt = `<div class="filters">${[['all', 'All'], ['teams', 'Teams & factions'], ['face', 'Faces'], ['heel', 'Heels'], ['champs', 'Champions'], ['injured', 'Injured'], ['unhappy', 'Unhappy'], ...(splitOn() ? SHOWS().map(x => ['b:' + x.id, brandName(x.id)]) : []), ...(divs.length > 1 ? divs.map(d => [d, d]) : [])].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="rosterF" data-id="${k}">${l}</button>`).join('')}</div>`;
   return `
-  <div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>
+  ${tools}${tabs}
   <div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search roster" aria-label="Search roster" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1">
     <select data-in="rosterSort" style="width:auto;max-width:42%" aria-label="Sort roster by">${[['pop', 'Popularity'], ['ring', 'In-ring'], ['mic', 'Mic'], ['morale', 'Morale (low first)'], ['fatigue', 'Fatigue'], ...(CON() ? [['contract', 'Contract (ending first)']] : []), ['wins', 'Wins'], ['winpct', 'Win %'], ['streak', 'Win streak'], ['name', 'Name']].map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${revBtn('roster', 'roster')}</div>
   ${filt}
   ${f === 'teams' ? `<button class="item" style="margin-bottom:10px" data-act="goTeams"><div class="av" style="width:36px;height:36px;font-size:15px;background:var(--card2)">👥</div><div class="main"><div class="t">Build and edit teams</div><div class="d">Tag teams and factions now live in Office → Teams</div></div></button>` : ''}
-  <div class="small muted" style="margin-bottom:8px">${list.length} of ${signed().length} signed${CON() && MON() ? ` · payroll ${money(sum(signed().map(w => w.contract.salary)))}/wk` : ''}</div>
+  <div class="small muted" style="margin-bottom:8px">${list.length} of ${signed().length - nNW} wrestlers${CON() && MON() ? ` · payroll ${money(sum(signed().map(w => w.contract.salary)))}/wk` : ''}</div>
   <div class="list">${list.map(w => wItem(w)).join('') || (signed().length ? '<div class="empty">Nobody matches.</div>' : `<div class="empty">Your roster is empty. Build, import or grab one from Community.${lib().length ? `<br><button class="btn" style="margin-top:8px" data-act="library">📚 Add from my library (${lib().length})</button>` : ''}</div>`)}</div>`;
 }
 
@@ -6105,6 +6132,8 @@ function renderPicker() {
   // per-appearance talent has its own tab in the match and segment picker
   const gTab = UI.modal?.type === 'seg' && CON() && !p.free, gOn = gTab && p.tab === 'guests', nG = gTab ? guestList(UI.selWeek).length : 0;
   if (gOn) list = guestList(UI.selWeek).map(x => x.w).filter(w => !w.away);
+  if (p.ring) list = list.filter(inRing);
+  else if (UI.modal?.type !== 'community') list = list.filter(w => !offTV(w));
   if (q) list = list.filter(w => (w.name + ' ' + w.nick + ' ' + w.style).toLowerCase().includes(q));
   const divs = DIVISIONS.filter(d => list.some(w => (w.division || 'Open') === d)), total = list.length;
   if (p.div && !divs.includes(p.div)) p.div = '';
@@ -6124,7 +6153,7 @@ function renderPicker() {
    <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${pickNF(p) ? ` Showing ${list.length} of ${total}. <button class="link" data-act="pickClear">Clear filters</button>` : ''}${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear.' : ''}</div>
    ${list.map(w => { const g = gOn && guestDeal(w.id, UI.selWeek), sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
      const tmLock = !sel && UI.modal?.type === 'editTeam' && otherTeamOf(w.id, UI.modal.draft.id, UI.modal.draft.kind);
-     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other || tmLock ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${tmLock ? `<span style="color:var(--warn)">👥 In ${esc(tmLock.name)}</span> · ` : ''}${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
+     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other || tmLock ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${tmLock ? `<span style="color:var(--warn)">👥 In ${esc(tmLock.name)}</span> · ` : ''}${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}${isNW(w) ? `<b>${ROLES[roleOf(w)].ic} ${ROLES[roleOf(w)].n}</b> · ` : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Roster → Free agents.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
    ${gOn ? `<button class="btn block" style="margin-top:10px" data-act="localTalent">+ Book local enhancement talent (${money(100)}–${money(250)})</button><div class="tiny muted" style="margin-top:6px">A local wrestler for one month, non-exclusive. Good for squash matches that make your stars look strong.</div>` : ''}`;
   return modal('Choose wrestlers', body, `<button class="btn pri" data-act="pickDone">Done (${p.sel.length})</button>`, { cls: 'picker-bg', closeAct: 'pickDone', anim });
 }
@@ -6145,7 +6174,9 @@ function modalWrestler(m) {
      <div class="row small" style="margin-top:8px"><span class="muted sp">Record</span><b>${w.record.w}W – ${w.record.l}L${w.record.d ? ' – ' + w.record.d + 'D' : ''} · ${Math.round(winPct(w) * 100)}%</b></div>
      <div class="row small"><span class="muted sp">Last 5</span>${formChips(w)}${w.streak >= 2 ? ` <b style="margin-left:6px;color:var(--good)">W${w.streak}</b>` : w.streak <= -2 ? ` <b style="margin-left:6px;color:var(--bad)">L${-w.streak}</b>` : ''}</div>
      ${splitOn() && w.contract ? `<div class="row small"><span class="muted sp">Show</span><select data-in="wBrand" data-id="${w.id}" style="width:auto;padding:4px 8px">${SHOWS().map(x => `<option value="${esc(x.id)}" ${!w.both && brandOf(w) === x.id ? 'selected' : ''}>${esc(brandName(x.id))}</option>`).join('')}<option value="*" ${w.both ? 'selected' : ''}>${allBrands()}</option></select></div>` : ''}
-     ${(() => { const mg = mgrOf(w), mine = managing(w.id); return `<div class="row small"><span class="muted sp">Manager</span>${w.retired ? `<b>${mg ? esc(mg.name) : 'None'}</b>` : `<button class="link" data-act="setMgr">${mg ? esc(mg.name) : 'Choose'}</button>`}</div>${mine.length ? `<div class="row small"><span class="muted sp">Manages</span><b class="clip">${mine.map(x => esc(x.name)).join(', ')}</b></div>` : ''}`; })()}
+     ${w.retired ? '' : `<div class="row small" style="margin:6px 0 4px"><span class="muted sp">Job</span></div><div class="seg-ctl" style="margin-bottom:6px"><button class="${isNW(w) ? '' : 'on'}" data-act="roleSw" data-id="wrestler" aria-pressed="${!isNW(w)}">🤼 Wrestles</button><button class="${isNW(w) ? 'on' : ''}" data-act="roleSw" data-id="${isNW(w) ? roleOf(w) : 'manager'}" aria-pressed="${isNW(w)}">💼 Doesn't wrestle</button></div>
+     ${isNW(w) ? `<label class="f" style="margin-bottom:4px"><span>Role</span><select data-in="wRole" data-id="${w.id}">${Object.entries(ROLES).filter(([k]) => k !== 'wrestler').map(([k, x]) => `<option value="${k}" ${roleOf(w) === k ? 'selected' : ''}>${x.n}</option>`).join('')}</select></label><div class="tiny muted" style="margin-bottom:8px">${esc(ROLES[roleOf(w)].d)} ${offTV(w) ? '' : 'Never booked in a match, auto-filled, ranked or given a title.'}</div>` : ''}`}
+     ${(() => { const mg = mgrOf(w), mine = managing(w.id); return `${isNW(w) ? '' : `<div class="row small"><span class="muted sp">Manager</span>${w.retired ? `<b>${mg ? esc(mg.name) : 'None'}</b>` : `<button class="link" data-act="setMgr">${mg ? esc(mg.name) : 'Choose'}</button>`}</div>`}${mine.length ? `<div class="row small"><span class="muted sp">Manages</span><b class="clip">${mine.map(x => esc(x.name)).join(', ')}</b></div>` : ''}`; })()}
      <div class="row small"><span class="muted sp">Momentum</span><b style="color:${w.momentum > 5 ? 'var(--good)' : w.momentum < -5 ? 'var(--bad)' : 'inherit'}">${w.momentum > 5 ? '🔥 Hot' : w.momentum < -5 ? '❄️ Cold' : 'Neutral'} (${Math.round(w.momentum)})</b></div>
      ${CON() ? `<div class="row small"><span class="muted sp">Contract</span><b>${w.contract ? `${money(w.contract.salary)}/wk · ${lenLabel(w.contract.weeks)} left` : 'Free agent'}</b></div>
      <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Free agent'}</b></div>`}
@@ -6788,7 +6819,9 @@ const A = {
     else if (m.type === 'editTeam') { cur = d.members; max = 4; }
     else if (m.type === 'editFaction') { if (f === 'leader') { cur = d.leader ? [d.leader] : []; max = 1; } else { cur = d.members; max = 8; } }
     else if (m.type === 'editTourney') { cur = d.ents; max = +d.size; }
-    UI.picker = { f, sel: cur.slice(), max, others, free, q: '', allB: m.type === 'seg' && f === 'ents' && !!MT(m.draft.mtype).wide };
+    // matches, titles, tag teams and tournaments take wrestlers only; promos, angles, ringside and managers take anyone
+    const ring = (m.type === 'seg' && (f.startsWith('side') || f === 'ents')) || ['title', 'editTeam', 'editTourney'].includes(m.type);
+    UI.picker = { f, sel: cur.slice(), max, others, free, ring, q: '', allB: m.type === 'seg' && f === 'ents' && !!MT(m.draft.mtype).wide };
     render();
   },
   pickTog(id) {
@@ -6801,6 +6834,7 @@ const A = {
     if (p.max === 1 && p.sel.length === 1) A.pickDone();
   },
   setMgr() { A.pickFor('manager'); },
+  roleSw(r) { const r2 = setRole(W(UI.modal?.id), r); if (r2?.no) return toast(r2.no); if (r2) commit(r2.msg); },
   cos() { openModal({ type: 'cos' }); },
   shows() { openModal({ type: 'shows' }); },
   afterShow() { liveTimers.forEach(clearTimeout); UI.modal = null; const r = goNext(); UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0);
@@ -6907,6 +6941,8 @@ const A = {
   openW(id) { openModal({ type: 'wrestler', id }); },
   rosterF(f) { UI.rosterF = f; render(); },
   faDiv(f) { UI.faDiv = f; render(); },
+  rosterTab(v) { UI.rosterTab = v === 'off' ? 'off' : 'ring'; render(); },
+  createNW() { A.createW(); UI.modal.draft.role = 'manager'; UI.modal.draft.ring = Math.min(UI.modal.draft.ring, 40); render(); },
   createW() { const w = makeWrestler('', '', 'face', 'Showman', 0.45); w.division = 'Open'; w.color = pick(SWATCHES); openModal({ type: 'editW', isNew: true, draft: { ...w, signNow: true } }); },
   shareBack() { UI.modal = UI.modal.draftBack; render(); },
   bAskAuto() { const d = UI.modal?.draft; if (!d) return; delete d.askSet; render(); },
@@ -6923,6 +6959,8 @@ const A = {
     if (SANDBOX() && +d.askSet > 0) d.askSet = clamp(Math.round(+d.askSet / 100) * 100, 100, 10000000); else if (SANDBOX() || !(+d.askSet > 0)) delete d.askSet;
     const cSal = SANDBOX() && d.cSal !== '' && d.cSal != null && isFinite(+d.cSal) ? clamp(Math.round(+d.cSal / 100) * 100, 0, 10000000) : null, cWks = SANDBOX() && d.cWks !== '' && d.cWks != null && isFinite(+d.cWks) ? clamp(Math.round(+d.cWks), 1, 520) : null;
     delete d.cSal; delete d.cWks;
+    const newRole = Object.hasOwn(ROLES, d.role) ? d.role : 'wrestler', oldW = !UI.modal.isNew && !UI.modal.rid && W(d.id);
+    if (oldW) { if (oldW.role) d.role = oldW.role; else delete d.role; } else if (newRole === 'wrestler') delete d.role; else d.role = newRole;
     if (d.contract && !UI.modal.isNew && !UI.modal.rid) { if (cSal != null) d.contract.salary = cSal; if (cWks != null) d.contract.weeks = cWks; }
     if (UI.modal.isNew) {
       const { signNow, ...w } = d; w.joined = G.week;
@@ -6932,6 +6970,7 @@ const A = {
       delete w._ageSet;
     } else if (UI.modal.rid) { const r = RV(UI.modal.rid), i = r ? r.roster.findIndex(x => x.id === d.id) : -1; if (i >= 0) { r.roster[i] = d; setRivalChamp(r); } UI.modal = { type: 'rivalRoster', id: UI.modal.rid }; }
     else { const i = G.wrestlers.findIndex(x => x.id === d.id); G.wrestlers[i] = d; UI.modal = { type: 'wrestler', id: d.id }; }
+    if (oldW) { const r = setRole(W(d.id), newRole); if (r?.no) return commit(r.no); if (r) return commit('Saved. ' + r.msg); }
     commit('Saved.');
   },
   deleteW() {
@@ -7087,15 +7126,15 @@ const A = {
     UI.modal = null; commit('Faction saved.');
   },
   delFaction() { const d = UI.modal.draft; confirmBox('Disband ' + d.name + '?', 'The faction and its record are removed. Its wrestlers and tag teams stay.', 'Disband', () => { G.factions = G.factions.filter(f => f.id !== d.id); news(`👑 ${d.name} has disbanded.`, 'story'); commit(); }, true); },
-  pickFaction(id) { const f = FC(id), p = UI.picker; if (!f || !p) return; const ms = liveMembers(f).sort((a, b) => (b.id === f.leader) - (a.id === f.leader) || b.pop - a.pop).map(w => w.id).filter(x => !p.others.has(x)).slice(0, p.max); if (ms.length < 2) return toast('Not enough of them are free for this side.'); p.sel = ms; A.pickDone(); },
-  pickTeam(id) { const t = TM(id), p = UI.picker; if (!t || !p) return; const ms = liveMembers(t).map(w => w.id).filter(x => !p.others.has(x)).slice(0, p.max); if (ms.length < 2) return toast('Some of them are already on the other side.'); p.sel = ms; A.pickDone(); },
+  pickFaction(id) { const f = FC(id), p = UI.picker; if (!f || !p) return; const ms = liveMembers(f).sort((a, b) => (b.id === f.leader) - (a.id === f.leader) || b.pop - a.pop).map(w => w.id).filter(x => !p.others.has(x) && (!p.ring || inRing(W(x)))).slice(0, p.max); if (ms.length < 2) return toast('Not enough of them are free for this side.'); p.sel = ms; A.pickDone(); },
+  pickTeam(id) { const t = TM(id), p = UI.picker; if (!t || !p) return; const ms = liveMembers(t).map(w => w.id).filter(x => !p.others.has(x) && (!p.ring || inRing(W(x)))).slice(0, p.max); if (ms.length < 2) return toast('Some of them are already on the other side.'); p.sel = ms; A.pickDone(); },
   newTourney() {
     const t = G.titles.find(x => !x.tag && !x.holder.length) || null;
     openModal({ type: 'editTourney', draft: { name: t ? t.short + ' Title Tournament' : 'Tournament of Champions', titleId: t?.id || '', prize: t ? 'title' : 'none', size: '8', ents: [] } });
   },
   tFill() {
     const d = UI.modal.draft, size = +d.size, t = d.titleId && G.titles.find(x => x.id === d.titleId);
-    const pool = signed().filter(w => !w.injury && !d.ents.includes(w.id) && (!t || (divOk(t, w) && !t.holder.includes(w.id)))).sort((a, b) => contenderScore(b) - contenderScore(a));
+    const pool = ringers().filter(w => !w.injury && !d.ents.includes(w.id) && (!t || (divOk(t, w) && !t.holder.includes(w.id)))).sort((a, b) => contenderScore(b) - contenderScore(a));
     d.ents = d.ents.concat(pool.map(w => w.id)).slice(0, size); render();
   },
   saveTourney() {
@@ -7218,7 +7257,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 // true when a canvas has see-through pixels (a PNG with its background already cut out)
@@ -7262,7 +7301,20 @@ function cleanW(o) {
   for (const k of SK_ALL) { const v = num(o[k], 1, 99); if (v !== undefined) w[k] = v; }
   const sh = str(o.short, 20).replace(/[<>&"'`]/g, ''); if (sh) w.short = sh;
   const age = num(o.age, 16, 70); if (age !== undefined) w.age = age;
+  const rl = roleFromText(o.role); if (rl && rl !== 'wrestler') w.role = rl;
   return w;
+}
+// "Manager", "GM", "commentary", "on hiatus"... from a spreadsheet or pasted list
+function roleFromText(v) {
+  const t = String(v ?? '').toLowerCase().trim(); if (!t) return '';
+  if (Object.hasOwn(ROLES, t)) return t;
+  if (/author|\bgm\b|general manager|owner|commission|president|director|boss|on-?air/.test(t)) return 'authority';
+  if (/manag|mouthpiece|advocate|agent/.test(t)) return 'manager';
+  if (/valet|escort|second/.test(t)) return 'valet';
+  if (/comment|announc|play.?by|colou?r|broadcast|interview|host/.test(t)) return 'commentator';
+  if (/inactive|hiatus|part.?time|off tv|sabbatical|non.?active/.test(t)) return 'inactive';
+  if (/wrestl|active|talent|roster/.test(t)) return 'wrestler';
+  return '';
 }
 function toPackW(w) { const o = {}; for (const k of PACK_FIELDS) { const v = w[k]; if (k === 'photo' && w.photoLocal) continue; if (v !== undefined && v !== null && v !== '') o[k] = typeof v === 'number' ? Math.round(v) : v; } return o; }
 function makePack(ws, opt) {
@@ -7281,7 +7333,7 @@ function cleanPack(p) {
 }
 
 // ---- reading whatever the player pastes: a share code, a JSON file, or a plain list ----
-const COLS = { name: /^(name|wrestler|ring ?name)$/, nick: /^(nick|nickname|alias)$/, short: /^(short|short ?name|shorthand)$/, psych: /^(psych|psychology)$/, sell: /^(sell|selling)$/, cons: /^(cons|consistency)$/, safety: /^(safe|safety)$/, tech: /^(tech|technical)$/, brawl: /^(brawl|brawling|hardcore)$/, air: /^(air|aerial|flying)$/, pot: /^(pot|potential)$/, align: /^(align|alignment|role|face\/heel|type)$/, style: /^(style|class)$/, division: /^(division|gender|brand)$/,
+const COLS = { name: /^(name|wrestler|ring ?name)$/, role: /^(role|job|position|type|roster ?type)$/, nick: /^(nick|nickname|alias)$/, short: /^(short|short ?name|shorthand)$/, psych: /^(psych|psychology)$/, sell: /^(sell|selling)$/, cons: /^(cons|consistency)$/, safety: /^(safe|safety)$/, tech: /^(tech|technical)$/, brawl: /^(brawl|brawling|hardcore)$/, air: /^(air|aerial|flying)$/, pot: /^(pot|potential)$/, align: /^(align|alignment|role|face\/heel|type)$/, style: /^(style|class)$/, division: /^(division|gender|brand)$/,
   pop: /^(pop|popularity|over|overness)$/, ring: /^(ring|in-ring|inring|workrate|wrestling|skill)$/, mic: /^(mic|promo|mic skills)$/, cha: /^(cha|charisma|star power)$/, stam: /^(stam|stamina)$/, age: /^age$/,
   hometown: /^(hometown|from)$/, height: /^height$/, weight: /^weight$/, finisher: /^(finisher|finishing move)$/, theme: /^(theme|entrance|music)$/ };
 function parseList(text) {
@@ -7305,6 +7357,7 @@ function parseList(text) {
         else if (STYLES.some(s => s.toLowerCase() === lc)) o.style = c;
         else if (/^(men|mens|men's|male|women|womens|women's|female|open)$/.test(lc)) o.division = lc;
         else if (/^\d{1,3}$/.test(c)) nums.push(+c);
+        else if (!o.role && /^(manager|valet|gm|general manager|authority( figure)?|owner|commissioner|commentator|announcer|inactive|on hiatus|hiatus)$/.test(lc)) o.role = lc;
         else if (c && !o.nick) o.nick = c;
       }
       ['pop', 'ring', 'mic', 'cha', 'stam'].forEach((k, i) => { if (nums[i] != null) o[k] = nums[i]; });
@@ -7617,6 +7670,7 @@ function modalBuilder(m) {
    <div class="sec">Character</div>
    <label class="f"><span>Alignment</span><div class="seg-ctl">${['face', 'heel'].map(a => `<button class="${d.align === a ? 'on' : ''}" data-act="bSet" data-f="align" data-id="${a}">${a === 'face' ? '😇 Face' : '😈 Heel'}</button>`).join('')}</div></label>
    <label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${(d.division || 'Open') === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
+   <label class="f"><span>Job</span><select data-ew="role">${Object.entries(ROLES).map(([k, x]) => `<option value="${k}" ${roleOf(d) === k ? 'selected' : ''}>${x.n}${k === 'wrestler' ? '' : ' (doesn\'t wrestle)'}</option>`).join('')}</select>${isNW(d) ? `<div class="tiny muted" style="margin-top:4px">${esc(ROLES[roleOf(d)].d)}</div>` : ''}</label>
    <label class="f"><span>Style</span><select data-ew="style">${STYLES.map(s => `<option ${s === d.style ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
    <label class="f"><span>Short name <span class="muted">· optional, used where only one name fits</span></span><input type="text" data-ew="short" value="${esc(d.short || '')}" maxlength="20" placeholder="${esc(String(d.name || '').trim().split(' ').pop() || 'e.g. Moxley')}"></label>
    <div class="grid2">${txt('hometown', 'Hometown', 'e.g. Detroit, MI')}${txt('age', 'Age', '', 2)}${txt('height', 'Height', `6'2"`, 12)}${txt('weight', 'Weight', '240 lbs', 12)}</div>
@@ -8316,6 +8370,7 @@ function sanitizeGame(g) {
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
     if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520) };
+    if (w.role !== undefined && (!Object.hasOwn(ROLES, w.role) || w.role === 'wrestler')) delete w.role;
     if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && MEDIA[a.k].long ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3) } : undefined; if (!w.away) delete w.away; }
     if (w.mediaWk != null) w.mediaWk = Math.floor(+w.mediaWk) || 0;
     if (w.askSet != null) { if (+w.askSet > 0) w.askSet = clamp(Math.round(+w.askSet), 100, 10000000); else delete w.askSet; }
@@ -8771,7 +8826,7 @@ const CREATOR_ACTIONS = {
     else go();
   },
   rtCsv() {
-    const rows = [['Name', 'Nickname', 'Short name', 'Alignment', 'Style', 'Division', 'Pop', 'Ring', 'Mic', 'Charisma', 'Stamina', 'Age', 'Hometown', 'Finisher', ...(skillsShown() ? SK_ALL.map(statName) : [])]].concat(signed().map(w => [w.name, w.nick, w.short || '', w.align, w.style, w.division || '', Math.round(w.pop), w.ring, w.mic, w.cha, w.stam, w.age, w.hometown || '', w.finisher || '', ...(skillsShown() ? SK_ALL.map(k => Math.round(ensureSkills(w)[k])) : [])]));
+    const rows = [['Name', 'Nickname', 'Short name', 'Alignment', 'Style', 'Division', 'Pop', 'Ring', 'Mic', 'Charisma', 'Stamina', 'Age', 'Hometown', 'Finisher', 'Role', ...(skillsShown() ? SK_ALL.map(statName) : [])]].concat(signed().map(w => [w.name, w.nick, w.short || '', w.align, w.style, w.division || '', Math.round(w.pop), w.ring, w.mic, w.cha, w.stam, w.age, w.hometown || '', w.finisher || '', ROLES[roleOf(w)].n, ...(skillsShown() ? SK_ALL.map(k => Math.round(ensureSkills(w)[k])) : [])]));
     const t = rows.map(r => r.map(c => { const v = String(c ?? '').replace(/[\t\r\n]/g, ' '); return /^[=+\-@]/.test(v) ? "'" + v : v; }).join('\t')).join('\n');
     try { navigator.clipboard.writeText(t).then(() => toast('Copied. Paste it into any spreadsheet.'), () => toast('Copy was blocked by the browser.')); } catch (e) { toast('Copy was blocked by the browser.'); }
   },
@@ -9138,7 +9193,7 @@ function personaWeek(booked) {
   for (const m of G.phone) if (m.ask && m.ans == null && G.week - m.wk >= 2) { m.ans = -1; const w = W(m.wid); if (w?.contract) remember(w, -4, 'You ignored my message'); }
   for (const w of signed()) {
     w.trust += ((w.pers === 'loyal' ? 60 : 50) - w.trust) * 0.01;
-    if (w.pers === 'star' && !booked.has(w.id) && !w.injury && !w.away && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
+    if (w.pers === 'star' && inRing(w) && !booked.has(w.id) && !w.injury && !w.away && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
     if (w.pers === 'money' && CON() && w.contract.salary < asking(w) * .85) w.morale = clamp(w.morale - 1, 0, 100);
     if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? 'My deal is up for talks. I want to stay. Let\'s get it done.' : w.trust < 35 ? 'My contract is up soon. Honestly, I\'m listening to other offers.' : 'My contract is coming up. Make me a fair offer and we can talk.', null, { act: 'talks' });
   }
@@ -9329,19 +9384,32 @@ function doMedia(w, k, m = 1, ev = false) {
   return `${w.name} went over well. Pop ${Math.round(before)} → ${Math.round(w.pop)}${cash ? ` · +${money(cash)}` : ''}.`;
 }
 // pull someone from every booked card when they leave for a while
-function pullFromCards(w) {
+function pullFromCards(w, ringOnly) {
   const cards = [G.card, ...Object.values(G.future || {})];
   for (const s of G.shows || []) { if (Array.isArray(s.card)) cards.push(s.card); for (const c of Object.values(s.future || {})) cards.push(c); }
   let n = 0;
   for (const c of new Set(cards)) {
     if (!Array.isArray(c)) continue;
     for (let i = c.length - 1; i >= 0; i--) {
-      const seg = c[i]; if (!segPeople(seg).includes(w.id)) continue;
+      const seg = c[i]; if (!segPeople(seg).includes(w.id) || (ringOnly && seg.kind !== 'match')) continue;
       n++; removeFromSeg(seg, w.id);
       if (!segPeople(seg).length || (seg.kind === 'match' && seg.sides.filter(sd => sd.length).length < 2)) c.splice(i, 1);
     }
   }
   return n;
+}
+// change someone's job. Champions and tag team members have to stay wrestlers until the title or team is sorted.
+function setRole(w, r) {
+  if (!w || !Object.hasOwn(ROLES, r) || roleOf(w) === r) return null;
+  if (r !== 'wrestler') {
+    const t = titlesOf(w.id)[0]; if (t) return { no: `${w.name} holds the ${t.name}. Vacate or move the title first.` };
+    const tm = (G.teams || []).find(x => x.members.includes(w.id)); if (tm) return { no: `${w.name} is in the tag team ${tm.name}. Take them out of it in Office → Teams first.` };
+  }
+  if (r === 'wrestler') delete w.role; else w.role = r;
+  for (const t of G.titles) if (Array.isArray(t.contenders) && r !== 'wrestler') t.contenders = t.contenders.filter(x => x !== w.id);
+  const n = r === 'wrestler' ? 0 : pullFromCards(w, r !== 'inactive');
+  const what = r === 'wrestler' ? 'is back to wrestling' : r === 'inactive' ? 'is now inactive and off TV' : `is now ${/^[aeiou]/i.test(ROLES[r].n) ? 'an' : 'a'} ${ROLES[r].n.toLowerCase()}`;
+  return { msg: `${w.name} ${what}.${n ? ` Taken off ${n} booked ${r === 'inactive' ? (n === 1 ? 'segment' : 'segments') : (n === 1 ? 'match' : 'matches')}.` : ''}` };
 }
 const mediaFee = (w, wks) => Math.round(w.pop * 80 * wks / 1000) * 1000;
 const tourCost = wks => Math.round(1500 * wks / 500) * 500;
@@ -9692,7 +9760,7 @@ function staffView() {
     : `<div class="small muted" style="margin-bottom:8px">${S.trainees.length}/${cap} trainees · next tryouts week ${S.next}${MON() ? ` · ${money(schoolCost())}/wk` : ''}</div>
       <div class="list">${S.trainees.map(w => tItem(w, 'trainee')).join('') || '<div class="empty">No trainees yet. Pick from the tryouts.</div>'}</div>
       ${(S.tryouts || []).length ? `<div class="sec">Tryouts</div><div class="list">${S.tryouts.map(w => tItem(w, 'tryout')).join('')}</div>` : ''}`;
-  const kids = signed().filter(w => w.age <= 26 || w.train || w.mentor).sort((a, b) => a.age - b.age).slice(0, 12);
+  const kids = ringers().filter(w => w.age <= 26 || w.train || w.mentor).sort((a, b) => a.age - b.age).slice(0, 12);
   return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week.</div>
     <div class="list">${roles.map(sRow).join('')}</div>
     <div class="sec">🎓 Training school</div>${school}
@@ -9747,7 +9815,7 @@ function modalTrainee(m) {
 }
 function modalMentor(m) {
   const w = W(m.id) || trainees().find(x => x.id === m.id); if (!w) return '';
-  const vets = signed().filter(v => v.id !== w.id && isVet(v) && !v.retired).sort((a, b) => (b.psych + b.ring) - (a.psych + a.ring)).slice(0, 25);
+  const vets = ringers().filter(v => v.id !== w.id && isVet(v) && !v.retired).sort((a, b) => (b.psych + b.ring) - (a.psych + a.ring)).slice(0, 25);
   const body = `<div class="small muted" style="margin-bottom:8px">A veteran passes on psychology, selling and consistency, and ${esc(w.name.split(' ')[0])} grows faster. Each veteran can mentor 2 people.</div>
     ${mentorOf(w) ? `<button class="btn block" data-act="mentorSet" data-id="" style="margin-bottom:8px">No mentor</button>` : ''}
     <div class="list">${vets.map(v => { const n = menteesOf(v.id).filter(x => x.id !== w.id).length; return `<button class="item" data-act="mentorSet" data-id="${v.id}" ${n >= 2 ? 'disabled aria-disabled="true" style="opacity:.55"' : ''}>${av(v)}<div class="main"><div class="t">${esc(v.name)}${w.mentor === v.id ? ' <span class="tag good">Now</span>' : ''}</div><div class="d">Age ${v.age} · Ring ${v.ring}${skillsShown() ? ` · Psychology ${Math.round(v.psych)}` : ''}${n ? ` · mentoring ${n}` : ''}</div></div></button>`; }).join('') || '<div class="empty">No veterans (30+) on the roster.</div>'}</div>`;
@@ -9931,7 +9999,7 @@ function wizToChamps() {
 // the starter roster's champions carry over to the titles the booker made, and the rest are filled by popularity
 function starterChamps(old, nt) {
   const used = new Set(), ok = (t, w) => w && w.contract && !used.has(w.id) && (!t.division || t.division === 'Open' || (t.division === "Women's") === (w.division === "Women's"));
-  const pool = signed().sort((a, b) => b.pop - a.pop);
+  const pool = ringers().sort((a, b) => b.pop - a.pop);
   const singles = nt.filter(t => !t.tag), tags = nt.filter(t => t.tag), oldS = old.filter(t => !t.tag), oldT = old.find(t => tsz(t) === 2);
   singles.forEach((t, i) => { const w = W(oldS[i]?.holder[0]); const pk = ok(t, w) ? w : pool.find(x => ok(t, x)); if (pk) { t.holder = [pk.id]; used.add(pk.id); } });
   tags.forEach(t => { const n = tsz(t); let ids = n === 2 && oldT ? oldT.holder.filter(id => ok(t, W(id))) : []; if (n === 2 && oldT) oldT.holder = []; if (ids.length < n) ids = pool.filter(x => ok(t, x) && x.align === 'heel').slice(0, n).map(x => x.id); if (ids.length === n) { t.holder = ids; ids.forEach(id => used.add(id)); } });
@@ -10362,6 +10430,7 @@ document.addEventListener('change', e => {
     else if (k === 'shAuto') { const x = showById(el.dataset.id); if (x) { if (el.checked && weekUnits().filter(u => !u.auto).length <= 1) { el.checked = false; return toast('Keep at least one show to book yourself.'); } x.auto = el.checked; commit(el.checked ? `${x.id === G.showId ? G.promo.show : x.name} will book itself.` : ''); } }
     else if (k === 'split') { G.split = el.checked; if (G.split && !signed().some(w => showById(w.brand) && w.brand !== mainShowId())) brandDraft(); commit(G.split ? 'Brand split on. Each show has its own roster.' : 'Brand split off. Everyone works every show.'); }
     else if (k === 'tBrand') { const t = G.titles.find(x => x.id === el.dataset.id); if (t) { t.brand = showById(el.value) ? el.value : ''; commit(); } }
+    else if (k === 'wRole') { const r = setRole(W(el.dataset.id), el.value); if (r?.no) { toast(r.no); render(); } else if (r) commit(r.msg); }
     else if (k === 'wBrand') { const w = W(el.dataset.id); if (w && el.value === '*') { w.both = true; commit(`${w.name} now works ${allBrands(0)}.`); }
       else if (w && showById(el.value)) { delete w.both; w.brand = el.value; for (const t of titlesOf(w.id)) if (showById(t.brand) && t.brand !== w.brand && t.holder.length === 1) t.brand = w.brand; commit(`${w.name} now works ${brandName(w.brand)}.`); } }
     else if (k === 'bigEvery') {
@@ -10566,7 +10635,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.24';
+const VERSION = '1.9.25';
 const WHATS_NEW = [
   ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
