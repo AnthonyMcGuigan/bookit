@@ -247,6 +247,12 @@ html.scroll-lock, html.scroll-lock body { overflow: hidden; overscroll-behavior:
 .lib-pick .ck { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; font-size: 14px; flex: none; }
 .lib-pick.on .ck { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .lib-row:has(.lib-pick.on) { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+#saveBar { position: fixed; left: 8px; right: 8px; top: calc(6px + env(safe-area-inset-top)); z-index: 60; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #b3263a; color: #fff; font-weight: 700; font-size: 14px; line-height: 1.3; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+#saveBar span { flex: 1; min-width: 0; }
+#saveBar .btn { flex: none; background: #fff; color: #111; border-color: #fff; }
+body:has(#saveBar) .toast { top: calc(110px + env(safe-area-inset-top)); }
+.boot-load { min-height: 70vh; display: grid; place-items: center; color: var(--muted); font-weight: 700; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .toast { animation: up .2s; position: fixed; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; z-index: 50; max-width: calc(100% - 32px); box-shadow: 0 6px 24px rgba(0,0,0,.3); }
 .empty { text-align: center; color: var(--dim); padding: 22px 10px; font-size: 14px; }
 .big-ev { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--card)), var(--card)); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
@@ -1233,21 +1239,153 @@ const ls = {
 };
 let meta = (() => { try { return JSON.parse(ls.get(META)) || { slot: 1 }; } catch (e) { return { slot: 1 }; } })();
 let G = null, UNDO = null;            // the whole game state
-let saveFailed = false;
+// Saves pack every photo's base64 into 15-bit characters (5 base64 chars in 2), so a save takes about 40% of the room its photos
+// used to. Browser storage is small (about 5 MB on most phones, shared by every slot and the wrestler library), and a big roster's
+// photos are most of a save. Older saves are plain JSON and still load; the packed form is still plain JSON with odd characters.
+const PK = '⁡', PK_SEP = '⁢', B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', B64I = new Int16Array(128).fill(-1);
+for (let i = 0; i < 64; i++) B64I[B64.charCodeAt(i)] = i;
+function pkPhoto(v) {
+  const c = v.indexOf(','); if (c < 0 || c > 40) return v;
+  let b = v.slice(c + 1); const pad = b.endsWith('==') ? 2 : b.endsWith('=') ? 1 : 0; if (pad) b = b.slice(0, -pad);
+  const n = b.length, out = [];
+  for (let i = 0; i < n; i += 5) {
+    let x = 0; for (let j = 0; j < 5; j++) { const cc = i + j < n ? b.charCodeAt(i + j) : 65, k = cc < 128 ? B64I[cc] : -1; if (k < 0) return v; x = x * 64 + k; }
+    out.push(String.fromCharCode(0x4000 + Math.floor(x / 32768), 0x4000 + (x % 32768)));
+  }
+  return PK + v.slice(0, c + 1) + PK_SEP + n + PK_SEP + pad + PK_SEP + out.join('');
+}
+function unpkPhoto(v) {
+  const a = v.indexOf(PK_SEP), b = v.indexOf(PK_SEP, a + 1), c = v.indexOf(PK_SEP, b + 1); if (a < 0 || b < 0 || c < 0) return '';
+  const head = v.slice(1, a), n = +v.slice(a + 1, b), pad = +v.slice(b + 1, c), out = new Array(Math.ceil(n / 5));
+  for (let i = c + 1, o = 0; i + 1 < v.length; i += 2, o++) {
+    let x = (v.charCodeAt(i) - 0x4000) * 32768 + (v.charCodeAt(i + 1) - 0x4000), s = '';
+    for (let j = 0; j < 5; j++) { s = B64[x % 64] + s; x = Math.floor(x / 64); }
+    out[o] = s;
+  }
+  return head + out.join('').slice(0, n) + '='.repeat(pad);
+}
+const packJSON = o => JSON.stringify(o, (k, v) => typeof v === 'string' && v.length > 120 && v.startsWith('data:image/') ? pkPhoto(v) : v);
+const unpackJSON = raw => raw.includes(PK) ? JSON.parse(raw, (k, v) => typeof v === 'string' && v[0] === PK ? unpkPhoto(v) : v) : JSON.parse(raw);
+// a save that didn't stick says so, and keeps saying so until one does (it used to flash once and get covered by "Saved.")
+let saveFailed = false, saveStale = false, lastRaw = null; // lastRaw: the slot text this window last wrote or loaded
 function save() {
-  if (!G) return;
+  if (!G) return true;
+  if (saveStale) { saveBar(); return false; }
   G.savedAt = Date.now();
-  const ok = ls.set(KEY(meta.slot), JSON.stringify(G));
+  let raw = ''; try { raw = packJSON(G); } catch (e) {}
+  if (!raw) return saveDone(false);
+  const n = meta.slot, inLs = ls.set(KEY(n), raw);
   ls.set(META, JSON.stringify(meta));
-  if (!ok && !saveFailed) { saveFailed = true; toast('Could not save in this browser. Use Export to keep a backup.'); }
+  lastRaw = raw;
+  if (inLs) lsFull[n] = G.savedAt;
+  // every save also goes to the device's big game storage (IndexedDB). A save too big for the small browser storage lives
+  // only there, and the small storage keeps a stub that says so.
+  const big = bigPut(n, raw, G.savedAt, inLs ? null : slotSum(G));
+  if (!inLs && !big) return saveDone(false);
+  if (inLs) saveDone(true);
   if (meta.cloudAuto) setTimeout(cloudAutoPush, 0);
+  return true;
+}
+function saveDone(ok) {
+  if (ok === !saveFailed) return ok;
+  saveFailed = !ok; saveBar();
+  if (ok) toast('Saved again. You are all caught up.');
+  return ok;
+}
+// ---- big game storage (IndexedDB): far more room than localStorage's ~5 MB, so huge rosters with photos fit ----
+const IDB = (() => {
+  let dbp = null;
+  const open = () => dbp ||= new Promise((res, rej) => {
+    if (!self.indexedDB) return rej('none');
+    const r = indexedDB.open('bookit', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => { const db = r.result; db.onversionchange = () => { db.close(); dbp = null; }; res(db); };
+    r.onerror = () => rej(r.error); r.onblocked = () => rej('blocked');
+  }).catch(e => { dbp = null; throw e; });
+  const run = (mode, fn) => open().then(db => new Promise((res, rej) => {
+    const t = db.transaction('kv', mode), q = fn(t.objectStore('kv'));
+    t.oncomplete = () => res(q.result); t.onerror = t.onabort = () => rej(t.error || 'abort');
+  }));
+  return { ok: !!self.indexedDB, get: k => run('readonly', st => st.get(k)), set: (k, v) => run('readwrite', st => st.put(v, k)), del: k => run('readwrite', st => st.delete(k)) };
+})();
+const BIG = n => 'slot' + n, lsFull = {}, bigQ = {};
+const STUB = '{"bookitStub":1';
+const isStub = raw => typeof raw === 'string' && raw.startsWith(STUB);
+const slotSum = g => ({ name: g.promo.name + (Array.isArray(g.cos) && g.cos.length ? ` +${g.cos.length}` : ''), week: g.week, money: g.settings?.finances === false ? null : g.money });
+// writes are queued per slot and only the newest waiting copy is written
+function bigPut(n, raw, at, stubSum) {
+  if (!IDB.ok) return false;
+  const q = bigQ[n] ||= { busy: false, next: null };
+  q.next = { raw, at, stubSum };
+  if (!q.busy) (async () => {
+    q.busy = true;
+    while (q.next) {
+      const x = q.next; q.next = null;
+      try {
+        await IDB.set(BIG(n), { raw: x.raw, at: x.at });
+        if (x.stubSum && x.at > (lsFull[n] || 0)) { ls.set(KEY(n), STUB + ',"savedAt":' + x.at + ',"sum":' + JSON.stringify(x.stubSum) + '}'); if (n === meta.slot) saveDone(true); }
+        askPersist();
+      } catch (e) { if (x.stubSum && n === meta.slot) { saveDone(false); toast(SAVE_FAIL); } }
+    }
+    q.busy = false;
+  })();
+  return true;
+}
+// ask the browser to keep the game's storage when the device runs low (Chrome/Android grants this to installed apps)
+function askPersist() { if (meta.persist || !navigator.storage?.persist) return; meta.persist = 1; ls.set(META, JSON.stringify(meta)); navigator.storage.persist().catch(() => {}); }
+// the newest copy of a slot, from either storage
+async function loadBig(n) {
+  const raw = ls.get(KEY(n)); let rec = null;
+  try { rec = await IDB.get(BIG(n)); } catch (e) {}
+  const lsAt = raw && !isStub(raw) ? (() => { try { return +unpackJSON(raw).savedAt || 0; } catch (e) { return -1; } })() : -1;
+  const use = rec && typeof rec.raw === 'string' && (+rec.at || 0) > lsAt ? rec.raw : lsAt >= 0 ? raw : null;
+  if (!use) return null;
+  try { const g = migrate(unpackJSON(use)); if (!g || !g.promo || !Array.isArray(g.wrestlers)) throw 0; return g; } catch (e) { return null; }
+}
+const SAVE_FAIL_FULL = 'Not saved: this browser is out of space. Tap the red bar to free some up.';
+const SAVE_FAIL = { toString: () => saveStale ? 'Not saved: this game changed in another window. Tap Reload on the red bar.' : SAVE_FAIL_FULL };
+function saveBar() {
+  let el = document.getElementById('saveBar');
+  const msg = saveStale ? 'This save was changed in another window. Reload to get the latest, so neither copy overwrites the other.' : saveFailed ? 'Your changes are not being saved. This browser is out of space.' : '';
+  if (!msg) { el?.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'saveBar'; el.setAttribute('role', 'alert'); document.body.appendChild(el); }
+  el.innerHTML = `<span>${esc(msg)}</span><button class="btn sm" data-act="${saveStale ? 'staleReload' : 'storage'}">${saveStale ? 'Reload' : 'Fix it'}</button>`;
+}
+// what is using this browser's storage, biggest first, in characters (browsers cap it at about 5 million)
+function storageUse() {
+  const rows = []; let total = 0;
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i), n = k.length + (localStorage.getItem(k) || '').length; total += n;
+    const m = /^ringsideBooker\.slot(\d)(\.damaged)?$/.exec(k);
+    rows.push({ k, n, kind: m ? (m[2] ? 'damaged' : 'slot') : k === LIB_KEY ? 'lib' : k === DRAFT_KEY ? 'draft' : 'other', slot: m ? +m[1] : 0 }); } } catch (e) {}
+  return { rows: rows.sort((a, b) => b.n - a.n), total };
+}
+const mb = n => (n / 1e6).toFixed(n < 1e5 ? 2 : 1) + ' MB';
+// an editor left open when the page goes away (reload, update, app closed) is kept here and reopened next time
+const DRAFT_KEY = 'ringsideBooker.draft';
+const ewDirty = m => m?.type === 'editW' && m.draft && m.orig !== undefined && JSON.stringify(m.draft) !== m.orig;
+function stashDraft() {
+  const m = UI.modal; if (!G || !ewDirty(m)) return;
+  const v = packJSON({ slot: meta.slot, at: Date.now(), m: { type: 'editW', isNew: !!m.isNew, rid: m.rid || undefined, draft: m.draft, orig: m.orig } });
+  if (!ls.set(DRAFT_KEY, v)) try { sessionStorage.setItem(DRAFT_KEY, v); } catch (e) {}
+}
+function dropDraft() { ls.del(DRAFT_KEY); try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+function takeDraft() {
+  let raw = ls.get(DRAFT_KEY); if (!raw) try { raw = sessionStorage.getItem(DRAFT_KEY); } catch (e) {}
+  dropDraft(); if (!raw || !G) return null;
+  try { const x = unpackJSON(raw), m = x?.m, d = m?.draft;
+    if (x.slot !== meta.slot || !d || typeof d !== 'object' || typeof d.id !== 'string' || Date.now() - (+x.at || 0) > 14 * 864e5) return null;
+    if (m.rid ? !RV(m.rid)?.roster.some(w => w.id === d.id) : !m.isNew && !W(d.id)) return null;
+    return { type: 'editW', isNew: !!m.isNew, ...(m.rid ? { rid: String(m.rid) } : {}), draft: d, orig: typeof m.orig === 'string' ? m.orig : '', restored: true };
+  } catch (e) { return null; }
 }
 function loadSlot(n) {
-  const raw = ls.get(KEY(n)); if (!raw) return null;
-  try { const g = migrate(JSON.parse(raw)); if (!g || !g.promo || !Array.isArray(g.wrestlers)) throw 0; return g; }
+  const raw = ls.get(KEY(n)); if (!raw || isStub(raw)) return null; // a stub's game is in big storage: loadBig
+  try { const g = migrate(unpackJSON(raw)); if (!g || !g.promo || !Array.isArray(g.wrestlers)) throw 0; return g; }
   catch (e) { if (!ls.get(KEY(n) + '.damaged')) ls.set(KEY(n) + '.damaged', raw); return null; }
 }
 function slotInfo(n) {
+  const raw = ls.get(KEY(n));
+  if (isStub(raw)) { try { const x = JSON.parse(raw), u = x.sum || {}; return { name: String(u.name || 'Saved game'), week: +u.week || 1, money: u.money ?? null, savedAt: +x.savedAt || 0, big: true }; } catch (e) { return null; } }
   const g = loadSlot(n); if (!g) return null;
   return { name: g.promo.name + (Array.isArray(g.cos) && g.cos.length ? ` +${g.cos.length}` : ''), week: g.week, money: g.settings?.finances === false ? null : g.money, savedAt: g.savedAt };
 }
@@ -3763,7 +3901,7 @@ function CAR() {
   // first time: start from the best booker on this device, so nobody loses their rank
   CAREER = cleanCareer(null);
   for (let n = 1; n <= SLOTS; n++) {
-    let g; try { g = JSON.parse(ls.get(KEY(n)) || 'null'); } catch (e) { g = null; } if (!g) continue;
+    let g; try { const r = ls.get(KEY(n)); g = r ? unpackJSON(r) : null; } catch (e) { g = null; } if (!g) continue;
     for (const c of [g, ...(Array.isArray(g.cos) ? g.cos : [])]) {
       const b = c && c.booker; if (!b) continue;
       CAREER.xp = Math.max(CAREER.xp, +b.xp || 0);
@@ -5086,6 +5224,7 @@ function heatBar(h) { return `<div class="heat">🔥<div class="bar"><i style="w
 function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><span class="${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${v > 0 && !/^Base/.test(t) ? '+' : ''}${v}</span> ${esc(t)}</div>`).join('')}</div>`; }
 
 function render() {
+  if (UI.bootLoad) { root.innerHTML = '<main tabindex="-1"><div class="boot-load" role="status">Loading your game…</div></main>'; return; }
   const fk = focusKey(document.activeElement);
   try { PLAYLOG.seen(UI.modal?.type, UI.wiz ? 'wizard' : G ? UI.tab : 'start'); } catch (e) {}
   if (!G || UI.wiz) { const mo = modals.querySelector('.modal-bg .mb'), ko = lastModalKey, so = mo ? mo.scrollTop : 0;
@@ -5726,6 +5865,8 @@ function renderModal() {
     case 'editRival': return modalEditRival(m);
     case 'worldNews': return modalWorldNews(m);
     case 'rivalRoster': return modalRivalRoster(m);
+    case 'ewLeave': return modal('Save your changes?', `<p>You changed ${esc(m.back?.draft?.name || 'this wrestler')} but didn't tap Save.</p>`, `<button class="btn" data-act="ewDiscard">Discard</button><button class="btn" data-act="ewKeep">Keep editing</button><button class="btn pri" data-act="ewSave">Save</button>`, { closeAct: 'ewKeep' });
+    case 'storage': return modalStorage();
     case 'confirm': return modal(esc(m.title), `<p>${esc(m.text)}</p>`, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri ${m.danger ? 'bad' : ''}" data-act="confirmYes">${esc(m.yes || 'Yes')}</button>`);
   }
   return '';
@@ -5755,12 +5896,24 @@ function modalStartMenu() {
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button></div>
   `);
 }
+function modalStorage() {
+  const m = UI.modal, u = storageUse(), name = r => r.kind === 'slot' ? `Save slot ${r.slot}${slotInfo(r.slot) ? ` · ${esc(slotInfo(r.slot).name)}` : ''}${r.slot === meta.slot ? ' (playing now)' : ''}${isStub(ls.get(r.k)) ? ' · in game storage' : ''}` : r.kind === 'damaged' ? `Damaged copy of slot ${r.slot}` : r.kind === 'lib' ? `Wrestler library · ${lib().length}` : r.kind === 'draft' ? 'Unsaved editor changes' : r.kind === 'rest' ? 'Settings and everything else' : esc(r.k.replace(/^(ringsideBooker|bookit)[.-]?/, '') || r.k);
+  const big = u.rows.filter(r => r.n >= 2e4 || r.kind !== 'other'), rest = u.total - big.reduce((a, r) => a + r.n, 0);
+  if (rest >= 1e4) big.push({ k: '', n: rest, kind: 'rest' });
+  return modal('Storage', `
+    ${saveFailed ? `<div class="card" style="border-color:var(--bad);margin-top:0"><b>Your game isn't saving.</b><div class="small" style="margin-top:4px">This browser is out of room. Back up your game first, then delete an old slot or some library wrestlers, and tap Try again.</div></div>` : ''}
+    <div class="small muted" style="margin:0 0 8px">Quick storage: ${mb(u.total)} used of about 5 MB, shared by every save slot and the wrestler library. A save too big for it is kept in the device's game storage instead, which has far more room${m.est?.quota ? ` (${mb(m.est.usage || 0)} used of about ${m.est.quota > 2e9 ? Math.round(m.est.quota / 1e9) + ' GB' : mb(m.est.quota)})` : ''}.</div>
+    <div class="list">${big.map(r => `<div class="item"><div class="main"><div class="t">${name(r)}</div><div class="d">${mb(r.n)}</div></div>${(r.kind === 'slot' && r.slot !== meta.slot) || r.kind === 'damaged' ? `<button class="btn sm bad" data-act="stDel" data-id="${esc(r.k)}">Delete</button>` : r.kind === 'lib' ? `<button class="btn sm" data-act="library">Open</button>` : ''}</div>`).join('')}</div>
+    <button class="btn block" style="margin-top:10px" data-act="export">💾 Back up or restore a save</button>
+    ${sbOn() ? `<button class="btn block" style="margin-top:8px" data-act="cloud">🌐 Cloud saves</button>` : ''}`,
+    `<button class="btn" data-act="menu">Menu</button><button class="btn pri" data-act="stRetry">${saveFailed ? 'Try again' : 'Save now'}</button>`);
+}
 function modalMenu() {
   if (!G) return modalStartMenu();
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
   return modal('Menu', `
     <div class="sec" style="margin-top:0">Save slots</div>
-    <div class="small muted" style="margin-bottom:8px">Auto-saves to slot ${meta.slot} in this browser.</div>
+    <div class="small muted" style="margin-bottom:8px">${saveFailed ? '<b style="color:var(--bad)">Not saving: this browser is out of space.</b>' : `Auto-saves to slot ${meta.slot} in this browser.`} <button class="linkbtn" data-act="storage">Storage (${mb(storageUse().total)})</button></div>
     <div class="list">${slots.map(s => `<div class="item"><div class="av" style="background:${s.n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${s.n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${s.n}</div><div class="main"><div class="t">${s.info ? esc(s.info.name) : 'Empty'}</div><div class="d">${s.info ? `Week ${s.info.week} · ${new Date(s.info.savedAt).toLocaleString()}` : '—'}</div></div>
       ${s.n === meta.slot ? '<span class="tag good">Current</span>' : `${s.info ? `<button class="btn sm" data-act="loadSlot" data-id="${s.n}">Load</button>` : ''}<button class="btn sm" data-act="copyTo" data-id="${s.n}">Save here</button>`}</div>`).join('')}</div>
     <button class="btn block" style="margin-top:10px" data-act="export">💾 Back up or restore a save</button>
@@ -6550,8 +6703,14 @@ function modalTitle(m) {
 // =====================================================================
 //  actions
 // =====================================================================
-function commit(msg) { save(); render(); if (msg) toast(msg); }
-function openModal(m) { UI.modal = m; render(); }
+// a huge save (thousands of wrestlers with photos) takes a moment to write, so quick taps in a row share one write;
+// leaving the page or switching apps still writes straight away
+let bigSaveT = 0;
+function commit(msg) {
+  if ((lastRaw?.length || 0) > 2e6 && !saveFailed && !saveStale) { clearTimeout(bigSaveT); bigSaveT = setTimeout(() => { bigSaveT = 0; save(); }, 700); render(); if (msg) toast(msg); return; }
+  const ok = save(); render(); if (msg || !ok) toast(ok ? msg : SAVE_FAIL);
+}
+function openModal(m) { if (m?.type === 'editW' && m.draft) m.orig = JSON.stringify(m.draft); UI.modal = m; render(); }
 function closeModal() { UI.modal = null; UI.picker = null; render(); }
 function confirmBox(title, text, yes, fn, danger) { UI.modal = { type: 'confirm', title, text, yes, fn, danger, prev: UI.modal }; render(); }
 
@@ -6667,10 +6826,11 @@ const A = {
     try { navigator.clipboard.writeText(code).then(() => toast('Share code copied. Import it and pick "Make it a rival promotion".'), () => toast('Copy was blocked by the browser.')); } catch (e) { toast('Copy was blocked by the browser.'); }
   },
   confirmYes() { const m = UI.modal; UI.modal = null; m.fn(); },
-  loadSlot(n) { const g = loadSlot(+n); if (!g) return toast('That slot is empty.'); G = g; meta.slot = +n; ls.set(META, JSON.stringify(meta)); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Loaded ' + G.promo.name); },
+  loadSlot(n) { const g = loadSlot(+n); if (!g) { if (isStub(ls.get(KEY(+n)))) { toast('Loading…'); loadBig(+n).then(b => b ? A.loadSlotG(+n, b) : toast('Could not open that save.')); return; } return toast('That slot is empty.'); } A.loadSlotG(+n, g); },
+  loadSlotG(n, g) { G = g; meta.slot = +n; ls.set(META, JSON.stringify(meta)); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); try { lastRaw = packJSON(G); } catch (e) {} saveStale = false; saveBar(); toast('Loaded ' + G.promo.name); },
   copyTo(n) { const go = () => { meta.slot = +n; save(); UI.modal = { type: 'menu' }; render(); toast('Saved to slot ' + n + '. You are now playing in slot ' + n + '.'); }; if (slotInfo(+n)) confirmBox('Overwrite slot ' + n + '?', 'Copy this game into slot ' + n + ', replacing what is there.', 'Overwrite', go, true); else go(); },
   quit() { save(); G = null; UI.modal = null; render(); },
-  deleteSlot() { confirmBox('Delete this save?', 'Slot ' + meta.slot + ' (' + G.promo.name + ') will be erased. Export first if you want a backup.', 'Delete', () => { ls.del(KEY(meta.slot)); G = null; render(); toast('Save deleted.'); }, true); },
+  deleteSlot() { confirmBox('Delete this save?', 'Slot ' + meta.slot + ' (' + G.promo.name + ') will be erased. Export first if you want a backup.', 'Delete', () => { ls.del(KEY(meta.slot)); IDB.del(BIG(meta.slot)).catch(() => {}); G = null; render(); toast('Save deleted.'); }, true); },
   export() { openModal({ type: 'transfer' }); },
   async download() {
     const name = (G.promo.name.replace(/[^\w]+/g, '-') || 'save') + '-week' + G.week + '.json', data = JSON.stringify(G);
@@ -6958,12 +7118,23 @@ const A = {
   rosterF(f) { UI.rosterF = f; render(); },
   faDiv(f) { UI.faDiv = f; render(); },
   rosterTab(v) { UI.rosterTab = v === 'off' ? 'off' : 'ring'; render(); },
-  createNW() { A.createW(); UI.modal.draft.role = 'manager'; UI.modal.draft.ring = Math.min(UI.modal.draft.ring, 40); render(); },
+  createNW() { A.createW(); UI.modal.draft.role = 'manager'; UI.modal.draft.ring = Math.min(UI.modal.draft.ring, 40); UI.modal.orig = JSON.stringify(UI.modal.draft); render(); },
   createW() { const w = makeWrestler('', '', 'face', 'Showman', 0.45); w.division = 'Open'; w.color = pick(SWATCHES); openModal({ type: 'editW', isNew: true, draft: { ...w, signNow: true } }); },
   shareBack() { UI.modal = UI.modal.draftBack; render(); },
   bAskAuto() { const d = UI.modal?.draft; if (!d) return; delete d.askSet; render(); },
   shareOneComm() { const id = UI.modal.draftBack.draft.id; UI.modal = { type: 'community', tab: 'share', what: 'pick', sel: [id], title: W(id)?.name || '' }; render(); },
   editW(id) { const w = W(id); openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); },
+  // closing the editor with changes asks first, instead of quietly throwing them away
+  ewClose() { const m = UI.modal; if (!ewDirty(m)) { dropDraft(); return closeModal(); } UI.modal = { type: 'ewLeave', back: m }; render(); },
+  ewKeep() { UI.modal = UI.modal?.back || null; render(); },
+  ewDiscard() { const b = UI.modal?.back; dropDraft(); UI.modal = b?.rid ? { type: 'rivalRoster', id: b.rid } : !b?.isNew && b?.draft && W(b.draft.id) ? { type: 'wrestler', id: b.draft.id } : null; UI.picker = null; render(); toast('Changes discarded.'); },
+  ewSave() { UI.modal = UI.modal?.back || null; if (UI.modal?.type === 'editW') A.saveW(); else render(); },
+  storage() { const m = { type: 'storage' }; openModal(m); navigator.storage?.estimate?.().then(e => { m.est = e; if (UI.modal === m) render(); }).catch(() => {}); },
+  staleReload() { saveStale = false; location.reload(); },
+  stDel(k) { const u = storageUse().rows.find(r => r.k === k); if (!u || u.kind === 'lib' || (u.kind === 'slot' && u.slot === meta.slot)) return;
+    const what = u.kind === 'slot' ? `Save slot ${u.slot}${slotInfo(u.slot) ? ` (${slotInfo(u.slot).name})` : ''}` : u.kind === 'damaged' ? `The damaged copy of slot ${u.slot}` : 'This item';
+    confirmBox('Delete it?', `${what} will be erased from this browser. Back it up first if you might want it.`, 'Delete', () => { ls.del(k); if (u.kind === 'slot') IDB.del(BIG(u.slot)).catch(() => {}); const ok = save(); UI.modal = { type: 'storage' }; render(); toast(ok ? 'Deleted. Your game is saving again.' : 'Deleted, but there still is not enough room.'); }, true); },
+  stRetry() { const ok = save(); render(); toast(ok ? 'Saved.' : SAVE_FAIL); },
   saveW() {
     const d = UI.modal.draft; if (!d.name.trim()) return toast('Give them a name.');
     { const where = wNameTaken(d.name.trim().slice(0, 40), d.id); if (where) return toast(`There's already a wrestler called ${d.name.trim()} (${where}). Pick another name.`); }
@@ -6986,6 +7157,7 @@ const A = {
       delete w._ageSet;
     } else if (UI.modal.rid) { const r = RV(UI.modal.rid), i = r ? r.roster.findIndex(x => x.id === d.id) : -1; if (i >= 0) { r.roster[i] = d; setRivalChamp(r); } UI.modal = { type: 'rivalRoster', id: UI.modal.rid }; }
     else { const i = G.wrestlers.findIndex(x => x.id === d.id); G.wrestlers[i] = d; UI.modal = { type: 'wrestler', id: d.id }; }
+    dropDraft();
     if (oldW) { const r = setRole(W(d.id), newRole); if (r?.no) return commit(r.no); if (r) return commit('Saved. ' + r.msg); }
     commit('Saved.');
   },
@@ -7701,7 +7873,7 @@ function modalBuilder(m) {
    ${m.isNew ? '' : `<div class="sec">Status</div><div class="grid2"><label class="f"><span>Morale</span><input type="number" min="0" max="100" data-ew="morale" value="${Math.round(d.morale)}"></label><label class="f"><span>Injury (weeks)</span><input type="number" min="0" max="52" data-ew="injury" value="${d.injury}"></label></div>`}
    ${G && CON() && !m.rid ? askBlock(d, m) : ''}
    ${m.isNew && !(G && CON() && !m.rid) ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now${CON() ? ` (${lenLabel(prefLen(d))} at their asking price)` : ''}</span></label>` : ''}`;
-  return modal(m.isNew ? 'Character builder' : 'Edit ' + esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="deleteW">Delete</button>'}<button class="btn" data-act="bShare">Share</button><button class="btn pri" data-act="saveW">Save</button>`);
+  return modal(m.isNew ? 'Character builder' : 'Edit ' + esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="deleteW">Delete</button>'}<button class="btn" data-act="bShare">Share</button><button class="btn pri" data-act="saveW">Save</button>`, { closeAct: 'ewClose' });
 }
 
 // what they'd ask for, live as you move the sliders. Sandbox can set the price and edit the current deal.
@@ -8422,7 +8594,7 @@ const LIB_KEY = 'bookit.library', LIB_MAX = 300, LIB_SRC = /^[A-Za-z0-9_-]{1,64}
 let LIB = null;
 function lib() {
   if (LIB) return LIB;
-  let x = null; try { x = JSON.parse(ls.get(LIB_KEY) || '[]'); } catch (e) {}
+  let x = null; try { x = unpackJSON(ls.get(LIB_KEY) || '[]'); } catch (e) {}
   return (LIB = libClean(x));
 }
 function libClean(x) {
@@ -8445,7 +8617,7 @@ async function libMerge(z) {
   if (!libSave()) { LIB = before; return 0; }
   return added;
 }
-const libSave = () => ls.set(LIB_KEY, JSON.stringify(LIB));
+const libSave = () => ls.set(LIB_KEY, packJSON(LIB));
 const libNorm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const libFind = (src, w) => lib().find(e => (src && e.src === src) || (libNorm(e.w.name) === libNorm(w.name) && e.by === (src || '').split('|')[0]));
 const inLib = key => { const { i, base, n } = cItem(key); if (!i) return false; const ws = packWs(i); return n != null ? !!ws[n] && !!libFind(base + '|' + n, ws[n]) : ws.length > 0 && ws.every((w, k) => libFind(base + '|' + k, w)); };
@@ -10562,7 +10734,7 @@ document.addEventListener('focusout', () => setTimeout(() => { if (COMM.pending 
 document.addEventListener('keydown', e => {
   if (e.target.classList?.contains('mgrip') && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); moveSeg(e.target.dataset.id, e.key === 'ArrowUp' ? -1 : 1, true); return; }
   if (e.key === 'Enter' && e.target.id === 'todo-in') A.addTodo();
-  if (e.key === 'Escape') { if (UI.picker) A.pickDone(); else if (UI.modal) closeModal(); }
+  if (e.key === 'Escape') { if (UI.picker) A.pickDone(); else if (UI.modal?.type === 'editW') A.ewClose(); else if (UI.modal?.type === 'ewLeave') A.ewKeep(); else if (UI.modal) closeModal(); }
   if (e.key === 'Tab') { // keep Tab inside the open sheet
     const ls = layers(), top = ls[ls.length - 1]; if (!top) return;
     const f = [...top.querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.getClientRects().length);
@@ -10647,8 +10819,21 @@ function reRender(el) {
 let renT; function debRender(el, e) { clearTimeout(renT); if (e && e.isComposing) return; renT = setTimeout(() => { if (el.isConnected) reRender(el); }, 180); }
 document.addEventListener('compositionend', e => { if (e.target.dataset?.in && /^(rosterQ|pickQ|cQ|mediaQ|bothQ)$/.test(e.target.dataset.in)) debRender(e.target); });
 let saveT; function debSave() { clearTimeout(saveT); saveT = setTimeout(save, 900); }
-window.addEventListener('pagehide', save);
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+window.addEventListener('pagehide', () => { clearTimeout(bigSaveT); save(); stashDraft(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(bigSaveT); save(); stashDraft(); } });
+// another window (a second tab, or the installed app and a browser tab) saved this slot: stop saving here, so the older copy
+// can't write over the newer one
+// another window (a second tab, the installed app and a browser tab, or the page being reloaded) saved this slot.
+// If nothing changed here since this window last saved, take the newer copy. Otherwise stop saving here, so neither copy
+// quietly writes over the other.
+window.addEventListener('storage', e => {
+  if (!G || saveStale || e.key !== KEY(meta.slot) || !e.newValue || e.newValue === lastRaw) return;
+  const unchanged = () => { try { return lastRaw != null && packJSON(G) === lastRaw; } catch (x) { return false; } };
+  const adopt = g => { G = g; render(); try { lastRaw = packJSON(G); } catch (x) { lastRaw = null; } };
+  if (!unchanged()) { saveStale = true; saveBar(); return; }
+  if (!isStub(e.newValue)) { const g = loadSlot(meta.slot); if (g) adopt(g); else { saveStale = true; saveBar(); } return; }
+  const was = lastRaw; loadBig(meta.slot).then(g => { if (g && lastRaw === was && unchanged()) adopt(g); else if (!g || lastRaw !== was) { saveStale = true; saveBar(); } });
+});
 
 function applyTheme() {
   // dark is the default; 'auto' follows the device, 'light' is an explicit pick
@@ -10714,8 +10899,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.26';
+const VERSION = '1.9.27';
 const WHATS_NEW = [
+  ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
   ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
   ['👥 Teams in the Office', 'Office → Teams is the new home for tag teams and factions. Start a team or faction, see their records, chemistry and titles, then edit, split up or disband them in one tap. A faction\'s leader is now picked from its own members.'],
@@ -10777,10 +10963,27 @@ window.addEventListener('error', e => { if (e.message) crash(e.message + (e.line
 let safeBoot = false; try { safeBoot = sessionStorage.getItem('rbSafe') === '1'; sessionStorage.removeItem('rbSafe'); } catch (e) {}
 const cur = safeBoot ? null : loadSlot(meta.slot);
 if (cur) G = cur;
+UI.bootLoad = !safeBoot && !cur && isStub(ls.get(KEY(meta.slot)));
 // no game yet: the home screen, where a new player can jump into a community save or start a company
 // returning players see what changed once per version
 try { const hadGame = [1, 2, 3].some(n => slotInfo(n)); if (meta.seen !== VERSION) { if (hadGame && G && !UI.modal) UI.modal = { type: 'whatsnew' }; meta.seen = VERSION; ls.set(META, JSON.stringify(meta)); } } catch (e) {}
+try { const d = takeDraft(); if (d) { UI.modal = d; toast(`Your unsaved changes to ${d.draft.name || 'a wrestler'} are back. Tap Save to keep them.`); } } catch (e) {}
 try { render(); } catch (e) { crash(e && e.message); }
+if (G) try { lastRaw = packJSON(G); } catch (e) {} // what this window holds, to tell another window's save from our own changes
+// a save in big storage loads after the page starts; a copy here that's older than big storage's gets replaced, and a save
+// from before big storage gets mirrored into it
+if (!safeBoot && IDB.ok) (async () => {
+  const n = meta.slot, rec = await IDB.get(BIG(n)).catch(() => null);
+  if (UI.bootLoad) {
+    const g = await loadBig(n); UI.bootLoad = false;
+    if (g) { G = g; UI.selWeek = G.week; try { const d = takeDraft(); if (d) { UI.modal = d; toast(`Your unsaved changes to ${d.draft.name || 'a wrestler'} are back. Tap Save to keep them.`); } } catch (e) {} lastRaw = packJSON(G); }
+    else toast('Could not find your saved game in this browser\'s storage. Load a backup or a cloud save.');
+    render(); return;
+  }
+  if (!G || meta.slot !== n) return;
+  if (rec && (+rec.at || 0) > (+G.savedAt || 0) && lastRaw != null && packJSON(G) === lastRaw) { const g = await loadBig(n); if (g && meta.slot === n) { G = g; lastRaw = packJSON(G); render(); } }
+  else if (!rec || (+rec.at || 0) < (+G.savedAt || 0)) bigPut(n, ls.get(KEY(n)), +G.savedAt || Date.now(), null);
+})();
 sbFromLink(); addEventListener('hashchange', sbFromLink);
 if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); supResume(); }
 try { PLAYLOG.start(); } catch (e) {}
