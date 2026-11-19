@@ -1528,7 +1528,7 @@ const W = id => G.wrestlers.find(w => w.id === id);
 const rivalW = id => { for (const r of G.rivalPromos || []) { const w = r.roster.find(x => x.id === id); if (w) return w; } return null; };
 const nameOf = id => W(id)?.name || rivalW(id)?.name || 'Unknown';
 const signed = () => G.wrestlers.filter(w => w.contract);
-// roster jobs: no role (or 'wrestler') wrestles; everyone else is off-ring talent. They can manage, talk,
+// roster jobs: no role (or 'wrestler') wrestles; everyone else is personnel. They can manage, talk,
 // stand at ringside and appear in angles, but never wrestle, get ranked or hold a title. Inactive = kept off TV.
 const ROLES = { wrestler: { ic: '🤼', n: 'Wrestler' }, manager: { ic: '💼', n: 'Manager', d: 'Manages wrestlers, talks for them and stands at ringside.' }, valet: { ic: '📣', n: 'Valet', d: 'Walks wrestlers to the ring, cheers them on and gets involved.' }, authority: { ic: '👑', n: 'Authority figure', d: 'A GM or owner on screen. Makes matches, cuts promos, starts angles.' }, commentator: { ic: '🎤', n: 'Commentator', d: 'Calls the action. Can cut promos and get pulled into angles.' }, inactive: { ic: '🚪', n: 'Inactive', d: 'Under contract but kept off TV. Not booked at all until you change it.' } };
 const roleOf = w => (w && Object.hasOwn(ROLES, w.role) ? w.role : 'wrestler');
@@ -5210,7 +5210,7 @@ function faView(all) {
   <div class="small muted" style="margin-bottom:8px">${list.length} of ${all.length} free agents</div>` : ''}
   <div class="list">${list.map(w => wItem(w, 'negotiate', extra(w))).join('') || `<div class="empty">${all.length ? 'Nobody matches.' : 'No free agents right now.'}</div>`}</div><button class="btn block" style="margin-top:12px" data-act="createW">+ Create a wrestler</button>`;
 }
-// off-ring talent: what matters is the mic, charisma and who they look after
+// personnel: what matters is the mic, charisma and who they look after
 function nwLine(w) {
   if (offTV(w)) return `Off TV · OVR <b>${overall(w)}</b> · Pop ${Math.round(w.pop)}`;
   const mg = w.contract ? managing(w.id).map(lastName) : [];
@@ -5529,7 +5529,7 @@ function segShort(s) {
 }
 
 // ---------- roster ----------
-// off-ring talent tab: managers, valets, authority figures, commentators and inactive people, grouped by job
+// personnel tab: managers, valets, authority figures, commentators and inactive people, grouped by job
 function offRingView(q) {
   const all = signed().filter(isNW), list = q ? all.filter(w => (w.name + ' ' + w.nick).toLowerCase().includes(q)) : all;
   const grp = (lbl, rs) => { const g = list.filter(w => rs.includes(roleOf(w))).sort((a, b) => b.pop - a.pop); return g.length ? `<div class="sec">${lbl} (${g.length})</div><div class="list">${g.map(w => wItem(w)).join('')}</div>` : ''; };
@@ -5541,9 +5541,9 @@ function offRingView(q) {
 function viewRoster() {
   const q = UI.rosterQ.toLowerCase();
   const off = UI.rosterTab === 'off', nNW = signed().filter(isNW).length;
-  const tabs = `<div class="seg-ctl" style="margin-bottom:10px"><button class="${off ? '' : 'on'}" data-act="rosterTab" data-id="ring" aria-pressed="${!off}">🤼 Wrestlers (${signed().length - nNW})</button><button class="${off ? 'on' : ''}" data-act="rosterTab" data-id="off" aria-pressed="${off}">💼 Off-ring talent (${nNW})</button></div>`;
+  const tabs = `<div class="seg-ctl" style="margin-bottom:10px"><button class="${off ? '' : 'on'}" data-act="rosterTab" data-id="ring" aria-pressed="${!off}">🤼 Wrestlers (${signed().length - nNW})</button><button class="${off ? 'on' : ''}" data-act="rosterTab" data-id="off" aria-pressed="${off}">💼 Personnel (${nNW})</button></div>`;
   const tools = `<div class="grid4" style="margin-bottom:12px"><button class="btn sm tool" data-act="createW"><b>＋</b>Build</button><button class="btn sm tool" data-act="rosterTools"><b>⇅</b>Import</button><button class="btn sm tool" data-act="community"><b>🌐</b>Community</button><button class="btn sm tool" data-act="rankings"><b>📈</b>Rankings</button></div>`;
-  if (off) return `${tools}${tabs}<div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search off-ring talent" aria-label="Search off-ring talent" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1"></div>${offRingView(q)}`;
+  if (off) return `${tools}${tabs}<div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search personnel" aria-label="Search personnel" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1"></div>${offRingView(q)}`;
   let list = signed().filter(inRing);
   const f = UI.rosterF;
   if (DIVISIONS.includes(f)) list = list.filter(w => (w.division || 'Open') === f);
