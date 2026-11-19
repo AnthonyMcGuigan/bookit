@@ -361,11 +361,27 @@ button.mrow:active { background: var(--card2); }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
 .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); }
 .sw.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
-.sl { display: grid; grid-template-columns: 92px 1fr 34px; align-items: center; gap: 4px 10px; margin-bottom: 10px; }
-.sl label { font-weight: 700; font-size: 14px; }
-.sl input[type=range] { width: 100%; accent-color: var(--accent); }
-.sl output { font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
-.sl small { grid-column: 2 / 4; font-size: 11px; color: var(--faint); margin-top: -6px; }
+/* stat sliders: name + value on top, then − [ slider ] +. Big touch area, tap anywhere on the bar, the sheet doesn't scroll mid-drag */
+.sl { margin-bottom: 12px; }
+.sl-top { display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; }
+.sl-top label { font-weight: 700; font-size: 14px; }
+.sl-top small { flex: 1; min-width: 0; font-size: 11.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-top output { margin-left: auto; font-weight: 800; font-size: 17px; text-align: right; font-variant-numeric: tabular-nums; }
+.sl-ctl { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; gap: 8px; }
+.sl-st { width: 40px; height: 40px; padding: 0; border-radius: 12px; border: 1px solid var(--line); background: var(--card2); color: var(--ink); font-size: 22px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; }
+.sl-st:active { background: var(--line); }
+.sl-trk { position: relative; --p: 50%; }
+.sl-trk input[type=range] { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 44px; margin: 0; background: transparent; touch-action: none; cursor: pointer; }
+.sl-trk input[type=range]::-webkit-slider-runnable-track { height: 10px; border-radius: 5px; background: linear-gradient(to right, var(--accent) 0 var(--p), var(--line) var(--p) 100%); }
+.sl-trk input[type=range]::-moz-range-track { height: 10px; border-radius: 5px; background: linear-gradient(to right, var(--accent) 0 var(--p), var(--line) var(--p) 100%); }
+.sl-trk input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; margin-top: -9px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 4px var(--accent), 0 2px 6px rgba(0,0,0,.45); }
+.sl-trk input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 4px var(--accent), 0 2px 6px rgba(0,0,0,.45); }
+.sl-trk input[type=range]:focus-visible { outline: none; }
+.sl-trk input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--accent), 0 0 0 7px var(--ink); }
+.sl-trk input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px var(--accent), 0 0 0 7px var(--ink); }
+.sl-trk::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 6px; height: 5px; pointer-events: none; opacity: .55; background: repeating-linear-gradient(to right, transparent 0 calc(10% - 1px), var(--faint) calc(10% - 1px) 10%); }
+.sl-bub { position: absolute; bottom: 36px; left: calc(14px + (100% - 28px) * var(--f, .5)); transform: translateX(-50%); min-width: 34px; padding: 2px 6px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-weight: 800; font-size: 14px; text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; opacity: 0; transition: opacity .12s; }
+.sl.drag .sl-bub { opacity: 1; }
 .chip { cursor: pointer; }
 pre.ex { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 11.5px; overflow-x: auto; margin: 0 0 6px; }
 img.av { display: block; }
@@ -7651,7 +7667,8 @@ function photoBatch(m) {
 function modalBuilder(m) {
   const d = m.draft;
   if (PX && PX.draft !== d) PX = null;
-  const sl = (k, l, hint) => `<div class="sl"><label for="ew-${k}">${l}</label><input type="range" id="ew-${k}" min="1" max="100" data-ew="${k}" value="${Math.round(d[k])}"><output id="ewv-${k}">${Math.round(d[k])}</output>${hint ? `<small>${hint}</small>` : ''}</div>`;
+  const sl = (k, l, hint) => { const v = clamp(Math.round(+d[k] || 1), 1, 100), f = (v - 1) / 99;
+    return `<div class="sl"><div class="sl-top"><label for="ew-${k}">${l}</label>${hint ? `<small>${hint}</small>` : ''}<output id="ewv-${k}" for="ew-${k}">${v}</output></div><div class="sl-ctl"><button type="button" class="sl-st" data-sl-step="-1" tabindex="-1" aria-label="Lower ${esc(l)}">−</button><div class="sl-trk" style="--p:${(f * 100).toFixed(2)}%;--f:${f.toFixed(4)}"><input type="range" id="ew-${k}" min="1" max="100" step="1" data-ew="${k}" value="${v}"><span class="sl-bub" aria-hidden="true">${v}</span></div><button type="button" class="sl-st" data-sl-step="1" tabindex="-1" aria-label="Raise ${esc(l)}">+</button></div></div>`; };
   const txt = (k, l, ph, max) => `<label class="f"><span>${l}</span><input type="text" data-ew="${k}" value="${esc(d[k] || '')}" placeholder="${esc(ph || '')}" maxlength="${max || 40}"></label>`;
   const pv = { ...d };
   const body = `
@@ -10327,6 +10344,68 @@ const WIZ_ACTIONS = {
 Object.assign(A, WIZ_ACTIONS, TUT_ACTIONS);
 
 // ---------- event wiring ----------
+// ---------- stat sliders (.sl): tap or drag anywhere on the bar, − / + buttons that repeat while held ----------
+// iOS Safari only moves a native slider when you grab the thumb, and a slightly diagonal drag scrolls the sheet instead.
+// So the bar takes the whole touch itself (touch-action: none) and sets the value from where the finger is.
+function slPaint(inp) {
+  const t = inp.closest('.sl-trk'); if (!t) return;
+  const mn = +inp.min || 0, mx = +inp.max || 100, f = mx > mn ? (+inp.value - mn) / (mx - mn) : 0;
+  t.style.setProperty('--p', (f * 100).toFixed(2) + '%'); t.style.setProperty('--f', f.toFixed(4));
+  const b = t.querySelector('.sl-bub'); if (b) b.textContent = inp.value;
+}
+function slSet(inp, v) {
+  const mn = +inp.min || 0, mx = +inp.max || 100, st = +inp.step || 1;
+  v = clamp(Math.round(v / st) * st, mn, mx);
+  if (v === +inp.value) return false;
+  const was = +inp.value; inp.value = v;
+  if (Math.floor(was / 10) !== Math.floor(v / 10)) navigator.vibrate?.(4);
+  inp.dispatchEvent(new Event('input', { bubbles: true }));
+  return true;
+}
+const SL = { d: null, rep: 0, hold: 0 };
+function slFromX(inp, x) {
+  const r = inp.getBoundingClientRect(), th = 28, mn = +inp.min || 0, mx = +inp.max || 100;
+  const f = clamp((x - r.left - th / 2) / Math.max(1, r.width - th), 0, 1);
+  return mn + f * (mx - mn);
+}
+function slEnd() {
+  const d = SL.d; if (!d) return; SL.d = null;
+  d.box.classList.remove('drag');
+  if (+d.inp.value !== d.v0) d.inp.dispatchEvent(new Event('change', { bubbles: true }));
+}
+function slStop() { clearTimeout(SL.hold); clearInterval(SL.rep); SL.hold = SL.rep = 0; if (SL.btn) { const inp = SL.btn; SL.btn = null; if (+inp.value !== SL.v0) inp.dispatchEvent(new Event('change', { bubbles: true })); } }
+document.addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
+  const inp = e.target.closest?.('.sl-trk input[type=range]');
+  if (inp && !inp.disabled) {
+    e.preventDefault();
+    try { inp.setPointerCapture(e.pointerId); } catch (x) {}
+    try { inp.focus({ preventScroll: true }); } catch (x) {}
+    SL.d = { inp, pid: e.pointerId, box: inp.closest('.sl'), v0: +inp.value };
+    SL.d.box.classList.add('drag');
+    slSet(inp, slFromX(inp, e.clientX));
+    return;
+  }
+  const b = e.target.closest?.('.sl-st');
+  if (b) {
+    const r = b.closest('.sl')?.querySelector('input[type=range]'); if (!r || r.disabled) return;
+    e.preventDefault(); slStop();
+    const dir = +b.dataset.slStep || 1; SL.btn = r; SL.v0 = +r.value;
+    slSet(r, +r.value + dir);
+    let n = 0;
+    SL.hold = setTimeout(() => { SL.rep = setInterval(() => { n++; if (!slSet(r, +r.value + dir * (n > 15 ? 2 : 1))) slStop(); }, 70); }, 380);
+  }
+}, { passive: false });
+document.addEventListener('pointermove', e => { const d = SL.d; if (d && e.pointerId === d.pid) { e.preventDefault(); slSet(d.inp, slFromX(d.inp, e.clientX)); } }, { passive: false });
+['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, e => { if (SL.d && e.pointerId === SL.d.pid) slEnd(); slStop(); }));
+addEventListener('blur', () => { slEnd(); slStop(); });
+// iOS: stop the native thumb drag (and the sheet scroll) so only the handler above moves the slider
+document.addEventListener('touchstart', e => { if (e.target.closest?.('.sl-trk input[type=range], .sl-st') && e.cancelable) e.preventDefault(); }, { passive: false });
+// keyboard / screen reader activation of the − / + buttons (taps are handled on pointerdown)
+document.addEventListener('click', e => {
+  const b = e.target.closest?.('.sl-st'); if (!b || e.detail) return;
+  const r = b.closest('.sl')?.querySelector('input[type=range]'); if (r && slSet(r, +r.value + (+b.dataset.slStep || 1))) r.dispatchEvent(new Event('change', { bubbles: true }));
+});
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   if (el.dataset.bg && e.target !== el) return; // clicks inside a modal don't close it
@@ -10379,7 +10458,7 @@ document.addEventListener('input', e => {
     const d = UI.modal.draft, k = el.dataset.ew;
     d[k] = el.type === 'range' ? +el.value : el.value;
     if (k === 'age') d._ageSet = true;
-    if (el.type === 'range') { const o = document.getElementById('ewv-' + k); if (o) o.textContent = el.value; const ov = document.getElementById('ew-ovr'); if (ov) ov.textContent = overall(d); }
+    if (el.type === 'range') { slPaint(el); const o = document.getElementById('ewv-' + k); if (o) o.textContent = el.value; const ov = document.getElementById('ew-ovr'); if (ov) ov.textContent = overall(d); }
     if (el.type === 'range' || k === 'age' || k === 'askSet') { const ak = document.getElementById('ew-ask'); if (ak && G) ak.innerHTML = iconize(askLine(d)); }
   }
   if (el.dataset.es != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
@@ -10471,7 +10550,7 @@ document.addEventListener('change', e => {
       el.dataset.was = now; save(); moRowSig(el, now, officeMoSig); const box = document.getElementById('bigOneBox'); if (box) box.innerHTML = bigOneHtml(); }
     else if (['promoName', 'showName', 'bigEvents', 'notebook', 'wNotes', 'sNotes'].includes(k)) { save(); render(); }
   }
-  if (el.dataset.ew != null && UI.modal?.draft) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
+  if (el.dataset.ew != null && UI.modal?.draft) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
   if (el.dataset.es != null) { if (el.type === 'checkbox') UI.modal.draft.autoEnd = el.checked; else if (el.dataset.es === 'titleId') UI.modal.draft.titleId = el.value || null; else UI.modal.draft[el.dataset.es] = el.value; }
   if (el.dataset.rr && el.tagName === 'SELECT') { A.rrMove(el.dataset.rr, el.value); return; }
   if (el.dataset.tt && el.tagName === 'SELECT' && UI.modal?.draft?.titles?.[+el.dataset.i]) { const t = UI.modal.draft.titles[+el.dataset.i]; if (el.dataset.tt === 'holder') t.holder = el.value; else { const n = el.value === 'trios' ? 3 : el.value === 'tag' ? 2 : 0; if (n) { if (t.n !== n) t.hn = ''; t.n = n; t.mid = true; t.div = ''; t.holder = ''; } else { if (t.n) { t.hn = ''; delete t.n; } t.mid = el.value === 'mid'; t.div = el.value === 'women' ? "Women's" : ''; } if (/ (World|Television|Women's|Tag Team|Trios) Championship$/.test(t.name)) t.name = t.name.replace(/(World|Television|Women's|Tag Team|Trios) Championship$/, n === 3 ? 'Trios Championship' : n === 2 ? 'Tag Team Championship' : t.div ? "Women's Championship" : t.mid ? 'Television Championship' : 'World Championship'); } render(); return; }
@@ -10635,7 +10714,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.25';
+const VERSION = '1.9.26';
 const WHATS_NEW = [
   ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
