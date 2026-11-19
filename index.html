@@ -7453,7 +7453,8 @@ function hasAlpha(c) { const d = c.getContext('2d').getImageData(0, 0, c.width, 
 // a real photo as a data URL: JPEG as before, but a photo with a see-through background keeps it
 // (WebP where the browser can make one, else PNG), stepped down until it fits a save
 function photoData(c, q, max) {
-  max = max || 60000; if (!hasAlpha(c)) return c.toDataURL('image/jpeg', q);
+  // an opaque photo is WebP where the browser can make one (Chrome, Android), about 40% smaller than JPEG at the same look
+  max = max || 60000; if (!hasAlpha(c)) { const w = c.toDataURL('image/webp', q); return w.startsWith('data:image/webp') ? w : c.toDataURL('image/jpeg', q); }
   let cur = c, url = '';
   for (let t = 0; t < 8; t++) {
     url = cur.toDataURL('image/webp', q); if (!url.startsWith('data:image/webp')) url = cur.toDataURL('image/png');
@@ -7511,9 +7512,10 @@ function makePack(ws, opt) {
   return p;
 }
 const packCode = p => 'RB1:' + btoa(unescape(encodeURIComponent(JSON.stringify(p))));
+const ROSTER_MAX = 2000; // the most wrestlers a shared roster or import can hold
 function cleanPack(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.wrestlers)) return null;
-  const ws = p.wrestlers.slice(0, 300).map(cleanW).filter(Boolean);
+  const ws = p.wrestlers.slice(0, ROSTER_MAX).map(cleanW).filter(Boolean);
   for (const w of ws) for (const k of ['name', 'nick', 'bio', 'finisher', 'signature', 'theme', 'hometown']) if (w[k]) w[k] = maskRude(w[k]);
   if (!ws.length) return null;
   const titles = Array.isArray(p.titles) ? p.titles.slice(0, 12).map(t => t && typeof t.name === 'string' ? { name: t.name.slice(0, 50), short: String(t.short || t.name).slice(0, 16), tag: !!t.tag, ...(t.tag && +t.size === 3 ? { size: 3 } : {}), prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 3).map(h => String(h).slice(0, 40)) : [] } : null).filter(Boolean) : null;
@@ -8164,9 +8166,9 @@ async function commInit() {
       const body = d.data() || {};
       for (const it of Array.isArray(body.items) ? body.items.slice(0, 25) : []) {
         if (!it || typeof it !== 'object') continue;
-        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 200000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {} }); continue; }
+        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 800000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {} }); continue; }
         if (!it.pack) continue;
-        items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack, ...(Number.isInteger(it.px) && it.px >= 1 && it.px <= PIX_SLOTS ? { px: it.px } : {}) });
+        items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack, ...(pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}) });
       }
       if (d.id === 'featured') COMM.support = cleanSupport(body.support);
       if (d.id === COMM.me) { COMM.mine = Array.isArray(body.items) ? body.items : []; COMM.body = body; }
@@ -8219,7 +8221,7 @@ const cleanItemId = v => String(v ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0,
 function knownFields(b) {
   b = b && typeof b === 'object' && !Array.isArray(b) ? b : {};
   const strs = (a, n, re) => (Array.isArray(a) ? a : []).filter(x => re.test(x)).slice(0, n);
-  const items = (Array.isArray(b.items) ? b.items : []).slice(0, 25).filter(it => it && typeof it === 'object' && JSON.stringify(it).length < 200000);
+  const items = (Array.isArray(b.items) ? b.items : []).slice(0, 25).filter(it => it && typeof it === 'object' && JSON.stringify(it).length < 800000);
   const out = { items, likes: strs(b.likes, 300, ITEM_KEY), used: strs(b.used, 300, ITEM_KEY), follows: strs(b.follows, 100, AUTHOR_ID) };
   const pr = b.profile; if (pr && typeof pr === 'object') out.profile = { name: cleanTxt(pr.name, 30), bio: cleanTxt(pr.bio, 160), color: safeColor(pr.color) || '', since: +pr.since || 0, ...cleanFlair(pr) };
   return out;
@@ -8233,9 +8235,12 @@ function cItem(key) { const [a, id, n] = String(key || '').split('|'); const i =
 const packWs = i => i._ws || (i._ws = cleanPack(pixPack(i))?.wrestlers || []);
 // ---- roster photos: a big roster's photos sit in their own gzipped row (pix1..pix10/<player id>), so they don't
 // fill the player's Community space, and Community only downloads them when someone opens that roster ----
-const PIX_SLOTS = 10, pixSlots = () => isSup() ? PIX_SLOTS : 3, pixMax = () => isSup() ? 790000 : 395000, PIX_INLINE = 40000;
+const PIX_SLOTS = 10, pixSlots = () => isSup() ? PIX_SLOTS : 5, pixMax = () => isSup() ? 790000 : 395000, PIX_INLINE = 40000;
 const PIX = new Map(), PIX_LOAD = new Map(), PIX_FAIL = new Set(), pixKey = i => i.author + '|' + i.id;
-const pixWaiting = i => !!i?.px && !PIX.has(pixKey(i));
+// a roster's photos sit in one slot (px: 3) or, for a huge roster, are spread over several (px: [2, 3, 4]); each slot row
+// says where its part starts
+const pxList = i => [...new Set((Array.isArray(i?.px) ? i.px : [i?.px]).filter(k => Number.isInteger(k) && k >= 1 && k <= PIX_SLOTS))].slice(0, PIX_SLOTS);
+const pixWaiting = i => pxList(i).length > 0 && !PIX.has(pixKey(i));
 function pixPack(i) {
   const a = i.px && PIX.get(pixKey(i)); if (!a || !Array.isArray(i.pack?.wrestlers)) return i.pack;
   return { ...i.pack, wrestlers: i.pack.wrestlers.map((w, k) => w && typeof w === 'object' && !w.photo && a[k] ? { ...w, photo: a[k] } : w) };
@@ -8247,8 +8252,12 @@ function pixLoad(i, retry) {
     let a = null;
     try {
       // photo rows are public, so read them with the public key alone: a stale sign-in can't block them
-      const d = sbOn() ? (r => Array.isArray(r) && r[0] ? r[0].data : null)(await sbFetch(`/rest/v1/docs?select=data&col=eq.pix${i.px}&id=eq.${sbQ(i.author)}`, {}, false)) : (await cdb.doc('pix' + i.px + '/' + i.author).get()).data();
-      if (d && d.item === i.id && typeof d.z === 'string' && d.z.length < 1000000) { const x = JSON.parse(await ungz(d.z)); if (Array.isArray(x)) a = x.slice(0, 300).map(pixGrow); }
+      const ks = pxList(i), rows = sbOn() ? (r => Array.isArray(r) ? r.map(x => x.data) : [])(await sbFetch(`/rest/v1/docs?select=data&col=in.(${ks.map(k => 'pix' + k).join(',')})&id=eq.${sbQ(i.author)}`, {}, false))
+        : await Promise.all(ks.map(k => cdb.doc('pix' + k + '/' + i.author).get().then(r => r.data())));
+      const parts = rows.filter(d => d && d.item === i.id && typeof d.z === 'string' && d.z.length < 1600000);
+      if (parts.length === ks.length) { a = [];
+        for (const d of parts) { const x = JSON.parse(await ungz(d.z)), at = Math.max(0, Math.floor(+d.start) || 0); if (!Array.isArray(x)) throw 0; x.forEach((v, k) => { if (at + k < ROSTER_MAX) a[at + k] = pixGrow(v); }); }
+        a = Array.from(a, v => v || ''); }
     } catch (e) {}
     PIX_LOAD.delete(k);
     if (!a) { PIX_FAIL.add(k); if (UI.modal?.type === 'cview') render(); return; } // shows a Try again button
@@ -8284,15 +8293,19 @@ function pixGrow(x) {
 async function pixSplit(pack, itemId) {
   const photos = pack.wrestlers.map(w => w.photo || '');
   if (sum(photos.map(x => x.length)) <= PIX_INLINE || typeof CompressionStream === 'undefined') return 0;
-  const used = new Set(COMM.mine.map(x => x?.px)), px = Array.from({ length: pixSlots() }, (_, k) => k + 1).find(k => !used.has(k));
-  if (!px) throw { code: 'pix_slots' };
-  const z = await gz(JSON.stringify(await Promise.all(photos.map(pixShrink))));
-  if (z.length > pixMax()) throw { code: 'pix_big' };
-  await cdb.doc('pix' + px + '/' + COMM.me).set({ item: itemId, z, n: photos.length, updated: Date.now() });
+  const shr = await Promise.all(photos.map(pixShrink));
+  // split into parts that each fit one slot (halving until they do)
+  const cut = async (a, b) => { const z = await gz(JSON.stringify(shr.slice(a, b))); if (z.length <= pixMax()) return [{ start: a, n: b - a, z }]; if (b - a < 2) throw { code: 'pix_big' }; const m = (a + b) >> 1; return [...await cut(a, m), ...await cut(m, b)]; };
+  const parts = await cut(0, shr.length);
+  const used = new Set(COMM.mine.flatMap(pxList)), free = Array.from({ length: pixSlots() }, (_, k) => k + 1).filter(k => !used.has(k));
+  if (free.length < parts.length) throw { code: 'pix_slots', need: parts.length, free: free.length };
+  const px = free.slice(0, parts.length), done = [];
+  try { for (let k = 0; k < parts.length; k++) { await cdb.doc('pix' + px[k] + '/' + COMM.me).set({ item: itemId, z: parts[k].z, n: parts[k].n, start: parts[k].start, updated: Date.now() }); done.push(px[k]); } }
+  catch (e) { await pixDrop(COMM.me, done); throw e; }
   for (const w of pack.wrestlers) delete w.photo;
-  return px;
+  return px.length === 1 ? px[0] : px;
 }
-const pixDrop = (author, px) => px ? cdb.doc('pix' + px + '/' + author).delete().catch(() => {}) : Promise.resolve();
+const pixDrop = (author, px) => Promise.all(pxList({ px }).map(k => cdb.doc('pix' + k + '/' + author).delete().catch(() => {})));
 const kindLbl = i => i.kind === 'world' ? `🌍 World · ${Array.isArray(i.sum?.cos) ? i.sum.cos.length : 0} companies · ${+i.sum?.n || 0} wrestlers` : i.kind === 'roster' ? 'Roster · ' + (+i.count || 0) + ' wrestlers' : (+i.count || 1) > 1 ? (+i.count) + ' wrestlers' : 'Wrestler';
 const REPORT_WHY = [['rude', 'Rude or hateful'], ['spam', 'Spam or junk'], ['copied', 'Copied work or real photos'], ['personal', 'Personal details'], ['other', 'Something else']];
 // things this player reported: hidden for them right away
@@ -8321,7 +8334,7 @@ async function inboxAdd(col, entry, max) {
 }
 const popScore = i => (i.nLikes || 0) * 3 + (i.nUses || 0) + (i.author === 'featured' ? 1000 : 0);
 // ---- shared save files: trimmed, gzipped and base64'd so a few fit in each player's space ----
-const saveShareMax = () => isSup() ? 10 : 3, spaceMax = () => isSup() ? 600000 : 240000; // the server allows 400 KB, or 800 KB for supporters
+const saveShareMax = () => isSup() ? 10 : 3, spaceMax = () => isSup() ? 790000 : 395000; // the server allows 400 KB, or 800 KB for supporters (setup.sql docs_rowsize)
 async function gz(str) {
   const cs = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
   const buf = new Uint8Array(await new Response(cs).arrayBuffer()); let bin = '';
@@ -8590,11 +8603,15 @@ async function commMe(patch) {
 }
 function markUsed(key) { if (!COMM.me || myList('used').includes(key) || COMM.canWrite === false) return; commMe({ used: [key, ...myList('used')].slice(0, 300) }); }
 // ---- wrestler library: Community wrestlers kept on this device, ready to add to any save ----
-const LIB_KEY = 'bookit.library', LIB_MAX = 300, LIB_SRC = /^[A-Za-z0-9_-]{1,64}\|[A-Za-z0-9_-]{1,64}\|\d{1,3}$/;
+const LIB_KEY = 'bookit.library', LIB_MAX = 2000, LIB_SRC = /^[A-Za-z0-9_-]{1,64}\|[A-Za-z0-9_-]{1,64}\|\d{1,4}$/;
 let LIB = null;
+// a library too big for localStorage lives in big storage (IndexedDB) with a stub here, and loads just after the page starts
+let LIB_WAIT = false, libSeq = 0;
 function lib() {
   if (LIB) return LIB;
-  let x = null; try { x = unpackJSON(ls.get(LIB_KEY) || '[]'); } catch (e) {}
+  const raw = ls.get(LIB_KEY);
+  if (isStub(raw)) { if (!LIB_WAIT) { LIB_WAIT = true; IDB.get('lib').then(r => { let x = null; try { x = r?.raw ? unpackJSON(r.raw) : null; } catch (e) {} LIB = libClean(x); }).catch(() => { LIB = []; }).finally(() => { LIB_WAIT = false; render(); }); } return []; }
+  let x = null; try { x = unpackJSON(raw || '[]'); } catch (e) {}
   return (LIB = libClean(x));
 }
 function libClean(x) {
@@ -8617,7 +8634,12 @@ async function libMerge(z) {
   if (!libSave()) { LIB = before; return 0; }
   return added;
 }
-const libSave = () => ls.set(LIB_KEY, packJSON(LIB));
+function libSave() {
+  if (!LIB) return false;
+  const raw = packJSON(LIB), ok = ls.set(LIB_KEY, raw), seq = ++libSeq;
+  if (IDB.ok) IDB.set('lib', { raw, at: Date.now() }).then(() => { if (!ok && seq === libSeq) ls.set(LIB_KEY, STUB + ',"lib":1,"n":' + LIB.length + '}'); askPersist(); }).catch(() => { if (!ok && seq === libSeq) toast('Your device is out of space for the library.'); });
+  return ok || IDB.ok;
+}
 const libNorm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const libFind = (src, w) => lib().find(e => (src && e.src === src) || (libNorm(e.w.name) === libNorm(w.name) && e.by === (src || '').split('|')[0]));
 const inLib = key => { const { i, base, n } = cItem(key); if (!i) return false; const ws = packWs(i); return n != null ? !!ws[n] && !!libFind(base + '|' + n, ws[n]) : ws.length > 0 && ws.every((w, k) => libFind(base + '|' + k, w)); };
@@ -9173,7 +9195,7 @@ const CREATOR_ACTIONS = {
       px = await pixSplit(pack, item.id); if (px) item.px = px;
       await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); UI.modal = { type: 'community', tab: 'mine' }; render(); toast('Shared with the community.');
     }
-    catch (e) { if (px) pixDrop(COMM.me, px); toast(e?.code === 'pix_slots' ? `You can share ${pixSlots()} rosters with photos${isSup() ? '' : ' (10 as a Supporter)'}. Delete an older one first.` : e?.code === 'pix_big' ? `Too many photos to share at once. ${isSup() ? 'Share the roster in two parts.' : 'Share fewer wrestlers, or become a Supporter for twice the room.'}` : e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
+    catch (e) { if (px) pixDrop(COMM.me, px); toast(e?.code === 'pix_slots' ? `This roster's photos need ${e.need} photo slot${e.need === 1 ? '' : 's'} and you have ${e.free} free (${pixSlots()} in all${isSup() ? '' : ', 10 as a Supporter'}). Delete an older roster with photos first.` : e?.code === 'pix_big' ? 'One of the photos is too big to share. Swap it for a smaller one.' : e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   shareWorld() { if (G) openModal({ type: 'community', tab: 'share', what: 'world' }); },
   async cPublishWorld() {
@@ -9225,7 +9247,7 @@ const CREATOR_ACTIONS = {
   cDel(key) {
     const [author, id] = key.split('|');
     confirmBox('Remove this creation?', 'It is removed for everyone. Copies already added stay.', 'Remove', async () => {
-      try { const cur = author === COMM.me ? COMM.mine : ((await cdb.doc('creations/' + author).get()).data()?.items || []), gone = cur.find(x => cleanItemId(x?.id) === id); await commWrite(author, cur.filter(x => cleanItemId(x?.id) !== id)); if (Number.isInteger(gone?.px) && !cur.some(x => x !== gone && x?.px === gone.px)) await pixDrop(author, gone.px); UI.modal = { type: 'community', tab: author === COMM.me ? 'mine' : 'browse' }; render(); toast('Removed.'); }
+      try { const cur = author === COMM.me ? COMM.mine : ((await cdb.doc('creations/' + author).get()).data()?.items || []), gone = cur.find(x => cleanItemId(x?.id) === id); await commWrite(author, cur.filter(x => cleanItemId(x?.id) !== id)); if (gone) { const keep = new Set(cur.filter(x => x !== gone).flatMap(pxList)); await pixDrop(author, pxList(gone).filter(k => !keep.has(k))); } UI.modal = { type: 'community', tab: author === COMM.me ? 'mine' : 'browse' }; render(); toast('Removed.'); }
       catch (e) { toast('Could not remove it.'); }
     }, true);
   }
@@ -10899,8 +10921,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.27';
+const VERSION = '1.9.28';
 const WHATS_NEW = [
+  ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
   ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
   ['🚫 No duplicates', 'You can\'t make two wrestlers, teams or factions with the same name, or the same team twice. A wrestler can be in one tag team (and any number of factions), and the game tells you when someone is already taken.'],
