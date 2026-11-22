@@ -836,6 +836,17 @@ body { --ic: var(--gold); }
 [style*="color:var(--"], [style*="color: var(--"] { --ic: currentColor; }
 .tabs svg.i, nav svg.i { width: 22px; height: 22px; }
 
+/* ----- month calendar ----- */
+.mg { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.mg-h { margin-bottom: 3px; } .mg-h span { text-align: center; font: 700 10px/1 var(--f-cond); letter-spacing: .08em; color: var(--faint); }
+.mg-c { min-height: 46px; border-radius: 8px; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 3px 2px; min-width: 0; }
+.mg-c.mg-o { visibility: hidden; }
+.mg-n { font-size: 11px; font-weight: 700; color: var(--faint); text-align: center; font-variant-numeric: tabular-nums; }
+.mg-s { padding: 0; } .mg-s .cal-t { flex: 1; padding: 3px 1px; }
+.mg-s .cal-n { font-size: 16px !important; }
+.mg-s .cal-t.big::before { display: none; }
+.mg-s .cal-now { font-size: 8.5px; } .mg-s .cal-c { font-size: 9px; }
+
 /* ----- Shows screen hierarchy: card first ----- */
 .cal { padding: 6px; }
 .cal-h { margin-bottom: 4px; }
@@ -2053,6 +2064,34 @@ function weekUnits() {
   return out.sort((a, b) => a.day - b.day || a.ord - b.ord || a.i - b.i);
 }
 const nextUp = () => weekUnits().find(u => !u.ran);
+// the week always runs in calendar order: every show that has aired comes before every show still to air.
+// A show or company that joins on a night that has already gone by this week starts next week instead.
+function holdBehind() {
+  const us = weekUnits(); let last = -1; us.forEach((u, i) => { if (u.ran) last = i; });
+  const held = us.slice(0, last + 1).filter(u => !u.ran);
+  for (const u of held) {
+    const sh = Array.isArray(u.c.shows) ? u.c.shows.find(s => s.id === u.sid) : null;
+    if (sh) sh.ran = G.week; else u.c.ranWk = G.week;
+    if (!Array.isArray(u.c.shows) || u.c.shows.every(s => (s.ran || 0) >= G.week)) u.c.ranWk = G.week;
+  }
+  return held;
+}
+// a show's night: moving it to a night that has already gone by this week waits until next week, so nothing airs out of order
+function setNight(x, k) {
+  k = clamp(+k || 0, 0, 6);
+  const was = x.day, act = x.id === G.showId, wasP = G.promo.day;
+  x.day = k; if (act) G.promo.day = k; delete x.nextDay;
+  if ((x.ran || 0) < G.week) {
+    const us = weekUnits(); let last = -1; us.forEach((u, i) => { if (u.ran) last = i; });
+    const me = us.findIndex(u => u.c === G && u.sid === x.id);
+    if (me >= 0 && me < last) { x.day = was; if (act) G.promo.day = wasP; x.nextDay = k; return 'later'; }
+  }
+  return 'now';
+}
+// nights moved mid-week take effect when the new week starts, for every company
+function applyNights() {
+  for (const c of [G, ...(G.cos || [])]) for (const s of Array.isArray(c.shows) ? c.shows : []) if (s.nextDay != null) { s.day = clamp(+s.nextDay || 0, 0, 6); if (s.id === c.showId) c.promo.day = s.day; delete s.nextDay; }
+}
 const unitLabel = u => multi() ? `${u.name} (${u.c.promo.name})` : u.name;
 function goUnit(u) {
   if (!u) return false;
@@ -2083,7 +2122,7 @@ function nextLabel(h) {
 }
 // the week moves on once every company has run; the next card for each company is picked up when it's opened
 function advanceWeek() {
-  G.week++; G.curWk = G.week;
+  G.week++; G.curWk = G.week; applyNights();
   // a title with a defense rule loses prestige every week it goes past its deadline
   for (const t of G.titles || []) { const ev = titleEvery(t); if (!ev || !t.holder.length) continue; const late = G.week - t.lastDefense - ev; if (late > 0) { t.prestige = clamp((t.prestige || 30) - 1.5, 5, 100); if (late === 1) news(`🏆 The ${t.name} is overdue for a defense. It loses prestige every week until it's defended.`, 'title'); } }
   guestTick(); shotTick();
@@ -5384,15 +5423,28 @@ function segWho(s) {
   return nmList(s.who || []) + ((s.target || []).length ? '<span class="vs">→</span>' + nmList(s.target) : '');
 }
 function viewBook() { return coBar() + viewBookCard(); }
+// ---------- the month calendar: every day of the month, Monday to Sunday ----------
+const DAY_MS = 864e5;
+function monthGrid(mk, wk, tile) {
+  const y = Math.floor(mk / 12), m = mk % 12, first = Date.UTC(y, m, 1), n = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const lead = (new Date(first).getUTCDay() + 6) % 7, night = +G.promo.day || 0;
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
+  for (let d = 1; d <= n; d++) {
+    const t = Date.UTC(y, m, d), off = Math.round((t - BASE) / DAY_MS), w = Math.floor(off / 7) + 1, day = ((off % 7) + 7) % 7;
+    cells.push(day === night && w >= 1 ? `<div class="mg-c mg-s">${tile(w)}</div>` : `<div class="mg-c" aria-hidden="true"><span class="mg-n">${d}</span></div>`);
+  }
+  while (cells.length % 7) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
+  return `<div class="mg mg-h" aria-hidden="true">${DAYS.map(x => `<span>${x.slice(0, 1)}</span>`).join('')}</div><div class="mg">${cells.join('')}</div>`;
+}
 function viewBookCard() {
   const wk = UI.selWeek, big = isBig(wk);
   const mk = UI.calMonth ?? monthKey(wk);
-  const weeks = weeksInMonth(mk);
   const att = attention().filter(a => a.lv === 'bad' || a.lv === 'warn');
   const last = lastRec();
   // ----- calendar -----
   const bkDue = backupDue();
-  const tiles = weeks.map(w => {
+  const tile = w => {
     const h = histFor(w);
     const cnt = w === G.week ? G.card.length : (G.future[w] || []).length;
     const cls = ['cal-t', w === wk ? 'sel' : '', w === G.week ? 'now' : '', w < G.week ? 'past' : '', isBig(w) ? 'big' : ''].join(' ');
@@ -5402,11 +5454,11 @@ function viewBookCard() {
     return `<button class="${cls}" data-act="selWeek" data-id="${w}" aria-label="${esc(lab)}" aria-pressed="${w === wk}" ${w < 1 || w > G.week + 16 ? 'disabled' : ''}>
       <span class="cal-n">${dateOf(w).getUTCDate()}</span>
       ${isBig(w) ? '<span class="cal-s">PPV</span>' : ''}${status}</button>`;
-  }).join('');
+  };
   const bkBar = bkDue ? `<div class="alert warn bk-bar"><span class="ic">💾</span><div class="sp small"><b>Back up your save.</b> ${bkDue >= G.week - 1 ? 'You haven\'t backed up yet.' : 'Last backup ' + bkDue + ' weeks ago.'} Saves live only in this browser.</div><button class="btn sm pri" data-act="export">Back up</button><button class="btn sm" data-act="bkLater">Later</button></div>` : '';
   const cal = `<div class="cal">
     <div class="cal-h"><button class="iconbtn sm" data-act="calNav" data-id="-1" aria-label="Previous month">‹</button><b>${monthLabel(mk)}</b>${wk !== G.week || UI.calMonth != null ? '<button class="btn sm" data-act="calToday">Tonight</button>' : ''}<button class="iconbtn sm" data-act="calNav" data-id="1" aria-label="Next month">›</button></div>
-    <div class="cal-g" style="grid-template-columns:repeat(${weeks.length},1fr)">${tiles}</div>
+    ${monthGrid(mk, wk, tile)}
   </div>`;
   const statusBar = `<div class="kpis"><span>👥 ${kfmt(G.fans)} fans</span><span>⭐ ${Math.round(G.promo.prestige)} prestige</span>${last ? `<span>Last: <b class="stars">${starStr(last.rating)}</b></span>` : ''}${att.length ? `<button class="kpi-alert" data-act="brief">⚠️ ${att.length} to check ›</button>` : '<button class="kpi-ok" data-act="brief">Briefing ›</button>'}</div>`;
 
@@ -7049,7 +7101,7 @@ const A = {
     if (SHOWS().length < 2) return;
     confirmBox('Redo the brand draft?', 'Everyone is shared out again, best first, so each show gets its share of stars. Tag teams stay together. Champions take their titles with them.', 'Draft', go);
   },
-  shDaySet(v) { const [id, k] = String(v).split('|'), x = showById(id); if (!x) return; x.day = clamp(+k || 0, 0, 6); if (x.id === G.showId) G.promo.day = x.day; commit(); },
+  shDaySet(v) { const [id, k] = String(v).split('|'), x = showById(id); if (!x) return; const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, k) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); },
   goBrands() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; render(); window.scrollTo(0, 0); },
   bdStart() { if (!splitOn()) return; openModal(bdNew()); },
   bdF(v) { UI.modal.f = v || ''; render(); },
@@ -8470,7 +8522,7 @@ function saveSummary(g) {
 // drops prototype keys, keeps ids to a safe alphabet, strips markup characters, coerces numbers,
 // and only allows known values in fixed-choice fields, so a crafted save can't inject markup or crash the game.
 const SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
-const NUM_KEYS = new Set(['creative', 'loanUntil', 'counter', 'turnWk', 'ranWk', 'curWk', 'raidWk', 'rating', 'wk', 'week', 'heat', 'hype', 'prestige', 'salary', 'weeks', 'attendance', 'net', 'fanDelta', 'defenses', 'since', 'lastDefense', 'start', 'xp', 'pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue', 'age', 'injury', 'momentum', 'money', 'fans', 'winner', 'streak', 'joined', 'lastBooked', 'day', 'tips', 'goalsWk', 'done', 'events', 'T', 'savedAt', 'bigEvery', 'calMonth', '_touched', 'backstage', 'champ', 'classic', 'first', 'four', 'sellout', 'stories', 'fans50', 'fans100', 'goals10', 'year', 'hof', 'best', 'created', 'd', 'def', 'ended', 'gate', 'l', 'm', 'merch', 'motn', 'n', 'payroll', 'ppv', 'production', 'showXp', 'sum', 'tv', 'tvWeeks', 'tw', 'v', 'w', 'amt', 'rWeeks', 'poachWk', 'last', 'tr', 'ti', 'from', 'to', 'retired', 'yr', 'until', 'mediaWk']);
+const NUM_KEYS = new Set(['creative', 'loanUntil', 'counter', 'turnWk', 'ranWk', 'curWk', 'raidWk', 'rating', 'wk', 'week', 'heat', 'hype', 'prestige', 'salary', 'weeks', 'attendance', 'net', 'fanDelta', 'defenses', 'since', 'lastDefense', 'start', 'xp', 'pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue', 'age', 'injury', 'momentum', 'money', 'fans', 'winner', 'streak', 'joined', 'lastBooked', 'day', 'tips', 'goalsWk', 'done', 'events', 'T', 'savedAt', 'bigEvery', 'calMonth', '_touched', 'backstage', 'champ', 'classic', 'first', 'four', 'sellout', 'stories', 'fans50', 'fans100', 'goals10', 'year', 'hof', 'best', 'created', 'd', 'def', 'ended', 'gate', 'l', 'm', 'merch', 'motn', 'n', 'payroll', 'ppv', 'production', 'showXp', 'sum', 'tv', 'tvWeeks', 'tw', 'v', 'w', 'amt', 'rWeeks', 'poachWk', 'last', 'tr', 'ti', 'from', 'to', 'retired', 'yr', 'until', 'mediaWk', 'nextDay']);
 // player-made participant types and gimmicks: plain fields only, safe names, sane limits
 const cmName = v => String(v || '').replace(/[\u0000-\u001f<>`"&]/g, '').trim().slice(0, 30);
 function fixCustomMatch(c) {
@@ -8540,7 +8592,7 @@ function scrubGame(raw) {
     if (!g.promo || typeof g.promo !== 'object' || Array.isArray(g.promo)) g.promo = { name: 'Promotion', show: 'Weekly Show', prestige: 40 };
     const fixFut = f => { const o = {}; if (f && typeof f === 'object') for (const k of Object.keys(f)) if (/^\d{1,6}$/.test(k)) o[k] = fixCard(f[k]); return o; };
     g.shows = (Array.isArray(g.shows) ? g.shows : []).filter(x => x && typeof x === 'object' && !Array.isArray(x) && x.id).slice(0, MAX_SHOWS)
-      .map(x => ({ id: x.id, name: String(x.name || 'Weekly Show').slice(0, 40), day: clamp(Math.floor(+x.day) || 0, 0, 6), ran: +x.ran || 0, auto: !!x.auto, ...(x.card ? { card: fixCard(x.card) } : {}), ...(x.future ? { future: fixFut(x.future) } : {}), ...(x.wk != null ? { wk: +x.wk || 0 } : {}) }));
+      .map(x => ({ id: x.id, name: String(x.name || 'Weekly Show').slice(0, 40), day: clamp(Math.floor(+x.day) || 0, 0, 6), ...(x.nextDay != null && Number.isFinite(+x.nextDay) ? { nextDay: clamp(Math.floor(+x.nextDay), 0, 6) } : {}), ran: +x.ran || 0, auto: !!x.auto, ...(x.card ? { card: fixCard(x.card) } : {}), ...(x.future ? { future: fixFut(x.future) } : {}), ...(x.wk != null ? { wk: +x.wk || 0 } : {}) }));
     if (!g.shows.length) delete g.shows;
     g.split = !!g.split; if (g.ord != null) g.ord = +g.ord || 0;
     g.ppvSig = (Array.isArray(g.ppvSig) ? g.ppvSig : []).filter(x => x && typeof x === 'object' && typeof x.name === 'string').slice(0, 24)
@@ -10268,6 +10320,9 @@ function wizFinish() {
   }
   if (manyShows()) { G.split = !!z.split; if (G.split) brandDraft(); news(`📺 ${G.promo.name} runs ${SHOWS().length} weekly shows: ${SHOWS().map(x => x.name).join(', ')}.`, 'office'); }
   if (host) joinWorld(host);
+  // joining partway through a week: any night that has already gone by starts next week
+  const held = host ? holdBehind() : [];
+  if (held.length) news(`📅 ${held.map(u => u.name).join(' and ')} start${held.length > 1 ? '' : 's'} next week. ${held.length > 1 ? 'Those nights have' : 'That night has'} already gone by this week.`, 'office');
   { const u = nextUp(); if (u && u.c === G && !u.on) goUnit(u); }
   if (!z.add) tutStart();
   UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : z.world && !z.take && z.source === 'world' ? 'office' : 'book'; if (UI.tab === 'office') UI.faTab = 'fa'; UI.selWeek = G.week; UI.calMonth = null;
@@ -10699,7 +10754,7 @@ document.addEventListener('change', e => {
     if (k === 'rosterSort') { UI.rosterSort = el.value; render(); }
     else if (k === 'pickSort') { UI.pickSort = el.value; try { localStorage.setItem('bookit-pickSort', el.value); } catch (e) { } render(); }
     else if (k === 'faSort') { UI.faSort = el.value; try { localStorage.setItem('bookit-faSort', el.value); } catch (e) { } render(); }
-    else if (k === 'shDay') { const x = showById(el.dataset.id); if (x) { x.day = clamp(+el.value || 0, 0, 6); if (x.id === G.showId) G.promo.day = x.day; commit(); } }
+    else if (k === 'shDay') { const x = showById(el.dataset.id); if (x) { const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, el.value) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); } }
     else if (k === 'shAuto') { const x = showById(el.dataset.id); if (x) { if (el.checked && weekUnits().filter(u => !u.auto).length <= 1) { el.checked = false; return toast('Keep at least one show to book yourself.'); } x.auto = el.checked; commit(el.checked ? `${x.id === G.showId ? G.promo.show : x.name} will book itself.` : ''); } }
     else if (k === 'split') { G.split = el.checked; if (G.split && !signed().some(w => showById(w.brand) && w.brand !== mainShowId())) brandDraft(); commit(G.split ? 'Brand split on. Each show has its own roster.' : 'Brand split off. Everyone works every show.'); }
     else if (k === 'tBrand') { const t = G.titles.find(x => x.id === el.dataset.id); if (t) { t.brand = showById(el.value) ? el.value : ''; commit(); } }
@@ -10923,7 +10978,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.31';
+const VERSION = '1.9.32';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
