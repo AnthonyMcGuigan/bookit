@@ -541,6 +541,11 @@ nav.tabs .dot { background: var(--rope-r); font-family: system-ui, sans-serif; l
 .show-score .tiny { color: rgba(255,255,255,.65) !important; font-family: var(--f-cond); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 /* match card */
 .mcard-h { font-size: 13px; color: var(--ink); background: var(--card2); }
+/* Opener on top / Main event on top switch above the match card */
+.flipbar { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.flipbar .seg-ctl { flex-wrap: nowrap; }
+.flipbar .seg-ctl button { min-height: 34px; padding: 6px 4px; font-size: 13px; }
+.flipnote { font-size: 12px; color: var(--muted); padding: 2px 12px 10px; text-align: center; }
 .mpos { font-size: 12px; }
 .mrow { padding: 10px 12px; position: relative; }
 .mrow.title-m { box-shadow: inset 3px 0 0 var(--gold); }
@@ -4857,7 +4862,7 @@ function storyIdea() {
 // =====================================================================
 //  UI
 // =====================================================================
-const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', sortRev: (() => { try { return JSON.parse(localStorage.getItem('bookit-sortRev') || '{}') || {}; } catch (e) { return {}; } })(), pickSort: (() => { try { return localStorage.getItem('bookit-pickSort') || 'fit'; } catch (e) { return 'fit'; } })(), faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts' };
+const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', sortRev: (() => { try { return JSON.parse(localStorage.getItem('bookit-sortRev') || '{}') || {}; } catch (e) { return {}; } })(), pickSort: (() => { try { return localStorage.getItem('bookit-pickSort') || 'fit'; } catch (e) { return 'fit'; } })(), faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts', topDown: (() => { try { return localStorage.getItem('bookit-topDown') === '1'; } catch (e) { return false; } })() };
 const root = document.getElementById('root'), modals = document.getElementById('modals');
 // ---------- scroll lock: nothing behind an open sheet, picker or overlay may scroll ----------
 const LOCK_SEL = '.modal-bg, .live, .crash';
@@ -5506,11 +5511,13 @@ function viewBookCard() {
   <div class="mcard">
     ${card.length > 1 && !UI.reorder ? '<p id="grip-help" class="sr-only">Drag to move it. Or use the up and down arrow keys. Press Enter for move buttons.</p>' : ''}
     ${card.length ? `<div class="mcard-h"><span>Match card</span><span class="sp"></span><button class="link" data-act="reorder">${UI.reorder ? 'Done' : 'Reorder'}</button></div>` : ''}
+    <div class="flipbar"><div class="seg-ctl" role="group" aria-label="Card order"><button class="${UI.topDown ? '' : 'on'}" data-act="topDown" data-id="0" aria-pressed="${!UI.topDown}">Opener on top</button><button class="${UI.topDown ? 'on' : ''}" data-act="topDown" data-id="1" aria-pressed="${UI.topDown}">Main event on top</button></div></div>
     ${(() => { const nb = !big && nextBig(), pm = nb ? ppvMatches(nb) : [];
-      return card.map((s, i) => { const pr = prs[i]; const b = pm.some(m => buildsFor(s, m) === 2); return matchRow(s, i, card.length, { proj: pr.rating, hints: hintsOf(pr.why), builds: b ? bigName(nb) : '', drag: card.length > 1 }); }).join(''); })()}
+      const rows = card.map((s, i) => { const pr = prs[i]; const b = pm.some(m => buildsFor(s, m) === 2); return matchRow(s, i, card.length, { proj: pr.rating, hints: hintsOf(pr.why), builds: b ? bigName(nb) : '', drag: card.length > 1 }); });
+      return (UI.topDown ? rows.reverse() : rows).join(''); })()}
     ${card.length >= maxSegs(wk) ? `<div class="ghost">Card is full: ${maxSegs(wk)} segments. Remove one to add another.</div>` : `<div class="addrow">
       <button data-act="addSeg" data-id="match"><b>＋</b> Match</button><button data-act="addSeg" data-id="promo"><b>＋</b> Promo</button><button data-act="addSeg" data-id="angle"><b>＋</b> Angle</button>
-    </div>`}
+    </div>${UI.topDown && card.length ? `<div class="flipnote">New segments go under ${card.length === 1 ? 'the main event' : 'the last one'}. The show still runs from the opener up.</div>` : ''}`}
     ${card.length && card.length < ideal[0] ? `<div class="ghost">Add ${ideal[0] - card.length} more for a full show</div>` : ''}
   </div>
   ${card.length
@@ -5530,7 +5537,8 @@ function tourneyCard() {
   }).join('');
 }
 // one row of the match card, used for booking and for results
-const cardPos = (i, n) => n > 1 && i === n - 1 ? 'Main Event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1);
+// with Main event first on, a lone segment is the main event you're building down from, and the one under it is the semi-main
+const cardPos = (i, n) => n > 1 && i === n - 1 ? 'Main Event' : UI.topDown && n === 1 ? 'Main Event' : UI.topDown && n > 2 && i === n - 2 ? 'Semi-main' : i === 0 ? 'Opener' : 'Segment ' + (i + 1);
 function matchRow(s, i, n, o) {
   const pos = cardPos(i, n);
   const rating = o.past ? o.rating : o.proj;
@@ -5569,8 +5577,10 @@ function matchRow(s, i, n, o) {
     ${body}
     <div class="mchips">${chips.map(c => c.startsWith('<span class="belt"') || c.startsWith('<span class="hint"') ? c : `<span>${c}</span>`).join('')}</div>
     ${o.past && o.text ? `<div class="mres">${esc(o.text)}</div>` : ''}
-    ${UI.reorder && !o.past ? `<div class="ctl"><button class="btn sm" data-act="segUp" data-id="${s.id}" ${i === 0 ? 'disabled' : ''}>↑ Up</button><button class="btn sm" data-act="segDown" data-id="${s.id}" ${i === n - 1 ? 'disabled' : ''}>↓ Down</button>${i < n - 1 ? `<button class="btn sm" data-act="segMain" data-id="${s.id}">★ Main event</button>` : ''}<span class="sp"></span><button class="btn sm bad" data-act="segDel" data-id="${s.id}">Remove</button></div>` : ''}
-  </${close}>${grip ? `<button class="mgrip" data-act="gripTap" data-id="${s.id}" aria-label="Move ${esc(segShort(s))}, ${pos}, ${i + 1} of ${n}" aria-describedby="grip-help"><svg viewBox="0 0 12 20" width="12" height="20" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.8"/><circle cx="9" cy="3" r="1.8"/><circle cx="3" cy="10" r="1.8"/><circle cx="9" cy="10" r="1.8"/><circle cx="3" cy="17" r="1.8"/><circle cx="9" cy="17" r="1.8"/></g></svg></button></div>` : ''}`;
+    ${UI.reorder && !o.past ? `<div class="ctl">${UI.topDown /* flipped card: up on screen is toward the main event */
+      ? `<button class="btn sm" data-act="segDown" data-id="${s.id}" ${i === n - 1 ? 'disabled' : ''}>↑ Up</button><button class="btn sm" data-act="segUp" data-id="${s.id}" ${i === 0 ? 'disabled' : ''}>↓ Down</button>`
+      : `<button class="btn sm" data-act="segUp" data-id="${s.id}" ${i === 0 ? 'disabled' : ''}>↑ Up</button><button class="btn sm" data-act="segDown" data-id="${s.id}" ${i === n - 1 ? 'disabled' : ''}>↓ Down</button>`}${i < n - 1 ? `<button class="btn sm" data-act="segMain" data-id="${s.id}">★ Main event</button>` : ''}<span class="sp"></span><button class="btn sm bad" data-act="segDel" data-id="${s.id}">Remove</button></div>` : ''}
+  </${close}>${grip ? `<button class="mgrip" data-act="gripTap" data-id="${s.id}" aria-label="Move ${esc(segShort(s))}, ${pos}, ${UI.topDown ? n - i : i + 1} of ${n}" aria-describedby="grip-help"><svg viewBox="0 0 12 20" width="12" height="20" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.8"/><circle cx="9" cy="3" r="1.8"/><circle cx="3" cy="10" r="1.8"/><circle cx="9" cy="10" r="1.8"/><circle cx="3" cy="17" r="1.8"/><circle cx="9" cy="17" r="1.8"/></g></svg></button></div>` : ''}`;
 }
 // plain words for a segment, for screen reader labels and toasts
 function segShort(s) {
@@ -6940,7 +6950,8 @@ const A = {
   mtDel(key) { const [kind, i] = String(key).split(':'), list = kind === 'gim' ? 'gims' : 'types', c = CM()[list][+i]; if (!c) return; const prev = UI.modal;
     confirmBox(`Delete ${c.name}?`, `Matches already booked with it switch to ${kind === 'gim' ? 'Standard rules' : 'Singles'}. Results already shown stay in your history.`, 'Delete', () => { G.customMatch[list].splice(+i, 1); renameMatchKind(kind, c.name, kind === 'gim' ? 'Standard' : 'Singles'); UI.modal = prev; commit(); }, true); },
   mtBack() { const m = UI.modal; UI.modal = m?.back || (m?.fromMenu ? { type: 'menu' } : null); render(); },
-  addSeg(kind) { if (!roomLeft(UI.selWeek, BK())) return toast(fullMsg(UI.selWeek)); openModal({ type: 'seg', isNew: true, draft: blankSeg(kind) }); },
+  addSeg(kind) { if (!roomLeft(UI.selWeek, BK())) return toast(fullMsg(UI.selWeek)); openModal({ type: 'seg', isNew: true, draft: blankSeg(kind), ...(UI.topDown ? { at: 0 } : {}) }); }, // main event first: each new one slots in under the last, so it goes first in run order
+  topDown(v) { UI.topDown = v === '1'; try { localStorage.setItem('bookit-topDown', UI.topDown ? '1' : '0'); } catch (e) {} render(); },
   editSeg(id) { const s = BK().find(x => x.id === id); if (s) openModal({ type: 'seg', draft: JSON.parse(JSON.stringify(s)) }); },
   segSave() {
     const d = UI.modal.draft;
@@ -10811,7 +10822,7 @@ document.addEventListener('focusout', () => setTimeout(() => { if (COMM.pending 
 // closes the open picker or sheet (Escape key, and the back swipe below). True when something closed.
 function closeTop() { if (UI.picker) A.pickDone(); else if (UI.modal?.type === 'editW') A.ewClose(); else if (UI.modal?.type === 'ewLeave') A.ewKeep(); else if (UI.modal) closeModal(); else return false; return true; }
 document.addEventListener('keydown', e => {
-  if (e.target.classList?.contains('mgrip') && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); moveSeg(e.target.dataset.id, e.key === 'ArrowUp' ? -1 : 1, true); return; }
+  if (e.target.classList?.contains('mgrip') && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); moveSeg(e.target.dataset.id, (e.key === 'ArrowUp' ? -1 : 1) * (UI.topDown ? -1 : 1), true); return; }
   if (e.key === 'Enter' && e.target.id === 'todo-in') A.addTodo();
   if (e.key === 'Escape') closeTop();
   if (e.key === 'Tab') { // keep Tab inside the open sheet
@@ -10876,7 +10887,7 @@ function dragEnd(e, cancel) {
   cancelAnimationFrame(d.raf); DRAG.s = null;
   d.slot.parentElement?.classList.remove('dragging');
   if (d.moved) DRAG.end = Date.now();
-  if (d.moved && !cancel && d.to !== d.from) { moveSeg(d.slot.dataset.seg, d.to); return; }
+  if (d.moved && !cancel && d.to !== d.from) { moveSeg(d.slot.dataset.seg, UI.topDown ? d.list.length - 1 - d.to : d.to); return; } // flipped card: screen order is reversed
   d.list.forEach(el => { el.style.transform = ''; el.classList.remove('lift'); });
 }
 document.addEventListener('pointerup', e => dragEnd(e, false));
@@ -10978,7 +10989,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.32';
+const VERSION = '1.9.33';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
