@@ -5972,7 +5972,7 @@ async function supCheck() {
 // back from Stripe: the webhook can take a few seconds, so look a few times
 async function supReturn() {
   if (!/[?&]supporter=done\b/.test(location.search)) return;
-  try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+  try { history.replaceState(history.state, '', location.pathname + location.hash); } catch (e) {}
   UI.modal = { type: 'support', waiting: true }; render();
   for (let i = 0; i < 10; i++) { await supCheck(); if (isSup()) { if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); } SFX.tap?.(); return toast('Thank you! You\'re a BookIt Supporter. ⭐'); } await new Promise(r => setTimeout(r, 3000)); }
   if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); }
@@ -8107,7 +8107,7 @@ const PLAYLOG = (() => {
 function sbFromLink() { if (sbOn() && /access_token=|error_description=/.test(location.hash)) sbLinkP = sbTakeLink(); }
 async function sbTakeLink() {
   const h = new URLSearchParams(location.hash.slice(1));
-  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) {}
   if (h.get('error_description')) return setTimeout(() => toast('That sign-in link didn\'t work. It may have expired, so ask for a new one.'), 600);
   const at = h.get('access_token'), rt = h.get('refresh_token');
   if (!at || !rt) return;
@@ -10753,10 +10753,12 @@ document.addEventListener('change', e => {
   if (el.dataset.act === 'todoCk') A.todoCk(el.dataset.id);
 });
 document.addEventListener('focusout', () => setTimeout(() => { if (COMM.pending && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) { COMM.pending = false; rerenderComm(); } }, 50));
+// closes the open picker or sheet (Escape key, and the back swipe below). True when something closed.
+function closeTop() { if (UI.picker) A.pickDone(); else if (UI.modal?.type === 'editW') A.ewClose(); else if (UI.modal?.type === 'ewLeave') A.ewKeep(); else if (UI.modal) closeModal(); else return false; return true; }
 document.addEventListener('keydown', e => {
   if (e.target.classList?.contains('mgrip') && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); moveSeg(e.target.dataset.id, e.key === 'ArrowUp' ? -1 : 1, true); return; }
   if (e.key === 'Enter' && e.target.id === 'todo-in') A.addTodo();
-  if (e.key === 'Escape') { if (UI.picker) A.pickDone(); else if (UI.modal?.type === 'editW') A.ewClose(); else if (UI.modal?.type === 'ewLeave') A.ewKeep(); else if (UI.modal) closeModal(); }
+  if (e.key === 'Escape') closeTop();
   if (e.key === 'Tab') { // keep Tab inside the open sheet
     const ls = layers(), top = ls[ls.length - 1]; if (!top) return;
     const f = [...top.querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.getClientRects().length);
@@ -10921,7 +10923,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.30';
+const VERSION = '1.9.31';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
@@ -11019,6 +11021,23 @@ try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   setTimeout(done, 4000); document.body.appendChild(sp);
 } } catch (e) {}
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+// Back swipe (iPhone edge swipe, Android back button, browser Back). The game is one page, so a back
+// used to leave it for whatever page came before, which on an iPhone home-screen app is often a dead
+// Stripe or sign-in page: a black screen, then "Safari couldn't open the page". Now one spare history
+// entry sits on top of the game: back closes the open sheet first, and on the iPhone app it never
+// leaves the game. Elsewhere, back with nothing open still leaves as usual.
+(() => { try {
+  const iosApp = (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+  const guard = () => { try { if (!history.state?.bkTop) history.pushState({ ...(history.state || {}), bkTop: 1 }, '', location.href); } catch (e) {} };
+  try { history.replaceState({ ...(history.state || {}), bkTop: 0 }, '', location.href); } catch (e) {}
+  guard();
+  addEventListener('popstate', e => {
+    if (e.state?.bkTop) return; // moved forward onto the spare entry
+    let shut = false; try { shut = closeTop(); } catch (x) {}
+    if (shut || iosApp) return guard();
+    history.back(); // nothing open: leave the game the normal way
+  });
+} catch (e) {} })();
 if (navigator.webdriver || /[?&]debug\b/.test(location.search)) window.__rb = { get G() { return G; }, A, UI, render, COMM, gz, ungz, shareableSave, saveSummary, sanitizeGame, ev: src => eval(src) };
 })();
 </script>
