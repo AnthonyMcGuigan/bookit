@@ -1409,7 +1409,7 @@ function migrate(g) {
   // keep older saves working as features get added
   g.todos ||= []; g.notebook ??= ''; g.future ||= {}; g.card ||= []; g.news ||= []; g.history ||= []; g.settings ||= {};
   g.settings.injuries ??= true; g.settings.finances ??= true; g.settings.contracts ??= true; g.settings.organic ??= true; g.settings.bigEvery = [3, 4, 5, 6, 8].includes(+g.settings.bigEvery) ? +g.settings.bigEvery : 4;
-  g.settings.bigMode = g.settings.bigMode === 'month' ? 'month' : 'weeks'; g.bigMonths = cleanMonths(g.bigMonths);
+  g.settings.bigMode = g.settings.bigMode === 'month' ? 'month' : 'weeks'; if (g.settings.bigDay != null && +g.settings.bigDay !== 5) g.settings.bigDay = 6; g.bigMonths = cleanMonths(g.bigMonths);
   // an empty list is allowed: a company whose booker named no big events gets plain numbered ones
   if (!Array.isArray(g.bigEvents)) g.bigEvents = BIG_EVENTS.slice();
   g.customMatch = fixCustomMatch(g.customMatch); if (!Array.isArray(g.ppvSig)) g.ppvSig = [];
@@ -1559,10 +1559,15 @@ const ppvList = v => String(v || '').split('\n').map(x => x.trim().replace(/[<>`
 const cleanMonths = a => Array.from({ length: 12 }, (_, i) => ppvList(Array.isArray(a) ? a[i] : '')[0] || '');
 const monthNames = a => [...new Set((a || []).filter(Boolean))];
 const byMonth = () => G.settings.bigMode === 'month' && (G.bigMonths || []).some(Boolean);
-const bigWk = wk => byMonth() ? monthKey(wk + 1) !== monthKey(wk) && !!G.bigMonths[monthKey(wk) % 12] : wk % G.settings.bigEvery === 0;
+// big events air on the weekend (Sunday, or Saturday if the booker picks it), in place of that week's main show
+const bigDay = () => +G?.settings?.bigDay === 5 ? 5 : 6;
+const mkAt = (wk, day) => { const d = new Date(BASE + ((wk - 1) * 7 + day) * 864e5); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
+// by month: the last weekend of a named month
+const bigWkOf = (months, wk) => { if (G.settings.bigMode === 'month' && (months || []).some(Boolean)) { const k = mkAt(wk, bigDay()); return mkAt(wk + 1, bigDay()) !== k && !!months[k % 12]; } return wk % G.settings.bigEvery === 0; };
+const bigWk = wk => bigWkOf(G.bigMonths, wk);
 // a big event takes the main show's slot that week; the company's other shows stay weekly TV
 const isBig = wk => bigWk(wk) && onMain();
-const bigName = wk => { if (byMonth()) return G.bigMonths[monthKey(wk) % 12] || 'Big Event'; const i = Math.max(0, Math.floor(wk / G.settings.bigEvery) - 1), l = G.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`; };
+const bigName = wk => { if (byMonth()) return G.bigMonths[mkAt(wk, bigDay()) % 12] || 'Big Event'; const i = Math.max(0, Math.floor(wk / G.settings.bigEvery) - 1), l = G.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`; };
 const showName = wk => isBig(wk) ? bigName(wk) : G.promo.show;
 // ---------- big event signature matches ----------
 // Each big event can have a signature match (a participant type, a gimmick, or both), like a yearly Rumble.
@@ -2062,7 +2067,8 @@ function weekUnits() {
     const sh = Array.isArray(c.shows) && c.shows.length ? c.shows : [{ id: null, name: c.promo.show, day: c.promo.day, ran: c.ranWk || 0 }];
     sh.forEach((s, i) => {
       const act = !s.id || s.id === c.showId;
-      out.push({ c, co: c.coId, sid: s.id, i, ord: c.ord, auto: !!s.auto, day: +(act ? c.promo.day : s.day) || 0, name: (act ? c.promo.show : s.name) || 'Weekly Show',
+      const big = i === 0 && bigWkOf(c === G ? G.bigMonths : c.bigMonths, G.week);
+      out.push({ c, co: c.coId, sid: s.id, i, ord: c.ord, auto: !!s.auto, day: big ? bigDay() : +(act ? c.promo.day : s.day) || 0, name: (act ? c.promo.show : s.name) || 'Weekly Show',
         ran: (s.ran || 0) >= G.week || (c.ranWk || 0) >= G.week, on: c === G && act });
     });
   }
@@ -2994,7 +3000,9 @@ HINTS.push([/lacks star power/, 'Needs bigger stars'], [/wasted early/, 'Star bo
 // the calendar: week 1 is the first Monday of the promotion's first year
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const BASE = Date.UTC(2027, 0, 4);
-const dateOf = wk => new Date(BASE + ((wk - 1) * 7 + (G?.promo?.day || 0)) * 864e5);
+// the night a week's show airs: a big event moves the main show's slot to the weekend
+const showDay = wk => G && isBig(wk) ? bigDay() : (G?.promo?.day || 0);
+const dateOf = wk => new Date(BASE + ((wk - 1) * 7 + showDay(wk)) * 864e5);
 const monthKey = wk => { const d = dateOf(wk); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
 const monthLabel = k => `${MONTHS[k % 12]} · Year ${Math.floor(k / 12) - 2026}`;
 const dayLabel = wk => { const d = dateOf(wk); return `${MONTHS[d.getUTCMonth()].slice(0, 3)} ${d.getUTCDate()}`; };
@@ -3074,7 +3082,7 @@ function runShow(opts = {}) {
   // head to head: your own companies on the same night fight for the same viewers
   const h2h = [];
   for (const c of G.cos || []) {
-    const hc = (c.history || []).filter(x => x.wk === G.week && (x.day ?? c.promo.day ?? 0) === (G.promo.day ?? 0)).at(-1); if (!hc) continue;
+    const hc = (c.history || []).filter(x => x.wk === G.week && (x.day ?? c.promo.day ?? 0) === showDay(G.week)).at(-1); if (!hc) continue;
     const cs = hc.big ? hc.name : hc.sname || c.promo.show;
     const d = overall - hc.rating; if (Math.abs(d) < 3) { h2h.push(`📺 ${G.promo.show} and ${cs} went head to head and split the audience.`); continue; }
     const swing = Math.round((d > 0 ? c.fans : G.fans) * 0.0015 * Math.min(4, Math.abs(d) / 4) * DF().rival);
@@ -3085,7 +3093,7 @@ function runShow(opts = {}) {
 
   if (!big) buildHype(results, G.week);
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
-  const rec = { wk: G.week, name: showName(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: G.promo.day ?? 0, sname: G.promo.show, ...(special ? { special: true } : {}) };
+  const rec = { wk: G.week, name: showName(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true } : {}) };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
   PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
@@ -5437,7 +5445,8 @@ function monthGrid(mk, wk, tile) {
   for (let i = 0; i < lead; i++) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
   for (let d = 1; d <= n; d++) {
     const t = Date.UTC(y, m, d), off = Math.round((t - BASE) / DAY_MS), w = Math.floor(off / 7) + 1, day = ((off % 7) + 7) % 7;
-    cells.push(day === night && w >= 1 ? `<div class="mg-c mg-s">${tile(w)}</div>` : `<div class="mg-c" aria-hidden="true"><span class="mg-n">${d}</span></div>`);
+    const on = w >= 1 && (isBig(w) ? day === bigDay() : day === night);
+    cells.push(on ? `<div class="mg-c mg-s">${tile(w)}</div>` : `<div class="mg-c" aria-hidden="true"><span class="mg-n">${d}</span></div>`);
   }
   while (cells.length % 7) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
   return `<div class="mg mg-h" aria-hidden="true">${DAYS.map(x => `<span>${x.slice(0, 1)}</span>`).join('')}</div><div class="mg">${cells.join('')}</div>`;
@@ -5779,7 +5788,8 @@ function setupView() {
     <button class="btn block" style="margin-bottom:10px" data-act="shows">📺 ${manyShows() ? `Weekly shows and brands (${SHOWS().length})` : 'Add another weekly show or brand'}</button>
     <div class="sec">Big events</div>
     <label class="f"><span>Schedule</span><select data-in="bigEvery"><option value="month" ${G.settings.bigMode === 'month' ? 'selected' : ''}>By month</option>${[3, 4, 5, 6, 8].map(n => `<option value="${n}" ${G.settings.bigMode !== 'month' && G.settings.bigEvery === n ? 'selected' : ''}>Every ${n} weeks</option>`).join('')}</select></label>
-    ${G.settings.bigMode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(G.bigMonths || [], 'data-in="bigMonth"', G.promo.day, dateOf(G.week).getUTCFullYear(), officeMoSig)}<div class="tiny muted" style="margin:-4px 0 12px">Each one takes the place of your last show of that month, every year. Leave a month empty for TV only. A signature match is one fans expect every year at that event, like a Rumble in January.${byMonth() ? '' : ` With every month empty you get a big event every ${G.settings.bigEvery} weeks.`}</div>`
+    <label class="f"><span>Big event night</span><div class="seg-ctl">${[[5, 'Saturday'], [6, 'Sunday']].map(([d, l]) => `<button class="${bigDay() === d ? 'on' : ''}" data-act="bigDaySet" data-id="${d}" aria-pressed="${bigDay() === d}">${l}</button>`).join('')}</div></label>
+    ${G.settings.bigMode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(G.bigMonths || [], 'data-in="bigMonth"', bigDay(), dateOf(G.week).getUTCFullYear(), officeMoSig)}<div class="tiny muted" style="margin:-4px 0 12px">Each one airs on the last weekend of that month, every year, in place of that week's main show. Leave a month empty for TV only. A signature match is one fans expect every year at that event, like a Rumble in January.${byMonth() ? '' : ` With every month empty you get a big event every ${G.settings.bigEvery} weeks.`}</div>`
     : `<label class="f"><span>Big event names (one per line)</span><textarea data-in="bigEvents" style="min-height:110px" placeholder="Leave empty for Big Event 1, 2, 3...">${esc(G.bigEvents.join('\n'))}</textarea></label>`}
     <div id="bigOneBox">${bigOneHtml()}</div>
     <div class="sec">Matches</div>
@@ -7112,6 +7122,12 @@ const A = {
     if (SHOWS().length < 2) return;
     confirmBox('Redo the brand draft?', 'Everyone is shared out again, best first, so each show gets its share of stars. Tag teams stay together. Champions take their titles with them.', 'Draft', go);
   },
+  bigDaySet(v) { const d = +v === 5 ? 5 : 6; if (d === bigDay()) return;
+    // a big event this week that already aired, or one whose new night has already gone by, waits a week
+    const was = G.settings.bigDay; G.settings.bigDay = d;
+    const us = weekUnits(); let last = -1; us.forEach((u, i) => { if (u.ran) last = i; });
+    if (us.some((u, i) => !u.ran && i < last)) { G.settings.bigDay = was; return toast('Change it after this week\'s shows. That night has already gone by.'); }
+    commit(`Big events now air on ${DAYS[d]}s.`); },
   shDaySet(v) { const [id, k] = String(v).split('|'), x = showById(id); if (!x) return; const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, k) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); },
   goBrands() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; render(); window.scrollTo(0, 0); },
   bdStart() { if (!splitOn()) return; openModal(bdNew()); },
@@ -10396,8 +10412,8 @@ function viewWizard() {
       <div class="sec">Big events</div>
       ${z.add ? `<p class="small muted" style="margin-top:0">${z.mode === 'month' ? 'This world runs its big events by month.' : `This world has a big event every ${G.settings.bigEvery} weeks.`}</p>` : `<label class="f"><span>Schedule</span><div class="seg-ctl"><button class="${z.mode === 'month' ? 'on' : ''}" data-act="wzSet" data-f="mode" data-id="month">By month</button><button class="${z.mode !== 'month' ? 'on' : ''}" data-act="wzSet" data-f="mode" data-id="weeks">Every few weeks</button></div></label>
       ${z.mode === 'month' ? '' : `<label class="f"><span>A big event every</span><div class="seg-ctl">${[3, 4, 5, 6, 8].map(n => `<button class="${+z.every === n ? 'on' : ''}" data-act="wzSet" data-f="every" data-id="${n}">${n} wk</button>`).join('')}</div></label>`}`}
-      ${z.mode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(z.months || [], 'data-wz="month"', z.day, 2027, wzMoSig(z))}
-      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">Each big event takes the place of your last show of that month, every year. Leave a month empty for TV only. Under each name you can pick a signature match fans expect every year, like a Rumble. You can change all of it later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`
+      ${z.mode === 'month' ? `<label class="f"><span>Name a big event for each month</span></label>${monthRows(z.months || [], 'data-wz="month"', bigDay(), 2027, wzMoSig(z))}
+      <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">Each big event airs on the last weekend of that month, every year, in place of that week's main show. Leave a month empty for TV only. Under each name you can pick a signature match fans expect every year, like a Rumble. You can change all of it later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`
       : `<label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
       <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order, then start again from the top. Leave it empty for Big Event 1, 2, 3. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`}
       <div id="wzSig">${wzSigHtml(z)}</div>
@@ -10989,7 +11005,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.33';
+const VERSION = '1.9.34';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
