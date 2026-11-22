@@ -842,27 +842,10 @@ body { --ic: var(--gold); }
 .mg-c { min-height: 46px; border-radius: 8px; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 3px 2px; min-width: 0; }
 .mg-c.mg-o { visibility: hidden; }
 .mg-n { font-size: 11px; font-weight: 700; color: var(--faint); text-align: center; font-variant-numeric: tabular-nums; }
-.mg-today .mg-n { color: var(--accent-t); }
 .mg-s { padding: 0; } .mg-s .cal-t { flex: 1; padding: 3px 1px; }
 .mg-s .cal-n { font-size: 16px !important; }
+.mg-s .cal-t.big::before { display: none; }
 .mg-s .cal-now { font-size: 8.5px; } .mg-s .cal-c { font-size: 9px; }
-.mg-has { background: var(--bg2); }
-.mg-chip { display: block; width: 100%; border: 0; border-left: 3px solid var(--co); border-radius: 4px; background: color-mix(in srgb, var(--co) 16%, var(--card)); color: var(--ink); font: 700 9.5px/1.25 var(--f-cond); letter-spacing: .02em; text-transform: uppercase; padding: 2px 3px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mg-chip i { font-style: normal; float: right; color: var(--gold); margin-left: 2px; }
-.mg-chip.big { background: linear-gradient(170deg, color-mix(in srgb, var(--gold) 35%, var(--card)), var(--card)); border-left-color: var(--gold); }
-.mg-chip.me { outline: 1px solid color-mix(in srgb, var(--co) 60%, transparent); }
-.mg-chip.sel { background: var(--accent); color: var(--accent-ink); } .mg-chip.sel i { color: var(--accent-ink); }
-.mg-chip:disabled { opacity: .4; }
-.mg-dots { display: flex; justify-content: center; gap: 3px; flex-wrap: wrap; } .mg-dots i { width: 7px; height: 7px; border-radius: 50%; }
-.mg-dots i.big { box-shadow: 0 0 0 2px var(--gold); }
-.mg-c.mg-has { min-height: 34px; }
-.mg-ag { margin-top: 8px; max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-.mg-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--bg2); border-radius: 8px; padding: 6px 8px; color: var(--ink); text-align: left; font-size: 13px; }
-.mg-row .co-dot { width: 10px; height: 10px; min-width: 0; padding: 0; flex: none; border-radius: 50%; }
-.mg-row .sp { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mg-row.big { border-color: color-mix(in srgb, var(--gold) 65%, var(--line)); }
-.mg-row.sel { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.mg-ad { display: flex; flex-direction: column; align-items: center; width: 30px; font: 700 9px/1.1 var(--f-cond); color: var(--faint); text-transform: uppercase; } .mg-ad b { font: 400 17px/1 var(--f-display); color: var(--ink); }
 
 /* ----- Shows screen hierarchy: card first ----- */
 .cal { padding: 6px; }
@@ -5442,57 +5425,21 @@ function segWho(s) {
 function viewBook() { return coBar() + viewBookCard(); }
 // ---------- the month calendar: every day of the month, Monday to Sunday ----------
 const DAY_MS = 864e5;
-const dateAt = (wk, day) => new Date(BASE + ((wk - 1) * 7 + (day || 0)) * DAY_MS);
-const mkDay = (wk, day) => { const d = dateAt(wk, day); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
-// every weekly show in the world, with the night it airs
-function allShows() {
-  const out = [];
-  for (const c of [G, ...(G.cos || [])]) {
-    const sh = Array.isArray(c.shows) && c.shows.length ? c.shows : [{ id: null, name: c.promo.show, day: c.promo.day }];
-    sh.forEach((s, i) => { const act = !s.id || s.id === c.showId; out.push({ c, sid: s.id, main: i === 0, day: +(act ? c.promo.day : s.day) || 0, name: (act ? c.promo.show : s.name) || 'Weekly Show', on: c === G && act }); });
-  }
-  ensureOrd(); return out.sort((a, b) => a.day - b.day || a.c.ord - b.c.ord);
-}
-// is week wk a big event for company c's main show (works for companies you're not booking right now)
-function bigFor(c, wk) {
-  const main = Array.isArray(c.shows) && c.shows[0] ? c.shows[0] : null, day = main && main.id !== c.showId ? +main.day || 0 : +c.promo.day || 0;
-  const months = c.bigMonths || [];
-  if (G.settings.bigMode === 'month' && months.some(Boolean)) return mkDay(wk + 1, day) !== mkDay(wk, day) && months[mkDay(wk, day) % 12] ? months[mkDay(wk, day) % 12] : '';
-  if (wk % G.settings.bigEvery) return '';
-  const i = Math.max(0, Math.floor(wk / G.settings.bigEvery) - 1), l = c.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`;
-}
-const recOf = (c, sid, wk) => (c.history || []).find(h => h.wk === wk && (!sid || (h.bid || c.shows?.[0]?.id) === sid));
 function monthGrid(mk, wk, tile) {
   const y = Math.floor(mk / 12), m = mk % 12, first = Date.UTC(y, m, 1), n = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-  const lead = (new Date(first).getUTCDay() + 6) % 7, today = dateOf(G.week).getTime();
-  const style = UI.calStyle || 'a', shows = style === 'a' ? null : allShows();
+  const lead = (new Date(first).getUTCDay() + 6) % 7, night = +G.promo.day || 0;
   const cells = [];
   for (let i = 0; i < lead; i++) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
-  const agenda = [];
   for (let d = 1; d <= n; d++) {
     const t = Date.UTC(y, m, d), off = Math.round((t - BASE) / DAY_MS), w = Math.floor(off / 7) + 1, day = ((off % 7) + 7) % 7;
-    const mine = day === (+G.promo.day || 0) && w >= 1;
-    if (style === 'a') { cells.push(mine ? `<div class="mg-c mg-s">${tile(w)}</div>` : `<div class="mg-c ${t === today ? 'mg-today' : ''}"><span class="mg-n">${d}</span></div>`); continue; }
-    const on = w >= 1 ? shows.filter(x => x.day === day) : [];
-    const chips = on.map(x => {
-      const big = x.main && bigFor(x.c, w), h = x.on ? histFor(w) : recOf(x.c, x.sid, w), col = safeColor(x.c.promo.color) || '#888';
-      const st = h ? h.rating : w === G.week ? weekUnits().find(u => u.c === x.c && u.sid === x.sid)?.ran ? '✓' : '' : '';
-      const nm = big || x.name, sel = x.on && w === wk;
-      agenda.push({ d, w, x, nm, big, h, st, col, sel });
-      return `<button class="mg-chip ${x.on ? 'me' : ''} ${big ? 'big' : ''} ${sel ? 'sel' : ''}" style="--co:${esc(col)}" data-act="calGo" data-id="${esc((x.c.coId || '') + '|' + (x.sid || '') + '|' + w)}" aria-label="${esc(nm + (multi() ? ', ' + x.c.promo.name : '') + ', ' + MONTHS[m] + ' ' + d + (h ? ', rated ' + h.rating : ''))}" ${w > G.week + 16 ? 'disabled' : ''}>${esc(abbr(nm))}${st !== '' ? `<i>${st}</i>` : ''}</button>`;
-    }).join('');
-    cells.push(`<div class="mg-c ${on.length ? 'mg-has' : ''} ${t === today ? 'mg-today' : ''}"><span class="mg-n">${d}</span>${style === 'b' ? chips : on.length ? `<span class="mg-dots">${on.map(x => `<i style="background:${esc(safeColor(x.c.promo.color) || '#888')}" class="${x.main && bigFor(x.c, w) ? 'big' : ''}"></i>`).join('')}</span>` : ''}</div>`);
+    cells.push(day === night && w >= 1 ? `<div class="mg-c mg-s">${tile(w)}</div>` : `<div class="mg-c" aria-hidden="true"><span class="mg-n">${d}</span></div>`);
   }
   while (cells.length % 7) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
-  const head = `<div class="mg mg-h">${DAYS.map(x => `<span>${x.slice(0, 1)}</span>`).join('')}</div>`;
-  let list = '';
-  if (style === 'c') list = `<div class="mg-ag">${agenda.map(a => `<button class="mg-row ${a.sel ? 'sel' : ''} ${a.big ? 'big' : ''}" data-act="calGo" data-id="${esc((a.x.c.coId || '') + '|' + (a.x.sid || '') + '|' + a.w)}" ${a.w > G.week + 16 ? 'disabled' : ''}><span class="mg-ad"><b>${a.d}</b>${DAYS[a.x.day].slice(0, 3)}</span><span class="co-dot" style="background:${esc(a.col)}"></span><span class="sp"><b>${esc(a.nm)}</b>${multi() ? ` <small class="muted">${esc(a.x.c.promo.name)}</small>` : ''}</span>${a.h ? `<span class="cal-r">${a.h.rating}</span>` : a.w === G.week ? '<span class="cal-now">TONIGHT</span>' : a.w < G.week ? '<span class="muted">✓</span>' : ''}</button>`).join('')}</div>`;
-  return `${head}<div class="mg mg-st-${style}">${cells.join('')}</div>${list}`;
+  return `<div class="mg mg-h" aria-hidden="true">${DAYS.map(x => `<span>${x.slice(0, 1)}</span>`).join('')}</div><div class="mg">${cells.join('')}</div>`;
 }
 function viewBookCard() {
   const wk = UI.selWeek, big = isBig(wk);
   const mk = UI.calMonth ?? monthKey(wk);
-  const weeks = weeksInMonth(mk);
   const att = attention().filter(a => a.lv === 'bad' || a.lv === 'warn');
   const last = lastRec();
   // ----- calendar -----
@@ -7043,12 +6990,6 @@ const A = {
     UI.selWeek = G.week; commit('Face-off added to this week\'s show.');
   },
   selWeek(wk) { UI.selWeek = +wk; UI.reorder = false; render(); },
-  // a show on the month calendar: open that week of that show (switching show or company if needed)
-  calGo(v) { const [co, sid, w] = String(v).split('|'), wk = +w; if (!wk || wk < 1 || wk > G.week + 16) return;
-    const mk = UI.calMonth;
-    if (co && co !== G.coId) { if (!switchCo(co)) return; }
-    if (sid && sid !== G.showId) setShow(sid);
-    UI.selWeek = wk; UI.calMonth = mk; UI.reorder = false; save(); render(); },
   calNav(d) { const k = (UI.calMonth ?? monthKey(UI.selWeek)) + +d; const ws = weeksInMonth(k); if (!ws.length || ws[ws.length - 1] < 1 || ws[0] > G.week + 16) return; UI.calMonth = k; render(); },
   calToday() { UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; render(); },
   reorder() { UI.reorder = !UI.reorder; render(); },
@@ -11037,7 +10978,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.31';
+const VERSION = '1.9.32';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
