@@ -1559,15 +1559,23 @@ const ppvList = v => String(v || '').split('\n').map(x => x.trim().replace(/[<>`
 const cleanMonths = a => Array.from({ length: 12 }, (_, i) => ppvList(Array.isArray(a) ? a[i] : '')[0] || '');
 const monthNames = a => [...new Set((a || []).filter(Boolean))];
 const byMonth = () => G.settings.bigMode === 'month' && (G.bigMonths || []).some(Boolean);
-// big events air on the weekend (Sunday, or Saturday if the booker picks it), in place of that week's main show
-const bigDay = () => +G?.settings?.bigDay === 5 ? 5 : 6;
+// ---------- big events: their own night on the weekend ----------
+// A big event is its own show (id EV) on Saturday or Sunday. The weekly shows still air that week as the go-home shows.
+// The company books it like another show: its card and booked-ahead weeks live in G.bigShow while another show is open.
+const EV = 'ev';
+const onEv = () => !!G && G.showId === EV;
+const evOf = c => (c.bigShow && typeof c.bigShow === 'object' ? c.bigShow : (c.bigShow = { ran: 0 }));
+const bigDayOf = st => +st?.bigDay === 5 ? 5 : 6;
+const bigDay = () => bigDayOf(G?.settings);
 const mkAt = (wk, day) => { const d = new Date(BASE + ((wk - 1) * 7 + day) * 864e5); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
-// by month: the last weekend of a named month
-const bigWkOf = (months, wk) => { if (G.settings.bigMode === 'month' && (months || []).some(Boolean)) { const k = mkAt(wk, bigDay()); return mkAt(wk + 1, bigDay()) !== k && !!months[k % 12]; } return wk % G.settings.bigEvery === 0; };
+const monthMode = (months, st) => st?.bigMode === 'month' && (months || []).some(Boolean);
+// by month: the last weekend of a named month; otherwise every few weeks
+const bigWkOf = (months, wk, st = G.settings) => { const bd = bigDayOf(st); if (monthMode(months, st)) { const k = mkAt(wk, bd); return mkAt(wk + 1, bd) !== k && !!months[k % 12]; } return wk % (st?.bigEvery || 4) === 0; };
 const bigWk = wk => bigWkOf(G.bigMonths, wk);
-// a big event takes the main show's slot that week; the company's other shows stay weekly TV
-const isBig = wk => bigWk(wk) && onMain();
-const bigName = wk => { if (byMonth()) return G.bigMonths[mkAt(wk, bigDay()) % 12] || 'Big Event'; const i = Math.max(0, Math.floor(wk / G.settings.bigEvery) - 1), l = G.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`; };
+const bigNameOf = (c, wk) => { const st = G.settings; if (monthMode(c.bigMonths, st)) return c.bigMonths[mkAt(wk, bigDay()) % 12] || 'Big Event'; const i = Math.max(0, Math.floor(wk / st.bigEvery) - 1), l = c.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`; };
+// the card being booked is a big event only on the event's own show
+const isBig = wk => onEv() && bigWk(wk);
+const bigName = wk => bigNameOf(G, wk);
 const showName = wk => isBig(wk) ? bigName(wk) : G.promo.show;
 // ---------- big event signature matches ----------
 // Each big event can have a signature match (a participant type, a gimmick, or both), like a yearly Rumble.
@@ -1692,8 +1700,8 @@ function recentlyFaced(ids) {
 
 // ---------- road to the PPV: announce the big card early, build hype on weekly shows ----------
 const ppvCard = wk => {
-  if (onMain()) return wk === G.week ? G.card : (G.future[wk] || []);
-  const m = SHOWS()[0], f = (m.future || {})[wk];
+  if (onEv()) return wk === G.week ? G.card : (G.future[wk] || []);
+  const m = evOf(G), f = (m.future || {})[wk];
   return f || (wk === (m.wk ?? G.week) ? m.card || [] : []);
 };
 const ppvMatches = wk => ppvCard(wk).filter(x => x.kind === 'match' && x.sides.filter(sd => sd.length).length >= 2);
@@ -2010,16 +2018,32 @@ function switchCo(id) {
 const MAX_SHOWS = 4;
 function migrateShows(g) {
   if (!Array.isArray(g.shows) || !g.shows.length) g.shows = [{ id: uid(), name: g.promo?.show || 'Weekly Show', day: +g.promo?.day || 0, ran: g.ranWk || 0 }];
-  if (!g.shows.some(s => s.id === g.showId)) g.showId = g.shows[0].id;
-  const cur = g.shows.find(s => s.id === g.showId); delete cur.card; delete cur.future; delete cur.wk;
+  if (g.showId !== EV && !g.shows.some(s => s.id === g.showId)) g.showId = g.shows[0].id;
+  const cur = g.showId === EV ? evOf(g) : g.shows.find(s => s.id === g.showId); delete cur.card; delete cur.future; delete cur.wk;
+  evOf(g);
   g.split = !!g.split;
+  if (!g.evV) { g.evV = 1; try { splitOldBig(g); } catch (e) { /* keep the save loading */ } }
   return g;
+}
+// saves from before big events had their own night: a card booked for a big week sat on the main show; move it to the event
+function splitOldBig(g) {
+  const st = g.settings || G?.settings; if (!st || !Number.isFinite(+g.week)) return;
+  const ev = evOf(g), main = g.shows[0], act = g.showId === main.id;
+  const fut = act ? (g.future ||= {}) : (main.future ||= {}); ev.future ||= {};
+  for (const k of Object.keys(fut)) { const w = +k; if (w > g.week && bigWkOf(g.bigMonths, w, st) && fut[k]?.length) { ev.future[k] = fut[k]; delete fut[k]; } }
+  if (bigWkOf(g.bigMonths, g.week, st)) {
+    if ((main.ran || 0) >= g.week || (g.ranWk || 0) >= g.week) ev.ran = g.week; // this week's big event already ran in the old way
+    else if (act && g.card?.length) { ev.card = g.card; ev.wk = g.week; g.card = []; }
+    else if (!act && (main.wk ?? g.week) === g.week && main.card?.length) { ev.card = main.card; ev.wk = g.week; main.card = []; }
+  }
 }
 const SHOWS = () => { if (G && !Array.isArray(G.shows)) migrateShows(G); return G?.shows || []; };
 const manyShows = () => SHOWS().length > 1;
-const curShow = () => SHOWS().find(s => s.id === G.showId) || SHOWS()[0];
+const curShow = () => onEv() ? evOf(G) : SHOWS().find(s => s.id === G.showId) || SHOWS()[0];
 const mainShowId = () => SHOWS()[0]?.id;
-const onMain = () => !G || !manyShows() || G.showId === mainShowId();
+const onMain = () => !G || (!onEv() && (!manyShows() || G.showId === mainShowId()));
+// the weekly show a new signing or a big event's crew belongs to
+const brandHere = () => onEv() ? mainShowId() : G.showId;
 const showById = id => id ? SHOWS().find(s => s.id === id) : null;
 const splitOn = () => manyShows() && !!G.split;
 const brandOf = w => showById(w?.brand) ? w.brand : mainShowId();
@@ -2035,18 +2059,20 @@ const bookable = wk => signed().filter(w => !w.away && !offTV(w) && onBrand(w, w
 const titleOn = (t, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || !showById(t.brand) || t.brand === G.showId;
 const brandName = id => showById(id)?.id === G.showId ? G.promo.show : showById(id)?.name || '';
 // history records carry the show they belong to (old records belong to the main show)
-const ownRec = h => !manyShows() || (showById(h.bid) ? h.bid : mainShowId()) === G.showId;
+// history records carry the show they belong to; big events (old ones too) belong to the event
+const recSid = h => h.bid === EV || h.big ? EV : showById(h.bid) ? h.bid : mainShowId();
+const ownRec = h => recSid(h) === G.showId;
 const histFor = wk => G.history.find(h => h.wk === wk && ownRec(h));
 const lastRec = () => { for (let i = G.history.length - 1; i >= 0; i--) if (ownRec(G.history[i])) return G.history[i]; return undefined; };
 function setShow(id) {
-  const tgt = showById(id); if (!tgt) return false;
+  const tgt = id === EV ? evOf(G) : showById(id); if (!tgt) return false;
   if (id === G.showId) return true;
   const cur = curShow();
   Object.assign(cur, { card: G.card, future: G.future, wk: G.week, name: G.promo.show, day: G.promo.day ?? 0 });
   G.card = Array.isArray(tgt.card) ? tgt.card : []; G.future = tgt.future && typeof tgt.future === 'object' ? tgt.future : {};
   const wk = tgt.wk ?? G.week;
   delete tgt.card; delete tgt.future; delete tgt.wk;
-  G.showId = id; G.promo.show = tgt.name || 'Weekly Show'; G.promo.day = +tgt.day || 0;
+  G.showId = id; G.promo.show = id === EV ? bigName(bigWk(G.week) ? G.week : nextBig()) : tgt.name || 'Weekly Show'; G.promo.day = id === EV ? bigDay() : +tgt.day || 0;
   if (wk < G.week) {
     G.card = (G.future[G.week] || []).filter(s => { removeGone(s); return segPeople(s).length; });
     for (const k of Object.keys(G.future)) if (+k <= G.week) delete G.future[k];
@@ -2067,24 +2093,28 @@ function weekUnits() {
     const sh = Array.isArray(c.shows) && c.shows.length ? c.shows : [{ id: null, name: c.promo.show, day: c.promo.day, ran: c.ranWk || 0 }];
     sh.forEach((s, i) => {
       const act = !s.id || s.id === c.showId;
-      const big = i === 0 && bigWkOf(c === G ? G.bigMonths : c.bigMonths, G.week);
-      out.push({ c, co: c.coId, sid: s.id, i, ord: c.ord, auto: !!s.auto, day: big ? bigDay() : +(act ? c.promo.day : s.day) || 0, name: (act ? c.promo.show : s.name) || 'Weekly Show',
+      out.push({ c, co: c.coId, sid: s.id, i, ord: c.ord, auto: !!s.auto, day: +(act ? c.promo.day : s.day) || 0, name: (act ? c.promo.show : s.name) || 'Weekly Show',
         ran: (s.ran || 0) >= G.week || (c.ranWk || 0) >= G.week, on: c === G && act });
     });
+    // a big event week: the event airs on the weekend after that week's go-home shows
+    if (bigWkOf(c.bigMonths, G.week)) out.push({ c, co: c.coId, sid: EV, i: 99, ord: c.ord, auto: !!sh[0]?.auto, day: bigDay(), name: bigNameOf(c, G.week), big: true,
+      ran: (evOf(c).ran || 0) >= G.week || (c.ranWk || 0) >= G.week, on: c === G && c.showId === EV });
   }
   return out.sort((a, b) => a.day - b.day || a.ord - b.ord || a.i - b.i);
 }
 const nextUp = () => weekUnits().find(u => !u.ran);
+// is every show this company has this week done, apart from the one being run now
+const coDoneBut = (c = G) => weekUnits().filter(u => u.c === c).every(u => u.on || u.ran);
 // the week always runs in calendar order: every show that has aired comes before every show still to air.
 // A show or company that joins on a night that has already gone by this week starts next week instead.
 function holdBehind() {
   const us = weekUnits(); let last = -1; us.forEach((u, i) => { if (u.ran) last = i; });
   const held = us.slice(0, last + 1).filter(u => !u.ran);
   for (const u of held) {
-    const sh = Array.isArray(u.c.shows) ? u.c.shows.find(s => s.id === u.sid) : null;
+    const sh = u.sid === EV ? evOf(u.c) : Array.isArray(u.c.shows) ? u.c.shows.find(s => s.id === u.sid) : null;
     if (sh) sh.ran = G.week; else u.c.ranWk = G.week;
-    if (!Array.isArray(u.c.shows) || u.c.shows.every(s => (s.ran || 0) >= G.week)) u.c.ranWk = G.week;
   }
+  for (const c of new Set(held.map(u => u.c))) if (weekUnits().filter(u => u.c === c).every(u => u.ran || (u.sid === EV ? (evOf(c).ran || 0) >= G.week : (c.shows || []).find(s => s.id === u.sid)?.ran >= G.week))) c.ranWk = G.week;
   return held;
 }
 // a show's night: moving it to a night that has already gone by this week waits until next week, so nothing airs out of order
@@ -2151,7 +2181,7 @@ function catchUpCo() {
 }
 // a company that can't put a card together still loses its week
 function skipShow() {
-  const coLast = SHOWS().every(s => s.id === G.showId || (s.ran || 0) >= G.week), world = coLast && !waitingCos().length;
+  const coLast = coDoneBut(), world = coLast && !waitingCos().length;
   curShow().ran = G.week;
   if (coLast) { G.ranWk = G.week; endOfWeek(G.history.filter(h => h.wk === G.week).flatMap(h => h.results.map(r => r.seg)), world); }
   news(`📺 No ${G.promo.show} this week.`, 'show');
@@ -3001,7 +3031,7 @@ HINTS.push([/lacks star power/, 'Needs bigger stars'], [/wasted early/, 'Star bo
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const BASE = Date.UTC(2027, 0, 4);
 // the night a week's show airs: a big event moves the main show's slot to the weekend
-const showDay = wk => G && isBig(wk) ? bigDay() : (G?.promo?.day || 0);
+const showDay = wk => onEv() ? bigDay() : (G?.promo?.day || 0);
 const dateOf = wk => new Date(BASE + ((wk - 1) * 7 + showDay(wk)) * 864e5);
 const monthKey = wk => { const d = dateOf(wk); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
 const monthLabel = k => `${MONTHS[k % 12]} · Year ${Math.floor(k / 12) - 2026}`;
@@ -3026,7 +3056,7 @@ function runShow(opts = {}) {
   if (!card.length) { toast('Add at least one segment first.'); return; }
   UNDO = { created: G.created, wk: G.week, bid: G.showId, co: G.coId, json: JSON.stringify(G), car: JSON.stringify(CAR()) };
   // the company's week ends with its last show; the world's week ends with the last show anywhere
-  const coLast = SHOWS().every(s => s.id === G.showId || (s.ran || 0) >= G.week);
+  const coLast = coDoneBut();
   const world = coLast && (!multi() || !waitingCos().length);
   const nS = SHOWS().length || 1, crew = splitOn() ? signed().filter(w => inBrand(w, G.showId)) : signed(), share = splitOn() ? 1 : 1 / nS, wsh = w => splitOn() && w.both ? 1 / nS : 1;
   G.rankPrev = rankSnap();
@@ -3059,10 +3089,11 @@ function runShow(opts = {}) {
   const special = G.special === G.week && !big; // a bonus TV special: bigger building, bigger TV money, more new fans
   const attendance = Math.round(Math.min((big ? 22000 : bShow ? 4000 : 9000) * (special ? 1.5 : 1), G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype * (special ? 1.4 : 1) * (perk('crowd') ? 1.1 : 1)) * rnd(.93, 1.07));
   const fin = {
-    gate: attendance * (big ? 50 : 25), tv: Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
-    merch: Math.round(sum(crew.map(w => w.pop * w.pop * wsh(w))) / 9 * share * (perk('merch') ? 1.15 : 1)),
-    payroll: CON() ? -Math.round(sum(crew.map(w => w.contract.salary * wsh(w))) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15)),
-    staff: MON() ? -Math.round(staffCost() / nS) : 0,
+    gate: attendance * (big ? 50 : 25), tv: big ? 0 : Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
+    // a big event is an extra night: pay, merch and TV money come in with the weekly shows
+    merch: big ? 0 : Math.round(sum(crew.map(w => w.pop * w.pop * wsh(w))) / 9 * share * (perk('merch') ? 1.15 : 1)),
+    payroll: CON() && !big ? -Math.round(sum(crew.map(w => w.contract.salary * wsh(w))) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15)),
+    staff: MON() && !big ? -Math.round(staffCost() / nS) : 0,
     guests: -guestFees(card)
   };
   if (!fin.guests) delete fin.guests;
@@ -3531,7 +3562,7 @@ function goRival(w, name) {
 function fromRival(w, r, contract) {
   outOfRival(w, r);
   w.contract = contract; w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(Math.max(w.morale || 60, 60), 0, 100);
-  if (splitOn()) w.brand = G.showId;
+  if (splitOn()) w.brand = brandHere();
   G.wrestlers.push(w);
 }
 // invaders go home when their 8 weeks are up
@@ -5285,7 +5316,7 @@ function render() {
   if (UI.pendingGet && !UI.modal && !UI.wiz) { const k = UI.pendingGet; UI.pendingGet = null; if (cItem(k).i) { setTimeout(() => A.cGet(k)); } }
   if (G.promo.color !== render.brand) { render.brand = G.promo.color; applyBrand(G.promo.color); }
   if (!UI.selWeek || UI.selWeek < 1) UI.selWeek = G.week;
-  if (splitOn()) for (const w of signed()) if (!showById(w.brand)) w.brand = G.showId;
+  if (splitOn()) for (const w of signed()) if (!showById(w.brand)) w.brand = brandHere();
   for (const w of G.wrestlers) if (w.both && !w.contract) delete w.both;
   const att = attention().filter(a => a.lv === 'bad' || a.lv === 'warn').length;
   const big = isBig(G.week);
@@ -5440,34 +5471,42 @@ function viewBook() { return coBar() + viewBookCard(); }
 const DAY_MS = 864e5;
 function monthGrid(mk, wk, tile) {
   const y = Math.floor(mk / 12), m = mk % 12, first = Date.UTC(y, m, 1), n = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-  const lead = (new Date(first).getUTCDay() + 6) % 7, night = +G.promo.day || 0;
+  const lead = (new Date(first).getUTCDay() + 6) % 7;
+  // the weekly show's night (on the big event, the main show's), and the big event on its weekends
+  const wid = onEv() ? mainShowId() : G.showId, night = onEv() ? +(SHOWS()[0]?.day) || 0 : +G.promo.day || 0;
   const cells = [];
   for (let i = 0; i < lead; i++) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
   for (let d = 1; d <= n; d++) {
     const t = Date.UTC(y, m, d), off = Math.round((t - BASE) / DAY_MS), w = Math.floor(off / 7) + 1, day = ((off % 7) + 7) % 7;
-    const on = w >= 1 && (isBig(w) ? day === bigDay() : day === night);
-    cells.push(on ? `<div class="mg-c mg-s">${tile(w)}</div>` : `<div class="mg-c" aria-hidden="true"><span class="mg-n">${d}</span></div>`);
+    const ts = w < 1 ? [] : [day === night ? tile(w, wid) : '', day === bigDay() && bigWk(w) ? tile(w, EV) : ''].filter(Boolean);
+    cells.push(ts.length ? `<div class="mg-c mg-s">${ts.join('')}</div>` : `<div class="mg-c" aria-hidden="true"><span class="mg-n">${d}</span></div>`);
   }
   while (cells.length % 7) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
   return `<div class="mg mg-h" aria-hidden="true">${DAYS.map(x => `<span>${x.slice(0, 1)}</span>`).join('')}</div><div class="mg">${cells.join('')}</div>`;
 }
 function viewBookCard() {
+  // the big event only has a card on its own weeks
+  if (onEv() && !bigWk(UI.selWeek)) { UI.selWeek = nextBig(); UI.calMonth = null; }
   const wk = UI.selWeek, big = isBig(wk);
   const mk = UI.calMonth ?? monthKey(wk);
   const att = attention().filter(a => a.lv === 'bad' || a.lv === 'warn');
   const last = lastRec();
   // ----- calendar -----
   const bkDue = backupDue();
-  const tile = w => {
-    const h = histFor(w);
-    const cnt = w === G.week ? G.card.length : (G.future[w] || []).length;
-    const cls = ['cal-t', w === wk ? 'sel' : '', w === G.week ? 'now' : '', w < G.week ? 'past' : '', isBig(w) ? 'big' : ''].join(' ');
-    const status = w < 1 ? '' : h ? `<span class="cal-r">${h.rating}</span>` : w === G.week ? '<span class="cal-now">TONIGHT</span>' : w < G.week ? '<span class="muted">—</span>' : cnt ? `<span class="cal-c">${cnt} booked</span>` : '<span class="cal-e">open</span>';
-    const say = w < 1 ? '' : h ? 'rated ' + h.rating : w === G.week ? 'tonight' : w < G.week ? 'no show' : cnt ? cnt + ' booked' : 'open';
-    const lab = `${dateOf(w).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}${isBig(w) ? ', big event' : ''}${say ? ', ' + say : ''}`;
-    return `<button class="${cls}" data-act="selWeek" data-id="${w}" aria-label="${esc(lab)}" aria-pressed="${w === wk}" ${w < 1 || w > G.week + 16 ? 'disabled' : ''}>
-      <span class="cal-n">${dateOf(w).getUTCDate()}</span>
-      ${isBig(w) ? '<span class="cal-s">PPV</span>' : ''}${status}</button>`;
+  // a show's tile on the calendar: the show being booked, or another of this company's shows (the big event, or the weekly show)
+  const tile = (w, sid = G.showId) => {
+    const me = sid === G.showId, ev = sid === EV, x = me ? null : ev ? evOf(G) : showById(sid);
+    const h = G.history.find(r => r.wk === w && recSid(r) === sid);
+    const cnt = me ? (w === G.week ? G.card : G.future[w] || []).length : ((x.future || {})[w] || (w === (x.wk ?? G.week) ? x.card || [] : [])).length;
+    const ran = me ? showRanNow() : (x.ran || 0) >= G.week;
+    const cls = ['cal-t', me && w === wk ? 'sel' : '', me && w === G.week ? 'now' : '', w < G.week ? 'past' : '', ev ? 'big' : ''].join(' ');
+    const status = w < 1 ? '' : h ? `<span class="cal-r">${h.rating}</span>` : w === G.week && me ? '<span class="cal-now">TONIGHT</span>' : w < G.week || (w === G.week && ran) ? '<span class="muted">—</span>' : cnt ? `<span class="cal-c">${cnt} booked</span>` : '<span class="cal-e">open</span>';
+    const say = w < 1 ? '' : h ? 'rated ' + h.rating : w === G.week && me ? 'tonight' : w < G.week ? 'no show' : cnt ? cnt + ' booked' : 'open';
+    const d = new Date(BASE + ((w - 1) * 7 + (ev ? bigDay() : me ? +G.promo.day || 0 : +x.day || 0)) * 864e5);
+    const lab = `${ev ? bigName(w) : me ? G.promo.show : x.name}, ${d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}${say ? ', ' + say : ''}`;
+    return `<button class="${cls}" ${me ? `data-act="selWeek" data-id="${w}"` : `data-act="calGo" data-id="${esc(sid + '|' + w)}"`} aria-label="${esc(lab)}" aria-pressed="${me && w === wk}" ${w < 1 || w > G.week + 16 ? 'disabled' : ''}>
+      <span class="cal-n">${d.getUTCDate()}</span>
+      ${ev ? '<span class="cal-s">PPV</span>' : ''}${status}</button>`;
   };
   const bkBar = bkDue ? `<div class="alert warn bk-bar"><span class="ic">💾</span><div class="sp small"><b>Back up your save.</b> ${bkDue >= G.week - 1 ? 'You haven\'t backed up yet.' : 'Last backup ' + bkDue + ' weeks ago.'} Saves live only in this browser.</div><button class="btn sm pri" data-act="export">Back up</button><button class="btn sm" data-act="bkLater">Later</button></div>` : '';
   const cal = `<div class="cal">
@@ -6831,7 +6870,7 @@ const A = {
   rrMove(id, to) {
     const r = RV(UI.modal.id), w = r?.roster.find(x => x.id === id); if (!w || !to) return;
     outOfRival(w, r);
-    if (to === 'me') { w.contract = { salary: CON() ? askFor(w, 52) : 0, weeks: 52 }; w.joined = G.week; w.lastBooked = G.week; w.morale = 70; if (splitOn()) w.brand = G.showId; G.wrestlers.push(w); }
+    if (to === 'me') { w.contract = { salary: CON() ? askFor(w, 52) : 0, weeks: 52 }; w.joined = G.week; w.lastBooked = G.week; w.morale = 70; if (splitOn()) w.brand = brandHere(); G.wrestlers.push(w); }
     else { const x = RV(to); if (!x) { w.contract = null; G.wrestlers.push(w); } else { x.roster.push(rivWrestler(w, x)); setRivalChamp(x); } }
     commit(`${w.name} moved.`);
   },
@@ -7011,8 +7050,11 @@ const A = {
     UI.selWeek = G.week; commit('Face-off added to this week\'s show.');
   },
   selWeek(wk) { UI.selWeek = +wk; UI.reorder = false; render(); },
+  // another of this company's shows on the calendar (the big event, or the weekly show): open it at that week
+  calGo(v) { const [sid, w] = String(v).split('|'), wk = +w; if (!wk || wk < 1 || wk > G.week + 16 || (sid === EV && !bigWk(wk))) return;
+    const mk = UI.calMonth ?? monthKey(UI.selWeek); if (!setShow(sid)) return; UI.selWeek = wk; UI.calMonth = mk; UI.reorder = false; save(); render(); },
   calNav(d) { const k = (UI.calMonth ?? monthKey(UI.selWeek)) + +d; const ws = weeksInMonth(k); if (!ws.length || ws[ws.length - 1] < 1 || ws[0] > G.week + 16) return; UI.calMonth = k; render(); },
-  calToday() { UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; render(); },
+  calToday() { if (onEv() && !bigWk(G.week)) { const u = nextUp(); if (!u || !goUnit(u)) setShow(mainShowId()); } UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; render(); },
   reorder() { UI.reorder = !UI.reorder; render(); },
   // tapping the drag handle (or Enter on it) turns on the Up / Down buttons
   gripTap(id) {
@@ -7106,7 +7148,7 @@ const A = {
     const nm = x.id === G.showId ? G.promo.show : x.name;
     confirmBox(`Cancel ${nm}?`, 'Its booked cards are dropped. Its wrestlers and titles move to the main show.', 'Cancel the show', () => {
       if (G.showId === id) setShow(SHOWS().find(y => y.id !== id).id);
-      const coLast = SHOWS().filter(y => y.id !== id).every(y => (y.ran || 0) >= G.week);
+      const coLast = SHOWS().filter(y => y.id !== id).every(y => (y.ran || 0) >= G.week) && (!bigWk(G.week) || (evOf(G).ran || 0) >= G.week);
       G.shows = SHOWS().filter(y => y.id !== id);
       for (const w of G.wrestlers) if (w.brand === id) delete w.brand;
       for (const t of G.titles) if (t.brand === id) t.brand = '';
@@ -7127,6 +7169,7 @@ const A = {
     const was = G.settings.bigDay; G.settings.bigDay = d;
     const us = weekUnits(); let last = -1; us.forEach((u, i) => { if (u.ran) last = i; });
     if (us.some((u, i) => !u.ran && i < last)) { G.settings.bigDay = was; return toast('Change it after this week\'s shows. That night has already gone by.'); }
+    if (onEv()) G.promo.day = d;
     commit(`Big events now air on ${DAYS[d]}s.`); },
   shDaySet(v) { const [id, k] = String(v).split('|'), x = showById(id); if (!x) return; const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, k) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); },
   goBrands() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; render(); window.scrollTo(0, 0); },
@@ -8621,6 +8664,7 @@ function scrubGame(raw) {
     g.shows = (Array.isArray(g.shows) ? g.shows : []).filter(x => x && typeof x === 'object' && !Array.isArray(x) && x.id).slice(0, MAX_SHOWS)
       .map(x => ({ id: x.id, name: String(x.name || 'Weekly Show').slice(0, 40), day: clamp(Math.floor(+x.day) || 0, 0, 6), ...(x.nextDay != null && Number.isFinite(+x.nextDay) ? { nextDay: clamp(Math.floor(+x.nextDay), 0, 6) } : {}), ran: +x.ran || 0, auto: !!x.auto, ...(x.card ? { card: fixCard(x.card) } : {}), ...(x.future ? { future: fixFut(x.future) } : {}), ...(x.wk != null ? { wk: +x.wk || 0 } : {}) }));
     if (!g.shows.length) delete g.shows;
+    if (g.bigShow && typeof g.bigShow === 'object') { const b = g.bigShow; g.bigShow = { ran: +b.ran || 0, ...(b.card ? { card: fixCard(b.card) } : {}), ...(b.future ? { future: fixFut(b.future) } : {}), ...(b.wk != null ? { wk: +b.wk || 0 } : {}), name: String(b.name || 'Big Event').slice(0, 40), day: bigDayOf({ bigDay: b.day }) }; } else delete g.bigShow;
     g.split = !!g.split; if (g.ord != null) g.ord = +g.ord || 0;
     g.ppvSig = (Array.isArray(g.ppvSig) ? g.ppvSig : []).filter(x => x && typeof x === 'object' && typeof x.name === 'string').slice(0, 24)
       .map(x => ({ name: x.name.slice(0, 40), mt: okMT.has(x.mt) ? x.mt : '', gm: okGM.has(x.gm) ? x.gm : '' })).filter(x => x.mt || x.gm);
@@ -9985,7 +10029,7 @@ function graduate(w) {
   delete w.trainee;
   w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(w.morale + 10, 0, 100); w.division ||= 'Open';
   w.contract = { salary: CON() ? Math.max(500, Math.round(asking(w) * 0.6 / 100) * 100) : 0, weeks: 104 };
-  if (splitOn()) w.brand = G.showId;
+  if (splitOn()) w.brand = brandHere();
   G.wrestlers.push(w);
   news(`🎓 ${w.name} graduated from the ${G.promo.name} school and signed a 2-year rookie deal.`, 'contract');
 }
@@ -10724,6 +10768,7 @@ document.addEventListener('input', e => {
     else if (k === 'negSal') { UI.modal.salary = +v; const w = W(UI.modal.id), tm = UI.modal.team && partnersFor(w).length; document.getElementById('negSalLbl').textContent = 'Weekly salary' + (tm ? ', each' : '') + ': ' + money(+v); document.getElementById('negChance').innerHTML = iconize(negChanceHTML(w, UI.modal)); const tt = document.getElementById('negTalk'); if (tt && tm) tt.innerHTML = iconize(teamTalkHTML([w, ...partnersFor(w)], UI.modal)); }
     else if (k === 'gFee') { UI.modal.fee = +v; const w = W(UI.modal.id); document.getElementById('gFeeLbl').textContent = 'Fee per appearance: ' + money(+v); document.getElementById('gChance').innerHTML = iconize(guestChanceHTML(w, UI.modal)); }
     else if (k === 'promoName') { G.promo.name = v || 'My Promotion'; debSave(); }
+    else if (k === 'showName' && onEv()) { toast('Name big events in Big events below.'); render(); }
     else if (k === 'showName') { G.promo.show = v || 'Weekly Show'; curShow().name = G.promo.show; debSave(); }
     else if (k === 'shName') { const x = showById(el.dataset.id); if (x) { const n = v.trim().slice(0, 40) || 'Weekly Show'; if (x.id === G.showId) G.promo.show = n; x.name = n; debSave(); } }
     else if (k === 'bigEvents') { G.bigEvents = ppvList(v); debSave(); }
@@ -11005,7 +11050,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.34';
+const VERSION = '1.9.35';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
