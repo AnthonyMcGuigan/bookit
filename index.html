@@ -471,6 +471,14 @@ nav.tabs button { font-family: var(--f-cond); font-size: 12.5px; font-weight: 70
 nav.tabs button.on::after { content: ""; position: absolute; bottom: -2px; left: 30%; right: 30%; height: 3px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 nav.tabs button.on .ic { transform: translateY(-1px) scale(1.08); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
 nav.tabs .dot { background: var(--rope-r); font-family: system-ui, sans-serif; letter-spacing: 0; }
+/* in the game the page scrolls inside <main>, between the top bar's ropes and the tab bar's ropes,
+   so the phone's scroll bar stays inside them instead of sliding over the bars */
+html.in-game, html.in-game body { height: 100%; overflow: hidden; }
+html.in-game #root { height: 100%; }
+html.in-game .app { height: 100%; display: flex; flex-direction: column; padding-bottom: var(--nav-h, calc(76px + env(safe-area-inset-bottom))); }
+html.in-game header.top { position: relative; flex: none; margin-bottom: 10px; }
+html.in-game .app > main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; margin: 0 -16px; padding: 12px 16px 16px; outline: none; }
+html.in-game .app > main .runbar { bottom: -16px; padding-bottom: 16px; }
 /* type */
 .sec { font-family: var(--f-cond); font-size: 15px; font-weight: 800; letter-spacing: .08em; color: var(--ink); }
 .sec::before { content: ""; width: 4px; height: 15px; border-radius: 1px; background: var(--accent); transform: skewX(-14deg); flex: none; }
@@ -5306,11 +5314,24 @@ function wItem(w, act, extra) {
 function heatBar(h) { return `<div class="heat">🔥<div class="bar"><i style="width:${clamp(h, 0, 100)}%"></i></div><b>${Math.round(h)}</b></div>`; }
 function whyList(why) { return `<div class="why">${why.map(([v, t]) => `<div><span class="${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${v > 0 && !/^Base/.test(t) ? '+' : ''}${v}</span> ${esc(t)}</div>`).join('')}</div>`; }
 
+// the game page scrolls inside <main> (see html.in-game); other screens scroll the whole page
+const pageEl = () => document.documentElement.classList.contains('in-game') ? root.querySelector('.app > main') : null;
+const pageY = () => { const m = pageEl(); return m ? m.scrollTop : scrollY; };
+const pageBy = v => { const m = pageEl(); if (m) m.scrollTop += v; else scrollBy(0, v); };
+function pageTop() { const m = pageEl(); if (m) m.scrollTop = 0; window.scrollTo(0, 0); }
+// the tab bar's real height (it grows with the iPhone home bar), so <main> ends right at its ropes
+const navRO = typeof ResizeObserver === 'function' ? new ResizeObserver(() => navHeight()) : null;
+function navHeight() {
+  const n = root.querySelector('nav.tabs'); if (!n) return;
+  const h = Math.ceil(n.getBoundingClientRect().height); if (h) document.documentElement.style.setProperty('--nav-h', h + 'px');
+  if (navRO && navHeight.el !== n) { navRO.disconnect(); navRO.observe(n); navHeight.el = n; }
+}
 function render() {
   if (UI.bootLoad) { root.innerHTML = '<main tabindex="-1"><div class="boot-load" role="status">Loading your game…</div></main>'; return; }
   const fk = focusKey(document.activeElement);
   try { PLAYLOG.seen(UI.modal?.type, UI.wiz ? 'wizard' : G ? UI.tab : 'start'); } catch (e) {}
   if (!G || UI.wiz) { const mo = modals.querySelector('.modal-bg .mb'), ko = lastModalKey, so = mo ? mo.scrollTop : 0;
+    document.documentElement.classList.remove('in-game');
     root.innerHTML = iconize('<main tabindex="-1">' + (UI.wiz ? viewWizard() : viewStart()) + '</main>'); modals.innerHTML = iconize(renderModal());
     const mn = modals.querySelector('.modal-bg .mb'); if (mn && so && ko === lastModalKey) mn.scrollTop = so; bdTabView(); a11yAfter(fk); MUSIC.sync(); return; }
   if (UI.pendingGet && !UI.modal && !UI.wiz) { const k = UI.pendingGet; UI.pendingGet = null; if (cItem(k).i) { setTimeout(() => A.cGet(k)); } }
@@ -5320,6 +5341,8 @@ function render() {
   for (const w of G.wrestlers) if (w.both && !w.contract) delete w.both;
   const att = attention().filter(a => a.lv === 'bad' || a.lv === 'warn').length;
   const big = isBig(G.week);
+  const pgOld = pageEl(), pgSc = pgOld ? pgOld.scrollTop : 0;
+  document.documentElement.classList.add('in-game');
   root.innerHTML = iconize(`<div class="app">
     <header class="top">
       <div class="top-logo">${esc(abbr(G.promo.name))}</div>
@@ -5335,6 +5358,8 @@ function render() {
     ${[['book', '📅', 'Shows', 0], ['roster', '🤼', 'Roster', 0], ['stories', '🔥', 'Stories', 0], ['office', '💼', 'Office', CON() ? signed().filter(w => w.contract.weeks <= 4).length : 0], ['notes', '📓', 'Notes', dirtUnread(), `new issue of ${DIRT_NAME}`]]
       .map(([k, i, l, n, sr]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}" ${UI.tab === k ? 'aria-current="page"' : ''}><span class="ic">${i}</span>${l}${n ? `<span class="dot" aria-hidden="true">${n}</span><span class="sr-only">, ${sr ? sr : `${n} contract${n === 1 ? '' : 's'} ending soon`}</span>` : ''}</button>`).join('')}
   </div></nav>`);
+  const pgNew = pageEl(); if (pgNew && pgSc) pgNew.scrollTop = pgSc;
+  navHeight();
   // keep the open sheet's scroll position when it re-renders (e.g. tapping options in the builder)
   const mbOld = modals.querySelector('.modal-bg:not(.picker-bg) .mb'), keyOld = lastModalKey, scOld = mbOld ? mbOld.scrollTop : 0;
   modals.innerHTML = iconize(renderModal() + renderPicker());
@@ -6826,7 +6851,7 @@ function closeModal() { UI.modal = null; UI.picker = null; render(); }
 function confirmBox(title, text, yes, fn, danger) { UI.modal = { type: 'confirm', title, text, yes, fn, danger, prev: UI.modal }; render(); }
 
 const A = {
-  tab(id) { UI.tab = id; UI.modal = null; render(); window.scrollTo(0, 0); },
+  tab(id) { UI.tab = id; UI.modal = null; render(); pageTop(); },
   about() { openModal({ type: 'about' }); },
   textSize(k) { meta.text = ['s', 'm', 'l', 'xl'].includes(k) ? k : 'm'; ls.set(META, JSON.stringify(meta)); applyTheme(); render(); },
   whatsNew() { UI.modal = { type: 'whatsnew' }; render(); },
@@ -7128,11 +7153,11 @@ const A = {
   roleSw(r) { const r2 = setRole(W(UI.modal?.id), r); if (r2?.no) return toast(r2.no); if (r2) commit(r2.msg); },
   cos() { openModal({ type: 'cos' }); },
   shows() { openModal({ type: 'shows' }); },
-  afterShow() { liveTimers.forEach(clearTimeout); UI.modal = null; const r = goNext(); UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0);
+  afterShow() { liveTimers.forEach(clearTimeout); UI.modal = null; const r = goNext(); UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop();
     if (r.u || r.n) toast(`${r.n ? `Auto-booked ${r.n} show${r.n > 1 ? 's' : ''}. ` : ''}Now booking ${G.promo.show}${multi() ? ' for ' + G.promo.name : ''}.`); },
-  goNextUp() { const u = nextUp(); if (!u) return; goUnit(u); UI.modal = null; UI.tab = 'book'; save(); render(); window.scrollTo(0, 0); toast(`Now booking ${G.promo.show}${multi() ? ' for ' + G.promo.name : ''}.`); },
+  goNextUp() { const u = nextUp(); if (!u) return; goUnit(u); UI.modal = null; UI.tab = 'book'; save(); render(); pageTop(); toast(`Now booking ${G.promo.show}${multi() ? ' for ' + G.promo.name : ''}.`); },
   goUnit(key) { const [co, sid] = String(key || '').split('|'); const u = weekUnits().find(x => (x.co || '') === co && (x.sid || '') === sid); if (!u || u.on) return; goUnit(u); UI.modal = null; UI.tab = 'book'; save(); render(); },
-  goShow(id) { if (!setShow(id)) return; UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0); toast(`Now booking ${G.promo.show}.`); },
+  goShow(id) { if (!setShow(id)) return; UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop(); toast(`Now booking ${G.promo.show}.`); },
   addShow() {
     const sh = SHOWS(); if (sh.length >= MAX_SHOWS) return;
     const used = new Set(sh.map(x => x.id === G.showId ? +G.promo.day : +x.day)), base = +G.promo.day || 0;
@@ -7172,7 +7197,7 @@ const A = {
     if (onEv()) G.promo.day = d;
     commit(`Big events now air on ${DAYS[d]}s.`); },
   shDaySet(v) { const [id, k] = String(v).split('|'), x = showById(id); if (!x) return; const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, k) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); },
-  goBrands() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; render(); window.scrollTo(0, 0); },
+  goBrands() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; render(); pageTop(); },
   bdStart() { if (!splitOn()) return; openModal(bdNew()); },
   bdF(v) { UI.modal.f = v || ''; render(); },
   bdPick(id) { const m = UI.modal, w = W(id); if (!w || bdTaken(m).has(id)) return; const on = bdTurn(m), grp = bdGroup(m, w).map(x => x.id); m.picks[on].push(...grp); m.hist.push({ t: 'pick', on, ids: grp }); m.k++; render(); },
@@ -7182,8 +7207,8 @@ const A = {
   bdFinish() { const m = UI.modal; if (bdPool(m).length) return; bdApply(m); UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; commit('The brand draft is done.'); },
   brandBoth(id) { const w = W(id); if (!w?.contract) return; const pick = UI.modal?.type === 'bothPick'; w.both = !w.both; if (!w.both) delete w.both; if (pick) UI.modal = null; commit(w.both ? `${w.name} now works ${allBrands(0)}.` : `${w.name} now works ${brandName(brandOf(w))} only.`); },
   brandBothPick() { openModal({ type: 'bothPick', q: '' }); },
-  brandRoster(id) { UI.modal = null; UI.tab = 'roster'; UI.rosterF = 'b:' + id; render(); window.scrollTo(0, 0); },
-  coSwitch(id) { if (!G.cos?.some(c => c.coId === id)) return; switchCo(id); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0); toast(`Now booking ${G.promo.name}.`); },
+  brandRoster(id) { UI.modal = null; UI.tab = 'roster'; UI.rosterF = 'b:' + id; render(); pageTop(); },
+  coSwitch(id) { if (!G.cos?.some(c => c.coId === id)) return; switchCo(id); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop(); toast(`Now booking ${G.promo.name}.`); },
   coAdd() { if ((G.cos || []).length + 1 >= MAX_COS) return toast(`A world can have up to ${MAX_COS} companies.`); confirmBox('Start another company?', `It joins this world and shares free agents, rival promotions and the calendar with ${G.promo.name}. Every company you run puts on a show each week.`, 'Start it', () => { UI.modal = null; wizStart(true); }); },
   coAuto() { if (!showRanNow() && !doneThisWeek()) return toast(`Run ${G.promo.show} first.`); autoBookRest(); },
   raid(id, el) {
@@ -7420,7 +7445,7 @@ const A = {
     render(); },
   splitTeam(id) { const t = TM(id); if (!t) return; confirmBox('Split up ' + t.name + '?', 'The team and its record are removed. The wrestlers stay.', 'Split up', () => { G.teams = G.teams.filter(x => x.id !== id); for (const f of G.factions || []) f.tms = f.tms.filter(x => x !== id); news(`👥 ${t.name} split up.`, 'story'); commit(); }, true); },
   disbandFaction(id) { const f = FC(id); if (!f) return; confirmBox('Disband ' + f.name + '?', 'The faction and its record are removed. Its wrestlers and tag teams stay.', 'Disband', () => { G.factions = G.factions.filter(x => x.id !== id); news(`👑 ${f.name} has disbanded.`, 'story'); commit(); }, true); },
-  goTeams() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'teams'; render(); window.scrollTo(0, 0); },
+  goTeams() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'teams'; render(); pageTop(); },
   fLeader(id) { const d = UI.modal.draft; if (!d.members.includes(id)) return; d.leader = d.leader === id ? null : id; render(); },
   saveFaction() {
     const d = UI.modal.draft; d.name = String(d.name || '').trim().slice(0, 40);
@@ -7546,9 +7571,9 @@ const A = {
   },
 
   // notes
-  notesTab(t) { UI.tab = 'notes'; UI.notesTab = t; UI.modal = null; if (t === 'dirt') UI.dirtIx = 0; render(); if (t === 'dirt') save(); window.scrollTo(0, 0); },
+  notesTab(t) { UI.tab = 'notes'; UI.notesTab = t; UI.modal = null; if (t === 'dirt') UI.dirtIx = 0; render(); if (t === 'dirt') save(); pageTop(); },
   newsF(f) { UI.newsF = f; render(); },
-  dirtIx(i) { UI.dirtIx = Math.max(0, +i || 0); render(); window.scrollTo(0, 0); },
+  dirtIx(i) { UI.dirtIx = Math.max(0, +i || 0); render(); pageTop(); },
   addTodo() { const el = document.getElementById('todo-in'); const t = el.value.trim(); if (!t) return; G.todos.unshift({ t, done: false }); commit(); setTimeout(() => document.getElementById('todo-in')?.focus(), 0); },
   todoCk(i) { G.todos[+i].done = !G.todos[+i].done; commit(); },
   todoDel(i) { G.todos.splice(+i, 1); commit(); },
@@ -9348,7 +9373,7 @@ const CREATOR_ACTIONS = {
       wizStart(false);
       const z = UI.wiz; Object.assign(z, { step: 'company', world: wd, take: take?.id || null, slot: n, source: 'world', count: 1, nth: 1, every: wd.every });
       if (take) { z.name = take.name; z.show = take.show; z.color = safeColor(take.color) || z.color; }
-      render(); window.scrollTo(0, 0);
+      render(); pageTop();
     };
     if (info) confirmBox(`Replace slot ${n}?`, `${info.name} (week ${info.week}) in slot ${n} will be replaced by your new game in this world. Back it up first from Menu if you want to keep it.`, 'Replace and start', go, true);
     else go();
@@ -10248,7 +10273,7 @@ const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w
 function wizStart(add, chain) {
   add = add === true && !!G;
   UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : false, contracts: add ? CON() : false, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, mode: add ? G.settings.bigMode : 'weeks', months: Array(12).fill(''), extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft', titles: wizTitles() };
-  render(); window.scrollTo(0, 0);
+  render(); pageTop();
 }
 function wizPool() {
   // a company joining an existing world drafts new faces, never a second copy of someone already out there
@@ -10265,7 +10290,7 @@ function wizBeginDraft() {
   const z = UI.wiz;
   z.pool = wizPool(); z.mine = []; z.rivalTook = {}; z.log = []; z.round = 1; z.rivals = shuffle(RIVALS).slice(0, 2);
   z.filter = 'all'; z.sort = 'ovr'; z.step = 'draft';
-  render(); window.scrollTo(0, 0);
+  render(); pageTop();
 }
 const draftPayroll = () => sum(UI.wiz.mine.map(w => w._ask));
 function rivalPick(rival) {
@@ -10328,7 +10353,7 @@ function wizToChamps() {
   const ti = wzTopIx(z), champ = z.titles[ti]?.holder[0];
   const top = mine.find(w => w.align === 'face' && !used.has(w.id));
   z.story = top && champ ? { a: top.id, b: champ, ti, title: 'Road to the Gold', on: z.story?.on ?? true } : null;
-  z.step = 'titles'; render(); window.scrollTo(0, 0);
+  z.step = 'titles'; render(); pageTop();
 }
 // the starter roster's champions carry over to the titles the booker made, and the rest are filled by popularity
 function starterChamps(old, nt) {
@@ -10399,7 +10424,7 @@ function wizFinish() {
   UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : z.world && !z.take && z.source === 'world' ? 'office' : 'book'; if (UI.tab === 'office') UI.faTab = 'fa'; UI.selWeek = G.week; UI.calMonth = null;
   // an empty roster lands on the Roster tab; Build, Import and Community are right there, so nothing pops up
   UI.modal = null;
-  applyBrand(G.promo.color); save(); render(); window.scrollTo(0, 0);
+  applyBrand(G.promo.color); save(); render(); pageTop();
   // several companies chosen at the start: go straight on to setting up the next one
   if ((z.count || 1) > (z.nth || 1) && (G.cos || []).length + 1 < MAX_COS) { wizStart(true, { n: (z.nth || 1) + 1, of: Math.min(MAX_COS, z.count) }); toast(`${G.promo.name} is ready. Now company ${(z.nth || 1) + 1} of ${z.count}.`); }
   else if ((z.count || 1) > 1) { const u = nextUp(); if (u && !u.on) { goUnit(u); save(); render(); } }
@@ -10630,13 +10655,13 @@ function tutWin(h) {
 const TUT_ACTIONS = {
   tutNext() { if (!tutOn()) return; if (G.tut >= TUT_WIN) { if (!G.tutReplay) PLAYLOG.ev('tutorial', 'done'); delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; commit('Tutorial done. Have a great run!'); return; } G.tut++; commit(); },
   tutSkip() { PLAYLOG.ev('tutorial', 'skip:' + (+G.tut || 0)); delete G.tut; delete G.tutRes; delete G.tutReplay; commit('Tutorial off. Replay it from Menu → How to play.'); },
-  tutReplay() { if (!G) return; tutStart(true); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); window.scrollTo(0, 0); }
+  tutReplay() { if (!G) return; tutStart(true); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop(); }
 };
 
 const WIZ_ACTIONS = {
   wzStart: wizStart,
-  wzCancel() { UI.wiz = null; render(); window.scrollTo(0, 0); },
-  wzGo(step) { UI.wiz.step = step; render(); window.scrollTo(0, 0); },
+  wzCancel() { UI.wiz = null; render(); pageTop(); },
+  wzGo(step) { UI.wiz.step = step; render(); pageTop(); },
   wzRule(k) { const z = UI.wiz; if ((k === 'money' || k === 'contracts') && !z.deep) return; z[k] = !z[k]; if (k === 'deep') { z.money = z.contracts = !!z.deep; } render(); },
   wzXDay(v) { const [i, k] = String(v).split(':').map(Number), x = UI.wiz.extra?.[i]; if (x) { x.day = clamp(k || 0, 0, 6); render(); } },
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
@@ -10912,12 +10937,12 @@ document.addEventListener('pointerdown', e => {
   e.preventDefault();
   try { g.setPointerCapture(e.pointerId); } catch (x) {}
   const rs = list.map(el => el.getBoundingClientRect()), from = list.indexOf(slot);
-  DRAG.s = { g, slot, list, from, to: from, pid: e.pointerId, y0: e.clientY, y: e.clientY, sy0: scrollY, tops: rs.map(r => r.top + scrollY), hs: rs.map(r => r.height), moved: false, raf: 0 };
+  DRAG.s = { g, slot, list, from, to: from, pid: e.pointerId, y0: e.clientY, y: e.clientY, sy0: pageY(), tops: rs.map(r => r.top + pageY()), hs: rs.map(r => r.height), moved: false, raf: 0 };
   slot.parentElement.classList.add('dragging');
 });
 function dragUpdate() {
   const d = DRAG.s; if (!d) return;
-  const dy = d.y - d.y0 + scrollY - d.sy0;
+  const dy = d.y - d.y0 + pageY() - d.sy0;
   if (!d.moved && Math.abs(dy) < 5) return;
   if (!d.moved) { d.moved = true; d.slot.classList.add('lift'); navigator.vibrate?.(8); }
   const mid = d.tops[d.from] + d.hs[d.from] / 2 + dy;
@@ -10934,7 +10959,7 @@ function dragTick() {
   const topEdge = (document.querySelector('header.top')?.getBoundingClientRect().bottom || 0) + 40;
   const botEdge = Math.min(document.querySelector('nav.tabs')?.getBoundingClientRect().top || innerHeight, document.querySelector('.runbar')?.getBoundingClientRect().top || innerHeight) - 40;
   const v = d.y < topEdge ? -Math.min(18, (topEdge - d.y) / 3 + 2) : d.y > botEdge ? Math.min(18, (d.y - botEdge) / 3 + 2) : 0;
-  if (v && d.moved) { scrollBy(0, v); dragUpdate(); }
+  if (v && d.moved) { pageBy(v); dragUpdate(); }
   d.raf = requestAnimationFrame(dragTick);
 }
 document.addEventListener('pointermove', e => {
@@ -11050,7 +11075,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.35';
+const VERSION = '1.9.36';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
