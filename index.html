@@ -302,6 +302,7 @@ details > summary::-webkit-details-marker { display: none; }
 .cal-t.past { background: transparent; }
 .cal-t.big { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 10%, var(--bg2)); }
 .cal-t.big .cal-s { color: var(--accent-t); }
+.cal-s.sp-tv { color: var(--good, #3fb950); }
 .cal-t.now { box-shadow: inset 0 0 0 1px var(--accent); }
 .cal-t.sel { background: var(--accent); border-color: var(--accent); }
 .cal-t.sel * { color: var(--accent-ink) !important; }
@@ -1625,6 +1626,7 @@ const bigNameOf = (c, wk) => { const st = G.settings; if (monthMode(c.bigMonths,
 const isBig = wk => onEv() && bigWk(wk);
 const bigName = wk => bigNameOf(G, wk);
 const showName = wk => isBig(wk) ? bigName(wk) : G.promo.show;
+const showTitle = wk => isSpecial(wk) ? `${G.promo.show}: ${specialName()}` : showName(wk);
 // ---------- big event signature matches ----------
 // Each big event can have a signature match (a participant type, a gimmick, or both), like a yearly Rumble.
 // It is put on that event's card for the player, fans expect it, and skipping it costs a little.
@@ -3322,7 +3324,7 @@ function runShow(opts = {}) {
   // the main show is the A show; other weekly shows are B shows: smaller crowds, half a TV deal, a bit more to put on
   // with the brand split on, every brand's show is an A show; B shows are the extra nights on a shared roster
   const bShow = !onMain() && !splitOn();
-  const special = G.special === G.week && !big; // a bonus TV special: bigger building, bigger TV money, more new fans
+  const special = isSpecial(G.week) && !big; // a bonus TV special: bigger building, bigger TV money, more new fans
   const attendance = Math.round(Math.min((big ? 22000 : bShow ? 4000 : 9000) * (special ? 1.5 : 1), G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype * (special ? 1.4 : 1) * (perk('crowd') ? 1.1 : 1)) * rnd(.93, 1.07));
   const fin = {
     gate: attendance * (big ? 50 : 25), tv: big ? 0 : Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
@@ -3360,7 +3362,7 @@ function runShow(opts = {}) {
 
   if (!big) buildHype(results, G.week);
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
-  const rec = { wk: G.week, name: showName(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true } : {}) };
+  const rec = { wk: G.week, name: showTitle(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true } : {}) };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
   PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
@@ -4355,7 +4357,7 @@ const bookerLvl = () => lvlOf(CAR().xp);
 const CO_MAX = 25, coXpAt = L => L <= 1 ? 0 : Math.round(14 * (L - 1) ** 1.8);
 const coLvlOf = xp => { let L = 1; while (L < CO_MAX && xp >= coXpAt(L + 1)) L++; return L; };
 const coLvl = () => G && G.booker ? coLvlOf(G.booker.cxp || 0) : 1;
-const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [3, '💼', 'More staff', 'Hire a PR Agent, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'Bonus TV specials', 'The network offers one-off specials.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
+const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [3, '💼', 'More staff', 'Hire a PR Agent, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'TV specials', 'Turn a weekly show into a one-off special every 8 weeks. Book it from the show\'s card.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
 const PERKS = {
   deals: ['💼', 'Contract discount', 'Wrestlers ask 10% less.'],
   tv: ['📺', 'Network friends', 'TV deals renew 10% bigger.'],
@@ -4531,10 +4533,10 @@ const EVENTS = {
     pick(i, d) { G.booker.lastSponsor = G.week; if (i) return `You passed on ${d.n}.`; G.sponsor = { n: d.n, pay: d.pay, T: d.T, left: d.wks, paidWk: 0 }; return `${d.n} is on board. Keep every show at ${d.T}+.`; }
   },
   special: {
-    when() { if (coLvl() < 8 || isBig(G.week) || G.special === G.week || G.week - (G.booker.lastSpecial || -99) < 8) return null; return { n: pick(['Prime Time Special', 'Holiday Spectacular', 'Saturday Night Special', 'Throwback Night', 'Championship Night']) }; },
+    when() { if (coLvl() < 8 || isBig(G.week) || onEv() || specialPending() || G.week < nextSpecialWk() || G.week - (G.booker.lastSpecial || -99) < SPECIAL_GAP) return null; return { n: pick(SPECIAL_NAMES) }; },
     title: '📺 TV special offer', text: d => `The network wants this week's show as a one-off "${d.n}".`,
     choices: () => [['Make it a special', 'Bigger crowd, double TV money, more new fans, one extra segment'], ['Keep it a normal week', 'Nothing changes']],
-    pick(i, d) { G.booker.lastSpecial = G.week; if (i) return 'A regular week it is.'; G.special = G.week; G.todos.unshift({ t: `This week is the ${d.n}: book a big card`, done: false }); return `This week's show is the ${d.n}.`; }
+    pick(i, d) { G.booker.lastSpecial = G.week; if (i) return 'A regular week it is.'; G.special = G.week; G.specialSid = G.showId; G.specialName = d.n; G.todos.unshift({ t: `This week is the ${d.n}: book a big card`, done: false }); return `This week's show is the ${d.n}.`; }
   },
   viralSeg: {
     when() {
@@ -4768,7 +4770,7 @@ function goalCard() {
   const g = G.booker.goals, c = CAR();
   const xp = c.xp, cur = RANKS[rankIx(xp)], L = lvlOf(xp), pct = L >= MAX_LVL ? 100 : (xp - xpAt(L)) / (xpAt(L + 1) - xpAt(L)) * 100;
   return `<div class="goals"><button class="g-rank" data-act="trophies" aria-label="Booker level ${L}, ${cur[1]}. Achievements and milestones"><span class="lvl">Lv ${L}</span><b>${cur[1]}</b><span class="bar"><i style="width:${pct}%"></i></span><span class="tiny muted">🏅 ${Object.keys(c.ach).length}/${ACH.length}</span></button>
-    ${perksDue() ? `<button class="btn sm block" style="margin-top:6px" data-act="coPerk">⭐ Company level ${coLvl()}: pick a promotion perk</button>` : ''}${G.special === G.week && !isBig(G.week) ? `<div class="goal"><span>📺</span><span class="sp">TV special this week: bigger crowd, double TV money</span></div>` : ''}${G.sponsor ? `<div class="goal"><span>💼</span><span class="sp">${esc(G.sponsor.n)}: rate ${G.sponsor.T}+ to get paid</span><b>${money(G.sponsor.pay)}</b></div>` : ''}
+    ${perksDue() ? `<button class="btn sm block" style="margin-top:6px" data-act="coPerk">⭐ Company level ${coLvl()}: pick a promotion perk</button>` : ''}${specialPending() && !isBig(G.special) ? `<div class="goal"><span>📺</span><span class="sp">${G.special === G.week ? 'TV special this week' : `TV special booked for week ${G.special}`}: ${esc(specialName())}. Bigger crowd, double TV money</span></div>` : ''}${G.sponsor ? `<div class="goal"><span>💼</span><span class="sp">${esc(G.sponsor.n)}: rate ${G.sponsor.T}+ to get paid</span><b>${money(G.sponsor.pay)}</b></div>` : ''}
     ${g.length ? `<div class="goal-l">${g.map(x => `<div class="goal"><span>🎯</span><span class="sp">${esc(x.text)}</span><b>+${x.xp} XP</b></div>`).join('')}</div>` : ''}</div>`;
 }
 function modalTrophies() {
@@ -5125,7 +5127,16 @@ function chanceLabel(c) { return c >= .85 ? ['Will accept', 'good'] : c >= .6 ? 
 // men's and women's divisions don't mix unless someone is in the Open division
 const sameDiv = (a, b) => !a || !b || !a.division || !b.division || a.division === 'Open' || b.division === 'Open' || a.division === b.division;
 // a show has room for 8 segments (10 at a big event)
-const maxSegs = wk => isBig(wk) ? 10 + bigBonus() : G && G.special === wk ? 9 : 8;
+// a TV special (company level 8): one weekly show turned into a one-off special. G.special is its week, G.specialSid its show.
+const SPECIAL_NAMES = ['Prime Time Special', 'Holiday Spectacular', 'Saturday Night Special', 'Throwback Night', 'Championship Night'];
+const SPECIAL_GAP = 8;
+const isSpecial = wk => !!G && G.special === wk && !isBig(wk) && !onEv() && (!G.specialSid || G.specialSid === G.showId);
+const specialName = () => G.specialName || 'TV special';
+const lastSpecialAired = () => Math.max(-99, ...G.history.filter(h => h.special).map(h => h.wk));
+// the first week a new special can go on: one every 8 weeks, counted from the last one that aired
+const nextSpecialWk = () => Math.max(G.week, lastSpecialAired() + SPECIAL_GAP);
+const specialPending = () => G.special >= G.week && !(G.special === G.week && (G.history.some(h => h.wk === G.week && h.special)));
+const maxSegs = wk => isBig(wk) ? 10 + bigBonus() : G && isSpecial(wk) ? 9 : 8;
 const roomLeft = (wk, card) => Math.max(0, maxSegs(wk) - card.length);
 const fullMsg = wk => `The card is full (${maxSegs(wk)} segments). Remove one to add another.`;
 // story matches: settle feuds clean at big shows, keep them going with dirty finishes on weekly shows
@@ -5863,6 +5874,17 @@ function monthGrid(mk, wk, tile) {
   while (cells.length % 7) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
   return `<div class="mg mg-h" aria-hidden="true">${DAYS.map(x => `<span>${x.slice(0, 1)}</span>`).join('')}</div><div class="mg">${cells.join('')}</div>`;
 }
+// the TV special line on a weekly show's card: book it, see it, or see when the next one is allowed
+function specialStrip(wk, card) {
+  if (coLvl() < 8 || onEv()) return '';
+  const done = wk === G.week && showRanNow();
+  if (isSpecial(wk)) return `<div class="warnline row sp-line"><span class="sp">📺 <b>${esc(specialName())}</b>: bigger crowd, double TV money, more new fans and room for 9 segments.</span>${done ? '' : '<button class="btn sm" data-act="specialOff">Cancel</button>'}</div>`;
+  if (done) return '';
+  if (specialPending()) return `<div class="tiny muted sp-line" style="margin:0 0 8px">📺 Your next TV special is week ${G.special}${isBig(G.special) ? '' : ` (${dayLabel(G.special)})`}.</div>`;
+  const nx = nextSpecialWk();
+  if (wk < nx) return `<div class="tiny muted sp-line" style="margin:0 0 8px">📺 Your next TV special can go on from week ${nx} (${dayLabel(nx)}).</div>`;
+  return `<div class="warnline row sp-line"><span class="sp">📺 Make this a TV special: bigger crowd, double TV money, more new fans and one extra segment.</span><button class="btn sm pri" data-act="specialOn">Make it a special</button></div>`;
+}
 function viewBookCard() {
   // the big event only has a card on its own weeks
   if (onEv() && !bigWk(UI.selWeek)) { UI.selWeek = nextBig(); UI.calMonth = null; }
@@ -5885,7 +5907,7 @@ function viewBookCard() {
     const lab = `${ev ? bigName(w) : me ? G.promo.show : x.name}, ${d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}${say ? ', ' + say : ''}`;
     return `<button class="${cls}" ${me ? `data-act="selWeek" data-id="${w}"` : `data-act="calGo" data-id="${esc(sid + '|' + w)}"`} aria-label="${esc(lab)}" aria-pressed="${me && w === wk}" ${w < 1 || w > G.week + 16 ? 'disabled' : ''}>
       <span class="cal-n">${d.getUTCDate()}</span>
-      ${ev ? '<span class="cal-s">PPV</span>' : ''}${status}</button>`;
+      ${ev ? '<span class="cal-s">PPV</span>' : ''}${me && !ev && G.special === w && (!G.specialSid || G.specialSid === sid) && !isBig(w) ? '<span class="cal-s sp-tv">SPECIAL</span>' : ''}${status}</button>`;
   };
   const bkBar = bkDue ? `<div class="alert warn bk-bar"><span class="ic">💾</span><div class="sp small"><b>Back up your save.</b> ${bkDue >= G.week - 1 ? 'You haven\'t backed up yet.' : 'Last backup ' + bkDue + ' weeks ago.'} Saves live only in this browser.</div><button class="btn sm pri" data-act="export">Back up</button><button class="btn sm" data-act="bkLater">Later</button></div>` : '';
   const cal = `<div class="cal">
@@ -5929,11 +5951,12 @@ function viewBookCard() {
   if (card.length > 2) { const live = prs.map((r, i) => card[i].kind === 'match' ? r.rating : -1), mx = Math.max(...live.slice(0, -1)); if (mx > 0 && (card[card.length - 1].kind !== 'match' || live[live.length - 1] < mx - 5)) bestIx = live.indexOf(mx); }
   const isNow = wk === G.week;
   return `${statusBar}${isNow ? eventAlert() + dirtAlert() : ''}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
-  <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showName(wk))}</h2>
+  <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showTitle(wk))}</h2>
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
   ${warn.length ? `<div class="warnline">${warn.map(esc).join('<br>')}</div>` : ''}
   ${sg ? `<div class="warnline row"><span class="sp">⭐ Signature match: <b>${esc(sigName(sg))}</b>. ${sgMiss ? (card.some(s => isSig(s, sg)) ? 'Fans expect it. Put wrestlers in it.' : 'Fans expect it. Leaving it off costs a little.') : 'Fans will love it.'}</span>${sgMiss && !card.some(s => isSig(s, sg)) && card.length < maxSegs(wk) ? '<button class="btn sm" data-act="addSig">Add it</button>' : ''}</div>` : ''}
+  ${!big ? specialStrip(wk, card) : ''}
   ${bestIx >= 0 ? `<div class="warnline row"><span class="sp">⭐ Close the show with your best match.</span><button class="btn sm" data-act="segMain" data-id="${card[bestIx].id}">Make it the main event</button></div>` : ''}
   <div class="mcard">
     ${card.length > 1 && !UI.reorder ? '<p id="grip-help" class="sr-only">Drag to move it. Or use the up and down arrow keys. Press Enter for move buttons.</p>' : ''}
@@ -7378,6 +7401,15 @@ const A = {
   setMoney() { if (!SANDBOX()) return; const v = +document.getElementById('setMoney').value; if (isFinite(v)) { G.money = v; commit('Bank balance set.'); } },
 
   // booking
+  specialOn() { const wk = UI.selWeek;
+    if (coLvl() < 8 || isBig(wk) || onEv() || wk < G.week || (wk === G.week && showRanNow())) return;
+    if (specialPending() && G.special !== wk) return toast(`You already have a TV special booked for week ${G.special}.`);
+    if (wk < nextSpecialWk()) return toast(`The network allows one special every ${SPECIAL_GAP} weeks. The next one can go on from week ${nextSpecialWk()}.`);
+    G.special = wk; G.specialSid = G.showId; G.specialName = pick(SPECIAL_NAMES); G.booker.lastSpecial = wk;
+    commit(`${G.promo.show} in week ${wk} is now the ${G.specialName}. Book a big card.`); },
+  specialOff() { const wk = UI.selWeek; if (!isSpecial(wk) || (wk === G.week && showRanNow())) return;
+    if (BK().length > 8) return toast('Take one segment off first: a regular show holds 8.');
+    G.special = null; G.specialSid = null; G.specialName = null; commit('Back to a regular show.'); },
   addSig() { const wk = UI.selWeek, sg = sigOf(wk); if (!sg) return; const card = BK(); if (!roomLeft(wk, card)) return toast(fullMsg(wk)); card.push(sigSeg(sg, wk)); commit(`The ${sigName(sg)} is on the card.`); },
   matchTypes() { openModal({ type: 'mtypes', back: UI.modal && UI.modal.type !== 'menu' ? UI.modal : null, fromMenu: UI.modal?.type === 'menu' }); },
   mtNew(kind) { UI.modal.edit = { kind, i: -1, d: kind === 'gim' ? { name: '', rule: 'any', style: '', risk: 1, heat: 1, long: false, desc: '' } : { name: '', ffa: false, teams: 2, per: 2, count: 10, wide: false, desc: '' } }; render(); },
@@ -11480,7 +11512,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.38';
+const VERSION = '1.9.39';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
