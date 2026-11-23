@@ -1763,6 +1763,8 @@ function momStory(a, b, heat, why, extra = {}) {
 const momMood = (w, d) => { if (w) w.morale = clamp(w.morale + d, 0, 100); };
 const momPush = (w, pop, mo) => { if (!w) return; if (pop) addPop(w, pop); if (mo) w.momentum = clamp(w.momentum + mo, -50, 50); };
 // where: what the camera shows; big: a full cutscene (the rest are quick cards in the feed); p: how likely it is to fire when it can
+// two or more ways to say the same thing: the variant is picked once (d.vx), so the text stays the same on every redraw
+const vary = (d, ...l) => l[Math.abs(Math.round(+d?.vx || 0)) % l.length];
 const MOMENTS = {
   jump: {
     p: .3, big: true, where: 'After the bell', head: 'HERE COMES TROUBLE',
@@ -1775,7 +1777,7 @@ const MOMENTS = {
       return a ? { a: a.id, b: v.id, hot: !!foe } : null;
     },
     ids: d => [d.a, d.b],
-    text: d => `${nameOf(d.a)} hits the ring from the crowd and lays out ${nameOf(d.b)} in the middle of the celebration!`,
+    text: d => vary(d, `${nameOf(d.a)} hits the ring from the crowd and lays out ${nameOf(d.b)} in the middle of the celebration!`, `${nameOf(d.b)} is celebrating on the turnbuckle when ${nameOf(d.a)} slides in from behind and drops them!`, `${nameOf(d.b)} has their arm raised... and ${nameOf(d.a)} comes out of nowhere to wipe them out!`),
     ch: d => [['Let it play out', d.hot ? 'Their story gets hotter' : 'A new feud starts, already hot'], ['Send security', 'Order is kept, but the crowd boos the stop']],
     go(d, i) {
       const a = W(d.a), v = W(d.b); if (!a || !v) return [];
@@ -1797,7 +1799,7 @@ const MOMENTS = {
       const tr = pick(lose); return { a: tr, members: lose.filter(id => id !== tr), team: team?.name || '' };
     },
     ids: d => [d.a, ...d.members],
-    text: d => `After the loss, ${nameOf(d.a)} stares at ${lnOf(d.members)}... and attacks! ${d.team ? d.team + ' is falling apart' : 'The partnership is over'}.`,
+    text: d => vary(d, `After the loss, ${nameOf(d.a)} stares at ${lnOf(d.members)}... and attacks! ${d.team ? d.team + ' is falling apart' : 'The partnership is over'}.`, `${nameOf(d.a)} offers ${lnOf(d.members)} a hand up... then turns it into a cheap shot! ${d.team ? d.team + ' may be finished' : 'The crowd can\'t believe it'}.`, `${nameOf(d.a)} has seen enough. They turn on ${lnOf(d.members)} right there in the ring! ${d.team ? d.team + ' is no more' : 'The crowd is stunned'}.`),
     ch: d => [['Let it happen', `${lastName(W(d.a))} turns ${W(d.a)?.align === 'face' ? 'heel' : 'face'} and a feud starts`], ['Cut to commercial', 'They stay a team, for now']],
     go(d, i) {
       const a = W(d.a); if (!a) return [];
@@ -1817,7 +1819,7 @@ const MOMENTS = {
       return c ? { a: c.id, b: h.id, titleId: t.id } : null;
     },
     ids: d => [d.a, d.b],
-    text: d => { const t = G.titles.find(x => x.id === d.titleId); return `${nameOf(d.a)} walks down the ramp, stares down ${nameOf(d.b)} and points at the ${t?.short || 'title'} belt. The crowd knows what that means.`; },
+    text: d => { const t = G.titles.find(x => x.id === d.titleId); return vary(d, `${nameOf(d.a)} walks down the ramp, stares down ${nameOf(d.b)} and points at the ${t?.short || 'title'} belt. The crowd knows what that means.`, `${nameOf(d.a)} blocks ${nameOf(d.b)}'s way up the ramp, taps the ${t?.short || 'title'} belt and says one word into the camera: "Next."`, `${nameOf(d.a)} steps into the ring, looks ${nameOf(d.b)} in the eye and holds the ${t?.short || 'title'} belt up high. Message sent.`); },
     ch: () => [['Make it official', 'A title chase starts. Their match will mean more'], ['Not yet', 'They wanted this. Morale drops']],
     go(d, i) {
       const a = W(d.a), t = G.titles.find(x => x.id === d.titleId); if (!a || !t) return [];
@@ -1833,7 +1835,7 @@ const MOMENTS = {
       return w ? { a: w.id } : null;
     },
     ids: d => [d.a],
-    text: d => `The lights go out. When they come back up, ${nameOf(d.a)} is standing on the stage. They haven't been seen in weeks, and the building is losing it.`,
+    text: d => vary(d, `The lights go out. When they come back up, ${nameOf(d.a)} is standing on the stage. They haven't been seen in weeks, and the building is losing it.`, `A familiar song hits and the whole crowd jumps to its feet. ${nameOf(d.a)} is back after weeks away!`, `The crowd is chanting before anyone even appears. Then ${nameOf(d.a)} walks out, back for the first time in weeks!`),
     go(d) { const w = W(d.a); if (!w) return []; momPush(w, 2, 12); momMood(w, 8); w.lastBooked = G.week; news(`💡 ${w.name} made a surprise return.`, 'show'); return [`📈 ${lastName(w)} popularity up`, `😊 ${lastName(w)} is happy to be back on TV`]; }
   },
   callout: {
@@ -1845,7 +1847,7 @@ const MOMENTS = {
       return a && storiesTouching([v.id]).length < 2 ? { a: a.id, b: v.id } : null;
     },
     ids: d => [d.a, d.b],
-    text: d => `The backstage interviewer catches ${nameOf(d.a)}, who wasn't even booked tonight. "${lastName(W(d.b))}, I watched that. You're not ready for me."`,
+    text: d => vary(d, `The backstage interviewer catches ${nameOf(d.a)}, who wasn't even booked tonight. "${lastName(W(d.b))}, I watched that. You're not ready for me."`, `${nameOf(d.a)} grabs a camera backstage: "${lastName(W(d.b))}, you looked slow out there. When you want a real fight, come find me."`, `Caught on camera backstage, ${nameOf(d.a)} has a message: "${lastName(W(d.b))}, you're next. I'm not asking."`),
     ch: () => [['Run with it', 'A new feud starts'], ['Leave it on the cutting room floor', 'Nothing changes']],
     go(d, i) { const a = W(d.a), v = W(d.b); if (!a || !v) return []; if (i) return ['✂️ The clip never aired']; momPush(a, 1, 4); return [momStory([a.id], [v.id], 24, `${a.name} called out ${v.name} in a backstage interview.`)]; }
   },
@@ -1853,7 +1855,7 @@ const MOMENTS = {
     p: .5, where: 'In the crowd', head: 'THE CROWD TAKES OVER',
     when(r) { if (r.rating < 72) return null; const w = segPeople(r.seg).map(W).filter(w => momOk(w) && w.pop < 60).sort((a, b) => b.momentum - a.momentum)[0]; return w ? { a: w.id } : null; },
     ids: d => [d.a],
-    text: d => `The whole building is chanting "${lastName(W(d.a)).toUpperCase()}!" long after the segment ends.`,
+    text: d => vary(d, `The whole building is chanting "${lastName(W(d.a)).toUpperCase()}!" long after the segment ends.`, `"${lastName(W(d.a)).toUpperCase()}! ${lastName(W(d.a)).toUpperCase()}!" The fans are on their feet for ${nameOf(d.a)} and won't sit down.`, `${nameOf(d.a)} is long gone, but the fans are still chanting their name.`),
     go(d) { const w = W(d.a); if (!w) return []; momPush(w, 2, 6); return [`📈 ${lastName(w)} popularity up`]; }
   },
   hijack: {
@@ -1864,7 +1866,7 @@ const MOMENTS = {
       return w ? { a: w.id, who: segPeople(r.seg).filter(id => W(id)) } : null;
     },
     ids: d => [d.a],
-    text: d => `The fans are bored, and they let everyone know it: "WE WANT ${lastName(W(d.a)).toUpperCase()}!"`,
+    text: d => vary(d, `The fans are bored, and they let everyone know it: "WE WANT ${lastName(W(d.a)).toUpperCase()}!"`, `Half the crowd has turned its back on the ring and started chanting for ${nameOf(d.a)} instead.`, `Nobody is watching the ring. The crowd has started a wave, then a "${lastName(W(d.a)).toUpperCase()}" chant.`),
     go(d) { const w = W(d.a); if (!w) return []; momPush(w, 1, 4); d.who.forEach(id => momMood(W(id), -2)); return [`📈 Fans want more ${lastName(w)}`, '😕 The wrestlers in the ring heard it too']; }
   },
   parking: {
@@ -1877,7 +1879,7 @@ const MOMENTS = {
       return sameG(a, v) ? { a: a.id, b: v.id, sid: st.id } : null;
     },
     ids: d => [d.a, d.b],
-    text: d => `A camera in the parking lot catches ${nameOf(d.a)} jumping ${nameOf(d.b)} as they get to their car.`,
+    text: d => vary(d, `A camera in the parking lot catches ${nameOf(d.a)} jumping ${nameOf(d.b)} as they get to their car.`, `Backstage cameras find ${nameOf(d.b)} down on the floor of the parking garage, and ${nameOf(d.a)} walking away smiling.`, `As ${nameOf(d.b)} loads their bags, ${nameOf(d.a)} jumps them from behind in the parking lot. A camera caught all of it.`),
     ch: () => [['Air it', 'Story heat goes up. They\'ll be banged up for next week'], ['Keep it off TV', 'Nothing changes']],
     go(d, i) {
       const st = G.stories.find(s => s.id === d.sid), v = W(d.b); if (i || !st) return ['🎬 The footage stays in the truck'];
@@ -1894,10 +1896,108 @@ const MOMENTS = {
       return hot.length >= 2 ? { sid: hot.slice(0, 4).map(s => s.id), ids: [...new Set(hot.flatMap(s => [...s.a, ...s.b]))].filter(id => momOk(W(id))).slice(0, 6) } : null;
     },
     ids: d => d.ids,
-    text: d => `The main event is over, but nobody is leaving. ${d.ids.slice(0, 4).map(nameOf).join(', ')} and more spill out from the back. The show goes off the air with a full-blown brawl.`,
+    text: d => vary(d, `The main event is over, but nobody is leaving. ${d.ids.slice(0, 4).map(nameOf).join(', ')} and more spill out from the back. The show goes off the air with a full-blown brawl.`, `The bell rings, but it isn't over. ${d.ids.slice(0, 4).map(nameOf).join(', ')} and more pour out from the back, and security can't hold them as the show goes off the air.`, `As the show ends, ${d.ids.slice(0, 4).map(nameOf).join(', ')} and more brawl from the ramp to the ring. Nobody is going home quietly.`),
     go(d) { const out = []; for (const id of d.sid) { const s = G.stories.find(x => x.id === id); if (s) { s.heat = clamp(s.heat + 4, 0, 100); s._touched = G.week; out.push(`🔥 ${s.title} +4`); } } return out.slice(0, 3); }
   }
 };
+// more moments: saves, stolen belts, open mics, respect, fan signs, teasers, ringside trouble, replays and a thank-you
+Object.assign(MOMENTS, {
+  save: {
+    p: .35, big: true, cheer: true, where: 'After the bell', head: 'THE SAVE',
+    when(r, c) {
+      if (r.seg.kind !== 'match' || !r.winners?.length) return null;
+      const h = W(r.winners[0]); if (!momOk(h) || h.align !== 'heel') return null;
+      const lose = r.seg.sides.find(sd => sd.length === 1 && !sd.some(id => r.winners.includes(id))), v = lose && W(lose[0]);
+      if (!momOk(v) || v.align !== 'face') return null;
+      const a = shuffle(ringers().filter(w => momOk(w) && w.align === 'face' && w.pop >= 25 && !c.used.has(w.id) && sameG(w, h) && !storyBetween([w.id], [h.id]) && storiesTouching([w.id]).length < 2))[0];
+      return a ? { a: a.id, b: h.id, target: v.id } : null;
+    },
+    ids: d => [d.a, d.b, d.target],
+    text: d => vary(d, `${nameOf(d.b)} keeps beating on ${nameOf(d.target)} after the bell, until ${nameOf(d.a)} hits the ring and clears house!`, `${nameOf(d.target)} is down and ${nameOf(d.b)} won't stop. Then the music hits: ${nameOf(d.a)} sprints to the ring to make the save!`, `${nameOf(d.b)} is putting the boots to ${nameOf(d.target)} when ${nameOf(d.a)} runs in to even the odds!`),
+    ch: d => [['Let it play out', `${lastName(W(d.a))} and ${lastName(W(d.b))} start a feud`], ['Cut away', 'Nothing changes']],
+    go(d, i) { const a = W(d.a), h = W(d.b); if (!a || !h) return []; if (i) return ['📺 The cameras missed it'];
+      momPush(a, 1, 6); momMood(W(d.target), 3); return [momStory([a.id], [h.id], 26, `${a.name} made the save for ${nameOf(d.target)}.`), `${lastName(a)} +momentum`]; }
+  },
+  beltGrab: {
+    p: .35, big: true, where: 'After the title match', head: 'STOLEN GOLD',
+    when(r, c) {
+      const t = r.seg.kind === 'match' && r.seg.title && G.titles.find(x => x.id === r.seg.title);
+      if (!t || t.holder.length !== 1) return null;
+      const h = W(t.holder[0]), on = segPeople(r.seg); if (!momOk(h)) return null;
+      const foes = storiesTouching([h.id]).flatMap(s => s.a.includes(h.id) ? s.b : s.a).map(W);
+      const a = [...foes, ...contenders(t, 4)].find(w => momOk(w) && w.align === 'heel' && !on.includes(w.id) && sameG(w, h));
+      return a ? { a: a.id, b: h.id, titleId: t.id } : null;
+    },
+    ids: d => [d.a, d.b],
+    text: d => { const t = G.titles.find(x => x.id === d.titleId)?.short || 'title'; return vary(d, `${nameOf(d.a)} sneaks in, snatches the ${t} belt and holds it high over the fallen ${nameOf(d.b)}.`, `${nameOf(d.b)} turns around to find ${nameOf(d.a)} on the ramp, posing with the ${t} belt.`, `While ${nameOf(d.b)} celebrates, ${nameOf(d.a)} grabs the ${t} belt from the timekeeper and walks off with it.`); },
+    ch: () => [['Let it play out', 'A title chase heats up'], ['Security takes it back', 'Nothing changes']],
+    go(d, i) { const a = W(d.a), t = G.titles.find(x => x.id === d.titleId); if (!a || !t) return []; if (i) return ['🛡️ Security got the belt back'];
+      momPush(a, 1, 6); return [momStory([a.id], t.holder.slice(), 30, `${a.name} stole the ${t.name} belt.`, { type: 'Title Chase', titleId: t.id, title: `${lastName(a)} chases the ${t.short} title` }), `${lastName(a)} +momentum`]; }
+  },
+  openMic: {
+    p: .2, big: true, where: 'Live in the arena', head: 'OFF SCRIPT',
+    when(r) { const w = shuffle(segPeople(r.seg).map(W).filter(w => momOk(w) && w.mic >= 55))[0]; return w ? { a: w.id } : null; },
+    ids: d => [d.a],
+    text: d => vary(d, `${nameOf(d.a)} wasn't meant to talk tonight, but they've grabbed a mic and they aren't giving it back.`, `The producers are waving frantically. ${nameOf(d.a)} has a mic and is going completely off script.`, `${nameOf(d.a)} just took the mic from the ring announcer. This wasn't in the script.`),
+    ch: () => [['Let them talk', 'Could be gold. Could go badly'], ['Cut the mic', 'Order is kept. They won\'t like it']],
+    go(d, i) { const w = W(d.a); if (!w) return []; if (i) { momMood(w, -4); return ['🎙️ The mic went dead']; }
+      if (Math.random() < .45 + w.mic / 250) { momPush(w, 3, 8); return ['🎤 They nailed it', `📈 ${lastName(w)} popularity up`]; }
+      w.momentum = clamp(w.momentum - 4, -50, 50); G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return ['😬 They said too much. Prestige −1']; }
+  },
+  respect: {
+    p: .4, cheer: true, where: 'After the bell', head: 'RESPECT',
+    when(r) {
+      if (r.seg.kind !== 'match' || r.rating < 78) return null;
+      const sd = r.seg.sides.filter(x => x.length); if (sd.length !== 2 || sd.some(x => x.length !== 1)) return null;
+      const [a, b] = sd.map(x => W(x[0])); return momOk(a) && momOk(b) ? { a: a.id, b: b.id } : null;
+    },
+    ids: d => [d.a, d.b],
+    text: d => vary(d, `${nameOf(d.a)} and ${nameOf(d.b)} shake hands in the middle of the ring. The crowd rises for both of them.`, `Exhausted, ${nameOf(d.a)} and ${nameOf(d.b)} help each other up and share a nod. "THANK YOU BOTH!"`, `${nameOf(d.a)} raises ${nameOf(d.b)}'s hand. After a match like that, the crowd agrees.`),
+    go(d) { momPush(W(d.a), 1, 3); momPush(W(d.b), 1, 3); return ['🤝 Both earned the crowd\'s respect']; }
+  },
+  sign: {
+    p: .3, cheer: true, where: 'In the crowd', head: 'SIGN OF THE NIGHT',
+    when(r, c) { if (r.rating < 60) return null; const w = shuffle(segPeople(r.seg).map(W).filter(w => momOk(w) && w.pop < 70))[0]; return w ? { a: w.id } : null; },
+    ids: d => [d.a],
+    text: d => vary(d, `A fan's homemade sign for ${nameOf(d.a)} keeps getting on camera. Social media loves it.`, `"${lastName(W(d.a)).toUpperCase()} FOR CHAMP" reads a giant banner in the crowd, and the cameras can't stop showing it.`, `The camera keeps finding the same fan with a giant ${lastName(W(d.a))} sign. It's already all over social media.`),
+    go(d) { const w = W(d.a); if (!w) return []; momPush(w, 1, 3); return [`📈 ${lastName(w)} popularity up`]; }
+  },
+  vignette: {
+    p: .25, big: true, where: 'On the big screen', head: 'COMING SOON',
+    when(r, c) { const w = shuffle(ringers().filter(w => (w.injury >= 2 || w.away) && w.pop >= 35 && !c.used.has(w.id)))[0]; return w ? { a: w.id } : null; },
+    ids: d => [d.a],
+    text: d => vary(d, `The screen glitches and a short video plays: a shadow, a date, a familiar logo. Fans are sure it's ${nameOf(d.a)}.`, `The lights flicker and a whisper fills the arena: "Soon." The crowd starts chanting for ${nameOf(d.a)}.`, `A video plays with no name and no face, only a date. Everyone thinks it's ${nameOf(d.a)}, back soon.`),
+    go(d) { const w = W(d.a); if (!w) return []; addPop(w, 2); w.momentum = clamp(w.momentum + 6, -50, 50); return [`📈 Buzz builds for ${lastName(w)}'s return`]; }
+  },
+  ringside: {
+    p: .25, where: 'At ringside', head: 'FRONT ROW TROUBLE',
+    when(r) { if (r.seg.kind !== 'match' || !r.winners?.length) return null; const w = W(r.winners[0]); return momOk(w) && w.align === 'heel' ? { a: w.id } : null; },
+    ids: d => [d.a],
+    text: d => vary(d, `${nameOf(d.a)} gets in the face of a fan in the front row after the match. The whole section is on its feet booing.`, `${nameOf(d.a)} snatches a kid's foam finger at ringside and snaps it in half. The boos are deafening.`, `${nameOf(d.a)} sprays water at a fan in the front row. The boos get even louder.`),
+    go(d) { const w = W(d.a); if (!w) return []; momPush(w, 1, 5); return [`🔥 ${lastName(w)} got real heat`]; }
+  },
+  replay: {
+    p: .3, big: true, where: 'After the bell', head: 'DID THE REF MISS IT?',
+    when(r) {
+      if (r.seg.kind !== 'match' || !r.winners?.length) return null;
+      const sd = r.seg.sides.filter(x => x.length); if (sd.length !== 2 || sd.some(x => x.length !== 1)) return null;
+      const w = W(r.winners[0]), l = W(sd.find(x => x[0] !== w?.id)?.[0]);
+      return momOk(w) && momOk(l) && !storyBetween([w.id], [l.id]) && storiesTouching([l.id]).length < 2 ? { a: l.id, b: w.id } : null;
+    },
+    ids: d => [d.a, d.b],
+    text: d => vary(d, `The replay shows ${nameOf(d.a)}'s foot was on the rope during the pin. ${lastName(W(d.a))} is screaming at the referee.`, `Slow motion says ${nameOf(d.a)} kicked out a split second before three. ${nameOf(d.b)} is already walking away with the win.`, `The big screen replays the finish: ${nameOf(d.a)}'s shoulder was up. ${nameOf(d.b)} got away with one.`),
+    ch: d => [['Air the replay', `${lastName(W(d.a))} wants a rematch: a new feud`], ['Let the result stand', 'Nothing changes']],
+    go(d, i) { const a = W(d.a), b = W(d.b); if (!a || !b) return []; if (i) return ['🎬 The replay never aired'];
+      momPush(a, 1, 4); return [momStory([a.id], [b.id], 24, `${a.name} says they were robbed by ${b.name}.`), `Fans side with ${lastName(a)}`]; }
+  },
+  thanks: {
+    p: .3, end: true, big: true, cheer: true, where: 'After the cameras stop', head: 'A MOMENT FOR THE FANS',
+    when(r) { if (r.rating < 70 || !r.winners?.length) return null; const w = r.winners.map(W).find(w => momOk(w) && w.align === 'face'); return w ? { a: w.id } : null; },
+    ids: d => [d.a],
+    text: d => vary(d, `The broadcast is over, but ${nameOf(d.a)} stays in the ring, grabs a mic and thanks every fan in the building.`, `Off the air, ${nameOf(d.a)} walks the whole barricade high-fiving fans. Phones are out everywhere.`, `The cameras are off, but ${nameOf(d.a)} stays out to sign autographs and take photos with the front row.`),
+    go(d) { const w = W(d.a); if (!w) return []; momPush(w, 1, 2); momMood(w, 4); const f = Math.round(G.fans * .003 * Math.max(.15, 1 - G.fans / fanCap())); G.fans += f; return [`😊 ${lastName(w)} made some fans for life`, `+${kfmt(f)} fans`]; }
+  }
+});
 const MOM_AFTER = Object.keys(MOMENTS).filter(k => !MOMENTS[k].end), MOM_END = Object.keys(MOMENTS).filter(k => MOMENTS[k].end);
 function showMoments(results, big) {
   const lv = MOM_LV(); if (!lv || !results.length) return [];
@@ -1913,7 +2013,7 @@ function showMoments(results, big) {
     let d = null; try { d = M.when(results[i], c); } catch (e) { }
     if (!d) continue;
     const ids = M.ids(d); if (ids.some(id => seen.has(id))) continue; ids.forEach(id => seen.add(id));
-    out.push({ k, at: i, ...(M.end ? { end: 1 } : {}), d, id: uid() });
+    out.push({ k, at: i, ...(M.end ? { end: 1 } : {}), d: { ...d, vx: rint(0, 99) }, id: uid() });
   }
   out.sort((a, b) => a.at - b.at || (a.end || 0) - (b.end || 0));
   for (const m of out) if (!MOMENTS[m.k].ch) momDo(m, 0);
@@ -3476,17 +3576,17 @@ const DIRT_KEEP = 12;
 const DIRT_NAME = 'Wrestling, Observed', DIRT_TAG = 'what’s the haps in graps';
 const DIRT_SRC = { solid: ['✅', 'Solid source'], hear: ['👂', "We're hearing"], spec: ['🤔', 'Speculation'] };
 const DIRT_VERDICT = [
-  [85, ['A must-watch show.', 'Go out of your way to see this one.', 'One of the best shows of the year so far.']],
-  [75, ['A strong night of wrestling.', 'Well worth your time.', 'Thumbs up from us.']],
-  [62, ['Solid, if not spectacular.', 'A decent show with a couple of highlights.', 'Nothing wrong with it, nothing special either.']],
-  [48, ['A flat night.', 'Skip it and read the results.', 'The crowd checked out early, and so did we.']],
-  [0, ['A mess from start to finish.', "One of the worst shows we've sat through this year.", 'Someone backstage needs to answer for that one.']]];
+  [85, ['A must-watch show.', 'Go out of your way to see this one.', 'One of the best shows of the year so far.', 'Clear your schedule and watch the whole thing.', 'This is why we love wrestling.', 'Shows like this are rare. Savour it.']],
+  [75, ['A strong night of wrestling.', 'Well worth your time.', 'Thumbs up from us.', 'Plenty to like here.', 'A good show that never dragged.', 'The kind of night that keeps fans coming back.']],
+  [62, ['Solid, if not spectacular.', 'A decent show with a couple of highlights.', 'Nothing wrong with it, nothing special either.', 'Watch the highlights and you won\'t miss much.', 'Fine for a regular week.', 'It passed the time.']],
+  [48, ['A flat night.', 'Skip it and read the results.', 'The crowd checked out early, and so did we.', 'Long stretches of nothing.', 'We kept waiting for it to get going. It didn\'t.', 'Not one to remember.']],
+  [0, ['A mess from start to finish.', "One of the worst shows we've sat through this year.", 'Someone backstage needs to answer for that one.', 'We want those hours back.', 'Even the commentators sounded bored.', 'Hard to find a single positive.']]];
 const DIRT_HEAD = [
-  [85, ['{s} steals the week', '{s} is the talk of wrestling', 'Believe the hype: {s} delivered']],
-  [75, ['{s} delivers', 'A good night for {c}', '{s} hits the mark']],
-  [62, ['{s} does its job', 'A middle-of-the-road {s}', '{s}: fine, not memorable']],
-  [48, ['{s} falls flat', 'Tough night for {c}', 'Fans tune out of {s}']],
-  [0, ['{s} bombs', 'Disaster for {c}', 'What happened to {s}?']]];
+  [85, ['{s} steals the week', '{s} is the talk of wrestling', 'Believe the hype: {s} delivered', '{c} raises the bar', 'An all-timer from {c}', '{s} brings the house down']],
+  [75, ['{s} delivers', 'A good night for {c}', '{s} hits the mark', '{c} on a roll', '{s} gets it right', 'Thumbs up for {s}']],
+  [62, ['{s} does its job', 'A middle-of-the-road {s}', '{s}: fine, not memorable', 'Steady as she goes for {c}', '{s} plays it safe', 'Business as usual at {c}']],
+  [48, ['{s} falls flat', 'Tough night for {c}', 'Fans tune out of {s}', '{s} runs out of steam', 'Questions for {c}', 'A forgettable {s}']],
+  [0, ['{s} bombs', 'Disaster for {c}', 'What happened to {s}?', 'Rock bottom for {c}?', '{s} is a write-off', 'Fans walk out on {s}']]];
 const dirtBand = (tbl, r) => pick(tbl.find(([m]) => r >= m)[1]);
 const dirtNoDot = s => String(s || '').replace(/[.!]$/, '');
 const dirtSrc = yes => { const x = Math.random(); return yes ? (x < .6 ? 'solid' : x < .9 ? 'hear' : 'spec') : (x < .1 ? 'solid' : x < .45 ? 'hear' : 'spec'); };
@@ -3531,23 +3631,37 @@ function dirtRumours() {
   const c = [], mine = signed().filter(w => !w.retired), rs = (G.rivalPromos || []).filter(r => r.roster.length);
   const add = (t, yes, wt = 1) => c.push({ t, yes, wt: wt + Math.random() });
   for (const w of mine) {
-    if (w.courted && w.contract.weeks <= 12) add(`${w.courted} has been in touch with ${w.name}'s people about their next deal.`, 1, 3);
-    if (w.morale < 30) add(`${w.name} is said to be unhappy with how ${G.promo.name} is using them.`, 1, 2.5);
+    if (w.courted && w.contract.weeks <= 12) add(pick([`${w.courted} has been in touch with ${w.name}'s people about their next deal.`, `${w.name} took a meeting with ${w.courted}. Their deal is nearly up.`]), 1, 3);
+    if (w.morale < 30) add(pick([`${w.name} is said to be unhappy with how ${G.promo.name} is using them.`, `Friends of ${w.name} say they're miserable at ${G.promo.name} right now.`]), 1, 2.5);
   }
   const happy = mine.filter(w => w.morale >= 70 && w.pop >= 45);
-  if (happy.length) { const w = pick(happy); add(`${w.name} has quietly asked for their release from ${G.promo.name}.`, 0, 1.2); }
-  const champ = (G.titles || []).find(t => t.holder.length === 1 && W(t.holder[0])); if (champ && Math.random() < .5) add(`${nameOf(champ.holder[0])} wants out of the ${champ.short} title picture and has told management so.`, 0, .8);
+  if (happy.length) { const w = pick(happy); add(pick([`${w.name} has quietly asked for their release from ${G.promo.name}.`, `${w.name} is said to be eyeing the exit at ${G.promo.name}.`]), 0, 1.2); }
+  const champ = (G.titles || []).find(t => t.holder.length === 1 && W(t.holder[0])); if (champ && Math.random() < .5) add(pick([`${nameOf(champ.holder[0])} wants out of the ${champ.short} title picture and has told management so.`, `${nameOf(champ.holder[0])} is tired of carrying the ${champ.short} title and wants a break.`]), 0, .8);
   for (const r of rs) {
-    if (r.money < 0) add(`Paychecks at ${r.name} are reportedly late. The locker room is nervous.`, 1, 2);
-    else if (r.money > payrollR(r) * 20 && Math.random() < .3) add(`${r.name} could be closing its doors before the year is out.`, 0, 1);
-    if (r.counter && r.counter > G.week) add(`${r.name} is stacking ${r.show} to go head to head with your ${bigName(r.counter)}.`, 1, 2.5);
-    const nd = !r.manual && rivalNeeds(r)[0]; if (nd) add(`${r.name} is shopping for ${nd.l}. Expect a signing soon.`, 1, 1.2);
-    const p = r.push.find(p => G.week - (p.wk || 0) <= 3), pw = p && rW(r, p.id); if (pw) add(`${r.name} management is very high on ${pw.name}. A push is coming.`, 1, 1.4);
+    if (r.money < 0) add(pick([`Paychecks at ${r.name} are reportedly late. The locker room is nervous.`, `${r.name} talent are being told the money is "coming soon". Nobody believes it.`]), 1, 2);
+    else if (r.money > payrollR(r) * 20 && Math.random() < .3) add(pick([`${r.name} could be closing its doors before the year is out.`, `Investors are said to be losing patience with ${r.name}.`]), 0, 1);
+    if (r.counter && r.counter > G.week) add(pick([`${r.name} is stacking ${r.show} to go head to head with your ${bigName(r.counter)}.`, `${r.name} plans to go all in on ${r.show} the night of your ${bigName(r.counter)}.`]), 1, 2.5);
+    const nd = !r.manual && rivalNeeds(r)[0]; if (nd) add(pick([`${r.name} is shopping for ${nd.l}. Expect a signing soon.`, `${r.name} has been calling agents about ${nd.l}.`]), 1, 1.2);
+    const p = r.push.find(p => G.week - (p.wk || 0) <= 3), pw = p && rW(r, p.id); if (pw) add(pick([`${r.name} management is very high on ${pw.name}. A push is coming.`, `Big plans for ${pw.name} at ${r.name}, we're told.`]), 1, 1.4);
     const star = r.roster.slice().sort((a, b) => b.pop - a.pop)[0];
-    if (star && star.pop >= 50 && Math.random() < .35) add(`${star.name}'s deal with ${r.name} is almost up, and they may test free agency.`, (star.rWeeks || 99) <= 10 ? 1 : 0, 1);
+    if (star && star.pop >= 50 && Math.random() < .35) add(pick([`${star.name}'s deal with ${r.name} is almost up, and they may test free agency.`, `${star.name} hasn't signed an extension with ${r.name} yet. Other companies are watching.`]), (star.rWeeks || 99) <= 10 ? 1 : 0, 1);
   }
   const fa = freeAgents().filter(w => w.pop >= 45).sort((a, b) => b.pop - a.pop)[0];
-  if (fa && rs.length) add(`${fa.name} is weighing offers. ${courtFor(fa)} is said to be the front-runner.`, .5, 1.3);
+  if (fa && rs.length) add(pick([`${fa.name} is weighing offers. ${courtFor(fa)} is said to be the front-runner.`, `${fa.name} has narrowed it down, and ${courtFor(fa)} is the name we keep hearing.`]), .5, 1.3);
+  // more chatter: some of it true, most of it noise
+  const hurt = pick(mine.filter(w => w.injury >= 2)); if (hurt) add(pick([`${hurt.name}'s injury may be worse than first thought.`, `Don't expect ${hurt.name} back on schedule, according to one source.`]), 0, .9);
+  const away = pick(mine.filter(w => w.away)); if (away) add(pick([`${away.name} could be back sooner than anyone thinks.`, `${away.name} has been spotted in the gym. A return may be close.`]), 0, .9);
+  const turn = pick(mine.filter(w => w.pop >= 45 && !w.turnWk)); if (turn && Math.random() < .5) add(pick([`There's talk of ${turn.name} turning ${turn.align === 'face' ? 'heel' : 'face'} soon.`, `${turn.name} has pitched a ${turn.align === 'face' ? 'heel' : 'face'} turn, we hear.`]), 0, .8);
+  const young = pick(mine.filter(w => w.age <= 25 && w.pop >= 35)); if (young) add(pick([`People backstage are calling ${young.name} a future world champion.`, `${G.promo.name} sees ${young.name} as a big part of its future.`]), 1, .9);
+  const hotSt = (G.stories || []).filter(s => s.status === 'active' && s.heat >= 50).sort((a, b) => b.heat - a.heat)[0];
+  if (hotSt) add(pick([`Plans for "${hotSt.title}" are said to run through ${bigName(nextBig())}.`, `"${hotSt.title}" is far from over, according to people close to it.`]), .5, 1);
+  if (mine.length >= 4 && Math.random() < .4) { const [x, y] = shuffle(mine).slice(0, 2); if (x && y) add(pick([`${x.name} and ${y.name} reportedly don't get along backstage.`, `There's real tension between ${x.name} and ${y.name}, we're told.`]), 0, .7); }
+  const lastR = (G.history || []).slice(-3).map(h => h.rating); if (lastR.length >= 3) add(pick([`Network executives are keeping a close eye on ${G.promo.name}'s ratings.`, `The network is said to be ${avg(lastR) >= 65 ? 'thrilled' : 'worried'} about ${G.promo.name}'s numbers.`]), avg(lastR) < 55 ? 1 : 0, .7);
+  for (const r of rs) {
+    const rc = r.roster.find(x => x.id === r.champId); if (rc && Math.random() < .25) add(pick([`${r.name} is said to be cooling on ${rc.name} as champion.`, `A title change at ${r.name} could be closer than you think.`]), 0, .6);
+    if (Math.random() < .15) add(pick([`${r.name} is in talks for a bigger TV deal.`, `${r.name} wants to add a second weekly show.`]), 0, .5);
+    if (Math.random() < .15) add(pick([`${r.name} has a surprise debut planned for its next big show.`, `Watch for a mystery signing at ${r.name} soon.`]), 0, .5);
+  }
   c.sort((a, b) => b.wt - a.wt);
   const picked = c.slice(0, 3);
   if (!picked.some(x => !x.yes)) { const f = c.find(x => !x.yes); if (f && Math.random() < .5) picked[Math.min(2, picked.length)] = f; }
@@ -3557,24 +3671,24 @@ function dirtRumours() {
 function dirtTake() {
   const opts = [], mine = ringers(), held = new Set((G.titles || []).flatMap(t => t.holder));
   const star = mine.filter(w => !held.has(w.id) && !w.injury).sort((a, b) => b.pop - a.pop)[0];
-  if (star && star.pop >= 60) opts.push(['Give them the gold', `${star.name} is one of the most popular names in ${G.promo.name} and has no title. What is everyone waiting for?`]);
+  if (star && star.pop >= 60) opts.push(pick([['Give them the gold', `${star.name} is one of the most popular names in ${G.promo.name} and has no title. What is everyone waiting for?`], ['Where is the belt?', `Every crowd cheers for ${star.name}, and every week they go home empty-handed. Put a title on them.`]]));
   for (const t of G.titles || []) {
     const c = t.holder.length === 1 && W(t.holder[0]); if (!c) continue;
     const wks = G.week - (t.since || G.week);
-    if (wks >= 20) opts.push(['Time for a change?', `${c.name} has held the ${t.name} for ${wks} weeks. Great reign, but fans are ready for someone new.`]);
-    if (!t.tag && c.pop < 45 && !t.mid) opts.push(['Not buying it', `${c.name} doesn't feel like a top champion yet. The ${t.short} title needs a bigger star or a bigger story.`]);
+    if (wks >= 20) opts.push(pick([['Time for a change?', `${c.name} has held the ${t.name} for ${wks} weeks. Great reign, but fans are ready for someone new.`], ['Long live the champ?', `${wks} weeks with the ${t.name} is a fine run for ${c.name}. The best reigns know when to end.`]]));
+    if (!t.tag && c.pop < 45 && !t.mid) opts.push(pick([['Not buying it', `${c.name} doesn't feel like a top champion yet. The ${t.short} title needs a bigger star or a bigger story.`], ['Too soon', `The ${t.short} title on ${c.name}? The fans aren't there yet. Build them up or move it on.`]]));
   }
   const hot = (G.stories || []).filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat)[0];
-  if (hot && hot.heat >= 70) opts.push(['Story of the year?', `"${hot.title}" is the hottest story in wrestling right now. Don't rush the payoff.`]);
+  if (hot && hot.heat >= 70) opts.push(pick([['Story of the year?', `"${hot.title}" is the hottest story in wrestling right now. Don't rush the payoff.`], ['Must-see TV', `Nobody changes the channel during "${hot.title}". Let it breathe.`]]));
   const h = (G.history || []).filter(x => x.rating);
   if (h.length >= 8) {
     const a = avg(h.slice(-4).map(x => x.rating)), b = avg(h.slice(-8, -4).map(x => x.rating));
-    if (a >= b + 5) opts.push(['On the rise', `${G.promo.name} is on a roll: the last four shows averaged ${Math.round(a)}, up from ${Math.round(b)}. Whoever is booking, keep going.`]);
-    if (a <= b - 5) opts.push(['Slipping', `${G.promo.name} has gone cold: the last four shows averaged ${Math.round(a)}, down from ${Math.round(b)}. Something needs to change.`]);
+    if (a >= b + 5) opts.push(pick([['On the rise', `${G.promo.name} is on a roll: the last four shows averaged ${Math.round(a)}, up from ${Math.round(b)}. Whoever is booking, keep going.`], ['Hot streak', `Four shows averaging ${Math.round(a)}, up from ${Math.round(b)}. ${G.promo.name} has found something.`]]));
+    if (a <= b - 5) opts.push(pick([['Slipping', `${G.promo.name} has gone cold: the last four shows averaged ${Math.round(a)}, down from ${Math.round(b)}. Something needs to change.`], ['Warning signs', `Down from ${Math.round(b)} to ${Math.round(a)} over the last four shows. ${G.promo.name} needs a shake-up.`]]));
   }
   const top = (G.rivalPromos || []).slice().sort((a, b) => b.fans - a.fans)[0];
-  if (top && top.fans > G.fans * 1.3) opts.push(['Chasing the leader', `${top.name} still draws far more fans than ${G.promo.name}. Beat them head to head on a big night and that can change.`]);
-  else if (top && G.fans > top.fans * 1.3) opts.push(['Top of the pile', `${G.promo.name} is the biggest company around right now. The hard part is staying there.`]);
+  if (top && top.fans > G.fans * 1.3) opts.push(pick([['Chasing the leader', `${top.name} still draws far more fans than ${G.promo.name}. Beat them head to head on a big night and that can change.`], ['Still the underdog', `${G.promo.name} is good, but ${top.name} is bigger. One great night could close the gap.`]]));
+  else if (top && G.fans > top.fans * 1.3) opts.push(pick([['Top of the pile', `${G.promo.name} is the biggest company around right now. The hard part is staying there.`], ['King of the hill', `Nobody draws like ${G.promo.name} right now. Everyone is coming for them.`]]));
   const o = opts.length ? pick(opts) : null; return o ? { h: o[0], b: o[1] } : null;
 }
 // power rankings, once a month: the 10 hottest wrestlers anywhere
@@ -4146,10 +4260,10 @@ function feudAdvice() {
     if (sent >= 2) continue;
     const nm = `${st.a.map(id => lastName(W(id) || { name: '?' })).join(' & ')} and ${st.b.map(id => lastName(W(id) || { name: '?' })).join(' & ')}`;
     const nb = bigName(nextBig()), wk = feudWks(st);
-    const t = c.k === 'hot' ? [`${st.title} is on fire`, `${nm} are the hottest thing on the show. Don't end it at ${nb}. Give them a rematch at the next one.`]
-      : c.k === 'ready' ? [`${st.title} is ready`, `${wk} weeks in and the crowd wants the payoff. Let's blow it off at ${nb}.`]
-      : c.k === 'stale' ? [`${st.title} has run long`, `${wk} weeks is a long time. Blow it off at ${nb} before the fans move on.`]
-      : [`${st.title} is dying`, `Nobody is buying ${nm}. ${wk} weeks is enough. Let's end it on the next show.`];
+    const t = c.k === 'hot' ? [`${st.title} is on fire`, pick([`${nm} are the hottest thing on the show. Don't end it at ${nb}. Give them a rematch at the next one.`, `The crowd can't get enough of ${nm}. I'd stretch this past ${nb}. There's more money in it.`])]
+      : c.k === 'ready' ? [`${st.title} is ready`, pick([`${wk} weeks in and the crowd wants the payoff. Let's blow it off at ${nb}.`, `${nm} have built this for ${wk} weeks and it's peaking. ${nb} is the place to end it.`])]
+      : c.k === 'stale' ? [`${st.title} has run long`, pick([`${wk} weeks is a long time. Blow it off at ${nb} before the fans move on.`, `I'm seeing people check their phones during ${nm}. After ${wk} weeks, let's finish it at ${nb}.`])]
+      : [`${st.title} is dying`, pick([`Nobody is buying ${nm}. ${wk} weeks is enough. Let's end it on the next show.`, `The crowd is silent for ${nm}. Let's cut our losses and end it on the next show.`])];
     asstText(t[0], t[1], { feud: st.id, fk: c.k, by: producerName() });
     sent++;
   }
@@ -4374,7 +4488,7 @@ const PERKS = {
 const perk = k => !!(G && G.booker && Array.isArray(G.booker.perks) && G.booker.perks.includes(k));
 const perksDue = () => Math.max(0, Math.min(Object.keys(PERKS).length, Math.floor(coLvl() / 5)) - (G.booker.perks || []).length);
 const bigBonus = () => [4, 10, 16].filter(l => coLvl() >= l).length;
-const SPONSORS = ['Iron Grip Energy', 'Bolt Cola', 'Ringside Rides', 'Turnbuckle Tools', 'Max Rep Gyms', 'Night Owl Coffee', 'Pinfall Pizza', 'Headlock Headphones'];
+const SPONSORS = ['Iron Grip Energy', 'Bolt Cola', 'Ringside Rides', 'Turnbuckle Tools', 'Max Rep Gyms', 'Night Owl Coffee', 'Pinfall Pizza', 'Headlock Headphones', 'Suplex Sneakers', 'Top Rope Tacos', 'Body Slam Burgers', 'Steel Chair Office Supply', 'Clothesline Laundry', 'Three Count Insurance', 'Main Event Motors', 'Cage Match Cereal'];
 // a company level reached: pay the bonus. Returns lines for the show-night screen.
 function coLevelUps() {
   const b = G.booker, L = coLvl(), out = [];
@@ -4533,13 +4647,13 @@ const EVENTS = {
       const last = G.history.slice(-3).map(h => h.rating), T = clamp(Math.round((last.length ? avg(last) : 60) - 4), 50, 80);
       return { n: pick(SPONSORS), pay: Math.round((G.tv * 0.12 + G.fans * 0.25) * (1 + coLvl() / 25) / 500) * 500, wks: pick([8, 10, 12]), T };
     },
-    title: '💼 Sponsorship offer', text: d => `${d.n} wants their name on your show: ${money(d.pay)} a week for ${d.wks} weeks, as long as every show rates ${d.T} or better.`,
+    title: '💼 Sponsorship offer', text: d => vary(d, `${d.n} wants their name on your show: ${money(d.pay)} a week for ${d.wks} weeks, as long as every show rates ${d.T} or better.`, `The people at ${d.n} called. They'll pay ${money(d.pay)} a week for ${d.wks} weeks to sponsor the show, but only while every show rates ${d.T} or better.`, `${d.n} is offering ${money(d.pay)} a week for ${d.wks} weeks to put their logo on the ring apron. The catch: every show has to hit ${d.T}.`),
     choices: d => [['Sign the deal', `+${money(d.pay)} a week. One show under ${d.T} and they walk.`], ['Turn it down', 'No pressure on the ratings']],
     pick(i, d) { G.booker.lastSponsor = G.week; if (i) return `You passed on ${d.n}.`; G.sponsor = { n: d.n, pay: d.pay, T: d.T, left: d.wks, paidWk: 0 }; return `${d.n} is on board. Keep every show at ${d.T}+.`; }
   },
   special: {
     when() { if (coLvl() < 8 || isBig(G.week) || onEv() || specialPending() || G.week < nextSpecialWk() || G.week - (G.booker.lastSpecial || -99) < SPECIAL_GAP) return null; return { n: pick(SPECIAL_NAMES) }; },
-    title: '📺 TV special offer', text: d => `The network wants this week's show as a one-off "${d.n}".`,
+    title: '📺 TV special offer', text: d => vary(d, `The network wants this week's show as a one-off "${d.n}".`, `The network just called. They want to brand this week's show as a one-off "${d.n}" and promote it hard.`, `Big news from the network: this week's show could air as "${d.n}", with extra promotion behind it.`),
     choices: () => [['Make it a special', `Bigger crowd, double TV money, more new fans, one extra segment. The network expects ${specialTargetNow()}+, and missing it hurts your reputation`], ['Keep it a normal week', 'Nothing changes']],
     pick(i, d) { G.booker.lastSpecial = G.week; if (i) return 'A regular week it is.'; G.special = G.week; G.specialSid = G.showId; G.specialName = d.n; G.specialT = specialTargetNow(); G.todos.unshift({ t: `This week is the ${d.n}: book a big card`, done: false }); return `This week's show is the ${d.n}.`; }
   },
@@ -4549,7 +4663,7 @@ const EVENTS = {
       const r = G.history.filter(h => h.wk === G.week - 1).flatMap(h => h.results).filter(r => r.rating >= 78).sort((a, b) => b.rating - a.rating)[0];
       if (!r) return null; const ids = segPeople(r.seg).filter(id => W(id)?.contract).slice(0, 4); return ids.length ? { ids, k: r.seg.kind } : null;
     },
-    title: '📱 Your show went viral', text: d => `Last week's ${d.k === 'match' ? 'match' : 'segment'} with ${d.ids.map(nameOf).join(', ')} is all over social media.`,
+    title: '📱 Your show went viral', text: d => vary(d, `Last week's ${d.k === 'match' ? 'match' : 'segment'} with ${d.ids.map(nameOf).join(', ')} is all over social media.`, `Everyone is sharing last week's ${d.k === 'match' ? 'match' : 'segment'} with ${d.ids.map(nameOf).join(', ')}. The clip is still climbing.`, `The clip of ${d.ids.map(nameOf).join(', ')} from last week's ${d.k === 'match' ? 'match' : 'segment'} just passed a million views.`),
     choices: () => [[MON() ? 'Push it everywhere' : 'Push it everywhere', MON() ? `Spend ${money(Math.round(G.fans * 0.4 / 1000) * 1000)} on ads for a big fan boost` : 'Big fan boost, they get more popular'], ['Let it ride', 'A smaller boost for free']],
     pick(i, d) {
       const room = Math.max(0.15, 1 - G.fans / fanCap()), f = Math.round(G.fans * (i ? 0.008 : 0.025) * room);
@@ -4561,25 +4675,25 @@ const EVENTS = {
   // ---- media: the big offers you can't book yourself ----
   mediaOffer: {
     when() { if (Math.random() > .5) return null; const w = pick(healthy().filter(w => w.pop >= 30 && w.mediaWk !== G.week)); if (!w) return null; const k = pick(['talk', 'pod']); return { a: w.id, k, n: pick(OUTLETS[k]) }; },
-    title: '📺 Big media request', text: d => `${d.n}, one of the biggest ${d.k === 'pod' ? 'podcasts' : 'TV shows'} around, wants ${nameOf(d.a)} on this week.`,
+    title: '📺 Big media request', text: d => vary(d, `${d.n}, one of the biggest ${d.k === 'pod' ? 'podcasts' : 'TV shows'} around, wants ${nameOf(d.a)} on this week.`, `${d.n} has a last-minute opening and asked for ${nameOf(d.a)} by name. It's one of the biggest ${d.k === 'pod' ? 'podcasts' : 'TV shows'} there is.`, `${nameOf(d.a)} got the call: ${d.n} wants them on this week, and it's one of the top ${d.k === 'pod' ? 'podcasts' : 'TV shows'} out there.`),
     choices: () => [['Send them', 'A big popularity boost. No fatigue, and they still work the show'], ['Pass', 'Nothing changes']],
     pick(i, d) { const w = W(d.a); if (!w?.contract || w.away) return 'The booking fell through.'; if (i) return `${w.name} stays focused on wrestling.`; return doMedia(w, d.k, 2.2, true); }
   },
   movieOffer: {
     when() { if (Math.random() > .3) return null; const w = pick(healthy().filter(w => w.pop >= 45 && !w.loan && !isChamp(w) && !mediaIn(w, 26))); if (!w) return null; const wks = pick([6, 8, 10]); return { a: w.id, wks, fee: mediaFee(w, wks) }; },
-    title: '🎬 Hollywood calls', text: d => `A studio wants ${nameOf(d.a)} for a big movie. Filming takes ${d.wks} weeks.`,
+    title: '🎬 Hollywood calls', text: d => vary(d, `A studio wants ${nameOf(d.a)} for a big movie. Filming takes ${d.wks} weeks.`, `${nameOf(d.a)}'s agent forwarded a movie script. The studio wants them on set for ${d.wks} weeks.`, `Hollywood wants ${nameOf(d.a)}. It's a real part in a big film, but they'd be gone ${d.wks} weeks.`),
     choices: d => [['Let them go', `Out ${d.wks} weeks, back a much bigger star${MON() ? ` · studio pays ${money(d.fee)}` : ''}`], ['Keep them here', 'They stay, but they wanted this']],
     pick(i, d) { const w = W(d.a); if (!w?.contract || w.away || isChamp(w)) return 'The studio went with someone else.'; if (i) { w.morale = clamp(w.morale - 5, 0, 100); return `${w.name} stays, but they're not happy about it.`; } return sendAway(w, 'movie', { wks: d.wks, m: 1.5, fee: d.fee }); }
   },
   indieOffer: {
     when() { if (Math.random() > .35) return null; const w = pick(healthy().filter(w => w.pop < 50 && !w.loan && !isChamp(w) && !mediaIn(w, 12))); return w && { a: w.id, wks: pick([3, 4, 5]) }; },
-    title: '🤼 Indie tour offer', text: d => `A big indie tour wants ${nameOf(d.a)} for ${d.wks} weeks of shows.`,
+    title: '🤼 Indie tour offer', text: d => vary(d, `A big indie tour wants ${nameOf(d.a)} for ${d.wks} weeks of shows.`, `An indie promoter is putting together a ${d.wks}-week tour and wants ${nameOf(d.a)} headlining it.`, `${nameOf(d.a)} has an offer to work ${d.wks} weeks of indie shows, and the bookers there love them.`),
     choices: d => [['Let them go', `Out ${d.wks} weeks. Back sharper and more popular`], ['Keep them here', 'Nothing changes']],
     pick(i, d) { const w = W(d.a); if (!w?.contract || w.away || isChamp(w)) return 'The tour found someone else.'; if (i) return `${w.name} stays home.`; return sendAway(w, 'indies', { wks: d.wks, m: 1.5 }); }
   },
   brawl: {
     when() { const hs = shuffle(healthy()); for (const a of hs) for (const b of hs) if (a !== b && a.align !== b.align && !storiesOf(a.id).some(s => s.a.includes(b.id) || s.b.includes(b.id))) return { a: a.id, b: b.id }; return null; },
-    title: '👊 Backstage brawl', text: d => `${nameOf(d.a)} and ${nameOf(d.b)} got into a real fight backstage.`,
+    title: '👊 Backstage brawl', text: d => vary(d, `${nameOf(d.a)} and ${nameOf(d.b)} got into a real fight backstage.`, `Security had to pull ${nameOf(d.a)} off ${nameOf(d.b)} in catering. Half the locker room saw it.`, `${nameOf(d.a)} and ${nameOf(d.b)} went at it in the hallway before anyone could stop them. This one wasn't a work.`),
     choices: () => [['Turn it into a feud', 'New storyline, already hot'], ['Fine them both', 'Morale drops, but order is kept'], ['Let it slide', 'They like you more, but it looks soft']],
     pick(i, d) { const a = W(d.a), b = W(d.b);
       if (i === 0) { G.stories.push({ id: uid(), title: `${lastName(a)} vs ${lastName(b)}`, type: 'Feud', a: [a.id], b: [b.id], titleId: null, heat: 35, start: G.week, status: 'active', notes: 'Started with a backstage brawl.', log: [], autoEnd: true }); return `New storyline: ${a.name} vs ${b.name} starts at 35 heat.`; }
@@ -4588,7 +4702,7 @@ const EVENTS = {
   },
   viral: {
     when() { const w = pick(healthy().filter(w => w.pop >= 25 && w.pop <= 78)); return w && { a: w.id }; },
-    title: '📱 Gone viral', text: d => `A clip of ${nameOf(d.a)} has millions of views.`,
+    title: '📱 Gone viral', text: d => vary(d, `A clip of ${nameOf(d.a)} has millions of views.`, `${nameOf(d.a)} is trending. A fan's video from ringside has been shared everywhere.`, `Everyone online is talking about ${nameOf(d.a)} today. One clip, millions of views.`),
     choices: () => [['Strike while it\'s hot', 'Big popularity boost'], [MON() ? 'Rush out a T-shirt' : 'Play it cool', MON() ? 'Cash in on merch' : 'A smaller, steady boost']],
     pick(i, d) { const w = W(d.a);
       if (i === 0) { addPop(w, 5); w.momentum += 10; G.todos.unshift({ t: `Feature ${w.name} on this week's show (they went viral)`, done: false }); return `${w.name} is the talk of the internet. Book them big this week.`; }
@@ -4597,7 +4711,7 @@ const EVENTS = {
   },
   walkin: {
     when() { const w = freeAgents().filter(w => w.pop >= 45).sort((a, b) => b.pop - a.pop)[0]; if (!w || (MON() && G.money < askFor(w, 52) * 8)) return null; return { a: w.id }; },
-    title: '🚪 Unexpected visitor', text: d => `Free agent ${nameOf(d.a)} showed up and wants to sign tonight${CON() ? ' for 1 year, no long negotiation' : ''}.`,
+    title: '🚪 Unexpected visitor', text: d => vary(d, `Free agent ${nameOf(d.a)} showed up and wants to sign tonight${CON() ? ' for 1 year, no long negotiation' : ''}.`, `${nameOf(d.a)} is sitting in your office right now. No agent, no games: they want to sign tonight${CON() ? ' on a 1-year deal' : ''}.`, `Free agent ${nameOf(d.a)} just walked in the back door asking for you. They want a deal tonight${CON() ? ': 1 year, no haggling' : ''}.`),
     choices: d => [[`Sign them tonight`, CON() ? `${money(Math.round(askFor(W(d.a), 52) * 1.05 / 100) * 100)}/wk for 1 year` : 'They join the roster now'], ['Not interested', 'They walk back out']],
     pick(i, d) { const w = W(d.a); if (!w || w.contract) return 'They already signed elsewhere.';
       if (i === 0) { w.contract = { salary: Math.round(askFor(w, 52) * 1.05 / 100) * 100, weeks: 52 }; w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(w.morale + 10, 0, 100); news(`✍️ ${w.name} signed on the spot.`, 'contract'); return `${w.name} is all yours. Debut them this week!`; }
@@ -4605,7 +4719,7 @@ const EVENTS = {
   },
   tweak: {
     when() { const last = G.history.at(-1); if (!last) return null; const ids = [...new Set(last.results.flatMap(r => segPeople(r.seg)))].filter(id => W(id)?.contract && !W(id).injury); const id = pick(ids); return id && { a: id }; },
-    title: '🩹 Injury scare', text: d => `${nameOf(d.a)} tweaked something last week. Probably fine.`,
+    title: '🩹 Injury scare', text: d => vary(d, `${nameOf(d.a)} tweaked something last week. Probably fine.`, `The trainer says ${nameOf(d.a)} came out of last week's show limping. They insist they're fine.`, `${nameOf(d.a)} was icing their knee after last week's show. They say it's nothing.`),
     choices: () => [['Rest them this week', 'Safe. They miss one show'], ['Let them work', 'Probably fine. Probably']],
     pick(i, d) { const w = W(d.a);
       if (i === 0) { w.injury = 1; return `${w.name} sits out this week to heal up.`; }
@@ -4614,7 +4728,7 @@ const EVENTS = {
   },
   raid: {
     when() { if (!CON() || !MON() || !G.rivals?.length) return null; const w = pick(signed().filter(w => w.pop >= 35 && w.pop < 72 && w.contract.weeks > 8 && !G.titles.some(t => t.holder.includes(w.id)))); return w && { a: w.id, r: courtFor(w), amt: Math.round(w.contract.salary * w.contract.weeks * .45 / 1000) * 1000 }; },
-    title: '💼 Buyout offer', text: d => `${d.r} wants ${nameOf(d.a)} and is offering ${money(d.amt)} to buy out their contract.`,
+    title: '💼 Buyout offer', text: d => vary(d, `${d.r} wants ${nameOf(d.a)} and is offering ${money(d.amt)} to buy out their contract.`, `${d.r} called with an offer: ${money(d.amt)} to take ${nameOf(d.a)}'s contract off your hands.`, `${d.r} wants to buy ${nameOf(d.a)} out of their deal and is putting ${money(d.amt)} on the table.`),
     choices: () => [['Take the money', 'Cash now, one less wrestler'], ['Refuse', 'They feel valued']],
     pick(i, d) { const w = W(d.a); if (!w?.contract) return 'The offer fell through.';
       if (i === 0) { G.money += d.amt; leaveCompany(w, 'bought out'); goRival(w, d.r); news(`💼 ${d.r} bought out ${w.name} for ${money(d.amt)}.`, 'contract'); return `+${money(d.amt)}. ${w.name} is off to ${d.r}.`; }
@@ -4622,7 +4736,7 @@ const EVENTS = {
   },
   dream: {
     when() { const top = healthy().sort((a, b) => b.pop - a.pop).slice(0, 6); const met = new Set(G.history.flatMap(h => h.keys || [])); for (const a of top) for (const b of top) if (a !== b && a.id < b.id && !met.has([a.id, b.id].sort().join(','))) return { a: a.id, b: b.id }; return null; },
-    title: '🗣️ Fans want a dream match', text: d => `"${lastName(W(d.a)).toUpperCase()} VS ${lastName(W(d.b)).toUpperCase()}!" is trending. They've never faced each other.`,
+    title: '🗣️ Fans want a dream match', text: d => vary(d, `"${lastName(W(d.a)).toUpperCase()} VS ${lastName(W(d.b)).toUpperCase()}!" is trending. They've never faced each other.`, `Fans keep chanting for ${nameOf(d.a)} vs ${nameOf(d.b)}. It has never happened, and social media won't stop asking.`, `"WE WANT ${lastName(W(d.a)).toUpperCase()}! WE WANT ${lastName(W(d.b)).toUpperCase()}!" The fans want a match that has never happened.`),
     choices: () => [['Book it this week', 'Added to this week\'s card'], ['Make them wait', 'Start a storyline and build to it']],
     pick(i, d) { const a = W(d.a), b = W(d.b);
       if (i === 0) { G.card.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean', title: null }); addPop(a, 1); addPop(b, 1); return `${a.name} vs ${b.name} is on this week's card.`; }
@@ -4630,14 +4744,14 @@ const EVENTS = {
   },
   mentor: {
     when() { const v = pick(healthy().filter(w => w.age >= 35)), y = pick(healthy().filter(w => w.age <= 25)); return v && y && { a: v.id, b: y.id }; },
-    title: '🎓 A veteran offers to help', text: d => `${nameOf(d.a)} wants to take ${nameOf(d.b)} under their wing.`,
+    title: '🎓 A veteran offers to help', text: d => vary(d, `${nameOf(d.a)} wants to take ${nameOf(d.b)} under their wing.`, `${nameOf(d.a)} has been staying late to watch ${nameOf(d.b)} train, and offered to coach them properly.`, `${nameOf(d.b)} keeps asking ${nameOf(d.a)} for advice, and ${lastName(W(d.a))} wants to take them on as a student.`),
     choices: () => [['Pair them up', 'The young one learns fast'], ['Not now', 'Nothing changes']],
     pick(i, d) { const v = W(d.a), y = W(d.b); if (i) return 'Maybe another time.';
       y.ring = clamp(y.ring + 3, 1, 100); y.mic = clamp(y.mic + 2, 1, 100); v.morale = clamp(v.morale + 6, 0, 100); return `${y.name} gains Ring +3, Mic +2. ${v.name} loves it.`; }
   },
   gimmick: {
     when() { const w = pick(healthy().filter(w => w.pop < 55)); return w && { a: w.id }; },
-    title: '🎭 Gimmick pitch', text: d => `${nameOf(d.a)} pitched a bold new character. It could be huge, or it could flop.`,
+    title: '🎭 Gimmick pitch', text: d => vary(d, `${nameOf(d.a)} pitched a bold new character. It could be huge, or it could flop.`, `${nameOf(d.a)} walked in with a notebook full of ideas for a brand new character. It's a big swing.`, `${nameOf(d.a)} wants to reinvent themselves with a totally new character. Bold idea, uncertain payoff.`),
     choices: () => [['Go for it', 'Big risk, big reward'], ['Stick with what works', 'Play it safe']],
     pick(i, d) { const w = W(d.a); if (i) { w.morale = clamp(w.morale - 2, 0, 100); return `${w.name} is a bit disappointed.`; }
       if (Math.random() < .6) { addPop(w, 7); w.momentum += 12; return `The fans love it. ${w.name} is suddenly over!`; }
@@ -4645,7 +4759,7 @@ const EVENTS = {
   },
   exec: {
     when() { return G.history.length >= 2 && !isBig(G.week) ? {} : null; },
-    title: '📺 TV exec in the building', text: () => `A TV executive is at this week's show.`,
+    title: '📺 TV exec in the building', text: d => vary(d, `A TV executive is at this week's show.`, `A network executive will be sitting ringside this week, taking notes.`, `Someone from the network is coming to watch this week's show in person.`),
     choices: () => [['Promise a great show', 'Rate 70+ for more TV money. Miss and lose prestige'], ['Keep expectations low', 'No goal, no risk']],
     pick(i) { if (i) return 'Business as usual.'; ensureGoals(); G.booker.goals.push({ key: 'exec', T: 70, wk: G.week, xp: 30, fans: .01, text: 'Impress the TV exec (70+ show)' }); return 'New goal: rate 70+ this week.'; }
   }
@@ -4658,7 +4772,7 @@ Object.assign(EVENTS, {
     when() { if (!CON()) return null; ensureRivals(); const r = bigRival(); if (!r) return null;
       const w = pick(signed().filter(w => !w.loan && w.contract.weeks > 8).sort((a, b) => b.pop - a.pop).slice(0, 5)); if (!w || w.pop < 50) return null;
       return { a: w.id, r: r.id, amt: Math.round(w.contract.salary * Math.min(w.contract.weeks, 52) * .5 / 1000) * 1000 }; },
-    title: '💼 Rival offer', text: d => `${RV(d.r)?.name || 'A rival'} offered ${nameOf(d.a)} a bigger deal to jump ship now, even with time left on their contract.`,
+    title: '💼 Rival offer', text: d => vary(d, `${RV(d.r)?.name || 'A rival'} offered ${nameOf(d.a)} a bigger deal to jump ship now, even with time left on their contract.`, `${nameOf(d.a)}'s agent says ${RV(d.r)?.name || 'a rival'} made a huge offer and wants them to jump now, contract or not.`, `${RV(d.r)?.name || 'A rival'} is trying to lure ${nameOf(d.a)} away right now with a much bigger contract.`),
     choices: d => [[MON() ? 'Match it' : 'Promise a bigger push', MON() ? `Raise their pay 25% to ${money(Math.round(W(d.a).contract.salary * 1.25 / 100) * 100)}/wk` : 'They stay, and want to be featured'], ['They\'re under contract', 'Hold them to it. They may not like it'], ['Let them go', MON() ? `${RV(d.r)?.name || 'The rival'} pays you ${money(d.amt)}` : 'They leave now']],
     pick(i, d) { const w = W(d.a), r = RV(d.r); if (!w?.contract || !r) return 'The offer fell through.';
       if (i === 0) { if (MON()) w.contract.salary = Math.round(w.contract.salary * 1.25 / 100) * 100; else G.todos.unshift({ t: `Give ${w.name} a big win (you promised a push)`, done: false }); w.morale = clamp(w.morale + 8, 0, 100); return `${w.name} is staying${MON() ? ' on a raise' : ''}.`; }
@@ -4672,7 +4786,7 @@ Object.assign(EVENTS, {
       const mine = pick(signed().filter(w => !w.loan && w.pop >= 25 && w.pop < 70 && !champOf(w) && !storiesOf(w.id).length)); if (!mine) return null;
       const theirs = shuffle(r.roster.filter(x => x.id !== r.champId && Math.abs(overall(x) - overall(mine)) <= 6 && (x.style !== mine.style || x.align !== mine.align)))[0];
       return theirs && { a: mine.id, b: theirs.id, r: r.id }; },
-    title: '↔️ Trade offer', text: d => `${RV(d.r)?.name || 'A rival'} wants to trade ${nameOf(d.b)} for your ${nameOf(d.a)}.`,
+    title: '↔️ Trade offer', text: d => vary(d, `${RV(d.r)?.name || 'A rival'} wants to trade ${nameOf(d.b)} for your ${nameOf(d.a)}.`, `${RV(d.r)?.name || 'A rival'} called about a swap: their ${nameOf(d.b)} for your ${nameOf(d.a)}.`, `Trade talk: ${RV(d.r)?.name || 'a rival'} would give you ${nameOf(d.b)} if you send them ${nameOf(d.a)}.`),
     choices: d => { const a = W(d.a), b = rivalW(d.b); return [['Make the trade', b ? `${b.style}, ${b.align}, Pop ${Math.round(b.pop)}, OVR ${overall(b)}` : 'Swap them'], ['No thanks', a ? `Keep ${a.name}` : 'Nothing changes']]; },
     pick(i, d) { if (i) return 'You kept your roster as it is.';
       const a = W(d.a), r = RV(d.r), b = r?.roster.find(x => x.id === d.b); if (!a?.contract || !b) return 'The trade fell through.';
@@ -4684,7 +4798,7 @@ Object.assign(EVENTS, {
     when() { if (G.week < 4 || signed().some(w => w.loan)) return null; ensureRivals(); const r = bigRival(); if (!r || r.roster.length < 6) return null;
       const inv = r.roster.filter(w => w.id !== r.champId && !w.injury).sort((a, b) => b.pop - a.pop).slice(0, 2); if (inv.length < 2) return null;
       return { a: inv[0].id, b: inv[1].id, r: r.id }; },
-    title: '🚪 Invasion', text: d => `${nameOf(d.a)} and ${nameOf(d.b)} from ${RV(d.r)?.name || 'a rival'} want to storm your show for an invasion story.`,
+    title: '🚪 Invasion', text: d => vary(d, `${nameOf(d.a)} and ${nameOf(d.b)} from ${RV(d.r)?.name || 'a rival'} want to storm your show for an invasion story.`, `${RV(d.r)?.name || 'A rival'} wants to send ${nameOf(d.a)} and ${nameOf(d.b)} through your crowd this week to start an invasion.`, `${nameOf(d.a)} and ${nameOf(d.b)} of ${RV(d.r)?.name || 'a rival'} want to crash your show and start a war between the companies.`),
     choices: () => [['Let them invade', 'They join for 8 weeks with a hot storyline'], ['Lock the doors', 'Your locker room likes that you protect them']],
     pick(i, d) { const r = RV(d.r);
       if (i) { for (const w of signed()) w.morale = clamp(w.morale + 2, 0, 100); return 'You kept them out. The locker room is fired up.'; }
@@ -4701,7 +4815,7 @@ Object.assign(EVENTS, {
         const x = seg.sides.filter((_, i) => i !== seg.winner).flat().map(W).filter(w => w && w.pop >= 55 && w.pop >= wp + 6 && !(w.creative >= G.week)).sort((a, b) => b.pop - a.pop)[0];
         if (x) return { a: x.id, b: seg.sides[seg.winner][0], seg: seg.id }; }
       return null; },
-    title: '😠 Refusing to lose', text: d => `${nameOf(d.a)} refuses to lose to ${nameOf(d.b)} tonight. "The fans didn't pay to see me lose to them."`,
+    title: '😠 Refusing to lose', text: d => vary(d, `${nameOf(d.a)} refuses to lose to ${nameOf(d.b)} tonight. "The fans didn't pay to see me lose to them."`, `${nameOf(d.a)} just told the agents they won't lose to ${nameOf(d.b)} tonight. "That finish doesn't work for me."`, `${nameOf(d.a)} is digging in: they don't want to lose to ${nameOf(d.b)} tonight, and they've told everyone backstage.`),
     choices: () => [['Change the finish', 'They win instead'], ['Hold firm', 'Keep your finish. They may walk out'], ['Let the match decide', 'Sim the winner']],
     pick(i, d) { const w = W(d.a), seg = G.card.find(x => x.id === d.seg); if (!w || !seg) return 'It sorted itself out.';
       const side = seg.sides.findIndex(sd => sd.includes(w.id)); if (side < 0) return 'They are not on the card anymore.';
@@ -4713,7 +4827,7 @@ Object.assign(EVENTS, {
   },
   creative: {
     when() { const w = pick(signed().filter(w => !w.loan && w.pop >= 60 && !(w.creative >= G.week)).sort((a, b) => b.pop - a.pop).slice(0, 4)); return w && { a: w.id }; },
-    title: '💼 Creative control', text: d => `${nameOf(d.a)} wants creative control: a say in when they win and lose.`,
+    title: '💼 Creative control', text: d => vary(d, `${nameOf(d.a)} wants creative control: a say in when they win and lose.`, `${nameOf(d.a)}'s people want it in writing: a say in their wins and losses for the next few months.`, `${nameOf(d.a)} wants approval over their own finishes from now on.`),
     choices: () => [['Grant it for 16 weeks', 'Happy star, but they may change finishes'], ['Refuse', 'Morale drops']],
     pick(i, d) { const w = W(d.a); if (!w) return 'Never mind.';
       if (i) { w.morale = clamp(w.morale - 10, 0, 100); return `${w.name} is upset you said no.`; }
@@ -4721,7 +4835,7 @@ Object.assign(EVENTS, {
   },
   leader: {
     when() { if (G.leader && W(G.leader)?.contract) return null; const w = pick(signed().filter(w => !w.loan && w.morale >= 55 && (w.age >= 32 || w.pop >= 70))); return w && { a: w.id }; },
-    title: '👑 Locker room leader', text: d => `${nameOf(d.a)} wants to be the voice of the locker room.`,
+    title: '👑 Locker room leader', text: d => vary(d, `${nameOf(d.a)} wants to be the voice of the locker room.`, `The locker room keeps going to ${nameOf(d.a)} with their problems. ${lastName(W(d.a))} wants to make it official.`, `${nameOf(d.a)} has offered to keep the locker room in line if you back them as its leader.`),
     choices: () => [['Back them as leader', 'Everyone\'s mood follows theirs. Keep them happy'], ['Stay neutral', 'No leader for now']],
     pick(i, d) { const w = W(d.a); if (!w) return 'Never mind.'; if (i) return 'No leader for now.';
       G.leader = w.id; w.morale = clamp(w.morale + 8, 0, 100); for (const x of signed()) x.morale = clamp(x.morale + 2, 0, 100);
@@ -4730,7 +4844,7 @@ Object.assign(EVENTS, {
   clique: {
     when() { const groups = [...(G.factions || []), ...(G.teams || [])].map(g => ({ name: g.name, ids: g.members.filter(id => W(id)?.contract) })).filter(g => g.ids.length >= 2);
       const g = pick(groups.filter(g => g.ids.every(id => G.week - (W(id).lastBooked || 0) >= 1))); return g && { a: g.ids[0], ids: g.ids.slice(0, 8), n: g.name }; },
-    title: '👥 Backstage clique', text: d => `${d.n} are complaining that they're being held down, and others are starting to listen.`,
+    title: '👥 Backstage clique', text: d => vary(d, `${d.n} are complaining that they're being held down, and others are starting to listen.`, `${d.n} have been grumbling in the locker room that they never get TV time, and it's spreading.`, `${d.n} say the office is holding them back, and the rest of the roster is starting to agree.`),
     choices: () => [['Give them TV time', 'They\'re happy. Book them this week'], ['Break up the clique', 'They\'re upset, but the room calms down']],
     pick(i, d) { const ws = (d.ids || []).map(W).filter(Boolean);
       if (i === 0) { ws.forEach(w => w.morale = clamp(w.morale + 6, 0, 100)); G.todos.unshift({ t: `Book ${d.n} this week (you promised TV time)`, done: false }); return `${d.n} are happy. Put them on the show.`; }
@@ -4738,12 +4852,205 @@ Object.assign(EVENTS, {
   },
   noshow: {
     when() { const w = pick(signed().filter(w => !w.loan && !w.injury && w.morale < 45)); return w && { a: w.id }; },
-    title: '🚪 No-show', text: d => `${nameOf(d.a)} didn't show up for TV this week.`,
+    title: '🚪 No-show', text: d => vary(d, `${nameOf(d.a)} didn't show up for TV this week.`, `${nameOf(d.a)} missed their flight and isn't answering their phone. They won't make TV this week.`, `Bad news: ${nameOf(d.a)} never showed up for TV and nobody knows where they are.`),
     choices: () => [[MON() ? 'Fine them' : 'Read them the riot act', 'Order is kept. Their morale drops'], ['Talk it out', 'They feel heard. It looks soft']],
     pick(i, d) { const w = W(d.a); if (!w) return 'Never mind.';
       for (const seg of G.card) if (segPeople(seg).includes(w.id)) removeFromSeg(seg, w.id);
       if (i === 0) { w.morale = clamp(w.morale - 5, 0, 100); if (MON()) G.money += 2000; for (const x of signed()) if (x !== w) x.morale = clamp(x.morale + 1, 0, 100); return `${w.name} is off this week's card${MON() ? ' and fined' : ''}. The locker room respects it.`; }
       w.morale = clamp(w.morale + 8, 0, 100); G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return `You talked it out with ${w.name}. They're off this week's card.`; }
+  }
+});
+// ---- more backstage moments: life on the road, the locker room and the business ----
+const CELEBS = ['A chart-topping rapper', 'A Hollywood action star', 'A pop superstar', 'A reality TV star', 'A star linebacker', 'A famous TV chef', 'A huge YouTuber', 'An Olympic gold medallist'];
+const evW = (f, n = 1) => shuffle(healthy().filter(f)).slice(0, n);
+const evMood = (w, d) => { if (w) w.morale = clamp(w.morale + d, 0, 100); };
+const evRoom = () => Math.max(0.15, 1 - G.fans / fanCap());
+Object.assign(EVENTS, {
+  fanFest: {
+    when() { if (Math.random() > .5) return null; const [w] = evW(w => w.pop >= 35 && w.mediaWk !== G.week); return w && { a: w.id }; },
+    title: '🎟️ Fan convention', text: d => vary(d, `A big fan convention wants ${nameOf(d.a)} at their signing table this weekend.`, `${nameOf(d.a)} has been invited to headline the autograph hall at the biggest fan convention of the year.`, `${nameOf(d.a)} has been asked to be the star guest at a fan convention this weekend.`),
+    choices: () => [['Send them', `A popularity boost${MON() ? ' and a cut of the signing money' : ''}`], ['Pass', 'Nothing changes']],
+    pick(i, d) { const w = W(d.a); if (!w?.contract || w.away) return 'The convention booked someone else.'; if (i) return `${w.name} stays home.`; return doMedia(w, 'con', 2, true); }
+  },
+  charity: {
+    when() { const [w] = evW(w => w.align === 'face' && w.pop >= 20); return w && { a: w.id }; },
+    title: '❤️ Charity visit', text: d => vary(d, `A children's hospital asked if ${nameOf(d.a)} could visit this week.`, `A local charity asked for ${nameOf(d.a)} to help out at a fundraiser this week.`, `${nameOf(d.a)} could spend a day helping a children's charity this week. They're keen if you are.`),
+    choices: () => [['Make it happen', 'They\'re loved for it, and so is the company'], ['Too busy this week', 'Nothing changes']],
+    pick(i, d) { const w = W(d.a); if (!w) return 'Maybe next time.'; if (i) return 'Maybe next time.';
+      addPop(w, 2); evMood(w, 5); G.promo.prestige = clamp(G.promo.prestige + 1, 1, 100); news(`❤️ ${w.name} spent the day at a charity visit.`, 'office'); return `${w.name} made a lot of people happy. Popularity and prestige up.`; }
+  },
+  stolenGear: {
+    when() { const [a] = evW(w => w.align === 'face' && w.pop >= 20); if (!a) return null;
+      const [b] = evW(w => w.align === 'heel' && sameG(w, a) && !storyBetween([w.id], [a.id]) && storiesOf(w.id).length < 2); return b && storiesOf(a.id).length < 2 && { a: a.id, b: b.id }; },
+    title: '🧳 Missing gear', text: d => vary(d, `${nameOf(d.a)}'s ring gear has gone missing from the locker room. They have a good idea who took it: ${nameOf(d.b)}.`, `Someone cut up ${nameOf(d.a)}'s entrance jacket. Everyone is looking at ${nameOf(d.b)}.`, `${nameOf(d.a)}'s boots vanished from their bag, and ${nameOf(d.b)} was the last one seen near it.`),
+    choices: () => [['Make it a story', 'A new feud starts'], [MON() ? 'Replace the gear' : 'Calm everyone down', MON() ? `Costs ${money(3000)}. They\'re grateful` : 'Their morale goes up']],
+    pick(i, d) { const a = W(d.a), b = W(d.b); if (!a || !b) return 'It turned up in the end.';
+      if (i === 0) return momStory([a.id], [b.id], 28, `${b.name} was blamed for wrecking ${a.name}'s gear.`);
+      if (MON()) G.money -= 3000; evMood(a, 5); return `${a.name} has new gear and a better mood.`; }
+  },
+  payLeak: {
+    when() { if (!MON() || !CON() || signed().length < 6) return null; const t = signed().filter(w => !w.loan).sort((a, b) => b.contract.salary - a.contract.salary)[0];
+      const w = t && pick(signed().filter(w => w !== t && !w.loan && w.pop >= 30 && w.contract.salary < t.contract.salary * .6)); return w && { a: w.id, b: t.id }; },
+    title: '📄 Pay leak', text: d => vary(d, `Someone leaked the payroll. ${nameOf(d.a)} just found out what ${nameOf(d.b)} makes, and they're not happy.`, `A list of salaries is going around the locker room. ${nameOf(d.a)} wants to know why ${nameOf(d.b)} earns so much more.`, `${nameOf(d.a)} saw a leaked pay sheet and now knows exactly how much more ${nameOf(d.b)} makes.`),
+    choices: d => [['Give them a raise', W(d.a)?.contract ? `+10%: ${money(Math.round(W(d.a).contract.salary * 1.1 / 100) * 100)}/wk` : '+10%'], ['Tell them to earn it', 'Their morale drops']],
+    pick(i, d) { const w = W(d.a); if (!w?.contract) return 'It blew over.';
+      if (i) { evMood(w, -8); return `${w.name} is sulking.`; }
+      w.contract.salary = Math.round(w.contract.salary * 1.1 / 100) * 100; evMood(w, 8); return `${w.name} now earns ${money(w.contract.salary)}/wk.`; }
+  },
+  travel: {
+    when() { const ids = shuffle([...new Set(G.card.flatMap(segPeople))].filter(id => { const w = W(id); return w?.contract && !w.injury && !w.away; })); return ids.length >= 2 ? { a: ids[0], b: ids[1] } : null; },
+    title: '✈️ Travel trouble', text: d => vary(d, `A storm grounded the flights. ${nameOf(d.a)} and ${nameOf(d.b)} are stuck at the airport and might miss the show.`, `${nameOf(d.a)} and ${nameOf(d.b)}'s rental car broke down hours from the arena.`, `${nameOf(d.a)} and ${nameOf(d.b)} are stranded after a cancelled flight. They need help to make the show.`),
+    choices: () => [[MON() ? 'Pay for a private ride' : 'Find them a ride', `${MON() ? `Costs ${money(5000)}. ` : ''}They make it, but they're worn out`], ['Rewrite the card', 'They\'re off this week\'s show']],
+    pick(i, d) { const ws = [W(d.a), W(d.b)].filter(Boolean);
+      if (i === 0) { if (MON()) G.money -= 5000; ws.forEach(w => { w.fatigue = clamp((w.fatigue || 0) + 10, 0, 100); evMood(w, 2); }); return 'They made it with minutes to spare.'; }
+      for (const w of ws) for (const seg of G.card) removeFromSeg(seg, w.id); return `${ws.map(w => w.name).join(' and ')} are off this week's card. Fill their spots.`; }
+  },
+  prank: {
+    when() { const [v] = evW(w => w.age >= 32), [y] = evW(w => w.age <= 26); return v && y && v !== y && { a: v.id, b: y.id }; },
+    title: '🤡 Locker room prank', text: d => vary(d, `${nameOf(d.a)} filled rookie ${nameOf(d.b)}'s boots with shaving cream. The locker room is in stitches.`, `${nameOf(d.a)} sent ${nameOf(d.b)} to ask the ring crew for a "left-handed turnbuckle". Everyone was in on it.`, `${nameOf(d.a)} hid all of rookie ${nameOf(d.b)}'s gear in the ring crew's truck. The rookie is searching everywhere.`),
+    choices: () => [['Laugh it off', 'The veterans like it. The rookie, less so'], ['Put a stop to it', 'The rookie is grateful. The veterans roll their eyes']],
+    pick(i, d) { const v = W(d.a), y = W(d.b);
+      if (i === 0) { evMood(v, 4); evMood(y, -3); return 'A good laugh. The rookie will get over it.'; }
+      evMood(y, 5); evMood(v, -3); return `${y?.name || 'The rookie'} appreciates you stepping in.`; }
+  },
+  pressConf: {
+    when() { const st = shuffle(G.stories.filter(s => s.status === 'active' && s.heat >= 30))[0]; if (!st) return null;
+      const a = st.a.map(W).find(w => w?.contract && !w.injury), b = st.b.map(W).find(w => w?.contract && !w.injury); return a && b && { a: a.id, b: b.id, sid: st.id }; },
+    title: '🎙️ Heated press event', text: d => vary(d, `${nameOf(d.a)} and ${nameOf(d.b)} have to share a stage at a press event this week. Nobody expects it to stay civil.`, `The local news set up a joint interview with ${nameOf(d.a)} and ${nameOf(d.b)}. The staff are worried it gets physical.`, `${nameOf(d.a)} and ${nameOf(d.b)} are booked on the same radio show this week. The host is hoping for fireworks.`),
+    choices: () => [['Let it get heated', 'Story heat goes up. It might get messy'], ['Keep them apart', 'Do the interviews one at a time']],
+    pick(i, d) { const st = G.stories.find(s => s.id === d.sid); if (i || !st) return 'Two calm interviews. Nothing changes.';
+      st.heat = clamp(st.heat + 8, 0, 100); st._touched = G.week; (st.log ||= []).push({ wk: G.week, text: 'Things got heated at a press event.' });
+      if (Math.random() < .3) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return `${st.title} heat +8. It got out of hand, and the press noticed (prestige −1).`; }
+      return `They had to be pulled apart. ${st.title} heat +8.`; }
+  },
+  fanShirt: {
+    when() { const [w] = evW(w => w.pop >= 20 && w.pop <= 70); return w && { a: w.id }; },
+    title: '👕 Fan-made shirt', text: d => vary(d, `A fan designed a T-shirt for ${nameOf(d.a)} and it's selling out online.`, `Fans keep wearing a homemade "${lastName(W(d.a)).toUpperCase()}" shirt to shows. Someone should make it official.`, `Fans made their own ${nameOf(d.a)} shirt, and it's all over the crowd.`),
+    choices: () => [[MON() ? 'Make it official' : 'Give it a shout-out', MON() ? 'Merch money and a popularity bump' : 'A popularity bump'], ['Leave it', 'Nothing changes']],
+    pick(i, d) { const w = W(d.a); if (!w || i) return 'The shirt stays a fan thing.';
+      addPop(w, 2); if (MON()) { const m = Math.round(w.pop * 300 / 100) * 100; G.money += m; return `The official shirt is a hit: +${money(m)}.`; } return `${w.name} gets a nice bump.`; }
+  },
+  realHeat: {
+    when() { const [w] = evW(w => w.align === 'heel' && w.pop >= 30); return w && { a: w.id }; },
+    title: '😡 Too much heat', text: d => vary(d, `${nameOf(d.a)} is so hated that fans followed them out of the arena last week. Security is worried.`, `${nameOf(d.a)} had a drink thrown at them at an autograph signing. They're the most hated person in wrestling right now.`, `Fans are booing ${nameOf(d.a)} at the airport, the hotel and the gym. The heel act is working a little too well.`),
+    choices: () => [['Lean into it', `More heat, more momentum${MON() ? `. Extra security costs ${money(4000)}` : ''}`], ['Tone it down', 'Fewer threats, less heat']],
+    pick(i, d) { const w = W(d.a); if (!w) return 'It calmed down.';
+      if (i === 0) { if (MON()) G.money -= 4000; addPop(w, 2); w.momentum = clamp(w.momentum + 10, -50, 50); return `${w.name} is the villain everyone loves to hate.`; }
+      w.momentum = clamp(w.momentum - 4, -50, 50); evMood(w, 3); return `${w.name} keeps a lower profile for a while.`; }
+  },
+  homecoming: {
+    when() { if (isBig(G.week)) return null; const [w] = evW(w => w.pop >= 25); return w && { a: w.id }; },
+    title: '🏠 Hometown show', text: d => vary(d, `This week's show is in ${nameOf(d.a)}'s hometown. Their family will be in the front row.`, `Tickets are flying in ${nameOf(d.a)}'s home town. The locals want to see one of their own.`, `${nameOf(d.a)} grew up just down the road from this week's arena, and half the town has tickets.`),
+    choices: () => [['Feature them', 'They\'re thrilled. Book them in a big spot this week'], ['Treat it like any show', 'Nothing changes']],
+    pick(i, d) { const w = W(d.a); if (!w || i) return 'Just another show.';
+      evMood(w, 8); addPop(w, 1); G.todos.unshift({ t: `Give ${w.name} a big spot this week (hometown show)`, done: false }); return `${w.name} can't wait. Give them a big spot this week.`; }
+  },
+  retireTalk: {
+    when() { const [w] = evW(w => w.age >= 38 && w.contract); return w && { a: w.id }; },
+    title: '🧓 Thinking about retiring', text: d => vary(d, `${nameOf(d.a)} told you privately they're thinking about hanging up the boots.`, `${nameOf(d.a)} says their body is telling them it's almost time. They wanted you to hear it first.`, `${nameOf(d.a)} sat you down after the show: they're not sure how many matches they have left.`),
+    choices: () => [['One last big run', 'They\'re fired up. Give them a push'], ['Ask them to stay on', 'They feel valued']],
+    pick(i, d) { const w = W(d.a); if (!w) return 'They made up their own mind.';
+      if (i === 0) { w.momentum = clamp(w.momentum + 12, -50, 50); addPop(w, 2); evMood(w, 5); G.todos.unshift({ t: `Give ${w.name} a run of big wins (one last run)`, done: false }); return `${w.name} is going out on top. Book them strong.`; }
+      evMood(w, 8); return `${w.name} isn't going anywhere yet.`; }
+  },
+  doctor: {
+    when() { const w = pick(signed().filter(w => inRing(w) && !w.injury && !w.away && (w.fatigue || 0) >= 55)); return w && { a: w.id }; },
+    title: '🩺 Doctor\'s orders', text: d => vary(d, `The doctor says ${nameOf(d.a)} is running on empty and needs a week off.`, `${nameOf(d.a)} could barely finish their workout today. The doctor wants them rested.`, `The doctor pulled you aside: ${nameOf(d.a)} is worn out and should take a week off.`),
+    choices: () => [['Rest them a week', 'They miss this week and come back fresh'], ['Keep them working', 'They\'d rather work. It could catch up with them']],
+    pick(i, d) { const w = W(d.a); if (!w) return 'Never mind.';
+      if (i === 0) { w.injury = 1; w.fatigue = Math.max(0, (w.fatigue || 0) - 35); return `${w.name} sits out this week to recharge.`; }
+      evMood(w, 2); if (Math.random() < .25) { w.injury = rint(1, 3); news(`🩹 ${w.name} was worn down and got hurt: out ${w.injury} week${w.injury === 1 ? '' : 's'}.`, 'injury'); return `The doctor was right: ${w.name} is out ${w.injury} week${w.injury === 1 ? '' : 's'}.`; }
+      return `${w.name} pushes through.`; }
+  },
+  ringTrouble: {
+    when() { if (!MON() || G.money < 20000) return null; return { c: Math.round(clamp(G.fans * .05, 4000, 15000) / 500) * 500 }; },
+    title: '🔧 Ring trouble', text: d => vary(d, `The ring crew says the boards are cracked. A proper fix costs ${money(d.c)}.`, `A ring rope snapped at a house show. The crew wants ${money(d.c)} for new ropes and posts.`, `The ring crew flagged a problem: the ring needs ${money(d.c)} of repairs to be safe.`),
+    choices: d => [['Pay for the fix', `−${money(d.c)}. Everyone is safe`], ['Patch it up', 'Free, but someone might get hurt']],
+    pick(i, d) { if (i === 0) { G.money -= d.c; return 'The ring is good as new.'; }
+      const w = Math.random() < .3 && pick(healthy()); if (w) { w.injury = rint(1, 3); news(`🔧 ${w.name} got hurt on the patched-up ring: out ${w.injury} week${w.injury === 1 ? '' : 's'}.`, 'injury'); return `The patch gave way. ${w.name} is out ${w.injury} week${w.injury === 1 ? '' : 's'}.`; }
+      return 'The patch held. This time.'; }
+  },
+  celeb: {
+    when() { return G.history.length >= 3 ? { cel: pick(CELEBS) } : null; },
+    title: '⭐ Celebrity guest', text: d => vary(d, `${d.cel} wants to be part of this week's show.`, `${d.cel} grew up a wrestling fan and is asking for a spot on TV this week.`, `${d.cel}'s team reached out. They want a cameo on your show this week.`),
+    choices: () => [['Put them on TV', 'New fans tune in. Hardcore fans might roll their eyes'], ['No thanks', 'Keep it about the wrestling']],
+    pick(i, d) { if (i) return 'You kept the show about the wrestling.';
+      const f = Math.round(G.fans * .012 * evRoom()); G.fans += f;
+      if (Math.random() < .35) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return `+${kfmt(f)} fans, but long-time fans weren't happy (prestige −1).`; }
+      return `The cameo was a hit: +${kfmt(f)} fans.`; }
+  },
+  rivalTrash: {
+    when() { ensureRivals(); const r = bigRival(); return r && { r: r.id }; },
+    title: '🗞️ Trash talk', text: d => vary(d, `The owner of ${RV(d.r)?.name || 'a rival company'} told a podcast your company is "a joke with a TV deal".`, `${RV(d.r)?.name || 'A rival company'} put out a statement calling your roster "our leftovers".`, `${RV(d.r)?.name || 'A rival company'} is trashing your company all over social media.`),
+    choices: () => [['Fire back on TV', 'Your locker room loves it. It could turn ugly'], ['Take the high road', 'You look professional']],
+    pick(i) { if (i) { G.promo.prestige = clamp(G.promo.prestige + 1, 1, 100); return 'You stayed classy. Prestige +1.'; }
+      for (const w of signed()) evMood(w, 2); if (Math.random() < .3) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return 'The locker room is fired up, but it got petty (prestige −1).'; } return 'The locker room is fired up.'; }
+  },
+  streamDeal: {
+    when() { if (G.history.length < 8 || Math.random() > .4) return null; return { amt: MON() ? Math.max(5000, Math.round(G.fans * .15 / 1000) * 1000) : 0 }; },
+    title: '📡 Streaming offer', text: d => vary(d, `A streaming service wants the rights to your old shows.`, `A streaming app wants to put your whole back catalogue online.`, `A streaming platform wants to license your back catalogue of shows.`),
+    choices: d => [['Take the deal', MON() ? `+${money(d.amt)} and new fans find you` : 'New fans find you'], ['Keep them in the vault', 'Nothing changes']],
+    pick(i, d) { if (i) return 'The old shows stay in the vault.'; const f = Math.round(G.fans * .01 * evRoom()); G.fans += f; if (MON()) G.money += d.amt; return `Your old shows are streaming: +${kfmt(f)} fans${MON() ? `, +${money(d.amt)}` : ''}.`; }
+  },
+  earlyReturn: {
+    when() { const w = pick(signed().filter(w => inRing(w) && w.injury >= 2 && !w.away)); return w && { a: w.id }; },
+    title: '🩹 Cleared early', text: d => vary(d, `${nameOf(d.a)} says they feel great and wants to come back early.`, `The doctor has cleared ${nameOf(d.a)} a little early, with a warning to take it easy.`, `${nameOf(d.a)} is begging to come back early from their injury.`),
+    choices: () => [['Bring them back', 'They can work this week. It\'s a risk'], ['Let them heal fully', 'Safe, but they\'re itching to get back']],
+    pick(i, d) { const w = W(d.a); if (!w || !w.injury) return 'They\'re already back.';
+      if (i) { evMood(w, -2); return `${w.name} heals up properly.`; }
+      w.injury = 0; evMood(w, 4); if (Math.random() < .25) { w.injury = rint(2, 5); news(`🩹 ${w.name} came back too soon: out ${w.injury} more weeks.`, 'injury'); return `Too soon. ${w.name} is out ${w.injury} more weeks.`; }
+      return `${w.name} is back and ready to work.`; }
+  },
+  jealous: {
+    when() { const t = shuffle(G.titles.filter(t => t.holder.length === 1 && W(t.holder[0])?.contract))[0]; if (!t) return null; const h = W(t.holder[0]);
+      const [a] = evW(w => w.pop >= 40 && w !== h && sameG(w, h) && !storyBetween([w.id], [h.id]) && storiesOf(w.id).length < 2); return a && { a: a.id, b: h.id, titleId: t.id }; },
+    title: '😒 Jealous of the champ', text: d => { const t = G.titles.find(x => x.id === d.titleId); return vary(d, `${nameOf(d.a)} is telling anyone who'll listen that ${nameOf(d.b)} doesn't deserve the ${t?.short || ''} title.`, `${nameOf(d.a)} thinks they should be holding the ${t?.short || ''} title instead of ${nameOf(d.b)}, and they're saying it loudly.`, `${nameOf(d.a)} rolled their eyes all through ${nameOf(d.b)}'s ${t?.short || ''} title celebration. They think it should be theirs.`); },
+    choices: () => [['Make it a story', 'A title chase starts'], ['Tell them to earn it', 'Their morale drops, but they work harder'], ['Ignore it', 'Nothing changes']],
+    pick(i, d) { const a = W(d.a), t = G.titles.find(x => x.id === d.titleId); if (!a || !t || !t.holder.length) return 'It blew over.';
+      if (i === 0) return momStory([a.id], t.holder.slice(), 28, `${a.name} says the champion doesn't deserve the ${t.name}.`, { type: 'Title Chase', titleId: t.id, title: `${lastName(a)} chases the ${t.short} title` });
+      if (i === 1) { evMood(a, -4); a.momentum = clamp(a.momentum + 4, -50, 50); return `${a.name} has something to prove now.`; }
+      return 'You let them grumble.'; }
+  },
+  tagIdea: {
+    when() { const [a] = evW(w => w.pop < 65); if (!a) return null; const inTeam = id => (G.teams || []).some(t => t.members.includes(id) && t.members.includes(a.id));
+      const [b] = evW(w => w !== a && w.pop < 65 && w.align === a.align && sameG(w, a) && !inTeam(w.id) && !storyBetween([w.id], [a.id])); return b && { a: a.id, b: b.id }; },
+    title: '🤝 Team-up pitch', text: d => vary(d, `${nameOf(d.a)} and ${nameOf(d.b)} have been training together and want to try teaming up.`, `${nameOf(d.a)} pitched a tag team with ${nameOf(d.b)}. They think the chemistry is there.`, `${nameOf(d.a)} and ${nameOf(d.b)} want to try working as a team. They've been practising double-team moves.`),
+    choices: () => [['Give it a try', 'Book them together this week'], ['Keep them apart', 'They\'re a little let down']],
+    pick(i, d) { const a = W(d.a), b = W(d.b); if (!a || !b) return 'Never mind.';
+      if (i) { evMood(a, -2); evMood(b, -2); return 'They\'ll stay singles for now.'; }
+      evMood(a, 5); evMood(b, 5); G.todos.unshift({ t: `Team ${a.name} and ${b.name} this week (try them out as a team)`, done: false }); return `Book ${lastName(a)} and ${lastName(b)} as a team this week.`; }
+  },
+  fanJump: {
+    when() { const [w] = evW(w => w.align === 'heel' && w.pop >= 30); return w && { a: w.id }; },
+    title: '🚨 Fan over the rail', text: d => vary(d, `A fan jumped the barricade at a house show and went after ${nameOf(d.a)}. Security grabbed them just in time.`, `A fan tried to get at ${nameOf(d.a)} on the way to the ring last night.`, `A fan went over the barricade at ${nameOf(d.a)} last night. Nobody was hurt, but it was close.`),
+    choices: d => [['Add more security', `${MON() ? `−${money(5000)}. ` : ''}Everyone feels safer`], ['Use it on TV', `${lastName(W(d.a))} brags about it. More heat`]],
+    pick(i, d) { const w = W(d.a);
+      if (i === 0) { if (MON()) G.money -= 5000; for (const x of signed()) evMood(x, 1); return 'More security at every show. The roster feels safer.'; }
+      if (w) { w.momentum = clamp(w.momentum + 8, -50, 50); addPop(w, 1); } G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return `${w?.name || 'They'} milked it on TV. More heat, but some called it tasteless (prestige −1).`; }
+  },
+  poster: {
+    when() { if (isBig(G.week)) return null; const f = healthy().filter(w => w.align === 'face').sort((a, b) => b.pop - a.pop)[0], h = healthy().filter(w => w.align === 'heel').sort((a, b) => b.pop - a.pop)[0]; return f && h && { a: f.id, b: h.id, wk: nextBig() }; },
+    title: '🖼️ The big poster', text: d => vary(d, `The art team needs to know who goes on the poster for ${bigName(d.wk)}: ${nameOf(d.a)} or ${nameOf(d.b)}?`, `Merch wants one face on the ${bigName(d.wk)} poster. ${nameOf(d.a)} and ${nameOf(d.b)} both want it.`, `Who should be the face of ${bigName(d.wk)}? The poster goes to print soon: ${nameOf(d.a)} or ${nameOf(d.b)}.`),
+    choices: d => [[`${lastName(W(d.a))} on the poster`, `${lastName(W(d.a))} gets a boost. ${lastName(W(d.b))} sulks`], [`${lastName(W(d.b))} on the poster`, `${lastName(W(d.b))} gets a boost. ${lastName(W(d.a))} sulks`]],
+    pick(i, d) { const [y, n] = i ? [W(d.b), W(d.a)] : [W(d.a), W(d.b)]; if (!y) return 'The poster went out with the logo on it.';
+      addPop(y, 2); evMood(y, 5); evMood(n, -3); return `${y.name} is the face of ${bigName(d.wk)}.`; }
+  },
+  crossover: {
+    when() { if (Math.random() > .4) return null; const [w] = evW(w => w.pop >= 40 && ['Brawler', 'Powerhouse'].includes(w.style) && !isChamp(w) && !w.loan && !mediaIn(w, 26)); return w && { a: w.id }; },
+    title: '🥊 Crossover fight', text: d => vary(d, `A fight league wants ${nameOf(d.a)} for a one-off crossover bout this weekend. It'd be huge news.`, `A boxing promoter offered ${nameOf(d.a)} a celebrity fight this weekend. The whole sports world would be watching.`, `${nameOf(d.a)} has been offered a crossover fight this weekend. Win, and every sports show will be talking about them.`),
+    choices: () => [['Let them fight', 'They miss this week. A win makes them a much bigger name'], ['Keep them here', 'They wanted this']],
+    pick(i, d) { const w = W(d.a); if (!w?.contract || w.away) return 'The fight fell through.';
+      if (i) { evMood(w, -5); return `${w.name} stays, but they wanted that fight.`; }
+      for (const seg of G.card) removeFromSeg(seg, w.id); w.mediaWk = G.week;
+      if (Math.random() < .6) { addPop(w, 6); w.momentum = clamp(w.momentum + 12, -50, 50); news(`🥊 ${w.name} won a crossover fight. The sports world is talking.`, 'office'); return `${w.name} won the fight! A much bigger name now.`; }
+      addPop(w, 2); w.momentum = clamp(w.momentum - 6, -50, 50); if (Math.random() < .15) w.injury = 2; news(`🥊 ${w.name} lost a crossover fight.`, 'office'); return `${w.name} lost the fight${w.injury ? ' and got hurt' : ''}, but people noticed.`; }
+  },
+  legend: {
+    when() { const r = pick(G.wrestlers.filter(w => w.retired && w.pop >= 40)); return { lg: r ? r.name : 'A Hall of Fame legend' }; },
+    title: '🎩 A legend stops by', text: d => vary(d, `${d.lg} is in town and offered to talk to the locker room before the show.`, `${d.lg} called. They'd love to stop by and share a few stories with the roster.`, `${d.lg} is in the building this week and would love to say a few words to the roster.`),
+    choices: () => [['Bring them in', `The whole locker room gets a lift${MON() ? `. Appearance fee ${money(2500)}` : ''}`], ['No thanks', 'Nothing changes']],
+    pick(i, d) { if (i) return 'Maybe another time.'; if (MON()) G.money -= 2500; for (const w of signed()) evMood(w, 3);
+      const y = pick(healthy().filter(w => w.age <= 26)); if (y) y.ring = clamp(y.ring + 1, 1, 100); return `The roster hung on every word.${y ? ` ${y.name} picked up a few tricks (Ring +1).` : ''}`; }
   }
 });
 function rollEvent() {
@@ -4755,10 +5062,12 @@ function rollEvent() {
 }
 // every backstage moment also arrives as a text from your assistant, and can be answered from the phone
 function setEvent(k, d) {
+  d.vx = rint(0, 99);
   G.event = { key: k, d, wk: G.week, id: uid() };
-  try { asstText(EVENTS[k].title, pick(ASST_LEAD) + EVENTS[k].text(d), { ev: G.event.id }); } catch (x) { }
+  try { asstText(EVENTS[k].title, pick(ASST_LEAD) + EVENTS[k].text(d) + pick(ASST_TAIL), { ev: G.event.id }); } catch (x) { }
 }
-const ASST_LEAD = ['Heads up, boss. ', 'Boss, you need to see this. ', 'Quick one before the show. ', 'Something came up backstage. ', ''];
+const ASST_LEAD = ['Heads up, boss. ', 'Boss, you need to see this. ', 'Quick one before the show. ', 'Something came up backstage. ', '', 'Sorry to bother you. ', 'You\'re going to want to sit down for this. ', 'Just landed on my desk. ', 'Before you hear it from someone else: ', 'Got a minute? '];
+const ASST_TAIL = ['', '', ' Your call.', ' Let me know what you want to do.', ' I need an answer before the show.', ' How do you want to play it?', ' Up to you, boss.', ' Thoughts?'];
 const evOpen = m => !!(m?.ev && G.event && G.event.id === m.ev && G.event.wk === G.week);
 function eventAlert() {
   const e = G.event; if (!e || e.wk !== G.week) return '';
@@ -4885,7 +5194,7 @@ function cutOpen(j) {
     ${ask ? `<div class="cs-q">What do you tell the producer?</div>${momBtns(M, m, j, 'cs-c')}` : `<div class="cs-c">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`}</div><div class="cs-bar"></div>`;
   live.appendChild(el);
   (el.querySelector('.cs-c .btn') || el.querySelector('.cs-skip'))?.focus({ preventScroll: true });
-  if (m.k === 'comeback' || m.k === 'chant') SFX.crowd('cheer', .9, .2); else SFX.crowd('applause', .5, .3);
+  if (M.cheer || m.k === 'comeback' || m.k === 'chant') SFX.crowd('cheer', .9, .2); else SFX.crowd('applause', .5, .3);
   // a moment with nothing to decide moves on by itself
   if (!ask) LV.auto = setTimeout(() => cutClose(), 7000);
 }
@@ -5133,7 +5442,7 @@ function chanceLabel(c) { return c >= .85 ? ['Will accept', 'good'] : c >= .6 ? 
 const sameDiv = (a, b) => !a || !b || !a.division || !b.division || a.division === 'Open' || b.division === 'Open' || a.division === b.division;
 // a show has room for 8 segments (10 at a big event)
 // a TV special (company level 8): one weekly show turned into a one-off special. G.special is its week, G.specialSid its show.
-const SPECIAL_NAMES = ['Prime Time Special', 'Holiday Spectacular', 'Saturday Night Special', 'Throwback Night', 'Championship Night'];
+const SPECIAL_NAMES = ['Prime Time Special', 'Holiday Spectacular', 'Saturday Night Special', 'Throwback Night', 'Championship Night', 'Fan Appreciation Night', 'Super Showdown Special', 'Battle of the Brands', 'Ladies of the Ring', 'New Blood Night'];
 const SPECIAL_GAP = 8;
 const isSpecial = wk => !!G && G.special === wk && !isBig(wk) && !onEv() && (!G.specialSid || G.specialSid === G.showId);
 const specialName = () => G.specialName || 'TV special';
@@ -5315,7 +5624,7 @@ document.addEventListener('touchmove', e => {
 
 
 // ---------- minimal line icons: emoji in any rendered text become small SVG icons ----------
-const EMO = {"🌍": "globe", "🛠️": "ruler", "📉": "down", "🚑": "medical", "🖊️": "pen", "✂️": "door", "🏚️": "door", "🏢": "home", "🌱": "sparkles", "💎": "star", "🩸": "zap", "☁️": "upload", "🧪": "bulb", "🚫": "stop", "💳": "coin", "🔑": "lock", "❤️": "heart", "ℹ": "info", "😮‍💨": "tired", "🔥": "flame", "🏆": "trophy", "🩹": "medical", "🤕": "medical", "📝": "pen", "✍️": "pen", "✏️": "pen", "🎆": "sparkles", "✨": "sparkles", "🎉": "sparkles", "⭐": "star", "🌟": "star", "💾": "save", "📋": "clipboard", "🌐": "globe", "🌎": "globe", "🎲": "dice", "📈": "trend", "🥶": "snow", "🧊": "snow", "❄️": "snow", "🔄": "refresh", "🔁": "refresh", "🗞️": "news", "🏅": "medal", "🤝": "equal", "📦": "box", "📺": "tv", "📡": "tv", "😠": "frown", "😡": "frown", "🏁": "flag", "🚩": "flag", "🔇": "mute", "🔊": "sound", "🐞": "bug", "💬": "message", "🔔": "bell", "🎯": "target", "📅": "calendar", "👑": "crown", "📣": "megaphone", "🙌": "megaphone", "👏": "megaphone", "🔊": "megaphone", "💼": "briefcase", "🔒": "lock", "🛑": "stop", "✅": "checkc", "❌": "xc", "🆕": "userplus", "💸": "coin", "💰": "coin", "📕": "book", "📚": "book", "📖": "book", "👋": "door", "🚪": "door", "🎟️": "ticket", "🏟️": "home", "💡": "bulb", "🧠": "bulb", "👥": "users", "🤼": "wrestle", "🤯": "zap", "😱": "zap", "👊": "zap", "💥": "zap", "⚡": "bolt", "🎤": "mic", "🎬": "film", "⚠️": "alert", "⚠": "alert", "📷": "camera", "📇": "user", "📱": "phone", "🗣️": "message", "🎓": "cap", "🎭": "mask", "⏭": "skip", "⏩": "skip", "☰": "menu", "📓": "notebook", "↔️": "swap", "🏠": "home", "🗑": "trash", "📍": "pin", "📏": "ruler", "🎵": "music", "👾": "grid", "😇": "smile", "😈": "heel", "📄": "file", "⬇": "download", "⬆": "upload", "⇅": "swap", "🔀": "layers", "🙂": "", "😐": "", "🍿": "", "😴": "", "🦗": "", "🥱": ""};
+const EMO = {"🧳": "box", "✈️": "globe", "🤡": "smile", "🎙️": "mic", "👕": "coin", "🧓": "user", "🩺": "medical", "🔧": "ruler", "😒": "frown", "🚨": "alert", "🖼️": "camera", "🥊": "wrestle", "🎩": "cap", "🌍": "globe", "🛠️": "ruler", "📉": "down", "🚑": "medical", "🖊️": "pen", "✂️": "door", "🏚️": "door", "🏢": "home", "🌱": "sparkles", "💎": "star", "🩸": "zap", "☁️": "upload", "🧪": "bulb", "🚫": "stop", "💳": "coin", "🔑": "lock", "❤️": "heart", "ℹ": "info", "😮‍💨": "tired", "🔥": "flame", "🏆": "trophy", "🩹": "medical", "🤕": "medical", "📝": "pen", "✍️": "pen", "✏️": "pen", "🎆": "sparkles", "✨": "sparkles", "🎉": "sparkles", "⭐": "star", "🌟": "star", "💾": "save", "📋": "clipboard", "🌐": "globe", "🌎": "globe", "🎲": "dice", "📈": "trend", "🥶": "snow", "🧊": "snow", "❄️": "snow", "🔄": "refresh", "🔁": "refresh", "🗞️": "news", "🏅": "medal", "🤝": "equal", "📦": "box", "📺": "tv", "📡": "tv", "😠": "frown", "😡": "frown", "🏁": "flag", "🚩": "flag", "🔇": "mute", "🔊": "sound", "🐞": "bug", "💬": "message", "🔔": "bell", "🎯": "target", "📅": "calendar", "👑": "crown", "📣": "megaphone", "🙌": "megaphone", "👏": "megaphone", "🔊": "megaphone", "💼": "briefcase", "🔒": "lock", "🛑": "stop", "✅": "checkc", "❌": "xc", "🆕": "userplus", "💸": "coin", "💰": "coin", "📕": "book", "📚": "book", "📖": "book", "👋": "door", "🚪": "door", "🎟️": "ticket", "🏟️": "home", "💡": "bulb", "🧠": "bulb", "👥": "users", "🤼": "wrestle", "🤯": "zap", "😱": "zap", "👊": "zap", "💥": "zap", "⚡": "bolt", "🎤": "mic", "🎬": "film", "⚠️": "alert", "⚠": "alert", "📷": "camera", "📇": "user", "📱": "phone", "🗣️": "message", "🎓": "cap", "🎭": "mask", "⏭": "skip", "⏩": "skip", "☰": "menu", "📓": "notebook", "↔️": "swap", "🏠": "home", "🗑": "trash", "📍": "pin", "📏": "ruler", "🎵": "music", "👾": "grid", "😇": "smile", "😈": "heel", "📄": "file", "⬇": "download", "⬆": "upload", "⇅": "swap", "🔀": "layers", "🙂": "", "😐": "", "🍿": "", "😴": "", "🦗": "", "🥱": ""};
 const EMO_RE = new RegExp(Object.keys(EMO).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + '|️', 'g');
 // reverse button that sits beside every sort menu; k names which list it flips
 const revBtn = (k, what) => `<button class="sort-rev ${UI.sortRev[k] ? 'on' : ''}" data-act="sortRev" data-id="${k}" aria-pressed="${!!UI.sortRev[k]}" aria-label="Reverse the ${what} order" title="Reverse order">${ic('swap')}</button>`;
@@ -9879,7 +10188,7 @@ function ensurePers() {
   }
   // the first time it's on, someone reaches out so the player finds their phone
   const top = first && signed().filter(w => !w.loan).sort((a, b) => b.pop - a.pop)[0];
-  if (top) textFrom(top, `Hey, it's ${lastName(top)}. Got your number from the office. I'll text you when something's on my mind.`);
+  if (top) textFrom(top, pick([`Hey, it's ${lastName(top)}. Got your number from the office. I'll text you when something's on my mind.`, `${lastName(top)} here. The office gave me your number. Hope you don't mind me texting when something comes up.`]));
 }
 // trust moves more or less depending on who they are
 function remember(w, v, t) {
@@ -9903,35 +10212,35 @@ const shotAt = w => G.titles.find(t => !t.tag && t.holder.length && !t.holder.in
 // what a wrestler can ask for: who asks, how long you get, and what counts as keeping your word
 const ASKS = {
   main: { who: w => w.pers === 'ego' && w.pop >= 40 && !mainedIn(w, 4), wk: 3, what: () => 'a main event',
-    ask: () => 'I should be closing shows, not opening them. Put me in a main event in the next 3 weeks.',
+    ask: () => pick(['I should be closing shows, not opening them. Put me in a main event in the next 3 weeks.', 'Everyone knows I\'m the draw here. Give me the main event spot in the next 3 weeks.']),
     met: (p, r, main) => main && segPeople(r.seg).includes(p.wid) },
   shot: { who: w => ['ego', 'hot', 'star'].includes(w.pers) && w.pop >= 50 && shotAt(w), wk: 5, b: w => shotAt(w).id, what: p => `a ${G.titles.find(t => t.id === p.b)?.short || 'title'} title shot`,
-    ask: (w, b) => `I've earned a shot at the ${G.titles.find(t => t.id === b)?.name || 'title'}. Give it to me in the next 5 weeks.`,
+    ask: (w, b) => pick([`I've earned a shot at the ${G.titles.find(t => t.id === b)?.name || 'title'}. Give it to me in the next 5 weeks.`, `I've beaten everyone you've put in front of me. I want the ${G.titles.find(t => t.id === b)?.name || 'title'} in the next 5 weeks.`]),
     met: (p, r) => r.seg.kind === 'match' && r.seg.title === p.b && segPeople(r.seg).includes(p.wid) },
   win: { who: w => w.pers !== 'team' && (w.streak || 0) <= -3, wk: 2, what: () => 'a win',
-    ask: w => `That's ${-w.streak} losses in a row. I need a win in the next 2 weeks or the fans will forget me.`,
+    ask: w => pick([`That's ${-w.streak} losses in a row. I need a win in the next 2 weeks or the fans will forget me.`, `${-w.streak} straight losses. I'm starting to feel like a punchline. Give me a win in the next 2 weeks.`]),
     met: (p, r) => (r.winners || []).includes(p.wid) },
   promo: { who: w => w.pers === 'star' && w.mic >= 40 && !promoIn(w, 4), wk: 2, what: () => 'a promo',
-    ask: () => 'Give me a mic. I want a promo in the next 2 weeks.',
+    ask: () => pick(['Give me a mic. I want a promo in the next 2 weeks.', 'I\'ve got things to say and nobody\'s letting me say them. A promo in the next 2 weeks?']),
     met: (p, r) => r.seg.kind === 'promo' && (r.seg.who || []).includes(p.wid) },
   tv: { who: w => ['star', 'ego'].includes(w.pers) && G.week - (w.lastBooked || 0) >= 2, wk: 1, what: () => 'TV time',
-    ask: () => `I haven't been on TV in weeks. Put me on the show this week.`,
+    ask: () => pick([`I haven't been on TV in weeks. Put me on the show this week.`, `My family keeps asking why I'm never on TV. Put me on the show this week.`]),
     met: (p, r) => segPeople(r.seg).includes(p.wid) },
   rematch: { who: w => w.pers === 'hot' && w.lastLoss && G.week - w.lastLoss.wk <= 1 && W(w.lastLoss.by)?.contract, wk: 3, b: w => w.lastLoss.by, what: p => `a rematch with ${nameOf(p.b)}`,
-    ask: (w, b) => `${nameOf(b)} got lucky. Give me the rematch in the next 3 weeks.`,
+    ask: (w, b) => pick([`${nameOf(b)} got lucky. Give me the rematch in the next 3 weeks.`, `I can't sleep after that loss to ${nameOf(b)}. Run it back in the next 3 weeks.`]),
     met: (p, r) => r.seg.kind === 'match' && r.seg.sides.some(sd => sd.includes(p.wid)) && r.seg.sides.some(sd => sd.includes(p.b) && !sd.includes(p.wid)) },
   raise: { who: w => w.pers === 'money' && MON() && CON() && w.contract.salary < asking(w) * .95, now: true, what: () => 'a raise',
-    ask: w => `Other places pay more than ${money(w.contract.salary)} a week for someone like me. I want a raise.` },
+    ask: w => pick([`Other places pay more than ${money(w.contract.salary)} a week for someone like me. I want a raise.`, `I sell tickets and I sell shirts. ${money(w.contract.salary)} a week doesn't cut it anymore. I want a raise.`]) },
   // media: a promise kept from Office → Media (keptMediaAsk), so a show result never meets it
   media: { who: w => ['star', 'money', 'ego'].includes(w.pers) && w.pop >= 30 && !mediaIn(w, 6), wk: 3, what: () => 'a media appearance',
-    ask: w => w.pers === 'money' ? 'A podcast wants me and the money is good. Book me some media in the next 3 weeks.' : 'I want people outside wrestling to know my name. Get me on a talk show or a podcast in the next 3 weeks.',
+    ask: w => w.pers === 'money' ? pick(['A podcast wants me and the money is good. Book me some media in the next 3 weeks.', 'There\'s easy money in media right now. Get me some bookings in the next 3 weeks.']) : pick(['I want people outside wrestling to know my name. Get me on a talk show or a podcast in the next 3 weeks.', 'My numbers online are huge. Get me some media in the next 3 weeks and watch what happens.']),
     met: () => false },
   movie: { who: w => ['star', 'ego'].includes(w.pers) && w.pop >= 55 && !isChamp(w) && !w.loan && !mediaIn(w, 26) && Math.random() < .25, now: true, b: () => pick([6, 8, 10]), what: () => 'time off for a movie',
-    ask: (w, b) => `A studio wants me in a movie. Filming takes ${b} weeks. Can I go? I'll come back a bigger star.`,
+    ask: (w, b) => pick([`A studio wants me in a movie. Filming takes ${b} weeks. Can I go? I'll come back a bigger star.`, `My agent landed me a movie role! It's ${b} weeks of filming. Please say yes.`]),
     choices: (w, b) => [['Let them go', `Out ${b} weeks, back much more popular${MON() ? ` · studio pays ${money(mediaFee(w, b))}` : ''}`], ['Not now', 'They\'ll remember']], yesLbl: 'You let them go',
-    yes(w, b) { if (mediaWhyNot(w, 'movie') && !/popularity/.test(mediaWhyNot(w, 'movie'))) return `${w.name} can't go right now.`; remember(w, 8, 'You let me do the movie'); w.morale = clamp(w.morale + 6, 0, 100); textFrom(w, 'Thank you! I won\'t forget this. See you in a few weeks.'); return sendAway(w, 'movie', { wks: clamp(+b || 8, 4, 12), m: 1.2 }); } }
+    yes(w, b) { if (mediaWhyNot(w, 'movie') && !/popularity/.test(mediaWhyNot(w, 'movie'))) return `${w.name} can't go right now.`; remember(w, 8, 'You let me do the movie'); w.morale = clamp(w.morale + 6, 0, 100); textFrom(w, pick(['Thank you! I won\'t forget this. See you in a few weeks.', 'You\'re the best. I\'ll bring you back an autograph from the lead.'])); return sendAway(w, 'movie', { wks: clamp(+b || 8, 4, 12), m: 1.2 }); } }
 };
-const persLead = w => (w.mem || []).some(m => m.v <= -10 && G.week - m.wk <= 26) ? 'Last time you made me a promise you didn\'t keep. ' : w.trust >= 72 ? 'You\'ve always looked after me, so I\'ll ask straight. ' : w.trust < 30 ? 'I\'ll be honest, I don\'t trust you much. ' : '';
+const persLead = w => (w.mem || []).some(m => m.v <= -10 && G.week - m.wk <= 26) ? pick(['Last time you made me a promise you didn\'t keep. ', 'You let me down last time, so this is your chance to fix it. ']) : w.trust >= 72 ? pick(['You\'ve always looked after me, so I\'ll ask straight. ', 'You\'ve been good to me. One favour: ']) : w.trust < 30 ? pick(['I\'ll be honest, I don\'t trust you much. ', 'Not sure you\'ll listen, but here goes. ']) : '';
 function newAsk() {
   const opts = [];
   for (const w of signed().filter(w => !w.loan && !w.injury && !w.away && !openAsk(w))) for (const [k, A] of Object.entries(ASKS)) { try { if (A.who(w)) opts.push([w, k]); } catch (e) { } }
@@ -9949,7 +10258,7 @@ function personaShow(results, rec) {
     if (!w?.contract) { G.promises.splice(G.promises.indexOf(p), 1); continue; }
     if (results.some((r, i) => A.met(p, r, n > 1 && i === n - 1))) {
       G.promises.splice(G.promises.indexOf(p), 1); remember(w, 12, `You kept your promise: ${A.what(p)}`); w.morale = clamp(w.morale + 8, 0, 100);
-      textFrom(w, pick(['You kept your word. I won\'t forget that.', 'Thanks for coming through. That means a lot.', 'Promise kept. You can count on me.'])); said++;
+      textFrom(w, pick(['You kept your word. I won\'t forget that.', 'Thanks for coming through. That means a lot.', 'Promise kept. You can count on me.', 'You did what you said. Not every boss does that.', 'Appreciate it. I owe you one.', 'Knew I could trust you. Thanks, boss.'])); said++;
     }
   }
   results.forEach((r, i) => {
@@ -9958,16 +10267,16 @@ function personaShow(results, rec) {
     for (const w of segPeople(r.seg).map(W).filter(w => w?.contract && !w.loan)) {
       const won = win.has(w.id), lost = isM && win.size > 0 && !won, P = w.pers;
       if (lost) { const opp = r.seg.sides.find(sd => sd.some(id => win.has(id))); w.lastLoss = { wk: G.week, by: opp?.[0] || null }; }
-      if (champ && won) { remember(w, 8, 'You put the title on me'); say(w, P === 'ego' ? 'Told you I was the best. Now everyone knows it.' : P === 'team' ? 'I won\'t let the locker room down. Thank you.' : 'I\'m the champ! Thank you for believing in me.'); continue; }
+      if (champ && won) { remember(w, 8, 'You put the title on me'); say(w, P === 'ego' ? pick(['Told you I was the best. Now everyone knows it.', 'About time the belt was on the right person.']) : P === 'team' ? pick(['I won\'t let the locker room down. Thank you.', 'This belt is for everyone in that locker room. Thank you.']) : pick(['I\'m the champ! Thank you for believing in me.', 'I keep looking at this belt. I can\'t believe it. Thank you!'])); continue; }
       if (P === 'ego') {
-        if (lost) { w.morale = clamp(w.morale - (rec.big ? 5 : 2), 0, 100); if (rec.big) { remember(w, -5, `You had me lose at ${rec.name}`); say(w, pick([`Losing at ${rec.name}? In front of all those people? I'll remember this.`, `You had me lose at ${rec.name}. That was supposed to be my night.`, `I didn't come here to lose at ${rec.name}. Think about that.`])); } }
+        if (lost) { w.morale = clamp(w.morale - (rec.big ? 5 : 2), 0, 100); if (rec.big) { remember(w, -5, `You had me lose at ${rec.name}`); say(w, pick([`Losing at ${rec.name}? In front of all those people? I'll remember this.`, `You had me lose at ${rec.name}. That was supposed to be my night.`, `I didn't come here to lose at ${rec.name}. Think about that.`, `${rec.name} was my stage and you gave it away. Unbelievable.`, `Do you know how that loss at ${rec.name} looks? I do.`, `Everyone watched me lose at ${rec.name}. Fix it.`])); } }
         if (won && main) { w.morale = clamp(w.morale + 3, 0, 100); remember(w, 2); }
       }
-      if (P === 'hot') { w.morale = clamp(w.morale + (won ? 3 : lost ? -3 : 0), 0, 100); if (lost && rec.big) say(w, pick(['That loss was a joke. I want them again.', 'I\'m still angry about that loss. Run it back.'])); }
+      if (P === 'hot') { w.morale = clamp(w.morale + (won ? 3 : lost ? -3 : 0), 0, 100); if (lost && rec.big) say(w, pick(['That loss was a joke. I want them again.', 'I\'m still angry about that loss. Run it back.', 'I punched a locker after that one. Give me another go.', 'That wasn\'t over. Not even close.'])); }
       if (P === 'team' && lost) w.morale = clamp(w.morale + 1, 0, 100);
-      if (P === 'star' && r.seg.kind === 'promo') { w.morale = clamp(w.morale + 3, 0, 100); remember(w, 1); if (r.rating >= 75) say(w, pick(['Did you hear that crowd? Give me the mic more often.', 'That promo was fire. More of that, please.', 'They hung on every word. Keep the mic coming.'])); }
+      if (P === 'star' && r.seg.kind === 'promo') { w.morale = clamp(w.morale + 3, 0, 100); remember(w, 1); if (r.rating >= 75) say(w, pick(['Did you hear that crowd? Give me the mic more often.', 'That promo was fire. More of that, please.', 'They hung on every word. Keep the mic coming.', 'That\'s going to be all over the internet tomorrow.', 'I had them in the palm of my hand. Again soon?', 'Best promo I\'ve ever cut. Thanks for the time.'])); }
       if (P === 'loyal') remember(w, .5);
-      if (main && !G.history.some(h => h !== rec && h.results.length > 1 && segPeople(h.results.at(-1).seg).includes(w.id))) { if (P !== 'team') say(w, pick(['My first main event. I won\'t ever forget you gave me this.', 'Main event! Thanks for trusting me with the spot.'])); remember(w, 3, 'You gave me my first main event'); }
+      if (main && !G.history.some(h => h !== rec && h.results.length > 1 && segPeople(h.results.at(-1).seg).includes(w.id))) { if (P !== 'team') say(w, pick(['My first main event. I won\'t ever forget you gave me this.', 'Main event! Thanks for trusting me with the spot.', 'I used to watch main events from the cheap seats. Tonight I was one. Thank you.', 'Closing the show felt unreal. Thanks for the chance.'])); remember(w, 3, 'You gave me my first main event'); }
     }
   });
 }
@@ -9977,7 +10286,8 @@ function personaWeek(booked) {
   for (const p of G.promises.slice()) if (G.week >= p.until) {
     G.promises.splice(G.promises.indexOf(p), 1); const w = W(p.wid); if (!w?.contract) continue;
     remember(w, -15, `You broke your promise: ${ASKS[p.key].what(p)}`); w.morale = clamp(w.morale - 12, 0, 100);
-    textFrom(w, w.pers === 'hot' ? `You PROMISED me ${ASKS[p.key].what(p)}. Don't ever do that again.` : w.pers === 'loyal' ? `You said I'd get ${ASKS[p.key].what(p)}. I'm disappointed, but I'm still here.` : `You promised me ${ASKS[p.key].what(p)}. I won't believe that next time.`);
+    const wh = ASKS[p.key].what(p);
+    textFrom(w, w.pers === 'hot' ? pick([`You PROMISED me ${wh}. Don't ever do that again.`, `No ${wh}? After you PROMISED? Unreal.`]) : w.pers === 'loyal' ? pick([`You said I'd get ${wh}. I'm disappointed, but I'm still here.`, `I was counting on ${wh}. It's fine. I'm still with you.`]) : pick([`You promised me ${wh}. I won't believe that next time.`, `So much for ${wh}. Your word doesn't mean much, does it?`]));
     maybeBlast(w, 'promise', { what: ASKS[p.key].what(p) });
   }
   for (const m of G.phone) if (m.social && m.ans == null && G.week - m.wk >= 2) { m.ans = -1; m.res = 'You let it blow over.'; }
@@ -9986,7 +10296,7 @@ function personaWeek(booked) {
     w.trust += ((w.pers === 'loyal' ? 60 : 50) - w.trust) * 0.01;
     if (w.pers === 'star' && inRing(w) && !booked.has(w.id) && !w.injury && !w.away && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
     if (w.pers === 'money' && CON() && w.contract.salary < asking(w) * .85) w.morale = clamp(w.morale - 1, 0, 100);
-    if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? 'My deal is up for talks. I want to stay. Let\'s get it done.' : w.trust < 35 ? 'My contract is up soon. Honestly, I\'m listening to other offers.' : 'My contract is coming up. Make me a fair offer and we can talk.', null, { act: 'talks' });
+    if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? pick(['My deal is up for talks. I want to stay. Let\'s get it done.', 'Contract time. I\'m happy here, so let\'s make it easy.']) : w.trust < 35 ? pick(['My contract is up soon. Honestly, I\'m listening to other offers.', 'My deal\'s nearly done and other companies have called. Just so you know.']) : pick(['My contract is coming up. Make me a fair offer and we can talk.', 'We should talk about my next deal. I\'m open to staying for the right offer.']), null, { act: 'talks' });
   }
   if (G.week >= 2 && G.phone.filter(m => m.ask && m.ans == null).length < 2 && Math.random() < .5) newAsk();
 }
@@ -10004,7 +10314,18 @@ const EV_MEM = {
   starRaid: [[6, 'You fought to keep me'], [-6, 'You held me to my contract'], [0]],
   mediaOffer: [[2, 'You got me on a big show'], [-2, 'You turned down a big media spot for me']],
   movieOffer: [[8, 'You let me do the movie'], [-6, 'You stopped me doing the movie']],
-  indieOffer: [[4, 'You let me tour the indies'], [-2]]
+  indieOffer: [[4, 'You let me tour the indies'], [-2]],
+  fanFest: [[2, 'You sent me to the fan convention'], [0]],
+  charity: [[3, 'You let me do the charity visit'], [0]],
+  stolenGear: [[2, 'You made my wrecked gear a story'], [3, 'You replaced my gear']],
+  payLeak: [[8, 'You gave me a raise after the pay leak'], [-6, 'You told me to earn my pay']],
+  homecoming: [[6, 'You featured me at my hometown show'], [-2]],
+  retireTalk: [[6, 'You gave me one last run'], [5, 'You asked me to stay']],
+  doctor: [[3, 'You rested me when I was worn out'], [0]],
+  earlyReturn: [[3, 'You let me come back early'], [-2]],
+  jealous: [[5, 'You put me in the title picture'], [-4, 'You told me to earn a title shot'], [0]],
+  tagIdea: [[3, 'You let me try a tag team'], [-2]],
+  crossover: [[6, 'You let me take the crossover fight'], [-5, 'You stopped my crossover fight']]
 };
 function personaEvent(key, i, d) {
   if (!PER() || !EV_MEM[key]?.[i]) return; ensurePers();
@@ -10018,7 +10339,7 @@ function phoneAnswer(m, i) {
   if (i === 0 && A.yes) return A.yes(w, m.ask.b);
   if (i === 0 && A.now) {
     const sal = Math.round(w.contract.salary * 1.1 / 100) * 100; w.contract.salary = sal; w.morale = clamp(w.morale + 8, 0, 100); remember(w, 10, 'You gave me a raise when I asked');
-    textFrom(w, 'Now that\'s respect. Thanks.'); G.phone[0].read = true; return `${w.name} now earns ${money(sal)}/wk.`;
+    textFrom(w, pick(['Now that\'s respect. Thanks.', 'That\'s what I wanted to hear. Thanks, boss.'])); G.phone[0].read = true; return `${w.name} now earns ${money(sal)}/wk.`;
   }
   if (i === 0) {
     G.promises.push({ ...p, until: G.week + A.wk - 1, made: G.week }); w.morale = clamp(w.morale + 4, 0, 100); remember(w, 2);
@@ -10139,7 +10460,7 @@ const MEDIA = {
 };
 const MEDIA_SLOTS = 3;
 const mText = (w, t) => { if (PER()) { ensurePers(); textFrom(w, t); } };
-const OUTLETS = { talk: ['Late Night Live', 'The Morning Mix', 'Sunday Night Chat'], pod: ['Off the Ropes', 'The Big Chat', 'Hot Mic Radio'] };
+const OUTLETS = { talk: ['Late Night Live', 'The Morning Mix', 'Sunday Night Chat', 'Wake Up Live', 'The After Show', 'Prime Time Tonight'], pod: ['Off the Ropes', 'The Big Chat', 'Hot Mic Radio', 'Talk Is Tough', 'The Pin Count', 'Lights Out Podcast'] };
 const mediaLog = () => Array.isArray(G.mediaLog) ? G.mediaLog : (G.mediaLog = []);
 const mediaUsed = () => mediaLog().filter(x => x.wk === G.week && x.short).length;
 const mediaIn = (w, n) => mediaLog().some(x => x.wid === w.id && x.wk > G.week - n);
@@ -10176,8 +10497,8 @@ function doMedia(w, k, m = 1, ev = false) {
   if (Math.random() < mediaRisk(w, k) * (ev ? .7 : 1)) {
     // heels get away with more: bad press is still press for a villain
     w.pop = clamp(w.pop - g / m * (w.align === 'heel' ? .6 : 1.1), 1, 100); w.momentum = clamp(w.momentum - 4, -50, 50);
-    const what = pick(['said something they shouldn\'t have', 'took a cheap shot at the fans', 'talked about backstage business', 'froze up on air']);
-    if (Math.random() < .5) mText(w, pick(['Ok, that interview did not go how I wanted. My bad.', 'I know, I know. I shouldn\'t have said that.']));
+    const what = pick(['said something they shouldn\'t have', 'took a cheap shot at the fans', 'talked about backstage business', 'froze up on air', 'mixed up the company\'s name', 'picked a fight with the host', 'gave away a storyline', 'showed up late and flustered']);
+    if (Math.random() < .5) mText(w, pick(['Ok, that interview did not go how I wanted. My bad.', 'I know, I know. I shouldn\'t have said that.', 'Please don\'t watch that clip. Ever.', 'Lesson learned. No more live interviews before coffee.']));
     logMedia(w, k, { short: !ev, d: Math.round((w.pop - before) * 10) / 10, bad: 1 });
     news(`${M.ic} ${w.name} ${what} during a ${M.n.toLowerCase()} spot. Popularity down.`, 'office');
     return `${w.name} ${what}. Pop ${Math.round(before)} → ${Math.round(w.pop)}.`;
@@ -11522,8 +11843,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.39';
+const VERSION = '1.9.40';
 const WHATS_NEW = [
+  ['🎲 Twice the surprises', 'There are now twice as many backstage events (46) and surprise moments on the live show (18), and every one of them can be told three different ways, so the same event rarely reads the same twice. New ones include fan conventions, charity visits, stolen gear, pay leaks, travel trouble, crossover fights, a heated press event, the save, a stolen belt, an off-script mic and a replay that shows the ref got it wrong. Your assistant, your producer, your wrestlers and The Dirt Sheet have twice as many things to say, too.'],
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
   ['🔒 Anonymous play stats', 'The game now sends a few anonymous counts, like how many people play and which screens get used, so we know what to improve. No name, email or account. Turn it off in Menu → Settings.'],
