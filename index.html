@@ -131,6 +131,8 @@ nav.tabs .dot { position: absolute; top: 2px; right: calc(50% - 18px); min-width
 .list { display: flex; flex-direction: column; gap: 8px; }
 .item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; }
 button.item:active { background: var(--card2); }
+.feud-note { margin-top: 8px; padding: 6px 8px; border-radius: 8px; background: var(--card2); border-left: 3px solid var(--line, #555); }
+.feud-note.good { border-left-color: var(--good); } .feud-note.warn { border-left-color: var(--warn); } .feud-note.info { border-left-color: var(--info); }
 .item .main { flex: 1; min-width: 0; }
 .item .t { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item .d { font-size: 12.5px; color: var(--dim); }
@@ -1573,12 +1575,12 @@ function newGame(opts) {
   // two starter storylines so the player has something to follow right away
   const champ = g.titles[0].holder[0];
   const challenger = (faces[0] || byPop[1]).id;
-  g.stories.push({ id: uid(), title: 'Chasing the Gold', type: 'Title Chase', a: [challenger], b: [champ], titleId: g.titles[0].id, heat: 30, start: 1, status: 'active', notes: 'The top face wants the World title. Pay it off at the first big event.', log: [] });
+  g.stories.push({ id: uid(), title: 'Chasing the Gold', type: 'Title Chase', a: [challenger], b: [champ], titleId: g.titles[0].id, heat: 30, start: 1, status: 'active', notes: 'The top face wants the World title. Build it over the first big events, then blow it off.', log: [] });
   if (faces[1] && heels[1]) g.stories.push({ id: uid(), title: 'Bad Blood', type: 'Feud', a: [faces[1].id], b: [heels[1].id], titleId: null, heat: 20, start: 1, status: 'active', notes: 'Old friends, now enemies.', log: [] });
   g.todos = [
     { t: 'Book this week\'s show on the Shows tab (or tap Auto-fill)', done: false, auto: 'firstShow' },
     { t: 'Check contracts that are about to expire (Office tab)', done: false },
-    { t: 'Plan a payoff match for "Chasing the Gold" at the first big event', done: false, auto: 'bigEvent' }
+    { t: 'Book a "Chasing the Gold" match at the first big event', done: false, auto: 'bigEvent' }
   ];
   news('Welcome to ' + g.promo.name + '. You are the booker now.', 'office');
   PLAYLOG.ev('new_game', opts.roster === 'empty' ? 'empty' : 'starter');
@@ -3043,6 +3045,7 @@ function applySegment(seg, res, ctx) {
     st.heat = clamp(st.heat + gain, 0, 100); st._touched = G.week;
     st.log.unshift({ wk: G.week, text: `${res.text} (${starStr(res.rating)}, heat +${gain})` });
     notes.push(`🔥 ${st.title} heat +${gain}`);
+    const bo = feudBlowMatch(st, seg, res, ctx); if (bo) notes.push(bo);
   }
   res.notes = notes;
 }
@@ -3414,12 +3417,9 @@ function endOfWeek(card, world = true) {
       st.heat = clamp(st.heat - 6, 0, 100);
       if (st.heat <= 0) { st.status = 'ended'; st.ended = G.week; news(`🧊 The "${st.title}" storyline fizzled out from neglect.`, 'story'); }
     }
-    // payoff at a big event when the two sides met in a match
-    if (bigWk(G.week) && st.status === 'active') {
-      const met = G.history.filter(h => h.wk === G.week && h.big).flatMap(h => h.results).find(r => r.seg.kind === 'match' && st.a.some(x => r.seg.sides.flat().includes(x)) && st.b.some(x => r.seg.sides.flat().includes(x)));
-      if (met && st.autoEnd !== false) concludeStory(st, met);
-    }
+    // a feud never ends on its own at a big event: the booker blows it off (a classic feud runs about 3 months)
   }
+  feudAdvice();
   // contracts (frozen when contracts are off: nobody's deal runs down and nobody walks out)
   endLoans(); mediaWeek();
   trainWeek();
@@ -3848,7 +3848,7 @@ function rivalCard(r, sup) {
   for (const f of r.feuds) {
     const a = rW(r, f.a), b = rW(r, f.b); if (!free(a) || !free(b)) continue;
     const t = f.tid ? r.titles.find(x => x.id === f.tid && x.holder.length && [a.id, b.id].includes(x.holder[0])) : null;
-    if (big) { take(a, b); segs.push(rBout(r, a, b, { t, feud: f, big })); f.done = 1; }
+    if (big) { take(a, b); segs.push(rBout(r, a, b, { t, feud: f, big })); if (G.week - (f.start || 0) >= 9 || f.heat < 30) f.done = 1; else f.heat = clamp(f.heat + 6, 0, 100); }
     else { f.heat = clamp(f.heat + rnd(4, 10) * (r.phil === 'ent' ? 1.25 : 1), 0, 100); if (Math.random() < 0.3) { take(a, b); segs.push(rBout(r, a, b, { feud: f })); } }
   }
   // title defenses: every title at a big event, now and then on a weekly show
@@ -4099,16 +4099,92 @@ function removeFromSeg(seg, id) {
   if (seg.target) seg.target = seg.target.filter(x => x !== id);
 }
 
-function concludeStory(st, met) {
-  st.status = 'ended'; st.ended = G.week; carBump('payoffs'); award('payoff');
+// ---------- feud control ----------
+// A classic feud runs about 3 months across big events. It only ends when the booker blows it off:
+// with a blow-off match (seg.blow, or st.plan 'blow' from st.planWk on), or straight from the feud screen.
+// The producer (your Road Agent when you have one) gives a call on each feud: extend the hot ones, blow off the dull ones.
+const FEUD_WKS = 12;
+const feudWks = st => Math.max(0, G.week - (st.start ?? G.week));
+const bigAfter = wk => { let w = wk + 1; while (!bigWk(w) && w < wk + 120) w++; return w; };
+const producerName = () => { const a = staffOf('agent'); return a ? `${a.n}, Road Agent` : 'Your producer'; };
+function feudCall(st) {
+  if (!st || st.status !== 'active') return null;
+  const wk = feudWks(st), h = st.heat, nb = nextBig(), nbn = bigName(nb);
+  if (st.plan === 'blow') return { k: 'set', cls: 'info', t: (st.planWk || 0) > G.week ? `Set to end at ${bigName(st.planWk)}. Their match there blows it off.` : 'Set to end. Their next match blows it off.' };
+  if (st.plan === 'extend' && (st.planWk || 0) > G.week) return { k: 'ext', cls: 'good', t: `Extended. Keep it hot until ${bigName(st.planWk)}, then blow it off for a bigger payoff.` };
+  if (wk < 3) return { k: 'early', cls: '', t: `Early days. Keep building toward ${nbn}.` };
+  if (wk >= 18 && h < 70) return { k: 'stale', cls: 'warn', t: `It's run ${wk} weeks. Blow it off at ${nbn} before it goes cold.` };
+  if (h < 30 && wk >= 4) return { k: 'dull', cls: 'warn', t: 'Going nowhere. Blow it off early, on the next show.' };
+  if (h >= 70 && wk < 9) return { k: 'hot', cls: 'good', t: `Red hot. Don't blow it off yet. Run it past ${nbn}.` };
+  if (wk >= 9 && h >= 45) return { k: 'ready', cls: 'good', t: `${h >= 70 ? 'Hot and ready.' : 'It\'s time.'} Blow it off at ${nbn}.` };
+  return { k: 'build', cls: '', t: `Keep building toward ${nbn}.` };
+}
+// the producer's call on what auto-fill should do with a feud this week
+const feudBlowNow = (st, big) => { if (st.plan === 'blow') return (st.planWk || 0) <= G.week; const k = feudCall(st)?.k; return k === 'dull' || (big && (k === 'ready' || k === 'stale')); };
+// how much of the payoff a blow-off earns: a big event, a real match, and about 3 months of build pay the most
+function payoffMult(st, big, match) {
+  const wk = feudWks(st), len = wk < 4 ? .5 : wk < 8 ? .75 : wk <= 18 ? 1 : .85;
+  const ext = st.plan === 'extend' && big && G.week >= (st.planWk || 0) ? 1.2 : 1;
+  return (match ? (big ? 1 : .6) : .25) * len * ext;
+}
+// the producer texts when the call on a feud changes to something worth acting on
+const FEUD_TEXT = { hot: 1, ready: 1, stale: 1, dull: 1 };
+function feudAdvice() {
+  let sent = 0;
+  for (const st of G.stories.filter(x => x.status === 'active').sort((a, b) => b.heat - a.heat)) {
+    const c = feudCall(st); if (!c) continue;
+    if (!FEUD_TEXT[c.k]) { if (c.k !== 'set' && c.k !== 'ext') delete st.advK; continue; }
+    if (st.advK === c.k) continue;
+    st.advK = c.k;
+    if (sent >= 2) continue;
+    const nm = `${st.a.map(id => lastName(W(id) || { name: '?' })).join(' & ')} and ${st.b.map(id => lastName(W(id) || { name: '?' })).join(' & ')}`;
+    const nb = bigName(nextBig()), wk = feudWks(st);
+    const t = c.k === 'hot' ? [`${st.title} is on fire`, `${nm} are the hottest thing on the show. Don't end it at ${nb}. Give them a rematch at the next one.`]
+      : c.k === 'ready' ? [`${st.title} is ready`, `${wk} weeks in and the crowd wants the payoff. Let's blow it off at ${nb}.`]
+      : c.k === 'stale' ? [`${st.title} has run long`, `${wk} weeks is a long time. Blow it off at ${nb} before the fans move on.`]
+      : [`${st.title} is dying`, `Nobody is buying ${nm}. ${wk} weeks is enough. Let's end it on the next show.`];
+    asstText(t[0], t[1], { feud: st.id, fk: c.k, by: producerName() });
+    sent++;
+  }
+}
+const feudMsgOpen = m => { if (!m.feud || m.ans != null || G.week - m.wk >= 2) return false; const st = G.stories.find(x => x.id === m.feud); return !!st && st.status === 'active'; };
+function feudChoices(m) {
+  const st = G.stories.find(x => x.id === m.feud); if (!st) return [];
+  const nb = nextBig(), nn = bigAfter(nb);
+  const ext = ['Extend it', `It runs to ${bigName(nn)}`, 'ext'], atBig = [`Blow it off at ${bigName(nb)}`, 'Their match there ends it', 'big'];
+  return m.fk === 'hot' ? [ext, atBig] : m.fk === 'dull' ? [['Blow it off early', 'Their next match ends it', 'now'], ['Give it more time', 'Heat keeps cooling', 'wait']] : [atBig, ext];
+}
+function feudPlan(st, how) {
+  const nb = nextBig();
+  if (how === 'ext') { st.plan = 'extend'; st.planWk = bigAfter(nb); st.log.unshift({ wk: G.week, text: `🎧 Extended to ${bigName(st.planWk)}.` }); return `"${st.title}" runs to ${bigName(st.planWk)}.`; }
+  if (how === 'big') { st.plan = 'blow'; st.planWk = nb; st.log.unshift({ wk: G.week, text: `🏁 Set to end at ${bigName(nb)}.` }); return `"${st.title}" ends with their match at ${bigName(nb)}.`; }
+  if (how === 'now') { st.plan = 'blow'; st.planWk = G.week; st.log.unshift({ wk: G.week, text: '🏁 Set to end at their next match.' }); return `"${st.title}" ends with their next match.`; }
+  if (how === 'off') { delete st.plan; delete st.planWk; return `"${st.title}" goes on.`; }
+  return `"${st.title}" goes on for now.`;
+}
+// a match between both sides: blow the feud off when the booker asked for it
+function feudBlowMatch(st, seg, res, ctx) {
+  if (!st || st.status !== 'active' || seg.kind !== 'match') return null;
+  if (!seg.blow && !(st.plan === 'blow' && (st.planWk || 0) <= G.week)) return null;
+  if (!res.winners?.length || res.fin?.dq) { st.log.unshift({ wk: G.week, text: '🔁 No clean result, so the feud goes on.' }); return `🔁 No clean result: ${st.title} goes on`; }
+  concludeStory(st, res, { big: !!ctx.big, match: true });
+  return `🏁 ${st.title} is over`;
+}
+
+function concludeStory(st, met, o = {}) {
+  const big = o.big ?? bigWk(G.week), match = o.match ?? !!met;
+  st.status = 'ended'; st.ended = G.week; carBump('payoffs'); if (big && match) award('payoff');
   let winSide = null;
-  if (met && met.winners?.length) winSide = st.a.some(x => met.winners.includes(x)) ? 'a' : 'b';
-  const bonus = Math.round(st.heat / 12);
+  if (met && met.winners?.length) winSide = st.a.some(x => met.winners.includes(x)) ? 'a' : st.b.some(x => met.winners.includes(x)) ? 'b' : null;
+  const bonus = Math.round(st.heat / 10 * payoffMult(st, big, match));
+  delete st.plan; delete st.planWk; delete st.advK;
   if (winSide) {
     st[winSide].forEach(id => { const w = W(id); if (w) { addPop(w, bonus); w.morale = clamp(w.morale + 8, 0, 100); } });
     st[winSide === 'a' ? 'b' : 'a'].forEach(id => { const w = W(id); if (w) addPop(w, bonus / 3); });
   }
-  const txt = winSide ? `${st[winSide].map(nameOf).join(' & ')} won the "${st.title}" storyline (+${bonus} popularity from ${Math.round(st.heat)} heat).` : `The "${st.title}" storyline wrapped up.`;
+  else if (bonus > 0) [...st.a, ...st.b].forEach(id => { const w = W(id); if (w) addPop(w, bonus / 2); });
+  const wks = feudWks(st);
+  const txt = winSide ? `${st[winSide].map(nameOf).join(' & ')} won the "${st.title}" feud${big ? ` at ${bigName(G.week)}` : ''} (+${bonus} popularity, ${Math.round(st.heat)} heat over ${wks} week${wks === 1 ? '' : 's'}).` : `The "${st.title}" feud was blown off${match ? '' : ' without a match'}.`;
   st.log.unshift({ wk: G.week, text: '🏁 ' + txt });
   news('🏁 ' + txt, 'story');
 }
@@ -5093,7 +5169,7 @@ function autoFill(quiet) {
       const mtype = size === 1 ? 'Singles' : size === 2 ? 'Tag Team' : 'Six-Person Tag';
       const title = st.titleId && G.titles.find(t => t.id === st.titleId);
       segs.push({ id: uid(), kind: 'match', mtype, stip: big && st.heat > 60 ? pick(['Street Fight', 'Steel Cage', 'No DQ', 'Ladder']) : 'Standard', sides: [A.slice(0, size), B.slice(0, size)], winner: -1, finish: 'Clean', title: title && title.holder.some(h => [...A, ...B].includes(h)) ? title.id : null, sim: true });
-      { const sg = segs[segs.length - 1]; sg.finish = autoFin(big, sg.stip, st.heat); }
+      { const sg = segs[segs.length - 1]; sg.finish = autoFin(big, sg.stip, st.heat); if (feudBlowNow(st, big)) { sg.blow = true; sg.finish = 'Clean'; } }
     } else segs.push({ id: uid(), kind: 'promo', ptype: pick(['Call-out', 'Face-off']), who: [A[0]], target: [B[0]] });
     take([...A.slice(0, size), ...B.slice(0, size)]);
   }
@@ -5145,7 +5221,7 @@ function attention() {
   const bk = backupDue(); if (bk) a.push({ lv: 'warn', ic: '💾', t: 'Back up your save', d: `Last backup ${bk >= G.week - 1 ? 'never' : bk + ' weeks ago'}. Saves live only in this browser.`, act: 'export' });
   const big = isBig(G.week);
   if (splitOn()) for (const x of SHOWS()) { const n = signed().filter(w => inBrand(w, x.id)).length; if (n < 10) a.push({ lv: 'warn', ic: '📺', t: `${brandName(x.id)} has only ${n} wrestlers`, d: 'A brand needs about 10 or more for good shows. Sign someone, or move wrestlers over in Weekly shows.', act: 'shows' }); }
-  if (big) a.push({ lv: 'good', ic: '🎆', t: `${bigName(G.week)} is THIS week`, d: 'Big event. Story matches pay off here.', go: 'book' });
+  if (big) a.push({ lv: 'good', ic: '🎆', t: `${bigName(G.week)} is THIS week`, d: 'Big event. Blow off the feuds that are ready.', go: 'book' });
   if (!G.card.length) a.push({ lv: 'info', ic: '📋', t: 'This week\'s card is empty', d: 'Tap Book show to build it, or use Auto-fill.', go: 'book' });
   const inj = G.card.flatMap(segPeople).map(W).filter(w => w && w.injury > 0);
   if (inj.length) a.push({ lv: 'bad', ic: '🩹', t: 'Injured wrestlers on the card', d: [...new Set(inj.map(w => w.name))].join(', ') + ' (big rating penalty, risk of worse injury)', go: 'book' });
@@ -5984,16 +6060,21 @@ function viewRoster() {
 }
 
 // ---------- stories ----------
+function feudNote(s, big) {
+  const c = feudCall(s); if (!c || c.k === 'early' || c.k === 'build') return '';
+  return big ? `<div class="alert ${c.cls}" style="margin-bottom:10px"><span class="ic">🎧</span><div class="small"><b>${esc(producerName())}:</b> ${esc(c.t)}</div></div>`
+    : `<div class="small feud-note ${c.cls}"><span aria-hidden="true">🎧</span> <b>${esc(producerName() === 'Your producer' ? 'Producer' : producerName().split(',')[0])}:</b> ${esc(c.t)}</div>`;
+}
 function viewStories() {
   const act = G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat);
   const ended = G.stories.filter(s => s.status !== 'active').reverse();
   const nb = nextBig();
   return `
-  <div class="card"><div class="small">Storylines build <b>heat</b> each time both sides share a segment. Heat boosts ratings and cools when ignored. Pay it off with a match at a big event (next: <b>${esc(bigName(nb))}</b>, week ${nb}).</div></div>
+  <div class="card"><div class="small">Storylines build <b>heat</b> each time both sides share a segment. Heat boosts ratings and cools when ignored. A classic feud runs about <b>3 months</b> across big events, and it only ends when <b>you</b> blow it off. The biggest payoff is a blow-off match at a big event (next: <b>${esc(bigName(nb))}</b>, week ${nb}).</div></div>
   <button class="btn pri block" data-act="newStory" style="margin-bottom:12px">+ New storyline</button>
   <div class="list">${act.map(s => `<button class="item" data-act="openStory" data-id="${s.id}" style="display:block"><div class="row"><div class="t sp">${esc(s.title)}</div>${s.organic && G.week - s.start <= 2 ? '<span class="tag good">New</span>' : ''}<span class="tag">${esc(s.type)}</span></div>
      <div class="d" style="margin:4px 0">${nmList(s.a)} <span class="vs">VS</span> ${nmList(s.b)}</div>${heatBar(s.heat)}
-     <div class="tiny muted" style="margin-top:4px">Running ${G.week - s.start} wk${s.titleId ? ' · 🏆 ' + esc(G.titles.find(t => t.id === s.titleId)?.short || '') : ''}${s.log[0] ? ' · last: wk ' + s.log[0].wk : ''}</div></button>`).join('') || '<div class="empty">No active storylines. Start one to give your shows purpose.</div>'}</div>
+     <div class="tiny muted" style="margin-top:4px">Week ${feudWks(s)} of about ${FEUD_WKS}${s.titleId ? ' · 🏆 ' + esc(G.titles.find(t => t.id === s.titleId)?.short || '') : ''}${s.log[0] ? ' · last: wk ' + s.log[0].wk : ''}</div>${feudNote(s)}</button>`).join('') || '<div class="empty">No active storylines. Start one to give your shows purpose.</div>'}</div>
   ${ended.length ? `<details style="margin-top:14px"><summary class="sec">Finished storylines (${ended.length}) ▾</summary><div class="list">${ended.map(s => `<button class="item" data-act="openStory" data-id="${s.id}"><div class="main"><div class="t">${esc(s.title)}</div><div class="d">${nmList(s.a)} vs ${nmList(s.b)} · wk ${s.start}–${s.ended}</div></div></button>`).join('')}</div></details>` : ''}`;
 }
 
@@ -6237,6 +6318,7 @@ function renderModal() {
     case 'guest': return modalGuest(m);
     case 'story': return modalStory(m);
     case 'editStory': return modalEditStory(m);
+    case 'blowStory': return modalBlowStory(m);
     case 'recap': return modalRecap(m);
     case 'title': return modalTitle(m);
     case 'creator': return modalCreator(m);
@@ -6499,7 +6581,7 @@ function helpHTML() {
   <h3>Matches</h3>
   <p>Pick the type, stipulation, winner and finish. Face vs heel works best. Records matter: streaks draw fans and contenders make better title matches. Avoid repeats. The last segment is the main event.</p>
   <h3>Storylines</h3>
-  <p>Start one yourself, or let them grow from your booking: rematches after a title change, revenge for a broken streak, betrayals, great matches and repeat clashes. Put both sides together to build heat. Pay it off with a match at a big event.</p>
+  <p>Start one yourself, or let them grow from your booking: rematches after a title change, revenge for a broken streak, betrayals, great matches and repeat clashes. Put both sides together to build heat. A classic feud runs about 3 months across big events. It only ends when you blow it off, and your producer tells you when to extend it or end it early.</p>
   <h3>Rival promotions</h3>
   <p>Office → <b>Rivals</b>. Rivals run weekly shows, sign free agents and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away.</p>
   <h3>Teams and tournaments</h3>
@@ -6643,7 +6725,9 @@ function modalSeg(m) {
       body += `<div class="side"><div class="lbl">${ic('briefcase')} At ringside</div>${s.sides.map((sd, i) => { const c = cs[i];
         return `<div class="small muted" style="margin:${i ? 12 : 2}px 0 6px">With ${sd.length ? esc(sd.map(shortOf).join(' & ')) : 'side ' + (i + 1)}</div><div class="chips">${c ? `<span class="chip">${nm(c.m.id)}<button data-act="cornerDel" data-id="${i}" aria-label="Remove ${esc(c.m.name)} from ringside">✕</button></span>` : `<button class="chip add" data-act="pickFor" data-f="corner${i}">+ Choose</button>`}</div>${c ? `<div class="seg-ctl" style="margin-top:8px" role="group" aria-label="What ${esc(c.m.name)} does"><button class="${c.plan === 'cheer' ? 'on' : ''}" aria-pressed="${c.plan === 'cheer'}" data-act="cornerPlan" data-id="${i}:cheer">${ic('megaphone')} Cheer on</button><button class="${c.plan === 'involve' ? 'on' : ''}" aria-pressed="${c.plan === 'involve'}" data-act="cornerPlan" data-id="${i}:involve">${ic('heel')} Get involved</button></div>` : ''}`; }).join('')}<div class="tiny muted" style="margin-top:8px">Managers keep feuds hot and help teams bond. Getting involved helps their side win, but the ref may throw them out.</div></div>`; }
     const st = mt.ffa ? storyAmong(entrants(s)) : storyBetween(s.sides[0] || [], s.sides.slice(1).flat());
-    if (st) body += `<div class="alert good" style="margin-bottom:12px"><span class="ic">🔥</span><div class="small">${mt.ffa ? 'Rivals inside' : 'Part of'} <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}). ${isBig(G.week) && !mt.ffa ? 'This match will pay off the storyline tonight.' : 'This will build heat.'}</div></div>`;
+    if (st) body += `<div class="alert good" style="margin-bottom:12px"><span class="ic">🔥</span><div class="small">${mt.ffa ? 'Rivals inside' : 'Part of'} <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}, week ${feudWks(st)} of about ${FEUD_WKS}). ${s.blow || (st.plan === 'blow' && (st.planWk || 0) <= (UI.selWeek || G.week)) ? 'This match ends the feud.' : 'This match builds the story.'}</div></div>`;
+    if (st) { const bo = !!s.blow, planned = !bo && st.plan === 'blow' && (st.planWk || 0) <= (UI.selWeek || G.week);
+      body += `<label class="f"><span>Blow-off match</span><div class="seg-ctl" role="group" aria-label="Blow-off match"><button class="${bo || planned ? '' : 'on'}" aria-pressed="${!bo && !planned}" data-act="segBlow" data-id="0">Keep it going</button><button class="${bo || planned ? 'on' : ''}" aria-pressed="${bo || planned}" data-act="segBlow" data-id="1">🏁 End the feud here</button></div><div class="tiny muted" style="margin-top:4px">${bo || planned ? 'The feud ends after this match if someone wins clean enough (no DQ or count-out). The payoff is bigger at a big event and after about 3 months of build.' : `${esc(feudCall(st)?.t || '')}`}</div></label>`; }
     if (!mt.ffa) body += `<label class="f"><span>Winner</span><div class="seg-ctl"><button class="${s.winner === -1 || s.winner == null ? 'on' : ''}" data-act="segWin" data-id="-1">🎲 Sim</button>${s.sides.map((side, i) => `<button class="${s.winner === i ? 'on' : ''}" data-act="segWin" data-id="${i}">${side.length ? esc(side.map(shortOf).join(' & ')) : 'Side ' + (i + 1)}</button>`).join('')}<button class="${s.winner === -2 ? 'on' : ''}" data-act="segWin" data-id="-2">🤝 Draw</button></div>${s.sides.flat().length ? `<div class="tiny muted" style="margin-top:4px">${s.sides.map(side => side.map(W).filter(Boolean).map(w => `${esc(lastName(w))} ${recStr(w)}${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''}`).join(' & ')).filter(Boolean).join(' · ')}</div>` : ''}</label>`;
     body += `<label class="f"><span>Gimmick</span><select data-seg="stip">${grp('Gimmicks', Object.keys(STIPS), s.stip)}${grp('Your gimmicks', gmine, s.stip)}</select><div class="tiny muted" style="margin-top:4px">${esc(gm.desc || '')}</div></label>`;
     body += `<button class="link" data-act="matchTypes" style="margin:-4px 0 12px">＋ Make your own match type or gimmick</button>`;
@@ -6852,11 +6936,23 @@ function modalStory(m) {
   const s = G.stories.find(x => x.id === m.id); if (!s) return '';
   const t = s.titleId && G.titles.find(x => x.id === s.titleId);
   const body = `<div class="row wrap" style="gap:6px;margin-bottom:10px"><span class="tag">${esc(s.type)}</span><span class="tag ${s.status === 'active' ? 'good' : ''}">${s.status === 'active' ? 'Active' : 'Finished wk ' + s.ended}</span>${t ? `<span class="tag gold">🏆 ${esc(t.short)}</span>` : ''}<span class="tag">Since wk ${s.start}</span></div>
-   <div class="card"><div class="side" style="border-style:solid"><div class="lbl">Side A</div>${nmList(s.a, ', ')}</div><div style="text-align:center" class="vs">VS</div><div class="side" style="border-style:solid;margin-bottom:10px"><div class="lbl">Side B</div>${nmList(s.b, ', ')}</div>${heatBar(s.heat)}</div>
+   ${s.status === 'active' ? feudNote(s, true) : ''}<div class="card"><div class="side" style="border-style:solid"><div class="lbl">Side A</div>${nmList(s.a, ', ')}</div><div style="text-align:center" class="vs">VS</div><div class="side" style="border-style:solid;margin-bottom:10px"><div class="lbl">Side B</div>${nmList(s.b, ', ')}</div>${heatBar(s.heat)}</div>
    ${s.status === 'active' ? `<div class="grid2" style="margin-bottom:10px"><button class="btn" data-act="storySeg" data-id="match">+ Match for this</button><button class="btn" data-act="storySeg" data-id="promo">+ Promo for this</button></div>` : ''}
    <div class="sec">Your notes</div><textarea data-in="sNotes" data-id="${s.id}" placeholder="Where is this going? Who wins in the end?">${esc(s.notes)}</textarea>
    <div class="sec">Story so far</div><div class="card" style="padding:4px 14px">${s.log.map(l => `<div class="news"><span class="wk">WK ${l.wk}</span><span>${esc(l.text)}</span></div>`).join('') || '<div class="empty">Nothing has happened yet. Put both sides on a show.</div>'}</div>`;
-  return modal(esc(s.title), body, s.status === 'active' ? `<button class="btn" data-act="editStory" data-id="${s.id}">Edit</button><button class="btn" data-act="endStory" data-id="${s.id}">End story</button>` : `<button class="btn" data-act="reviveStory" data-id="${s.id}">Restart</button><button class="btn bad" data-act="delStory" data-id="${s.id}">Delete</button>`);
+  return modal(esc(s.title), body, s.status === 'active' ? `<button class="btn" data-act="editStory" data-id="${s.id}">Edit</button><button class="btn pri" data-act="endStory" data-id="${s.id}">🏁 ${s.plan === 'blow' ? 'Blow-off set' : 'Blow it off'}</button>` : `<button class="btn" data-act="reviveStory" data-id="${s.id}">Restart</button><button class="btn bad" data-act="delStory" data-id="${s.id}">Delete</button>`);
+}
+function modalBlowStory(m) {
+  const s = G.stories.find(x => x.id === m.id); if (!s) return '';
+  const nb = nextBig(), big = isBig(G.week), wk = feudWks(s);
+  const opt = (k, l, d, pri) => `<button class="btn ${pri ? 'pri' : ''}" data-act="blowPick" data-id="${k}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`;
+  const body = `<p class="small muted" style="margin-top:0">${wk} week${wk === 1 ? '' : 's'} in, heat ${Math.round(s.heat)}. A classic feud runs about 3 months. The biggest payoff is a clean win in a blow-off match at a big event.</p>${feudNote(s, true)}
+    <div class="bs-c">${opt('book', 'Book the blow-off match', `Adds their match to ${big ? 'this week\'s big event' : 'this week\'s show'}, set to end the feud`, true)}
+    ${big ? '' : opt('big', `Blow it off at ${bigName(nb)}`, `Their match there, in week ${nb}, ends it`)}
+    ${opt('now', 'At their next match', 'Whenever they next wrestle, on any show')}
+    ${s.plan ? opt('off', 'Keep it going', s.plan === 'blow' ? 'Cancel the blow-off you set' : 'Clear the plan') : ''}
+    ${opt('end', 'End it now, no match', 'Only a small payoff')}</div>`;
+  return modal('Blow off "' + esc(s.title) + '"', body, `<button class="btn" data-act="closeModal">Cancel</button>`);
 }
 function modalEditStory(m) {
   const d = m.draft;
@@ -6865,7 +6961,6 @@ function modalEditStory(m) {
    <div class="side"><div class="lbl">Side A</div>${chipsFor(d.a, 'a', 5)}</div>
    <div class="side"><div class="lbl">Side B</div>${chipsFor(d.b, 'b', 5)}</div>
    <label class="f"><span>Championship involved (optional)</span><select data-es="titleId"><option value="">None</option>${G.titles.map(t => `<option value="${t.id}" ${d.titleId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
-   <label class="todo"><input type="checkbox" data-es="autoEnd" ${d.autoEnd !== false ? 'checked' : ''}><span>End automatically when both sides wrestle at a big event</span></label>
    <label class="f" style="margin-top:10px"><span>Notes</span><textarea data-es="notes" placeholder="The plan for this story">${esc(d.notes)}</textarea></label>`;
   return modal(m.isNew ? 'New storyline' : 'Edit storyline', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="saveStory">${m.isNew ? 'Create' : 'Save'}</button>`);
 }
@@ -7329,6 +7424,7 @@ const A = {
   segMain(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0) { c.push(...c.splice(i, 1)); commit('Moved to the main event.'); } },
   segDown(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0 && i < c.length - 1) { [c[i + 1], c[i]] = [c[i], c[i + 1]]; commit(); } },
   segWin(i) { UI.modal.draft.winner = +i; render(); },
+  segBlow(i) { const d = UI.modal.draft; if (+i) d.blow = true; else { delete d.blow; const st = storyBetween(d.sides?.[0] || [], (d.sides || []).slice(1).flat()); if (st?.plan === 'blow') { delete st.plan; delete st.planWk; } } render(); },
   segElim(i) { const d = UI.modal.draft; if (+i) d.elim = true; else delete d.elim; render(); },
   segTagSize(n) { const d = UI.modal.draft, k = TAG_SIZES[+n]; if (!k || d.mtype === k) return; const mt = MT(k); d.mtype = k;
     d.sides = Array.from({ length: 2 }, (_, i) => (d.sides[i] || []).slice(0, sideSize(mt, i))); d.winner = -1;
@@ -7839,10 +7935,16 @@ const A = {
     if (i >= 0) G.stories[i] = d; else { G.stories.push(d); news(`🔥 New storyline: "${d.title}" (${d.a.map(nameOf).join(' & ')} vs ${d.b.map(nameOf).join(' & ')}).`, 'story'); }
     UI.modal = { type: 'story', id: d.id }; commit(i >= 0 ? 'Saved.' : 'Storyline created.');
   },
-  endStory(id) { const s = G.stories.find(x => x.id === id); confirmBox('End "' + s.title + '"?', 'No payoff bonus unless it ends at a big event.', 'End it', () => { s.status = 'ended'; s.ended = G.week; s.log.unshift({ wk: G.week, text: '🏁 The booker closed this storyline.' }); news(`📕 "${s.title}" storyline ended.`, 'story'); UI.modal = { type: 'story', id }; commit(); }); },
+  endStory(id) { const s = G.stories.find(x => x.id === id); if (s?.status === 'active') openModal({ type: 'blowStory', id }); },
+  blowPick(k) {
+    const id = UI.modal?.id, s = G.stories.find(x => x.id === id); if (!s || s.status !== 'active') return;
+    if (k === 'book') { UI.modal = { type: 'story', id }; return A.storySeg('match', true); }
+    if (k === 'end') { concludeStory(s, null, { match: false }); UI.modal = { type: 'story', id }; return commit(); }
+    const msg = feudPlan(s, k); UI.modal = { type: 'story', id }; commit(msg);
+  },
   reviveStory(id) { const s = G.stories.find(x => x.id === id); s.status = 'active'; s.heat = Math.max(s.heat, 15); s.start = G.week; s._touched = G.week; s.log.unshift({ wk: G.week, text: '🔁 The story was reignited.' }); commit('Storyline restarted.'); },
   delStory(id) { G.stories = G.stories.filter(s => s.id !== id); UI.modal = null; commit('Deleted.'); },
-  storySeg(kind) {
+  storySeg(kind, blow) {
     const s = G.stories.find(x => x.id === UI.modal.id);
     const ok = id => W(id)?.contract;
     const A2 = s.a.filter(ok), B2 = s.b.filter(ok);
@@ -7852,6 +7954,7 @@ const A = {
       d.mtype = sizeMT(n);
       d.sides = [A2.slice(0, n), B2.slice(0, n)];
       if (s.titleId) { const t = G.titles.find(x => x.id === s.titleId); if (t && tsz(t) === n) d.title = t.id; }
+      if (blow === true) d.blow = true;
     } else { d.who = A2.slice(0, 1); d.target = B2.slice(0, 1); }
     UI.tab = 'book'; openModal({ type: 'seg', isNew: true, draft: d });
   },
@@ -8955,6 +9058,7 @@ function scrubGame(raw) {
     if (!x || !x.kind) return null;
     if (x.kind === 'match') { if (!okMT.has(x.mtype)) x.mtype = 'Singles'; if (!okGM.has(x.stip)) x.stip = 'Standard'; if (x.n != null) x.n = clamp(Math.round(+x.n) || 10, 3, 40); x.finish = finOf(x); if (x.elim !== undefined && x.elim !== true) delete x.elim; if (x.runin !== undefined && !Array.isArray(x.runin)) delete x.runin; if (x.corner !== undefined && !Array.isArray(x.corner)) delete x.corner; if (x.cplan !== undefined && !Array.isArray(x.cplan)) delete x.cplan; if (Array.isArray(x.cplan)) x.cplan = x.cplan.map(v => CPLANS.includes(v) ? v : null); if (x.turn !== undefined && typeof x.turn !== 'string') delete x.turn; if (!Array.isArray(x.sides) || x.sides.length < 2) x.sides = [[], []]; x.sides = x.sides.map(sd => Array.isArray(sd) ? sd : []); }
     else { if (x.kind === 'promo') x.ptype ||= Object.keys(PROMO_TYPES)[0]; else x.atype ||= Object.keys(ANGLE_TYPES)[0]; x.who = Array.isArray(x.who) ? x.who : []; x.target = Array.isArray(x.target) ? x.target : []; }
+    if (x.blow !== undefined && x.blow !== true) delete x.blow;
     x.id ||= uid(); return x;
   };
   const fixCard = c => Array.isArray(c) ? c.map(fixSeg).filter(Boolean) : [];
@@ -9749,7 +9853,7 @@ function textFrom(w, t, ask, x) {
 const phoneNew = () => Array.isArray(G.phone) ? G.phone.filter(m => !m.read).length : 0;
 // a message still waiting on you: an open ask from a wrestler, or a backstage moment you haven't decided
 const talksOpen = (m, w = W(m.wid)) => m.act === 'talks' && CON() && !!w?.contract && !w.loan && w.contract.weeks <= TALKS_OPEN;
-const msgOpen = m => m.from === 'asst' ? evOpen(m) : !!(m.ask && m.ans == null && W(m.wid)?.contract) || talksOpen(m) || !!(m.social && m.ans == null && W(m.wid) && G.week - m.wk < 2);
+const msgOpen = m => m.from === 'asst' ? (m.feud ? feudMsgOpen(m) : evOpen(m)) : !!(m.ask && m.ans == null && W(m.wid)?.contract) || talksOpen(m) || !!(m.social && m.ans == null && W(m.wid) && G.week - m.wk < 2);
 const openAsk = w => (G.phone || []).some(m => m.wid === w.id && m.ask && m.ans == null) || (G.promises || []).some(p => p.wid === w.id);
 const mainedIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.length > 1 && segPeople(h.results.at(-1).seg).includes(w.id));
 const promoIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.some(r => r.seg.kind === 'promo' && (r.seg.who || []).includes(w.id)));
@@ -9890,6 +9994,15 @@ function phoneChoices(m) {
 const trustWord = v => v >= 75 ? 'Trusts you' : v >= 55 ? 'Likes you' : v >= 40 ? 'Unsure of you' : v >= 25 ? 'Wary of you' : 'Doesn\'t trust you';
 function phoneMsg(m) {
   const del = `<button class="ph-del" data-act="phoneDel" data-id="${m.id}" aria-label="Delete this message${m.ask && msgOpen(m) ? ' (counts as ignoring it)' : ''}">🗑</button>`;
+  if (m.from === 'asst' && m.feud) {
+    const open = feudMsgOpen(m), ch = open ? feudChoices(m) : [];
+    return `<div class="ph-m asst${m.read ? '' : ' new'}${open ? ' open' : ''}"><span class="ph-av ph-asst" aria-hidden="true">🎧</span><div class="sp">
+      <div class="ph-h"><b>${esc(m.by || 'Your producer')}</b><span class="tiny muted">Week ${m.wk}</span>${del}</div>
+      <div class="ph-b">${m.title ? `<b class="ph-tt">${esc(m.title)}</b>` : ''}${esc(m.t)}</div>
+      ${open ? `<div class="bs-c">${ch.map(([l, d, k], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="feudAns" data-id="${m.id}:${k}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>`
+        : m.ans != null ? `<div class="ph-you">You: ${esc(m.you || 'decided')}</div>` : ''}
+    </div></div>`;
+  }
   if (m.from === 'asst') {
     const open = evOpen(m), ch = open ? EVENTS[G.event.key].choices(G.event.d) : [];
     return `<div class="ph-m asst${m.read ? '' : ' new'}${open ? ' open' : ''}"><span class="ph-av ph-asst" aria-hidden="true">📋</span><div class="sp">
@@ -9951,6 +10064,11 @@ Object.assign(A, {
     const msg = phoneAnswer(m, +i); G.booker.xp += 1; commit(msg);
   },
   phoneF(f) { UI.phF = f === 'open' ? 'open' : 'all'; render(); },
+  feudAns(v) {
+    const [id, k] = String(v).split(':'), m = (G.phone || []).find(x => x.id === id); if (!m || !feudMsgOpen(m)) return;
+    const st = G.stories.find(x => x.id === m.feud), ch = feudChoices(m).find(c => c[2] === k); if (!st || !ch) return;
+    m.ans = k; m.you = ch[0]; G.booker.xp += 1; commit(feudPlan(st, k));
+  },
   blastAns(v) {
     const [id, i] = String(v).split(':'), m = (G.phone || []).find(x => x.id === id); if (!m?.social || !msgOpen(m)) return;
     const msg = blastAnswer(m, +i); G.booker.xp += 1; commit(msg);
@@ -10845,7 +10963,7 @@ function viewWizard() {
       ${z.titles.length < MAX_TITLES ? `<button class="btn block wz-add" data-act="wzNewTitle">＋ Add a championship</button>
       ${more.length ? `<div class="chips" style="margin:8px 0 4px">${more.map(x => `<button class="chip" data-act="wzMoreTitle" data-id="${esc(x[0])}">＋ ${esc(x[0].replace(' Championship', ''))}</button>`).join('')}</div>` : ''}` : ''}
       <p class="tiny muted">${draft ? 'A heel champion gives fans someone to chase.' : z.source === 'starter' ? 'Champions are picked from the starter roster.' : 'Titles start vacant. Crown champions once you have a roster.'} Change titles and belts anytime in Office → Titles.</p>
-      ${draft && st && stT ? `<div class="card wz-story"><label class="todo" style="border:0;padding:0"><input type="checkbox" data-wz="storyOn" ${st.on ? 'checked' : ''}><span><b>Start your first storyline</b><br><span class="small muted">${esc(W2(st.a)?.name)} chases ${esc(W2(st.b)?.name)} for the ${esc(stT.name)}, paying off at your first big event.</span></span></label></div>` : ''}
+      ${draft && st && stT ? `<div class="card wz-story"><label class="todo" style="border:0;padding:0"><input type="checkbox" data-wz="storyOn" ${st.on ? 'checked' : ''}><span><b>Start your first storyline</b><br><span class="small muted">${esc(W2(st.a)?.name)} chases ${esc(W2(st.b)?.name)} for the ${esc(stT.name)}, building over your first big events.</span></span></label></div>` : ''}
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="${draft ? 'draft' : 'roster'}">${draft ? 'Back to draft' : 'Back'}</button><button class="btn pri" data-act="wzFinish">Open for business 🎉</button></div></div>`;
   }
   return '';
@@ -11362,7 +11480,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.37';
+const VERSION = '1.9.38';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
