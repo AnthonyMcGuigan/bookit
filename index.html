@@ -799,6 +799,44 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .live .btn:not(.pri) { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
 .live.skip .lv-seg, .live.skip .lv-o, .live.skip .lv-fin, .live.skip .lv-me, .live.skip .lv-st, .live.skip .lv-rank { animation-delay: 0s !important; animation-duration: .01s !important; }
 .live.skip .lv-conf { display: none; }
+/* surprise moments: a card in the feed, and the big ones as a full-screen cutscene that pauses the show */
+.live.skip .cut { animation-delay: 0s !important; animation-duration: .01s !important; }
+.live.hold .lv-body, .live.hold .lv-body * { animation-play-state: paused !important; }
+.cut { position: relative; overflow: hidden; border-radius: 14px; margin: 2px 0 12px; padding: 12px; background: linear-gradient(135deg, rgba(255,60,70,.22), rgba(20,10,20,.6)); border: 1px solid rgba(255,90,95,.75); box-shadow: 0 10px 30px rgba(255,40,60,.16); opacity: 0; animation: lvIn .55s cubic-bezier(.2,1.3,.4,1) forwards; animation-delay: var(--d); }
+.cut.sm { background: linear-gradient(135deg, rgba(255,181,71,.16), rgba(20,14,8,.5)); border-color: rgba(255,181,71,.6); box-shadow: none; }
+.cut-b { display: inline-block; font-family: var(--f-display); letter-spacing: .08em; font-size: 14px; color: #fff; background: #e5303d; padding: 3px 10px; border-radius: 6px; transform: skew(-8deg); }
+.cut.sm .cut-b { background: #b9781c; }
+.cut-w { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.6); margin: 8px 0 0; }
+.cut-f { display: flex; justify-content: center; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+.cut-f .lv-face { font-size: 11px; max-width: 64px; }
+.cut-f .lv-face span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 64px; }
+.cut-d { font-size: 14px; line-height: 1.45; color: rgba(255,255,255,.92); }
+.cut-x { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.cut-x span { font-size: 12px; font-weight: 800; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 3px 9px; }
+.cut-x span:first-child { background: rgba(255,181,71,.18); border-color: rgba(255,181,71,.6); color: #ffcf5a; }
+.cut-c, .cs-c { display: grid; gap: 8px; margin-top: 10px; }
+.cut-c .btn, .cs-c .btn { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 10px 14px; }
+.cut-c .btn span, .cs-c .btn span { font-size: 12px; opacity: .85; font-weight: 600; }
+.cs { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; color: #fff; background: rgba(6,4,10,.96); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: csIn .35s ease-out; }
+.cs-bar { height: max(56px, env(safe-area-inset-top)); background: #000; flex: none; animation: csBar .5s ease-out; }
+.cs-bar:last-child { height: max(56px, env(safe-area-inset-bottom)); }
+.cs-mid { position: relative; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 20px; overflow-y: auto; background: radial-gradient(ellipse at 50% 30%, rgba(255,70,80,.35), transparent 65%); }
+.cs-top { position: absolute; top: 12px; left: 16px; right: 12px; display: flex; justify-content: space-between; align-items: center; }
+.cs-rec { font-size: 12px; font-weight: 800; color: #ff5a5f; letter-spacing: .12em; }
+.cs-skip { color: rgba(255,255,255,.75); font-weight: 800; font-size: 14px; padding: 8px; background: none; border: 0; }
+.cs-loc { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.6); font-weight: 800; text-align: center; }
+.cs-t { font-family: var(--f-display); font-size: 34px; line-height: 1; text-align: center; margin: 10px 0 16px; letter-spacing: .03em; animation: csT .6s cubic-bezier(.2,1.4,.4,1) .15s both; }
+.cs-f { display: flex; justify-content: center; gap: 16px; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; }
+.cs-f .lv-face { font-size: 13px; max-width: 104px; opacity: 0; animation: csFace .5s cubic-bezier(.2,1.3,.4,1) forwards; }
+.cs-f .lv-face:nth-child(2) { animation-delay: .25s; } .cs-f .lv-face:nth-child(3) { animation-delay: .4s; } .cs-f .lv-face:nth-child(n+4) { animation-delay: .55s; }
+.cs-f .lv-face .av { border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+.cs-line { font-size: 17px; line-height: 1.5; background: rgba(255,255,255,.07); border-left: 3px solid #ff5a5f; border-radius: 10px; padding: 12px 14px; opacity: 0; animation: lvIn .5s ease-out .5s forwards; }
+.cs-q { font-size: 13px; color: rgba(255,255,255,.7); text-align: center; margin: 14px 0 0; font-weight: 700; }
+.cs-c { opacity: 0; animation: lvIn .4s ease-out .9s forwards; }
+@keyframes csIn { from { opacity: 0; } }
+@keyframes csBar { from { height: 0; } }
+@keyframes csT { from { opacity: 0; transform: scale(1.4); letter-spacing: .2em; } }
+@keyframes csFace { from { opacity: 0; transform: translateY(24px) scale(.9); } to { opacity: 1; transform: none; } }
 
 /* ----- records ----- */
 .form { display: inline-flex; gap: 3px; }
@@ -1699,6 +1737,192 @@ function organicStories(results, before) {
   const r = results.find(x => segPeople(x.seg).some(id => pick.a.includes(id)) && segPeople(x.seg).some(id => pick.b.includes(id)));
   if (r) (r.notes ||= []).push(`🔥 New storyline: ${title}`);
 }
+// ---------- surprise moments on the show ----------
+// Things the booker didn't book: an attack after the bell, a partner turning, a contender pointing at the belt,
+// a star coming back, the crowd taking over. They play out on the live show as cutscenes, and they lean on the
+// stories, titles and roster you already have. A moment with a choice waits for you; skip it and the producer
+// lets it play out. Settings → Surprise moments: Off, Some (default) or Lots.
+const MOM_LV = () => [0, 1, 2].includes(G.settings.moments) ? G.settings.moments : 1;
+const momOk = w => !!w && !!w.contract && inRing(w) && !w.injury && !w.away && !offTV(w);
+const sameG = (a, b) => isWomen(a) === isWomen(b);
+const lnOf = ids => ids.map(id => lastName(W(id))).join(' & ');
+// start a feud, or warm up the one they already have
+function momStory(a, b, heat, why, extra = {}) {
+  const st = storyBetween(a, b);
+  if (st) { const g = Math.max(4, Math.round(heat / 4)); st.heat = clamp(st.heat + g, 0, 100); st._touched = G.week; (st.log ||= []).push({ wk: G.week, text: why }); return `🔥 ${st.title} heat +${g}`; }
+  if (G.stories.filter(s => s.status === 'active').length >= 8) return `👀 Fans want to see ${lnOf(a)} vs ${lnOf(b)}`; // the board is full: no new story
+  const title = (extra.title || `${lnOf(a)} vs ${lnOf(b)}`).slice(0, 60);
+  G.stories.push({ id: uid(), title, type: extra.type || 'Feud', a: a.slice(), b: b.slice(), titleId: extra.titleId || null, heat, start: G.week, status: 'active', notes: why, log: [{ wk: G.week, text: why }], autoEnd: true, _touched: G.week });
+  news(`🔥 New storyline: "${title}". ${why}`, 'story');
+  return `🔥 New feud: ${title}`;
+}
+const momMood = (w, d) => { if (w) w.morale = clamp(w.morale + d, 0, 100); };
+const momPush = (w, pop, mo) => { if (!w) return; if (pop) addPop(w, pop); if (mo) w.momentum = clamp(w.momentum + mo, -50, 50); };
+// where: what the camera shows; big: a full cutscene (the rest are quick cards in the feed); p: how likely it is to fire when it can
+const MOMENTS = {
+  jump: {
+    p: .3, big: true, where: 'After the bell', head: 'HERE COMES TROUBLE',
+    when(r) {
+      if (r.seg.kind !== 'match' || !r.winners?.length) return null;
+      const v = W(r.winners[0]); if (!momOk(v)) return null;
+      const on = segPeople(r.seg);
+      const foe = storiesTouching([v.id]).flatMap(s => s.a.includes(v.id) ? s.b : s.a).map(W).find(w => momOk(w) && !on.includes(w.id) && sameG(w, v));
+      const a = foe || (v.align === 'face' && shuffle(ringers().filter(w => momOk(w) && w.align === 'heel' && w.pop >= 25 && !on.includes(w.id) && sameG(w, v) && storiesTouching([w.id]).length < 2))[0]);
+      return a ? { a: a.id, b: v.id, hot: !!foe } : null;
+    },
+    ids: d => [d.a, d.b],
+    text: d => `${nameOf(d.a)} hits the ring from the crowd and lays out ${nameOf(d.b)} in the middle of the celebration!`,
+    ch: d => [['Let it play out', d.hot ? 'Their story gets hotter' : 'A new feud starts, already hot'], ['Send security', 'Order is kept, but the crowd boos the stop']],
+    go(d, i) {
+      const a = W(d.a), v = W(d.b); if (!a || !v) return [];
+      if (i) { momMood(a, -3); return ['🛡️ Security broke it up before it got going']; }
+      momPush(a, 1, 6); momPush(v, 1, 2);
+      news(`👊 ${a.name} attacked ${v.name} after the bell.`, 'story');
+      return [momStory([a.id], [v.id], 32, `${a.name} attacked ${v.name} after a match.`), `${lastName(a)} +momentum`, `Fans rally behind ${lastName(v)}`];
+    }
+  },
+  betray: {
+    p: .5, big: true, where: 'After the bell', head: 'BETRAYAL!',
+    when(r) {
+      if (r.seg.kind !== 'match' || !r.winners?.length) return null;
+      const lose = r.seg.sides.find(sd => sd.length >= 2 && !sd.some(id => r.winners.includes(id)));
+      if (!lose || !lose.every(id => momOk(W(id)))) return null;
+      const team = (G.teams || []).find(t => lose.every(id => t.members.includes(id)));
+      if (team && (team.bond || 0) >= 6) return null; // a close team doesn't fall apart over one loss
+      if (lose.some(id => W(id).turnWk && G.week - W(id).turnWk < 8)) return null;
+      const tr = pick(lose); return { a: tr, members: lose.filter(id => id !== tr), team: team?.name || '' };
+    },
+    ids: d => [d.a, ...d.members],
+    text: d => `After the loss, ${nameOf(d.a)} stares at ${lnOf(d.members)}... and attacks! ${d.team ? d.team + ' is falling apart' : 'The partnership is over'}.`,
+    ch: d => [['Let it happen', `${lastName(W(d.a))} turns ${W(d.a)?.align === 'face' ? 'heel' : 'face'} and a feud starts`], ['Cut to commercial', 'They stay a team, for now']],
+    go(d, i) {
+      const a = W(d.a); if (!a) return [];
+      if (i) { d.members.forEach(id => momMood(W(id), -2)); momMood(a, -2); return ['📺 The cameras cut away. The tension is still there']; }
+      const to = a.align === 'face' ? 'heel' : 'face'; a.align = to; a.turnWk = G.week; momPush(a, 3, 10);
+      news(`🔄 ${a.name} turned ${to} on ${d.members.map(nameOf).join(' & ')}!`, 'story');
+      return [`🔄 ${a.name} is now a ${to}`, momStory([a.id], d.members, 45, `${a.name} turned on their partner after a loss.`, { title: `Betrayal: ${lastName(a)} vs ${lnOf(d.members)}` })];
+    }
+  },
+  contender: {
+    p: .55, big: true, where: 'After the title match', head: 'NEXT IN LINE',
+    when(r) {
+      const t = r.seg.kind === 'match' && r.seg.title && G.titles.find(x => x.id === r.seg.title);
+      if (!t || !t.holder.length || t.holder.length > 1) return null;
+      const h = W(t.holder[0]), on = segPeople(r.seg); if (!momOk(h)) return null;
+      const c = contenders(t, 4).find(w => momOk(w) && !on.includes(w.id) && !storyBetween([w.id], t.holder) && storiesTouching([w.id]).length < 2);
+      return c ? { a: c.id, b: h.id, titleId: t.id } : null;
+    },
+    ids: d => [d.a, d.b],
+    text: d => { const t = G.titles.find(x => x.id === d.titleId); return `${nameOf(d.a)} walks down the ramp, stares down ${nameOf(d.b)} and points at the ${t?.short || 'title'} belt. The crowd knows what that means.`; },
+    ch: () => [['Make it official', 'A title chase starts. Their match will mean more'], ['Not yet', 'They wanted this. Morale drops']],
+    go(d, i) {
+      const a = W(d.a), t = G.titles.find(x => x.id === d.titleId); if (!a || !t) return [];
+      if (i) { momMood(a, -5); return [`😤 ${a.name} isn't happy to be made to wait`]; }
+      momPush(a, 1, 5);
+      return [momStory([a.id], t.holder.slice(), 30, `${a.name} laid down a challenge for the ${t.name}.`, { type: 'Title Chase', titleId: t.id, title: `${lastName(a)} chases the ${t.short} title` }), `${lastName(a)} +momentum`];
+    }
+  },
+  comeback: {
+    p: .4, big: true, where: 'Live in the arena', head: 'THE LIGHTS GO OUT',
+    when(r, c) {
+      const w = shuffle(ringers().filter(w => momOk(w) && w.pop >= 40 && !c.used.has(w.id) && G.week - (w.lastBooked || 0) >= 4))[0];
+      return w ? { a: w.id } : null;
+    },
+    ids: d => [d.a],
+    text: d => `The lights go out. When they come back up, ${nameOf(d.a)} is standing on the stage. They haven't been seen in weeks, and the building is losing it.`,
+    go(d) { const w = W(d.a); if (!w) return []; momPush(w, 2, 12); momMood(w, 8); w.lastBooked = G.week; news(`💡 ${w.name} made a surprise return.`, 'show'); return [`📈 ${lastName(w)} popularity up`, `😊 ${lastName(w)} is happy to be back on TV`]; }
+  },
+  callout: {
+    p: .15, big: true, where: 'Backstage', head: 'CAUGHT ON CAMERA',
+    when(r, c) {
+      const on = segPeople(r.seg).map(W).filter(momOk); if (!on.length) return null;
+      const v = pick(on);
+      const a = shuffle(ringers().filter(w => momOk(w) && !c.used.has(w.id) && w.pop >= 25 && sameG(w, v) && w.align !== v.align && !storyBetween([w.id], [v.id]) && storiesTouching([w.id]).length < 2))[0];
+      return a && storiesTouching([v.id]).length < 2 ? { a: a.id, b: v.id } : null;
+    },
+    ids: d => [d.a, d.b],
+    text: d => `The backstage interviewer catches ${nameOf(d.a)}, who wasn't even booked tonight. "${lastName(W(d.b))}, I watched that. You're not ready for me."`,
+    ch: () => [['Run with it', 'A new feud starts'], ['Leave it on the cutting room floor', 'Nothing changes']],
+    go(d, i) { const a = W(d.a), v = W(d.b); if (!a || !v) return []; if (i) return ['✂️ The clip never aired']; momPush(a, 1, 4); return [momStory([a.id], [v.id], 24, `${a.name} called out ${v.name} in a backstage interview.`)]; }
+  },
+  chant: {
+    p: .5, where: 'In the crowd', head: 'THE CROWD TAKES OVER',
+    when(r) { if (r.rating < 72) return null; const w = segPeople(r.seg).map(W).filter(w => momOk(w) && w.pop < 60).sort((a, b) => b.momentum - a.momentum)[0]; return w ? { a: w.id } : null; },
+    ids: d => [d.a],
+    text: d => `The whole building is chanting "${lastName(W(d.a)).toUpperCase()}!" long after the segment ends.`,
+    go(d) { const w = W(d.a); if (!w) return []; momPush(w, 2, 6); return [`📈 ${lastName(w)} popularity up`]; }
+  },
+  hijack: {
+    p: .6, where: 'In the crowd', head: 'THE CROWD HIJACKS IT',
+    when(r, c) {
+      if (r.rating > 46) return null;
+      const w = ringers().filter(w => momOk(w) && w.align === 'face' && !c.used.has(w.id)).sort((a, b) => b.pop - a.pop)[0];
+      return w ? { a: w.id, who: segPeople(r.seg).filter(id => W(id)) } : null;
+    },
+    ids: d => [d.a],
+    text: d => `The fans are bored, and they let everyone know it: "WE WANT ${lastName(W(d.a)).toUpperCase()}!"`,
+    go(d) { const w = W(d.a); if (!w) return []; momPush(w, 1, 4); d.who.forEach(id => momMood(W(id), -2)); return [`📈 Fans want more ${lastName(w)}`, '😕 The wrestlers in the ring heard it too']; }
+  },
+  parking: {
+    p: .4, end: true, big: true, where: 'The parking lot', head: 'AMBUSH',
+    when() {
+      const st = shuffle(G.stories.filter(s => s.status === 'active' && s.heat >= 25))[0]; if (!st) return null;
+      const side = [st.a, st.b].map(sd => sd.map(W).filter(momOk));
+      const hi = side.findIndex(sd => sd.some(w => w.align === 'heel')); if (hi < 0 || !side[1 - hi].length) return null;
+      const a = side[hi].find(w => w.align === 'heel'), v = pick(side[1 - hi]);
+      return sameG(a, v) ? { a: a.id, b: v.id, sid: st.id } : null;
+    },
+    ids: d => [d.a, d.b],
+    text: d => `A camera in the parking lot catches ${nameOf(d.a)} jumping ${nameOf(d.b)} as they get to their car.`,
+    ch: () => [['Air it', 'Story heat goes up. They\'ll be banged up for next week'], ['Keep it off TV', 'Nothing changes']],
+    go(d, i) {
+      const st = G.stories.find(s => s.id === d.sid), v = W(d.b); if (i || !st) return ['🎬 The footage stays in the truck'];
+      st.heat = clamp(st.heat + 10, 0, 100); st._touched = G.week; (st.log ||= []).push({ wk: G.week, text: `${nameOf(d.a)} ambushed ${nameOf(d.b)} in the parking lot.` });
+      if (v) v.fatigue = clamp(v.fatigue + 15, 0, 100);
+      news(`🚗 ${nameOf(d.a)} ambushed ${nameOf(d.b)} in the parking lot.`, 'story');
+      return [`🔥 ${st.title} heat +10`, `🤕 ${lastName(v)} is banged up`];
+    }
+  },
+  melee: {
+    p: .5, end: true, big: true, where: 'To close the show', head: 'EVERYBODY OUT',
+    when(r, c) {
+      const hot = G.stories.filter(s => s.status === 'active' && s.heat >= 55 && [...s.a, ...s.b].some(id => c.used.has(id)));
+      return hot.length >= 2 ? { sid: hot.slice(0, 4).map(s => s.id), ids: [...new Set(hot.flatMap(s => [...s.a, ...s.b]))].filter(id => momOk(W(id))).slice(0, 6) } : null;
+    },
+    ids: d => d.ids,
+    text: d => `The main event is over, but nobody is leaving. ${d.ids.slice(0, 4).map(nameOf).join(', ')} and more spill out from the back. The show goes off the air with a full-blown brawl.`,
+    go(d) { const out = []; for (const id of d.sid) { const s = G.stories.find(x => x.id === id); if (s) { s.heat = clamp(s.heat + 4, 0, 100); s._touched = G.week; out.push(`🔥 ${s.title} +4`); } } return out.slice(0, 3); }
+  }
+};
+const MOM_AFTER = Object.keys(MOMENTS).filter(k => !MOMENTS[k].end), MOM_END = Object.keys(MOMENTS).filter(k => MOMENTS[k].end);
+function showMoments(results, big) {
+  const lv = MOM_LV(); if (!lv || !results.length) return [];
+  if (lv === 1 && Math.random() > (big ? .85 : .6)) return [];
+  const max = lv === 2 ? (big ? 4 : 3) : (big ? 2 : 1), n = results.length;
+  const c = { used: new Set(results.flatMap(r => segPeople(r.seg))), big }, seen = new Set(), out = [];
+  // a show's last word belongs to the main event, so end-of-show moments come after it
+  const tries = shuffle([...results.flatMap((r, i) => MOM_AFTER.map(k => [k, i])), ...MOM_END.map(k => [k, n - 1])]);
+  for (const [k, i] of tries) {
+    if (out.length >= max) break;
+    const M = MOMENTS[k];
+    if (out.some(m => m.at === i && !!m.end === !!M.end) || out.some(m => m.k === k) || Math.random() > M.p * (lv === 2 ? 1.5 : 1)) continue;
+    let d = null; try { d = M.when(results[i], c); } catch (e) { }
+    if (!d) continue;
+    const ids = M.ids(d); if (ids.some(id => seen.has(id))) continue; ids.forEach(id => seen.add(id));
+    out.push({ k, at: i, ...(M.end ? { end: 1 } : {}), d, id: uid() });
+  }
+  out.sort((a, b) => a.at - b.at || (a.end || 0) - (b.end || 0));
+  for (const m of out) if (!MOMENTS[m.k].ch) momDo(m, 0);
+  return out;
+}
+// play a moment out: i is the choice (0 = let it play out, the producer's call when nobody answers)
+function momDo(m, i = 0) {
+  if (!m || m.done) return; const M = MOMENTS[m.k]; if (!M) { m.done = 1; return; }
+  let fx = []; try { fx = M.go(m.d, i) || []; } catch (e) { fx = ['That moment passed']; }
+  m.done = 1; m.you = i; m.fx = fx.filter(Boolean);
+}
+// anything left unanswered when the show closes plays out as the producer sees fit
+function momSettle() { for (const h of G.history.slice(-6)) for (const m of h.moments || []) if (!m.done) momDo(m, 0); }
 function storiesTouching(ids) { return G.stories.filter(s => s.status === 'active' && [...s.a, ...s.b].some(x => ids.includes(x))); }
 function recentlyFaced(ids) {
   // same opponents booked in the last 2 weeks
@@ -3059,6 +3283,7 @@ function setBK(arr) { if (UI.selWeek === G.week) G.card = arr; else G.future[UI.
 
 function runShow(opts = {}) {
   if (showRanNow() || doneThisWeek()) { toast(`${G.promo.show} already ran this week.`); return; }
+  momSettle();
   const nu = nextUp(); if (nu && !nu.on) { toast(`${unitLabel(nu)} goes on first this week.`); return; }
   const card = G.card.filter(s => segPeople(s).length);
   if (!card.length) { toast('Add at least one segment first.'); return; }
@@ -3142,6 +3367,7 @@ function runShow(opts = {}) {
   if (best && best.rating >= 80) news(`⭐ ${best.seg.kind === 'match' ? 'Match' : 'Segment'} of the night: ${best.text} (${starStr(best.rating)})`, 'show');
   const mark = G.news[0];
   organicStories(results, holdersBefore);
+  { const mo = showMoments(results, big); if (mo.length) rec.moments = mo; if (opts.quiet) momSettle(); }
   personaShow(results, rec);
   // the week's upkeep (fatigue, contracts, injuries, rivals) happens once, after the company's last show
   if (coLast) endOfWeek(G.history.filter(h => h.wk === G.week).flatMap(h => h.results.map(r => r.seg)), world);
@@ -4509,9 +4735,11 @@ function liveScreen(m) {
   const h = histFor(m.wk); if (!h) return '';
   const p = h.prog || { goals: [], trophies: [] };
   let t = 1.4; const n = h.results.length;
+  const mo = h.moments || [];
   const segs = h.results.map((r, i) => {
     const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0), d1 = d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
     t = d1 + 1.3;
+    const after = mo.map((m, j) => m.at === i ? (() => { const c = momCard(h, j, t); t += MOMENTS[m.k]?.big ? 1.2 : 1.8; return c; })() : '').join('');
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x)), hurt = (r.notes || []).find(x => /injured/i.test(x));
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
     <div class="lv-seg ${main ? 'main' : ''}" style="--d:${t0(d0)}" data-lv="${i}">
@@ -4524,7 +4752,7 @@ function liveScreen(m) {
         ${champ ? `<div class="lv-champ">🏆 AND NEW CHAMPION!</div>` : ''}${(r.notes || []).filter(x => /streak|lost 4 straight/i.test(x)).map(x => `<div class="lv-streak">${esc(x)}</div>`).join('')}${hurt ? `<div class="lv-hurt">🩹 ${esc(hurt)}</div>` : ''}
       </div>
       ${r.rating >= 85 || champ ? `<div class="lv-conf" style="--d:${t0(d1)}">${Array.from({ length: 18 }, (_, k) => `<i style="left:${(k * 37) % 100}%;--c:${['#ffb547', '#ff5a5f', '#4c8dff', '#2fbf71', '#fff'][k % 5]};--x:${(k % 3) - 1};animation-delay:calc(var(--d) + ${(k % 6) * 0.06}s)"></i>`).join('')}</div>` : ''}
-    </div>`;
+    </div>${after}`;
   }).join('');
   const rk = p.rankUp != null ? RANKS[p.rankUp] : null;
   const fin = `<div class="lv-fin" style="--d:${t0(t)}" data-rating="${h.rating}">
@@ -4547,6 +4775,56 @@ function liveScreen(m) {
     <div class="lv-body">${segs}${fin}</div></div>`;
 }
 const t0 = x => Math.round(x * 100) / 100 + 's';
+// a surprise moment in the live feed (and on the recap); a big one also opens as a cutscene when the show reaches it
+const momFace = (w, sz) => `<div class="lv-face">${av(w, sz, true)}<span>${esc(sz > 60 ? w.name : shortOf(w.id))}</span></div>`;
+const momFx = m => m.fx?.length ? `<div class="cut-x">${m.fx.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '';
+const momBtns = (M, m, j, cls) => `<div class="${cls}">${M.ch(m.d).map(([l, d], i) => `<button class="btn ${i ? '' : 'pri'}" data-act="momPick" data-id="${j}:${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>`;
+function momCard(h, j, d) {
+  const m = h.moments[j], M = MOMENTS[m?.k]; if (!M) return '';
+  let txt = ''; try { txt = M.text(m.d); } catch (e) { return ''; }
+  const ws = M.ids(m.d).map(W).filter(Boolean).slice(0, 6);
+  return `<div class="cut ${M.big ? 'big' : 'sm'}" style="--d:${t0(d)}" data-mom="${j}"${M.big ? ' data-cs="1"' : ''}>
+    <span class="cut-b">⚡ ${esc(M.head)}</span><div class="cut-w">${esc(M.where)}</div>
+    ${ws.length ? `<div class="cut-f">${ws.map(w => momFace(w, 44)).join('')}</div>` : ''}<div class="cut-d">${esc(txt)}</div>
+    <div class="cut-r">${!m.done && M.ch ? momBtns(M, m, j, 'cut-c') : momFx(m)}</div></div>`;
+}
+function cutOpen(j) {
+  const live = document.querySelector('.live'), h = histFor(UI.modal?.wk), m = h?.moments?.[j], M = MOMENTS[m?.k];
+  if (!live || !M || live.classList.contains('skip') || live.querySelector('.cs')) return;
+  let txt = ''; try { txt = M.text(m.d); } catch (e) { return; }
+  const ws = M.ids(m.d).map(W).filter(Boolean).slice(0, 4), ask = !m.done && M.ch;
+  liveHold(true);
+  const el = document.createElement('div');
+  el.className = 'cs'; el.dataset.mom = j; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', M.head);
+  el.innerHTML = `<div class="cs-bar"></div><div class="cs-mid"><div class="cs-top"><span class="cs-rec">● LIVE</span><button class="cs-skip" data-act="cutGo">${ask ? 'Skip ›' : 'Continue ›'}</button></div>
+    <div class="cs-loc">${esc(M.where)} · ${esc(h.name)}</div><div class="cs-t">${esc(M.head)}</div>
+    <div class="cs-f">${ws.map(w => momFace(w, ws.length > 2 ? 72 : 96)).join('')}</div><div class="cs-line">${esc(txt)}</div>
+    ${ask ? `<div class="cs-q">What do you tell the producer?</div>${momBtns(M, m, j, 'cs-c')}` : `<div class="cs-c">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`}</div><div class="cs-bar"></div>`;
+  live.appendChild(el);
+  (el.querySelector('.cs-c .btn') || el.querySelector('.cs-skip'))?.focus({ preventScroll: true });
+  if (m.k === 'comeback' || m.k === 'chant') SFX.crowd('cheer', .9, .2); else SFX.crowd('applause', .5, .3);
+  // a moment with nothing to decide moves on by itself
+  if (!ask) LV.auto = setTimeout(() => cutClose(), 7000);
+}
+function cutClose() {
+  const cs = document.querySelector('.live .cs'); if (!cs) return;
+  clearTimeout(LV.auto); const h = histFor(UI.modal?.wk), j = +cs.dataset.mom, m = h?.moments?.[j];
+  if (m && !m.done) { momDo(m, 0); save(); momRefresh(j); }
+  cs.remove(); liveHold(false);
+}
+function momRefresh(j) {
+  const h = histFor(UI.modal?.wk), m = h?.moments?.[j], box = document.querySelector(`.cut[data-mom="${j}"] .cut-r`);
+  if (box && m) box.innerHTML = momFx(m);
+}
+// the live clock: segments come in on a timeline that a cutscene can pause
+const LV = { t: 0, off: 0, at: 0, jobs: [], auto: 0 };
+const lvNow = () => (LV.at || performance.now()) - LV.t - LV.off;
+function lvRun(job) { liveTimers.push(job.h = setTimeout(() => { job.ran = 1; job.fn(); }, Math.max(0, job.d * 1000 - lvNow()))); }
+function liveHold(on) {
+  const live = document.querySelector('.live'); if (!live) return;
+  if (on && !LV.at) { LV.at = performance.now(); liveTimers.forEach(clearTimeout); liveTimers = []; live.classList.add('hold'); }
+  else if (!on && LV.at) { LV.off += performance.now() - LV.at; LV.at = 0; live.classList.remove('hold'); LV.jobs.filter(j => !j.ran).forEach(lvRun); }
+}
 // every match and angle shows the wrestlers' photos when they have them (photos never leave this device);
 // the main event gets the big ones. Each photo is turned into a short blob link once and reused, so a long
 // card with the same stars in several segments doesn't copy the image into the page again and again.
@@ -4573,16 +4851,16 @@ function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
   const box = document.querySelector('.live .lv-body'); if (!box || box.closest('.skip')) return;
   // the bell to open, then one crowd reaction for the whole show when the final rating comes in
-  const at = (el, d, fn) => liveTimers.push(setTimeout(() => { if (!el.closest('.skip')) fn(); }, Math.max(0, d) * 1000));
+  LV.t = performance.now(); LV.off = 0; LV.at = 0; LV.jobs = []; clearTimeout(LV.auto);
+  const at = (el, d, fn) => { const job = { d: Math.max(0, d), fn: () => { if (!el.closest('.skip')) fn(); } }; LV.jobs.push(job); lvRun(job); };
   const dOf = el => parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0;
   SFX.load();
   SFX.bell(3);
   box.querySelectorAll('.lv-fin').forEach(el => at(el, dOf(el), () => { SFX.bell(1); SFX.show(+el.dataset.rating); }));
   // keep the newest segment in view as it comes in
-  box.querySelectorAll('.lv-seg, .lv-fin').forEach(el => {
-    const d = parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0;
-    liveTimers.push(setTimeout(() => { if (!el.closest('.skip')) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, d * 1000 + 50));
-  });
+  box.querySelectorAll('.lv-seg, .lv-fin, .cut').forEach(el => at(el, dOf(el) + .05, () => el.scrollIntoView({ behavior: 'smooth', block: 'center' })));
+  // the big surprise moments stop the show for a cutscene
+  box.querySelectorAll('.cut[data-cs]').forEach(el => at(el, dOf(el) + .7, () => cutOpen(+el.dataset.mom)));
 }
 
 // ---------- contracts ----------
@@ -6066,6 +6344,7 @@ function modalMenu() {
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
     <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
+    <label class="f"><span>⚡ Surprise moments on the show</span><select data-in="moments">${[[0, 'Off: only what you book happens'], [1, 'Some: now and then'], [2, 'Lots: most shows have one or more']].map(([v, l]) => `<option value="${v}" ${MOM_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
 ${displaySettings()}
     <div class="sec">Help</div>
@@ -6614,6 +6893,7 @@ function modalRecap(m) {
   const body = `<div style="text-align:center;margin-bottom:12px"><div class="muted small">Week ${h.wk}${h.big ? ' · BIG EVENT' : ''}</div><div class="res-score">${h.rating}</div><div class="stars" style="font-size:22px">${starStr(h.rating)}</div><div class="muted">${grade(h.rating)} show</div>${h.why.length ? whyList(h.why) : ''}</div>
    <div class="grid3" style="margin-bottom:12px"><div class="stat"><div class="k">Crowd</div><div class="v" style="font-size:17px">${h.attendance.toLocaleString()}</div></div><div class="stat"><div class="k">Fans</div><div class="v" style="font-size:17px;color:${h.fanDelta >= 0 ? 'var(--good)' : 'var(--bad)'}">${h.fanDelta >= 0 ? '+' : ''}${kfmt(h.fanDelta)}</div></div>${MON() ? `<div class="stat"><div class="k">Profit</div><div class="v" style="font-size:17px;color:${h.net >= 0 ? 'var(--good)' : 'var(--bad)'}">${(h.net < 0 ? '-$' : '$') + kfmt(Math.abs(h.net))}</div></div>` : `<div class="stat"><div class="k">Rating</div><div class="v" style="font-size:17px">${h.rating}</div></div>`}</div>
    ${(h.headlines || []).length ? `<div class="heads"><div class="review-h">Headlines</div>${h.headlines.map(t => `<div>${esc(t)}</div>`).join('')}</div>` : ''}
+   ${(h.moments || []).length ? `<div class="heads"><div class="review-h">Surprises on the show</div>${h.moments.map(m => { const M = MOMENTS[m.k]; let t = ''; try { t = M ? M.text(m.d) : ''; } catch (e) { } return t ? `<div><b>⚡ ${esc(M.head)}</b> ${esc(t)}${m.fx?.length ? `<br><span class="tiny muted">${m.fx.map(esc).join(' · ')}</span>` : ''}</div>` : ''; }).join('')}</div>` : ''}
    ${h.big ? monthReview(h) : ''}
    ${h.results.map((r, i) => `<details class="seg"><summary><div class="hd"><span class="no">${i === h.results.length - 1 && h.results.length > 1 ? '★ME' : '#' + (i + 1)}</span><span class="ttl">${segTitle(r.seg)}</span><span class="stars">${starStr(r.rating)}</span></div>
      ${r.seg.kind === 'match' ? `<div class="rwho">${segWho(r.seg)}</div>` : ''}<div class="who">${esc(r.text)}</div>${(r.notes || []).length ? `<div class="meta">${r.notes.map(esc).join('<br>')}</div>` : ''}<div class="tiny muted" style="margin-top:4px">Score ${r.rating} · tap for why ▾</div></summary>${whyList(r.why)}</details>`).join('')}`;
@@ -7102,8 +7382,14 @@ const A = {
     document.querySelectorAll('[data-act=musicToggle]').forEach(b => { b.innerHTML = ic(turnOn ? 'music' : 'musicoff'); b.setAttribute('aria-pressed', turnOn ? 'false' : 'true'); b.setAttribute('aria-label', turnOn ? 'Mute music' : 'Play music'); });
     toast(turnOn ? 'Music on' : 'Music off'); },
   sound() { meta.sound = meta.sound === false; ls.set(META, JSON.stringify(meta)); if (meta.sound) SFX.tap(); MUSIC.sync(); const b = document.querySelector('[data-act=sound]'); if (b) { b.innerHTML = iconize(meta.sound ? '🔊' : '🔇'); b.setAttribute('aria-label', meta.sound ? 'Mute sound' : 'Turn sound on'); } else render(); },
-  liveSkip() { liveTimers.forEach(clearTimeout); const l = document.querySelector('.live'); if (l) { l.classList.add('skip'); l.querySelector('.lv-fin')?.scrollIntoView({ block: 'start' }); } },
-  liveRecap() { liveTimers.forEach(clearTimeout); openModal({ type: 'recap', wk: UI.modal.wk }); },
+  momPick(v) {
+    const [j, i] = String(v).split(':').map(Number), h = histFor(UI.modal?.wk), m = h?.moments?.[j];
+    if (!m || m.done) return; momDo(m, i); save(); momRefresh(j);
+    const cs = document.querySelector('.live .cs'); if (cs) { cs.querySelector('.cs-c').outerHTML = `<div class="cs-c" style="animation-delay:0s">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`; cs.querySelector('.cs-skip').textContent = 'Continue ›'; cs.querySelector('.cs-q')?.remove(); cs.querySelector('.cs-c .btn')?.focus({ preventScroll: true }); LV.auto = setTimeout(() => cutClose(), 6000); }
+  },
+  cutGo() { cutClose(); },
+  liveSkip() { document.querySelector('.live .cs')?.remove(); clearTimeout(LV.auto); LV.at = 0; document.querySelector('.live')?.classList.remove('hold'); liveTimers.forEach(clearTimeout); const l = document.querySelector('.live'); if (l) { l.classList.add('skip'); l.querySelector('.lv-fin')?.scrollIntoView({ block: 'start' }); } },
+  liveRecap() { liveTimers.forEach(clearTimeout); clearTimeout(LV.auto); momSettle(); openModal({ type: 'recap', wk: UI.modal.wk }); },
   trophies() { openModal({ type: 'trophies' }); },
   carTab(t) { UI.carTab = t; render(); },
   coPerk() { UI.carTab = 'co'; openModal({ type: 'trophies' }); },
@@ -7153,7 +7439,7 @@ const A = {
   roleSw(r) { const r2 = setRole(W(UI.modal?.id), r); if (r2?.no) return toast(r2.no); if (r2) commit(r2.msg); },
   cos() { openModal({ type: 'cos' }); },
   shows() { openModal({ type: 'shows' }); },
-  afterShow() { liveTimers.forEach(clearTimeout); UI.modal = null; const r = goNext(); UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop();
+  afterShow() { liveTimers.forEach(clearTimeout); clearTimeout(LV.auto); momSettle(); UI.modal = null; const r = goNext(); UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop();
     if (r.u || r.n) toast(`${r.n ? `Auto-booked ${r.n} show${r.n > 1 ? 's' : ''}. ` : ''}Now booking ${G.promo.show}${multi() ? ' for ' + G.promo.name : ''}.`); },
   goNextUp() { const u = nextUp(); if (!u) return; goUnit(u); UI.modal = null; UI.tab = 'book'; save(); render(); pageTop(); toast(`Now booking ${G.promo.show}${multi() ? ' for ' + G.promo.name : ''}.`); },
   goUnit(key) { const [co, sid] = String(key || '').split('|'); const u = weekUnits().find(x => (x.co || '') === co && (x.sid || '') === sid); if (!u || u.on) return; goUnit(u); UI.modal = null; UI.tab = 'book'; save(); render(); },
@@ -10865,6 +11151,7 @@ document.addEventListener('change', e => {
     }
     else if (k === 'injuries') { G.settings.injuries = el.checked; commit(); }
     else if (k === 'organic') { G.settings.organic = el.checked; commit(); }
+    else if (k === 'moments') { G.settings.moments = clamp(+el.value || 0, 0, 2); commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
     else if (k === 'deep') { G.settings.deep = el.checked; if (el.checked) { G.settings.finances = true; if (G.settings.contracts === false) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40); G.settings.contracts = true; } else { G.settings.finances = false; G.settings.contracts = false; } commit(el.checked ? 'Deep sim on, with money and contracts. Open any wrestler to see their skills.' : 'Deep sim off. Money and contracts are off too.'); }
     else if (k === 'trainFocus') { const w = W(el.dataset.id) || trainees().find(x => x.id === el.dataset.id); if (w && Object.hasOwn(FOCUS, el.value)) { w.train = el.value; commit(`${w.name}: ${FOCUS[w.train][0].toLowerCase()} training.`); } }
@@ -11075,7 +11362,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.36';
+const VERSION = '1.9.37';
 const WHATS_NEW = [
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
