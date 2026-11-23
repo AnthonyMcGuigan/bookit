@@ -3343,11 +3343,15 @@ function runShow(opts = {}) {
   const room = 1 - G.fans / fanCap();
   // more shows a week means each one moves the needle a little less
   let fanDelta = Math.round(G.fans * (overall - 58) / (big ? 500 : 900) * (overall > 58 ? Math.max(0.02, room) * DF().fanUp : DF().fanDown) / Math.sqrt(nS));
-  if (special && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.5);
+  const spT = special ? specialTarget() : 0, spMiss = special && overall < spT;
+  if (special && !spMiss && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.5);
   if (perk('fans') && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.1);
   if (room < 0 && overall < 80) fanDelta -= Math.round(G.fans * Math.min(0.01, -room * 0.02));
   G.fans = Math.max(1000, G.fans + fanDelta);
   G.promo.prestige = clamp(G.promo.prestige + (overall - G.promo.prestige) * 0.05 / Math.sqrt(nS), 1, 100);
+  // a TV special is a promise to the network: keep it and your name grows, miss it and everyone hears about it
+  let spHit = 0;
+  if (special) { spHit = spMiss ? -Math.min(10, 3 + Math.floor((spT - overall) / 3)) : 2; G.promo.prestige = clamp(G.promo.prestige + spHit, 1, 100); }
   // head to head: your own companies on the same night fight for the same viewers
   const h2h = [];
   for (const c of G.cos || []) {
@@ -3362,9 +3366,10 @@ function runShow(opts = {}) {
 
   if (!big) buildHype(results, G.week);
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
-  const rec = { wk: G.week, name: showTitle(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true } : {}) };
+  const rec = { wk: G.week, name: showTitle(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true, spT, spMiss, spHit } : {}) };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
   PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
+  if (special) news(spMiss ? `📉 The ${specialName()} missed the network's target of ${spT}. Your reputation took a hit (${spHit} prestige) and the network wants ${SPECIAL_GAP_MISS} weeks before another special.` : `📺 The ${specialName()} beat the network's target of ${spT}. +${spHit} prestige.`, 'show');
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
   const best = results.slice().sort((a, b) => b.rating - a.rating)[0];
   const bestM = results.filter(r => r.seg.kind === 'match').sort((a, b) => b.rating - a.rating)[0];
@@ -4357,7 +4362,7 @@ const bookerLvl = () => lvlOf(CAR().xp);
 const CO_MAX = 25, coXpAt = L => L <= 1 ? 0 : Math.round(14 * (L - 1) ** 1.8);
 const coLvlOf = xp => { let L = 1; while (L < CO_MAX && xp >= coXpAt(L + 1)) L++; return L; };
 const coLvl = () => G && G.booker ? coLvlOf(G.booker.cxp || 0) : 1;
-const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [3, '💼', 'More staff', 'Hire a PR Agent, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'TV specials', 'Turn a weekly show into a one-off special every 8 weeks. Book it from the show\'s card.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
+const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [3, '💼', 'More staff', 'Hire a PR Agent, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'TV specials', 'Turn a weekly show into a one-off special every 8 weeks. Book it from the show\'s card. Miss the network\'s target and your reputation suffers.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
 const PERKS = {
   deals: ['💼', 'Contract discount', 'Wrestlers ask 10% less.'],
   tv: ['📺', 'Network friends', 'TV deals renew 10% bigger.'],
@@ -4535,8 +4540,8 @@ const EVENTS = {
   special: {
     when() { if (coLvl() < 8 || isBig(G.week) || onEv() || specialPending() || G.week < nextSpecialWk() || G.week - (G.booker.lastSpecial || -99) < SPECIAL_GAP) return null; return { n: pick(SPECIAL_NAMES) }; },
     title: '📺 TV special offer', text: d => `The network wants this week's show as a one-off "${d.n}".`,
-    choices: () => [['Make it a special', 'Bigger crowd, double TV money, more new fans, one extra segment'], ['Keep it a normal week', 'Nothing changes']],
-    pick(i, d) { G.booker.lastSpecial = G.week; if (i) return 'A regular week it is.'; G.special = G.week; G.specialSid = G.showId; G.specialName = d.n; G.todos.unshift({ t: `This week is the ${d.n}: book a big card`, done: false }); return `This week's show is the ${d.n}.`; }
+    choices: () => [['Make it a special', `Bigger crowd, double TV money, more new fans, one extra segment. The network expects ${specialTargetNow()}+, and missing it hurts your reputation`], ['Keep it a normal week', 'Nothing changes']],
+    pick(i, d) { G.booker.lastSpecial = G.week; if (i) return 'A regular week it is.'; G.special = G.week; G.specialSid = G.showId; G.specialName = d.n; G.specialT = specialTargetNow(); G.todos.unshift({ t: `This week is the ${d.n}: book a big card`, done: false }); return `This week's show is the ${d.n}.`; }
   },
   viralSeg: {
     when() {
@@ -4770,7 +4775,7 @@ function goalCard() {
   const g = G.booker.goals, c = CAR();
   const xp = c.xp, cur = RANKS[rankIx(xp)], L = lvlOf(xp), pct = L >= MAX_LVL ? 100 : (xp - xpAt(L)) / (xpAt(L + 1) - xpAt(L)) * 100;
   return `<div class="goals"><button class="g-rank" data-act="trophies" aria-label="Booker level ${L}, ${cur[1]}. Achievements and milestones"><span class="lvl">Lv ${L}</span><b>${cur[1]}</b><span class="bar"><i style="width:${pct}%"></i></span><span class="tiny muted">🏅 ${Object.keys(c.ach).length}/${ACH.length}</span></button>
-    ${perksDue() ? `<button class="btn sm block" style="margin-top:6px" data-act="coPerk">⭐ Company level ${coLvl()}: pick a promotion perk</button>` : ''}${specialPending() && !isBig(G.special) ? `<div class="goal"><span>📺</span><span class="sp">${G.special === G.week ? 'TV special this week' : `TV special booked for week ${G.special}`}: ${esc(specialName())}. Bigger crowd, double TV money</span></div>` : ''}${G.sponsor ? `<div class="goal"><span>💼</span><span class="sp">${esc(G.sponsor.n)}: rate ${G.sponsor.T}+ to get paid</span><b>${money(G.sponsor.pay)}</b></div>` : ''}
+    ${perksDue() ? `<button class="btn sm block" style="margin-top:6px" data-act="coPerk">⭐ Company level ${coLvl()}: pick a promotion perk</button>` : ''}${specialPending() && !isBig(G.special) ? `<div class="goal"><span>📺</span><span class="sp">${G.special === G.week ? 'TV special this week' : `TV special booked for week ${G.special}`}: ${esc(specialName())}. Network target ${specialTarget()}+</span></div>` : ''}${G.sponsor ? `<div class="goal"><span>💼</span><span class="sp">${esc(G.sponsor.n)}: rate ${G.sponsor.T}+ to get paid</span><b>${money(G.sponsor.pay)}</b></div>` : ''}
     ${g.length ? `<div class="goal-l">${g.map(x => `<div class="goal"><span>🎯</span><span class="sp">${esc(x.text)}</span><b>+${x.xp} XP</b></div>`).join('')}</div>` : ''}</div>`;
 }
 function modalTrophies() {
@@ -5132,9 +5137,13 @@ const SPECIAL_NAMES = ['Prime Time Special', 'Holiday Spectacular', 'Saturday Ni
 const SPECIAL_GAP = 8;
 const isSpecial = wk => !!G && G.special === wk && !isBig(wk) && !onEv() && (!G.specialSid || G.specialSid === G.showId);
 const specialName = () => G.specialName || 'TV special';
+// the network's target for a special: a bit above your recent shows. Miss it and your reputation takes the hit.
+const specialTargetNow = () => { const last = G.history.filter(ownRec).slice(-3).map(h => h.rating); return clamp(Math.round((last.length ? avg(last) : 60) + 3), 55, 85); };
+const specialTarget = () => G.specialT || specialTargetNow();
+const SPECIAL_GAP_MISS = 12;
 const lastSpecialAired = () => Math.max(-99, ...G.history.filter(h => h.special).map(h => h.wk));
 // the first week a new special can go on: one every 8 weeks, counted from the last one that aired
-const nextSpecialWk = () => Math.max(G.week, lastSpecialAired() + SPECIAL_GAP);
+const nextSpecialWk = () => { const lw = lastSpecialAired(), h = G.history.find(r => r.wk === lw && r.special); return Math.max(G.week, lw + (h?.spMiss ? SPECIAL_GAP_MISS : SPECIAL_GAP)); };
 const specialPending = () => G.special >= G.week && !(G.special === G.week && (G.history.some(h => h.wk === G.week && h.special)));
 const maxSegs = wk => isBig(wk) ? 10 + bigBonus() : G && isSpecial(wk) ? 9 : 8;
 const roomLeft = (wk, card) => Math.max(0, maxSegs(wk) - card.length);
@@ -5878,12 +5887,12 @@ function monthGrid(mk, wk, tile) {
 function specialStrip(wk, card) {
   if (coLvl() < 8 || onEv()) return '';
   const done = wk === G.week && showRanNow();
-  if (isSpecial(wk)) return `<div class="warnline row sp-line"><span class="sp">📺 <b>${esc(specialName())}</b>: bigger crowd, double TV money, more new fans and room for 9 segments.</span>${done ? '' : '<button class="btn sm" data-act="specialOff">Cancel</button>'}</div>`;
+  if (isSpecial(wk)) return `<div class="warnline row sp-line"><span class="sp">📺 <b>${esc(specialName())}</b>: bigger crowd, double TV money, more new fans and room for 9 segments. The network expects <b>${specialTarget()}+</b>. Miss it and your reputation takes a hit.</span>${done ? '' : '<button class="btn sm" data-act="specialOff">Cancel</button>'}</div>`;
   if (done) return '';
   if (specialPending()) return `<div class="tiny muted sp-line" style="margin:0 0 8px">📺 Your next TV special is week ${G.special}${isBig(G.special) ? '' : ` (${dayLabel(G.special)})`}.</div>`;
   const nx = nextSpecialWk();
   if (wk < nx) return `<div class="tiny muted sp-line" style="margin:0 0 8px">📺 Your next TV special can go on from week ${nx} (${dayLabel(nx)}).</div>`;
-  return `<div class="warnline row sp-line"><span class="sp">📺 Make this a TV special: bigger crowd, double TV money, more new fans and one extra segment.</span><button class="btn sm pri" data-act="specialOn">Make it a special</button></div>`;
+  return `<div class="warnline row sp-line"><span class="sp">📺 Make this a TV special: bigger crowd, double TV money, more new fans and one extra segment. The network will expect <b>${specialTargetNow()}+</b>, and missing it hurts your reputation.</span><button class="btn sm pri" data-act="specialOn">Make it a special</button></div>`;
 }
 function viewBookCard() {
   // the big event only has a card on its own weeks
@@ -5921,6 +5930,7 @@ function viewBookCard() {
   if (h) {
     return `${statusBar}${cal}
     <div class="show-h ${h.big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk} · Results</div><h2>${esc(h.name)}</h2>
+      ${h.special && h.spT ? `<div class="small" style="color:var(--${h.spMiss ? 'bad' : 'good'})">📺 TV special · network target ${h.spT}: ${h.spMiss ? `missed, ${h.spHit} prestige` : `hit, +${h.spHit} prestige`}</div>` : ''}
       <div class="small muted">${h.attendance.toLocaleString()} fans${MON() ? ` · ${h.net >= 0 ? '+' : ''}${money(h.net)}` : ''} · ${h.fanDelta >= 0 ? '+' : ''}${kfmt(h.fanDelta)} fans</div></div>
       <div class="show-score"><b>${h.rating}</b><span class="stars">${starStr(h.rating)}</span></div></div>
     <div class="mcard">${h.results.map((r, i) => matchRow(r.seg, i, h.results.length, { rating: r.rating, text: r.text, winners: r.winners, past: true })).join('')}</div>
@@ -7405,11 +7415,11 @@ const A = {
     if (coLvl() < 8 || isBig(wk) || onEv() || wk < G.week || (wk === G.week && showRanNow())) return;
     if (specialPending() && G.special !== wk) return toast(`You already have a TV special booked for week ${G.special}.`);
     if (wk < nextSpecialWk()) return toast(`The network allows one special every ${SPECIAL_GAP} weeks. The next one can go on from week ${nextSpecialWk()}.`);
-    G.special = wk; G.specialSid = G.showId; G.specialName = pick(SPECIAL_NAMES); G.booker.lastSpecial = wk;
+    G.special = wk; G.specialSid = G.showId; G.specialName = pick(SPECIAL_NAMES); G.specialT = specialTargetNow(); G.booker.lastSpecial = wk;
     commit(`${G.promo.show} in week ${wk} is now the ${G.specialName}. Book a big card.`); },
   specialOff() { const wk = UI.selWeek; if (!isSpecial(wk) || (wk === G.week && showRanNow())) return;
     if (BK().length > 8) return toast('Take one segment off first: a regular show holds 8.');
-    G.special = null; G.specialSid = null; G.specialName = null; commit('Back to a regular show.'); },
+    G.special = null; G.specialSid = null; G.specialName = null; G.specialT = null; commit('Back to a regular show.'); },
   addSig() { const wk = UI.selWeek, sg = sigOf(wk); if (!sg) return; const card = BK(); if (!roomLeft(wk, card)) return toast(fullMsg(wk)); card.push(sigSeg(sg, wk)); commit(`The ${sigName(sg)} is on the card.`); },
   matchTypes() { openModal({ type: 'mtypes', back: UI.modal && UI.modal.type !== 'menu' ? UI.modal : null, fromMenu: UI.modal?.type === 'menu' }); },
   mtNew(kind) { UI.modal.edit = { kind, i: -1, d: kind === 'gim' ? { name: '', rule: 'any', style: '', risk: 1, heat: 1, long: false, desc: '' } : { name: '', ffa: false, teams: 2, per: 2, count: 10, wide: false, desc: '' } }; render(); },
