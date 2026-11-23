@@ -777,6 +777,46 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .lv-faces.sm .lv-face .av { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
 .lv-faces.sm > .vs { font-size: 16px; }
 .lv-o { margin-top: 6px; }
+/* match, promo and angle each look different: a coloured tag and stripe, a speech bubble, a camera feed */
+.kp { display: inline-block; flex: none; font-size: 10.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; color: #120d1c; line-height: 1.35; }
+.kp.m { background: #ff6b70; } .kp.p { background: #b48cff; } .kp.a { background: #3fd0c9; }
+.verb { display: inline-block; font-family: var(--f-display); font-weight: 400; font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; padding: 1px 8px; border-radius: 20px; margin: 0 4px; white-space: nowrap; vertical-align: 1px; color: var(--dim); background: var(--bg2); }
+.lv-kh { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.lv-seg.k-match:not(.main) { box-shadow: inset 4px 0 0 #ff6b70; }
+.lv-seg.k-promo { border-color: rgba(180,140,255,.45); background: radial-gradient(circle at 12% 0%, rgba(150,100,255,.26), transparent 62%), rgba(255,255,255,.04); box-shadow: inset 4px 0 0 #b48cff; }
+.lv-seg.k-promo .verb { color: #dcc9ff; background: rgba(180,140,255,.22); }
+.lv-seg.k-angle { background: #07080a; border-color: rgba(63,208,201,.45); box-shadow: inset 4px 0 0 #3fd0c9; padding: 14px; }
+.lv-seg.k-angle::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px); }
+.lv-seg.k-angle .verb { color: #a6f2ec; background: rgba(63,208,201,.2); }
+.lv-seg.main.k-promo, .lv-seg.main.k-angle { border-color: rgba(255,190,80,.7); }
+.cam { position: absolute; width: 14px; height: 14px; border: 0 solid rgba(255,255,255,.5); }
+.cam.tl { top: 6px; left: 8px; border-top-width: 2px; border-left-width: 2px; } .cam.tr { top: 6px; right: 6px; border-top-width: 2px; border-right-width: 2px; }
+.cam.bl { bottom: 6px; left: 8px; border-bottom-width: 2px; border-left-width: 2px; } .cam.br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
+.rec { margin-left: auto; font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; font-weight: 700; color: #ff6b70; letter-spacing: .06em; }
+.rec b { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ff5a5f; margin-right: 5px; vertical-align: 1px; animation: blink 1.2s infinite; }
+.pr-row { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 6px; }
+.pr-who { display: flex; gap: 4px; flex: none; }
+.pr-who .av { border-radius: 50% !important; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
+.bub { position: relative; flex: 1; min-width: 0; background: #f4efff; color: #1b1330; border-radius: 16px 16px 16px 4px; padding: 9px 12px; font-weight: 700; font-style: italic; font-size: 14.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.bub::before { content: ''; position: absolute; left: -7px; top: 16px; border: 8px solid transparent; border-right-color: #f4efff; border-left: 0; }
+.bub small { display: block; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; color: #5d43a3; margin-top: 5px; text-transform: uppercase; }
+.bub .muted-b { font-style: normal; color: #5d43a3; }
+.tgt, .lv-int { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; font-weight: 800; color: rgba(255,255,255,.75); margin: 2px 0 4px; }
+.tgt .av, .lv-int .av { border-radius: 50% !important; }
+.lv-int { color: #ffcf5a; margin-top: 6px; }
+.act-faces { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+.act-faces .lv-side { gap: 4px; }
+.act-faces .lv-face .av { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+.l3 { position: relative; z-index: 1; margin: 8px -14px 2px; padding: 6px 14px; background: linear-gradient(90deg, #3fd0c9, #1f8f8a 70%, transparent); color: #04201e; font-weight: 900; font-size: 14.5px; }
+.l3 > span:first-child { display: block; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; opacity: .8; }
+.l3 [class^="n-"] { color: inherit; }
+.mrow.k-promo { box-shadow: inset 3px 0 0 #b48cff; background: linear-gradient(90deg, color-mix(in srgb, #b48cff 12%, transparent), transparent 70%); }
+.mrow.k-angle { box-shadow: inset 3px 0 0 #3fd0c9; background: linear-gradient(90deg, color-mix(in srgb, #3fd0c9 11%, transparent), transparent 70%); }
+.mrow.k-match { box-shadow: inset 3px 0 0 color-mix(in srgb, #ff6b70 80%, transparent); }
+.mrow .kp { font-size: 9.5px; padding: 1px 6px; }
+.mrow.k-promo .verb { color: color-mix(in srgb, #9a6cff 65%, var(--ink)); background: color-mix(in srgb, #b48cff 18%, transparent); }
+.mrow.k-angle .verb { color: color-mix(in srgb, #1fb5ad 65%, var(--ink)); background: color-mix(in srgb, #3fd0c9 18%, transparent); }
+.mquote { font-style: italic; font-weight: 600; font-size: 13px; color: var(--dim); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lv-txt { font-size: 14px; color: rgba(255,255,255,.85); margin-bottom: 4px; }
 .lv-st { font-size: 20px; color: #ffcf5a; animation: starPop .5s cubic-bezier(.2,1.8,.4,1) both; animation-delay: var(--d); }
 @keyframes starPop { from { transform: scale(.3); opacity: 0; } }
@@ -1241,7 +1281,9 @@ const PROMO_TYPES = {
   'Call-out': { desc: 'Challenge a rival. Builds heat.', heat: 7, needT: true },
   'Hype Promo': { desc: 'Speaker builds themself up. Raises popularity.', heat: 2 },
   'Face-off': { desc: 'Nose to nose. Big heat with good talkers.', heat: 10, needT: true },
-  'Interview': { desc: 'Safe and low-key. Good for weak talkers.', heat: 3, safe: true }
+  'Interview': { desc: 'Safe and low-key. Good for weak talkers.', heat: 3, safe: true },
+  'Open Challenge': { desc: 'Anyone can answer. Pick who answers, or leave it open and see who shows up.', heat: 6, open: true },
+  'Sit-down Debate': { desc: 'Both sides at a table with a host. Talkers shine, brawlers struggle.', heat: 6, needT: true, debate: true }
 };
 // what a promo is about and how it's delivered. Empty = let them improvise (the old behavior).
 const PROMO_TOPICS = {
@@ -1266,8 +1308,31 @@ const ANGLE_TYPES = {
   'Turn Face': { desc: 'Wrestler wins the crowd over and becomes a face.', turn: 'face' },
   'Contract Signing': { desc: 'Sign a big match. Often ends in chaos.', heat: 9, needT: true },
   'Debut / Return': { desc: 'Show off a new or returning star.', pop: 4 },
-  'Backstage Skit': { desc: 'Comedy or character bit. Low stakes, raises morale.', morale: 4 }
+  'Backstage Skit': { desc: 'Comedy or character bit. Low stakes, raises morale.', morale: 4 },
+  'Brawl': { desc: 'A wild fight that security can barely break up. Big heat, but both sides get tired.', heat: 12, needT: true, brawl: true },
+  'Hype Video': { desc: 'A pre-taped video package. Safe, and builds popularity.', pop: 3, taped: true },
+  'Celebration': { desc: 'Party in the ring. Great for a new champion or a big win. Heels love to crash it.', pop: 2, morale: 3, party: true }
 };
+// where a promo or angle happens, how long it runs and how it ends. Empty = the old behavior.
+const SEG_PLACES = {
+  '': { n: 'Booker\'s call', ic: '📍', desc: 'Wherever fits best.' },
+  ring: { n: 'In the ring', ic: '🎤', desc: 'The whole crowd is watching. A bit more upside.' },
+  backstage: { n: 'Backstage', ic: '🚪', desc: 'Lower stakes. Promos land softer, attacks feel real.' },
+  screen: { n: 'On the big screen', ic: '📺', desc: 'Pre-taped, so it never flops, but the ceiling is lower.', taped: true },
+  crowd: { n: 'In the crowd', ic: '🎟️', desc: 'Up close with the fans. Faces get a pop, heels get heat.' },
+  lot: { n: 'Parking lot', ic: '🚗', desc: 'Angles only. Raw and dangerous. Big heat, the target gets hurt worse.', angle: true }
+};
+const SEG_LENS = { quick: { n: 'Quick', desc: 'Short and safe. Less heat.' }, '': { n: 'Normal', desc: '' }, long: { n: 'Long', desc: 'Great talkers soar, weak ones drag. More heat.' } };
+const SEG_ENDS = {
+  '': { n: 'Clean', desc: 'It ends the way it was planned.' },
+  brawl: { n: 'Brawl breaks out', desc: 'Needs a target. More heat, and both sides get tired.', needT: true },
+  walk: { n: 'Walk-off', desc: 'Someone storms off. Heels get heat, faces look weak.' },
+  inter: { n: 'Interrupted', desc: 'Pick who barges in. They join the story.' }
+};
+const segPlace = s => SEG_PLACES[s.loc] && !(SEG_PLACES[s.loc].angle && s.kind !== 'angle') ? s.loc : '';
+const segLen = s => Object.hasOwn(SEG_LENS, s.span || '') ? s.span || '' : '';
+const segEnd = s => Object.hasOwn(SEG_ENDS, s.outro || '') ? s.outro || '' : '';
+const segSay = s => String(s.line || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 140);
 const NAMES = [
   ['Rex Calloway', 'The Prize', 'face', 'Showman'], ['Vanessa Vale', 'The Velvet Hammer', 'heel', 'Technician'],
   ['Brick Mason', '', 'face', 'Powerhouse'], ['Kai Tempest', 'The Storm', 'face', 'High Flyer'],
@@ -2785,6 +2850,46 @@ function bookRecord(seg, res, rating) {
   return notes;
 }
 
+// a promo's or angle's plan: place, length and ending. Adds to the rating through addR and leaves heat for applySegment.
+function segPlan(seg, ctx, out, people, add, addR, getR) {
+  const doers = (seg.who || []).map(W).filter(Boolean), d = doers.length ? doers : people, tg = out.tg || (seg.target || []).map(W).filter(Boolean);
+  const pl = segPlace(seg), ln = segLen(seg), en = segEnd(seg), heel = d.every(w => w.align === 'heel'), face = d.every(w => w.align === 'face');
+  const taped = pl === 'screen' || ANGLE_TYPES[seg.atype]?.taped && seg.kind === 'angle';
+  out.xHeat = 0; out.heatMul = 1;
+  if (pl === 'ring') addR(add(2, 'In the ring: the whole crowd is watching'));
+  else if (pl === 'backstage') addR(seg.kind === 'promo' ? add((60 - getR()) * 0.12, 'Backstage: lower stakes') : add(2, 'Backstage: it felt real'));
+  else if (pl === 'screen') { if (out.land < 0) addR(add(-out.land, 'Pre-taped: no chance to flop')); const over = getR() - 80; if (over > 0) addR(add(-over, 'Pre-taped: lower ceiling')); }
+  else if (pl === 'crowd') { if (face) addR(add(3, 'Up close with the fans')); else if (heel) { addR(add(1, 'Heels in the crowd: fans furious')); out.xHeat += 2; } }
+  else if (pl === 'lot' && seg.kind === 'angle') { addR(add(2, 'Parking lot: it felt dangerous')); out.xHeat += 3; out.lot = true; }
+  if (ln === 'quick') { addR(add((60 - getR()) * 0.15, 'Quick: short and safe')); out.heatMul = 0.7; }
+  else if (ln === 'long') { const talk = avg(d.map(w => w.mic * 0.6 + w.cha * 0.4)); addR(add((talk - 65) * 0.25, talk >= 65 ? 'Long: they held the crowd' : 'Long: it dragged on')); out.heatMul = 1.3; }
+  if (taped) return; // a video can't be interrupted or turn into a brawl
+  const nm0 = d.map(w => w.name).join(' & ');
+  if (en === 'brawl' && tg.length) { addR(add(3, 'It broke down into a brawl')); out.xHeat += 4; out.brawl = true; out.endText = ' It broke down into a brawl, and security had to pull them apart.'; }
+  else if (en === 'walk') { if (heel) { addR(add(1, 'Heel walked off: fans wanted more')); out.xHeat += 2; } else if (face) addR(add(-2, 'A face walking off looks weak')); out.endText = ` Then ${heel || !tg.length ? nm0 : tg.map(w => w.name).join(' & ')} walked off.`; }
+  else if (en === 'inter') { const iw = W((seg.inter || [])[0]);
+    if (!iw) addR(add(-3, 'Nobody came out to interrupt'));
+    else if (iw.injury > 0 || iw.away) addR(add(-5, iw.name + ' was supposed to interrupt but is out'));
+    else { addR(add(2 + (iw.pop - 50) * 0.06, iw.name + ' interrupted')); out.inter = iw.id; out.xHeat += 2; out.endText = ` Then ${iw.name} interrupted!`; } }
+}
+// the words on screen: the booker's own line, or one written from the topic and tone
+function segQuote(seg, sp, tg, first) {
+  const own = segSay(seg); if (own) return own;
+  if (seg.kind !== 'promo' || !sp.length) return '';
+  const T = tg[0] ? lastName(tg[0]) : '', me = lastName(sp[0]), t = G.titles.find(x => x.holder.some(h => [...sp, ...tg].some(w => w.id === h)));
+  const L = {
+    title: [t ? `That ${t.short || t.name} belongs to me, and everybody in this building knows it.` : `I'm coming for gold, and nobody is standing in my way.`, `Champions come and go. I'm here to stay${T ? ', ' + T : ''}.`],
+    personal: T ? [`You smile for the cameras, ${T}, but I know what you did.`, `This stopped being business a long time ago, ${T}.`, `${T}, I'm going to make you remember my name.`] : [`Somebody in that locker room knows exactly what they did.`],
+    crowd: [`Every one of you paid to see ${me}, and I won't let you down!`, `This town is the best in the world, and you know it!`],
+    loss: T ? [`How did that loss taste, ${T}? Get used to it.`, `${T}, you couldn't beat me if I had one arm tied behind my back.`] : [`Losers talk. Winners don't have to.`],
+    brag: [`Look at the record. Nobody is on a run like ${me}.`, `I don't lose. Write that down.`]
+  }[seg.topic];
+  const tone = { fiery: [`Next week, I take it all!`, `I am DONE talking${T ? ', ' + T : ''}!`], calm: [`I don't need to shout. The results speak for me.`], funny: [`${T ? T + ', I' : 'I'}'ve seen scarier things in my cereal bowl.`], cheap: [`This town is a dump, and so are all of you!`], sincere: [`Everything I have, I owe to you people.`] }[seg.tone];
+  const gen = { 'Call-out': T ? [`${T}! Get out here and face me!`, `I'm calling you out, ${T}. No more hiding.`] : [`Anybody back there want some? Come and get it!`], 'Face-off': [`Look me in the eye${T ? ', ' + T : ''}. You know how this ends.`],
+    'Hype Promo': [`There's nobody in this company like ${me}. Nobody.`, `You're looking at the future of this business.`], Interview: [`I just take it one week at a time.`, `I'm focused, I'm healthy, and I'm ready.`],
+    'Open Challenge': [`Anybody. Anytime. Come and take your shot!`], 'Sit-down Debate': [`Let's settle this like adults${T ? ', ' + T : ''}. Then I'll beat you like a child.`] }[seg.ptype];
+  const arr = L || tone || gen || [`You'll see.`]; return first ? arr[0] : pick(arr);
+}
 function simSegment(seg, ctx) {
   const why = []; const add = (v, t) => { if (Math.abs(v) >= 1) why.push([Math.round(v), t]); return v; };
   const people = segPeople(seg).map(W).filter(Boolean);
@@ -2946,13 +3051,21 @@ function simSegment(seg, ctx) {
     const pt = PROMO_TYPES[seg.ptype] || PROMO_TYPES['Hype Promo'];
     const sp = (seg.who || []).map(W).filter(Boolean), tg = (seg.target || []).map(W).filter(Boolean);
     const speakers = sp.length ? sp : people;
-    const all = [...speakers, ...(seg.ptype === 'Face-off' ? tg : [])];
+    // an open challenge with nobody named: someone free tonight answers it (the sim's pick)
+    if (pt.open && !tg.length && !ctx.proj) { const busy = new Set((ctx.card || []).flatMap(segPeople)), sa = speakers[0];
+      const pool = G.wrestlers.filter(w => momOk(w) && !busy.has(w.id) && (!sa || sameG(w, sa)) && (!G.split || !sa || !w.brand || w.brand === sa.brand || w.both));
+      const ans = Math.random() < 0.9 ? pool.sort((a, b) => (b.pop + (sa && b.align !== sa.align ? 15 : 0) + rnd(0, 25)) - (a.pop + (sa && a.align !== sa.align ? 15 : 0) + rnd(0, 25)))[0] : null;
+      if (ans) { tg.push(ans); out.ans = ans.id; } }
+    const all = [...speakers, ...(seg.ptype === 'Face-off' || pt.debate ? tg : [])];
     r = avg(all.map(w => w.mic)) * 0.6 + avg(all.map(w => w.cha)) * 0.25 + avg(all.map(w => w.pop)) * 0.15 - 1;
     why.push([Math.round(r), 'Base: mic skills, charisma, popularity']);
     const mt0 = speakers.map(w => [w, mgrOf(w)]).find(([w, m]) => m && m.mic > w.mic + 8 && !speakers.includes(m));
     if (mt0) r += add(Math.min(8, (mt0[1].mic - mt0[0].mic) * 0.2), mt0[1].name + ' does the talking');
     if (pt.safe) { r = r * 0.8 + 14; why.push([0, 'Interview: safer, lower ceiling']); }
-    if (pt.needT && !tg.length) r += add(-10, 'Call-out with nobody to call out');
+    if (pt.needT && !tg.length) r += add(-10, pt.debate ? 'A debate with nobody to debate' : 'Call-out with nobody to call out');
+    if (pt.open && !tg.length && !ctx.proj) r += add(-6, 'Nobody answered the open challenge');
+    if (pt.open && out.ans) r += add(2 + (W(out.ans).pop - 50) * 0.05, W(out.ans).name + ' answered the challenge');
+    if (pt.debate && tg.length) { const talk = avg(all.map(w => w.mic)); r += add((talk - 58) * 0.15, talk >= 58 ? 'Debate: sharp talkers on both sides' : 'Debate: nobody could keep up'); }
     const st = tg.length ? storyBetween(speakers.map(w => w.id), tg.map(w => w.id)) : storiesTouching(speakers.map(w => w.id))[0];
     if (st) r += add(st.heat * (tg.length ? 0.18 : 0.1), 'Storyline: ' + st.title);
     if (tg.length && speakers[0] && tg[0] && speakers[0].align !== tg[0].align) r += add(3, 'Face vs heel tension');
@@ -2977,7 +3090,12 @@ function simSegment(seg, ctx) {
     }
     out.text_extra = out.land >= 4 ? ' The crowd ate it up.' : out.land <= -4 ? ' It fell flat.' : '';
     out.story = st; out.pt = pt;
-    out.text = `${speakers.map(w => w.name).join(' & ')} ${seg.ptype === 'Interview' ? 'sat down for an interview' : seg.ptype === 'Hype Promo' ? 'cut a promo' : seg.ptype === 'Face-off' ? 'went face to face with ' + tg.map(w => w.name).join(' & ') : (tg.length ? 'called out ' + tg.map(w => w.name).join(' & ') : 'called out the whole locker room, but nobody answered')}.` + (out.text_extra || '');
+    const tn2 = tg.map(w => w.name).join(' & ');
+    out.text = `${speakers.map(w => w.name).join(' & ')} ${seg.ptype === 'Interview' ? 'sat down for an interview' : seg.ptype === 'Hype Promo' ? 'cut a promo' : seg.ptype === 'Face-off' ? 'went face to face with ' + tn2
+      : seg.ptype === 'Open Challenge' ? (out.ans ? 'laid down an open challenge, and ' + tn2 + ' answered it' : tg.length ? 'laid down an open challenge to ' + tn2 : ctx.proj ? 'laid down an open challenge' : 'laid down an open challenge, but nobody answered')
+      : seg.ptype === 'Sit-down Debate' ? (tg.length ? 'sat down across the table from ' + tn2 : 'sat down for a debate, but the other chair stayed empty')
+      : (tg.length ? 'called out ' + tn2 : 'called out the whole locker room, but nobody answered')}.` + (out.text_extra || '');
+    out.tg = tg;
     delete out.text_extra;
   } else {
     const at = ANGLE_TYPES[seg.atype] || ANGLE_TYPES['Backstage Skit'];
@@ -2991,6 +3109,10 @@ function simSegment(seg, ctx) {
       if (already) r += add(-12, 'Already a ' + at.turn); else if (d.some(turnedSoon)) r += add(-4, 'Turned again too soon'); else r += add(6 + avg(d.map(w => w.pop)) * 0.1, 'Shocking turn');
     }
     if (at.morale) r = r * 0.85 + 4;
+    if (at.taped) { r = r * 0.8 + 14; why.push([0, 'Hype video: safe, lower ceiling']); }
+    if (at.brawl && tg.length) r += add(3, 'Wild brawl: fans love chaos');
+    if (at.party) { const real = d.some(w => titlesOf(w.id).length || formOf(w)[0] === 'W' || (w.streak || 0) >= 3); r += real ? add(4, 'Celebrating something real') : add(-5, 'Celebrating nothing in particular');
+      if (tg.length && tg.every(w => w.align === 'heel') && d.some(w => w.align === 'face')) r += add(3, 'Heels crashed the party'); }
     const st = tg.length ? storyBetween(d.map(w => w.id), tg.map(w => w.id)) : storiesTouching(d.map(w => w.id))[0];
     if (st) r += add(st.heat * 0.15, 'Storyline: ' + st.title);
     out.story = st; out.at = at; out.doers = d; out.targets = tg;
@@ -3000,12 +3122,17 @@ function simSegment(seg, ctx) {
       'Turn Face': `${d.map(w => w.name).join(' & ')} won the crowd over and became a fan favorite!`,
       'Contract Signing': `The contract signing between ${d.map(w => w.name).join(' & ')} and ${tg.map(w => w.name).join(' & ')} ended in chaos.`,
       'Debut / Return': `${d.map(w => w.name).join(' & ')} made a big entrance!`,
-      'Backstage Skit': `${d.map(w => w.name).join(' & ')} had a fun backstage moment.`
+      'Backstage Skit': `${d.map(w => w.name).join(' & ')} had a fun backstage moment.`,
+      'Brawl': `${d.map(w => w.name).join(' & ')} and ${tg.map(w => w.name).join(' & ') || 'nobody'} brawled all over the building!`,
+      'Hype Video': `A hype video for ${d.map(w => w.name).join(' & ')} played on the big screen.`,
+      'Celebration': `${d.map(w => w.name).join(' & ')} threw a party in the ring${tg.length ? ', until ' + tg.map(w => w.name).join(' & ') + ' crashed it' : ''}.`
     }[seg.atype] || 'Something happened.';
   }
+  // promos and angles: where it happens, how long it runs, how it ends
+  if (seg.kind !== 'match') segPlan(seg, ctx, out, people, add, v => r += v, () => r);
   // promos and angles with a target: someone gets the upper hand (the booker can choose)
   if (seg.kind !== 'match') {
-    const a = (seg.who || []).map(W).filter(Boolean), b = (seg.target || []).map(W).filter(Boolean);
+    const a = (seg.who || []).map(W).filter(Boolean), b = out.tg || (seg.target || []).map(W).filter(Boolean);
     if (a.length && b.length) {
       let e = seg.edge;
       if (e == null || e < 0) { const sc = s2 => avg(s2.map(w => w.pop * .4 + w.mic * .3 + w.cha * .2 + (w.momentum || 0) * .3 + (ctx.proj ? 0 : rnd(0, 30)))); e = seg.kind === 'angle' && seg.atype === 'Sneak Attack' && !ctx.proj && Math.random() < .7 ? 0 : sc(a) >= sc(b) ? 0 : 1; }
@@ -3017,6 +3144,8 @@ function simSegment(seg, ctx) {
       } else out.text += ' Neither side backed down.';
     }
   }
+  if (out.endText) { out.text += out.endText; delete out.endText; }
+  if (seg.kind !== 'match' && !ctx.proj) { const sp = (seg.who || []).map(W).filter(Boolean); out.quote = segQuote(seg, sp.length ? sp : people, out.tg || []); }
   // shared modifiers
   if (injured.length) r += add(-8 * injured.length, 'Booked while injured: ' + injured.map(w => w.name).join(', '));
   if (tired > 30) r += add(-(tired - 30) * 0.25, 'Tired wrestlers');
@@ -3127,6 +3256,15 @@ function applySegment(seg, res, ctx) {
     if (at.pop) res.doers.forEach(w => addPop(w, at.pop));
     if (at.morale) res.doers.forEach(w => w.morale = clamp(w.morale + at.morale, 0, 100));
     if (seg.atype === 'Sneak Attack') res.targets.forEach(w => { w.fatigue = clamp(w.fatigue + 12, 0, 100); w.momentum = clamp(w.momentum - 3, -50, 50); });
+    if (at.brawl) [...res.doers, ...res.targets].forEach(w => w.fatigue = clamp(w.fatigue + 10, 0, 100));
+  }
+  if (seg.kind !== 'match') {
+    if (res.brawl) [...(seg.who || []), ...(res.tg || res.targets || []).map(w => w.id)].map(W).filter(Boolean).forEach(w => w.fatigue = clamp(w.fatigue + 8, 0, 100));
+    if (res.lot) (res.targets || []).forEach(w => { w.fatigue = clamp(w.fatigue + 6, 0, 100); w.momentum = clamp(w.momentum - 2, -50, 50); });
+    // whoever answered the open challenge or interrupted joins the story
+    for (const [k, why] of [['ans', 'answered the open challenge'], ['inter', 'interrupted']]) { const w = W(res[k]); if (!w || !(seg.who || []).length || (seg.who || []).includes(w.id)) continue;
+      w.lastBooked = G.week; w.fatigue = clamp(w.fatigue + 4, 0, 100);
+      notes.push(momStory(seg.who.slice(), [w.id], k === 'ans' ? 30 : 25, `${w.name} ${why}.`)); }
   }
   if (seg.kind !== 'match' && res.winners.length) {
     res.winners.forEach(id => { const w = W(id); w.momentum = clamp(w.momentum + 4, -50, 50); addPop(w, 0.4); });
@@ -3141,7 +3279,7 @@ function applySegment(seg, res, ctx) {
   // storyline heat
   const st = res.story;
   if (st) {
-    let gain = (seg.kind === 'match' ? 6 : seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) * (0.6 + res.rating / 100);
+    let gain = (seg.kind === 'match' ? 6 : (seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) + (res.xHeat || 0)) * (res.heatMul || 1) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
     gain = Math.round(gain * (1 + staffQ('writer') * 0.04));
     st.heat = clamp(st.heat + gain, 0, 100); st._touched = G.week;
@@ -3411,7 +3549,7 @@ function runShow(opts = {}) {
     applySegment(seg, res, ctx);
     if (seg.tid) tResult(seg, res);
     if (veto) res.notes = [veto, ...(res.notes || [])];
-    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue });
+    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue, ...(res.quote ? { quote: res.quote } : {}), ...(res.ans ? { ans: res.ans } : {}), ...(res.inter ? { inter: res.inter } : {}) });
     if (seg.kind === 'match') keys.push(segPeople(seg).slice().sort().join(','));
   });
   // overall show score
@@ -5134,9 +5272,10 @@ function liveScreen(m) {
     const after = mo.map((m, j) => m.at === i ? (() => { const c = momCard(h, j, t); t += MOMENTS[m.k]?.big ? 1.2 : 1.8; return c; })() : '').join('');
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x)), hurt = (r.notes || []).find(x => /injured/i.test(x));
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
-    <div class="lv-seg ${main ? 'main' : ''}" style="--d:${t0(d0)}" data-lv="${i}">
-      <div class="lv-k">${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${segTitle(r.seg)}</div>
-      ${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.kind === 'match' && r.seg.title && G.titles.find(x => x.id === r.seg.title))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>
+    <div class="lv-seg ${main ? 'main' : ''} k-${r.seg.kind}" style="--d:${t0(d0)}" data-lv="${i}">
+      ${r.seg.kind === 'angle' ? '<i class="cam tl"></i><i class="cam tr"></i><i class="cam bl"></i><i class="cam br"></i>' : ''}
+      <div class="lv-k lv-kh">${kindTag(r.seg)}<span>${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${r.seg.kind === 'match' ? segTitle(r.seg) : esc(r.seg.ptype || r.seg.atype)}</span>${r.seg.kind === 'angle' ? `<span class="rec"><b></b>REC${segPlace(r.seg) ? ' · ' + esc(SEG_PLACES[segPlace(r.seg)].n) : ''}</span>` : ''}</div>
+      ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>` : lvTalk(r, main)}
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -5237,7 +5376,22 @@ function lvFaces(seg, main) {
   const sz = main ? 72 : 52, face = w => `<div class="lv-face">${av(w, sz, true)}<span>${esc(shortOf(w.id))}</span></div>`;
   const cls = `lv-faces${main ? '' : ' sm'}`;
   if (sides.length > 4) return `<div class="${cls}">${sides.flat().filter(w => safePhoto(w.photo)).slice(0, main ? 6 : 8).map(face).join('')}</div>`;
-  return `<div class="${cls}">${sides.map(sd => `<div class="lv-side">${sd.slice(0, 4).map(face).join('')}</div>`).join('<span class="vs">VS</span>')}</div>`;
+  return `<div class="${cls}">${sides.map(sd => `<div class="lv-side">${sd.slice(0, 4).map(face).join('')}</div>`).join(seg.kind === 'match' ? '<span class="vs">VS</span>' : `<span class="verb">${segVerb(seg)}</span>`)}</div>`;
+}
+// promos as a speech bubble, angles as backstage camera footage with a caption bar
+function lvTalk(r, main) {
+  const s = r.seg, sp = (s.who || []).map(W).filter(Boolean), tg = [...(s.target || []), ...(r.ans ? [r.ans] : [])].map(W).filter(Boolean), iw = W(r.inter);
+  const face = (w, n) => `<div class="lv-face">${av(w, n, true)}<span>${esc(shortOf(w.id))}</span></div>`, names = ws => ws.map(w => `<span class="n-${w.align}">${esc(w.name)}</span>`).join(' & ');
+  const pl = segPlace(s), place = pl ? `${SEG_PLACES[pl].ic} ${esc(SEG_PLACES[pl].n)}` : '', sz = main ? 64 : 52;
+  const intr = iw ? `<div class="lv-int">${av(iw, 26, true)}<span>⚡ <span class="n-${iw.align}">${esc(iw.name)}</span> interrupted!</span></div>` : '';
+  if (s.kind === 'promo') {
+    const q = r.quote || segSay(s), plan = [PROMO_TONES[s.tone] && s.tone ? PROMO_TONES[s.tone].n : '', PROMO_TOPICS[s.topic] && s.topic ? PROMO_TOPICS[s.topic].n : '', place].filter(Boolean).join(' · ');
+    return `<div class="pr-row">${sp.length ? `<div class="pr-who">${sp.slice(0, 3).map(w => face(w, sp.length > 1 ? 40 : sz)).join('')}</div>` : ''}<div class="bub">${q ? `“${esc(q)}”` : `<span class="muted-b">${names(sp) || 'The mic is live'}</span>`}${plan ? `<small>${plan}</small>` : ''}</div></div>
+      ${tg.length ? `<div class="tgt">${r.ans ? '🙋 Answered by' : '📣 ' + esc(segVerb(s).replace(/^./, c => c.toUpperCase()))} ${tg.slice(0, 3).map(w => av(w, 24, true)).join('')} ${names(tg)}</div>` : ''}${intr}`;
+  }
+  const headline = `${names(sp) || 'Someone'}${tg.length ? ` ${esc(segVerb(s))} ${names(tg)}` : ''}`;
+  return `${sp.length ? `<div class="act-faces"><div class="lv-side">${sp.slice(0, 3).map(w => face(w, sz)).join('')}</div>${tg.length ? `<span class="verb">${esc(segVerb(s))}</span><div class="lv-side">${tg.slice(0, 3).map(w => face(w, sz)).join('')}</div>` : ''}</div>` : ''}
+    <div class="l3"><span>${esc(s.atype)}</span>${headline}</div>${intr}`;
 }
 function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
@@ -6172,7 +6326,7 @@ function segTitle(s) {
 function segWho(s) {
   if (isFFA(s)) return nmList(entrants(s).slice(0, 6)) + (entrants(s).length > 6 ? ` <span class="muted">+${entrants(s).length - 6} more</span>` : '');
   if (s.kind === 'match') return s.sides.map(side => nmList(side)).join('<span class="vs">VS</span>');
-  return nmList(s.who || []) + ((s.target || []).length ? '<span class="vs">→</span>' + nmList(s.target) : '');
+  return nmList(s.who || []) + ((s.target || []).length ? ` <span class="verb">${segVerb(s)}</span> ` + nmList(s.target) : '');
 }
 function viewBook() { return coBar() + viewBookCard(); }
 // ---------- the month calendar: every day of the month, Monday to Sunday ----------
@@ -6324,6 +6478,9 @@ function matchRow(s, i, n, o) {
     if (!o.past) chips.push(s.winner >= 0 && s.sides[s.winner]?.length ? `👑 ${esc(s.sides[s.winner].map(shortOf).join(' & '))}` : s.winner === -2 ? '🤝 draw' : '🎲 sim decides');
   } else {
     chips.push(s.kind === 'promo' ? '🎤 ' + esc(s.ptype) + (PROMO_TONES[s.tone] && s.tone ? ' · ' + esc(PROMO_TONES[s.tone].n) : '') : '🎬 ' + esc(s.atype));
+    const pl = segPlace(s), ln = segLen(s), en = segEnd(s);
+    if (pl) chips.push(`${SEG_PLACES[pl].ic} ${esc(SEG_PLACES[pl].n)}`); if (ln) chips.push(`⏱️ ${esc(SEG_LENS[ln].n)}`);
+    if (en && !(pl === 'screen' || ANGLE_TYPES[s.atype]?.taped && s.kind === 'angle')) chips.push(en === 'inter' && W((s.inter || [])[0]) ? `⚡ ${esc(shortOf(s.inter[0]))} interrupts` : esc(SEG_ENDS[en].n));
     const st = s.target?.length ? storyBetween(s.who || [], s.target) : storiesTouching(s.who || [])[0]; if (st) chips.push(`🔥 ${esc(st.title)}`);
   }
   if (o.builds) chips.push(`<span class="hype">📈 Builds ${esc(o.builds)}</span>`);
@@ -6337,12 +6494,12 @@ function matchRow(s, i, n, o) {
     body = `<div class="mmulti">${win.length ? `<b>${win.map(nm).join(' & ')}</b>${o.past ? ' 👑' : ''} · ` : ''}${rest.slice(0, 8).map(nm).join(', ')}${rest.length > 8 ? ` <span class="muted">+${rest.length - 8} more</span>` : ''}${all.length ? '' : '<span class="muted small">No entrants yet</span>'}</div>`; }
   else if (s.kind === 'match' && s.sides.length === 2) body = `<div class="mvs">${sideHTML(s.sides[0])}<span class="vsb">VS</span>${sideHTML(s.sides[1], true)}</div>`;
   else if (s.kind === 'match') body = `<div class="mmulti">${s.sides.map(sd => sd.map(nm).join(' & ')).join('<span class="vs">VS</span>')}</div>`;
-  else body = `<div class="mmulti">${nmList(s.who || [])}${(s.target || []).length ? '<span class="vs">→</span>' + nmList(s.target) : ''}</div>`;
+  else body = `<div class="mmulti">${nmList(s.who || [])}${(s.target || []).length ? ` <span class="verb">${segVerb(s)}</span> ` + nmList(s.target) : ''}</div>${segSay(s) ? `<div class="mquote">“${esc(segSay(s))}”</div>` : ''}`;
   const tag = o.past ? 'button data-act="recap" data-id="' + (UI.selWeek) + '"' : UI.reorder ? 'div' : `button data-act="editSeg" data-id="${s.id}"`;
   const close = tag.split(' ')[0];
   const grip = o.drag && !o.past && !UI.reorder;
-  return `${grip ? `<div class="mslot ${pos === 'Main Event' ? 'me' : ''}" data-seg="${s.id}">` : ''}<${tag} class="mrow ${pos === 'Main Event' ? 'me' : ''} ${t ? 'title-m' : ''}">
-    <div class="mrow-h"><span class="mpos">${pos}</span><span class="sp"></span>${rating ? `<span class="mrate" title="${o.past ? 'Rating' : 'Projected'}">${o.past ? '' : '<i>proj</i> '}<span class="stars">${starStr(rating)}</span></span>` : ''}</div>
+  return `${grip ? `<div class="mslot ${pos === 'Main Event' ? 'me' : ''}" data-seg="${s.id}">` : ''}<${tag} class="mrow k-${s.kind} ${pos === 'Main Event' ? 'me' : ''} ${t ? 'title-m' : ''}">
+    <div class="mrow-h">${kindTag(s)}<span class="mpos">${pos}</span><span class="sp"></span>${rating ? `<span class="mrate" title="${o.past ? 'Rating' : 'Projected'}">${o.past ? '' : '<i>proj</i> '}<span class="stars">${starStr(rating)}</span></span>` : ''}</div>
     ${body}
     <div class="mchips">${chips.map(c => c.startsWith('<span class="belt"') || c.startsWith('<span class="hint"') ? c : `<span>${c}</span>`).join('')}</div>
     ${o.past && o.text ? `<div class="mres">${esc(o.text)}</div>` : ''}
@@ -7014,6 +7171,19 @@ function blankSeg(kind) {
   if (kind === 'promo') return { id: uid(), kind, ptype: 'Call-out', who: [], target: [] };
   return { id: uid(), kind, atype: 'Sneak Attack', who: [], target: [] };
 }
+// the promo and angle plan: their line, where, how long, how it ends
+function segPlanEditor(s) {
+  const pl = segPlace(s), ln = segLen(s), en = segEnd(s), taped = pl === 'screen' || (s.kind === 'angle' && ANGLE_TYPES[s.atype]?.taped);
+  const sp = (s.who || []).map(W).filter(Boolean), ex = s.kind === 'promo' && sp.length ? segQuote({ ...s, line: '' }, sp, (s.target || []).map(W).filter(Boolean), true) : '';
+  let h = `<div class="sec" style="margin-top:6px">${s.kind === 'promo' ? '🎤 The promo' : '🎬 The angle'}</div>`;
+  if (s.kind === 'promo') h += `<label class="f"><span>Their line <span class="muted">(optional)</span></span><input type="text" data-segln maxlength="140" value="${esc(segSay(s))}" placeholder="${esc(ex ? 'e.g. ' + ex : 'Leave empty and the game writes one')}"><div class="tiny muted" style="margin-top:4px">Shows in a speech bubble on the live show. Leave it empty and the game writes one from the topic and tone.</div></label>`;
+  h += `<label class="f"><span>Where</span><select data-seg="loc">${Object.entries(SEG_PLACES).filter(([k, v]) => !v.angle || s.kind === 'angle').map(([k, v]) => `<option value="${k}" ${k === pl ? 'selected' : ''}>${v.ic} ${esc(v.n)}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(SEG_PLACES[pl].desc)}</div></label>`;
+  h += `<label class="f"><span>Length</span><div class="seg-ctl">${Object.entries(SEG_LENS).map(([k, v]) => `<button class="${k === ln ? 'on' : ''}" data-act="segSpan" data-id="${k || 'n'}">${esc(v.n)}</button>`).join('')}</div>${SEG_LENS[ln].desc ? `<div class="tiny muted" style="margin-top:4px">${esc(SEG_LENS[ln].desc)}</div>` : ''}</label>`;
+  if (taped) return h + `<div class="tiny muted" style="margin:-4px 0 10px">📺 It's pre-taped, so nobody can interrupt and it can't turn into a brawl.</div>`;
+  h += `<label class="f"><span>How it ends</span><select data-seg="outro">${Object.entries(SEG_ENDS).filter(([k, v]) => !v.needT || (s.target || []).length || k === en).map(([k, v]) => `<option value="${k}" ${k === en ? 'selected' : ''}>${esc(v.n)}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(SEG_ENDS[en].desc)}${en === 'brawl' && !(s.target || []).length ? ' Add a target first.' : ''}</div></label>`;
+  if (en === 'inter') h += `<div class="side"><div class="lbl">Who interrupts</div>${chipsFor(s.inter || [], 'inter', 1)}<div class="tiny muted" style="margin-top:4px">They start a feud with ${sp.length ? esc(sp.map(w => shortOf(w.id)).join(' & ')) : 'the speaker'}, or heat up the one they have.</div></div>`;
+  return h;
+}
 function chipsFor(list, field, max) {
   return `<div class="chips">${list.map(id => `<span class="chip">${nm(id)}<button data-act="chipDel" data-f="${field}" data-id="${id}" aria-label="Remove">✕</button></span>`).join('')}${list.length < max ? `<button class="chip add" data-act="pickFor" data-f="${field}">+ ${list.length ? 'Add' : 'Choose'}</button>` : ''}</div>`;
 }
@@ -7096,6 +7266,7 @@ function modalSeg(m) {
       body += `<label class="f"><span>Who comes out on top?</span><div class="seg-ctl"><button class="${e < 0 ? 'on' : ''}" data-act="segEdge" data-id="-1">🎲 Sim</button><button class="${e === 0 ? 'on' : ''}" data-act="segEdge" data-id="0">${nm1(s.who)}</button><button class="${e === 1 ? 'on' : ''}" data-act="segEdge" data-id="1">${nm1(s.target)}</button><button class="${e === 2 ? 'on' : ''}" data-act="segEdge" data-id="2">🤝 Even</button></div><div class="tiny muted" style="margin-top:4px">Standing tall gives momentum. A heel on top builds heat.</div></label>`; }
     const st = s.target?.length ? storyBetween(s.who, s.target) : storiesTouching(s.who)[0];
     if (st) body += `<div class="alert good"><span class="ic">🔥</span><div class="small">Builds <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}).</div></div>`;
+    body += segPlanEditor(s);
   }
   return modal(m.isNew ? `Add ${s.kind}` : `Edit ${s.kind}`, tutSegHint(s) + body, `${m.isNew ? '' : '<button class="btn bad" data-act="segDelModal">Remove</button>'}<button class="btn pri" data-act="segSave">${m.isNew ? 'Add to card' : 'Save'}</button>`);
 }
@@ -7306,10 +7477,17 @@ function modalEditStory(m) {
    <label class="f" style="margin-top:10px"><span>Notes</span><textarea data-es="notes" placeholder="The plan for this story">${esc(d.notes)}</textarea></label>`;
   return modal(m.isNew ? 'New storyline' : 'Edit storyline', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="saveStory">${m.isNew ? 'Create' : 'Save'}</button>`);
 }
+// what a promo or angle does to its target, in place of VS
+function segVerb(s) {
+  if (s.kind === 'promo') return { 'Call-out': 'calls out', 'Face-off': 'face to face', Interview: 'with', 'Hype Promo': 'hypes up', 'Open Challenge': 'answered by', 'Sit-down Debate': 'debates' }[s.ptype] || 'with';
+  return { 'Sneak Attack': 'attacks', 'Contract Signing': 'signs with', Brawl: 'brawls with', Celebration: 'crashed by', 'Turn Heel': 'turns on', 'Turn Face': 'stands with', 'Hype Video': 'featuring' }[s.atype] || 'with';
+}
+const KIND_TAG = { match: ['m', 'Match'], promo: ['p', '🎤 Promo'], angle: ['a', '🎬 Angle'] };
+const kindTag = s => { const [c, n] = KIND_TAG[s.kind] || KIND_TAG.match; return `<span class="kp ${c}">${n}</span>`; };
 function segWho(seg) {
   if (isFFA(seg)) { const e = entrants(seg); return `${e.length}-person ${esc(seg.mtype)}: ` + e.slice(0, 5).map(nm).join(', ') + (e.length > 5 ? ` +${e.length - 5} more` : ''); }
   if (seg.kind === 'match') return (seg.sides || []).map(sd => sd.map(nm).join(' & ') || '?').join(' <span class="vs">VS</span> ');
-  return nmList(seg.who || []) + ((seg.target || []).length ? ' <span class="vs">→</span> ' + nmList(seg.target) : '');
+  return nmList(seg.who || []) + ((seg.target || []).length ? ` <span class="verb">${segVerb(seg)}</span> ` + nmList(seg.target) : '');
 }
 function monthReview(h) {
   // every show since the previous big event, up to and including this one
@@ -7414,7 +7592,7 @@ function modalTourney(m) {
 }
 function plainText(h) { return new DOMParser().parseFromString(String(h), 'text/html').body.textContent; }
 function copyText(t, okMsg) { try { navigator.clipboard.writeText(t).then(() => toast(okMsg || 'Copied.'), () => toast('Copy was blocked by the browser.')); } catch (e) { toast('Copy was blocked by the browser.'); } }
-const segLine = s => { const who = s.kind === 'match' ? vsLine(s, sideLabel) : (s.who || []).map(nameOf).join(' & ') + ((s.target || []).length ? ' → ' + s.target.map(nameOf).join(' & ') : ''); return `${plainText(segTitle(s)).replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]\uFE0F?\s*/gu, '')}: ${who}`; };
+const segLine = s => { const who = s.kind === 'match' ? vsLine(s, sideLabel) : (s.who || []).map(nameOf).join(' & ') + ((s.target || []).length ? ' ' + segVerb(s) + ' ' + s.target.map(nameOf).join(' & ') : ''); return `${plainText(segTitle(s)).replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]\uFE0F?\s*/gu, '')}: ${who}`; };
 const canUndo = wk => !!UNDO && UNDO.created === G.created && UNDO.wk === wk && UNDO.bid === G.showId && UNDO.co === G.coId && G.history.at(-1)?.wk === wk && G.history.at(-1)?.bid === G.showId;
 
 // ---- a photo of a belt: the same looks as wrestler photos (pixel art or the real photo), cut to the belt's wide shape ----
@@ -7785,6 +7963,7 @@ const A = {
   segFill() { const d = UI.modal.draft, n = fillEntrants(d); render(); toast(n ? `Added ${n} entrant${n > 1 ? 's' : ''}.` : 'Nobody else is free to enter.'); },
   segClearEnts() { const d = UI.modal.draft; d.sides = []; d.winner = -1; render(); },
   segEdge(i) { UI.modal.draft.edge = +i; render(); },
+  segSpan(k) { const d = UI.modal.draft; if (k === 'n' || !Object.hasOwn(SEG_LENS, k)) delete d.span; else d.span = k; render(); },
   shotUseNext(v) { UI.modal.shotUse = v === 'any' ? 'any' : 'event'; render(); },
   shotDel(id) { const s = SHOTS().find(x => x.id === id); if (!s) return; dropShot(s); commit(`${s.ids.map(nameOf).join(' & ')} no longer has a title shot.`); },
   segShot(v) { const d = UI.modal.draft; if (!+v) { d.shot = null; return render(); }
@@ -7860,6 +8039,7 @@ const A = {
       else if (f === 'ents') { cur = entrants(d); max = d.n || MT(d.mtype).def; }
       else if (f === 'runin') { cur = d.runin || []; max = 1; d.sides.flat().forEach(x => others.add(x)); }
       else if (f.startsWith('corner')) { const i = +f.slice(6), cs = corners(d); cur = cs[i] ? [cs[i].m.id] : []; max = 1; d.sides.flat().forEach(x => others.add(x)); cs.forEach((c, j) => c && j !== i && others.add(c.m.id)); }
+      else if (f === 'inter') { cur = d.inter || []; max = 1; [...d.who, ...d.target].forEach(x => others.add(x)); }
       else { cur = d[f]; max = 3; (f === 'who' ? d.target : d.who).forEach(x => others.add(x)); }
     } else if (m.type === 'wrestler') { const w = W(m.id); cur = w && w.manager && W(w.manager) ? [w.manager] : []; max = 1; others.add(m.id); }
     else if (m.type === 'editStory') { cur = d[f]; max = 5; (f === 'a' ? d.b : d.a).forEach(x => others.add(x)); }
@@ -9371,9 +9551,9 @@ function fixCustomMatch(c) {
   return o;
 }
 function scrubGame(raw) {
-  const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES), topic: Object.keys(PROMO_TOPICS), tone: Object.keys(PROMO_TONES) };
+  const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES), topic: Object.keys(PROMO_TOPICS), tone: Object.keys(PROMO_TONES), loc: Object.keys(SEG_PLACES), span: Object.keys(SEG_LENS), outro: Object.keys(SEG_ENDS) };
   const idMap = new Map(), fixId = v => { v = String(v); if (SAFE_ID.test(v)) return v; if (!idMap.has(v)) idMap.set(v, uid()); return idMap.get(v); };
-  const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|corner|coId|brand|bid|showId|loan|cutBy)$/;
+  const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|corner|coId|brand|bid|showId|loan|cutBy|inter|ans)$/;
   let budget = 400000;
   const clean = (v, k, depth, inId) => {
     if (--budget < 0 || depth > 14) return undefined;
@@ -9408,7 +9588,7 @@ function scrubGame(raw) {
   const fixSeg = x => {
     if (!x || !x.kind) return null;
     if (x.kind === 'match') { if (!okMT.has(x.mtype)) x.mtype = 'Singles'; if (!okGM.has(x.stip)) x.stip = 'Standard'; if (x.n != null) x.n = clamp(Math.round(+x.n) || 10, 3, 40); x.finish = finOf(x); if (x.elim !== undefined && x.elim !== true) delete x.elim; if (x.runin !== undefined && !Array.isArray(x.runin)) delete x.runin; if (x.corner !== undefined && !Array.isArray(x.corner)) delete x.corner; if (x.cplan !== undefined && !Array.isArray(x.cplan)) delete x.cplan; if (Array.isArray(x.cplan)) x.cplan = x.cplan.map(v => CPLANS.includes(v) ? v : null); if (x.turn !== undefined && typeof x.turn !== 'string') delete x.turn; if (!Array.isArray(x.sides) || x.sides.length < 2) x.sides = [[], []]; x.sides = x.sides.map(sd => Array.isArray(sd) ? sd : []); }
-    else { if (x.kind === 'promo') x.ptype ||= Object.keys(PROMO_TYPES)[0]; else x.atype ||= Object.keys(ANGLE_TYPES)[0]; x.who = Array.isArray(x.who) ? x.who : []; x.target = Array.isArray(x.target) ? x.target : []; }
+    else { if (x.kind === 'promo') x.ptype ||= Object.keys(PROMO_TYPES)[0]; else x.atype ||= Object.keys(ANGLE_TYPES)[0]; x.who = Array.isArray(x.who) ? x.who : []; x.target = Array.isArray(x.target) ? x.target : []; if (x.inter !== undefined && !Array.isArray(x.inter)) delete x.inter; if (x.line !== undefined) x.line = segSay(x) || undefined; if (x.line === undefined) delete x.line; }
     if (x.blow !== undefined && x.blow !== true) delete x.blow;
     x.id ||= uid(); return x;
   };
@@ -11530,6 +11710,7 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.in === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); el.setAttribute('aria-valuetext', el.value + '%'); MUSIC.sync(); return; }
   if (el.dataset.wz === 'ppv') { UI.wiz.ppv = el.value; return; }
+  if (el.hasAttribute('data-segln') && UI.modal?.draft) { const v = el.value.replace(/[<>`"]/g, '').slice(0, 140); if (v.trim()) UI.modal.draft.line = v; else delete UI.modal.draft.line; return; }
   if (el.dataset.wz === 'month') { (UI.wiz.months ||= Array(12).fill(''))[+el.dataset.i] = el.value; return; }
   if (el.dataset.wz === 'xName') { const x = UI.wiz.extra?.[+el.dataset.i]; if (x) x.name = el.value; return; }
   if (el.dataset.wz === 'name' || el.dataset.wz === 'show') {
@@ -11610,6 +11791,7 @@ document.addEventListener('change', e => {
     else if (k === 'shotT') { if (d.shot) d.shot.titleId = el.value; }
     else if (k === 'shotWk') { if (d.shot) d.shot.wk = +el.value || 0; }
     else if (k === 'turn') d.turn = el.value || null;
+    else if (k === 'loc' || k === 'outro') { if (el.value) d[k] = el.value; else delete d[k]; if (k === 'outro' && el.value !== 'inter') delete d.inter; }
     else if (k === 'stip') { d.stip = el.value; d.finish = finOf(d); }
     else d[k] = el.value;
     render(); return; }
@@ -11843,8 +12025,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.40';
+const VERSION = '1.9.41';
 const WHATS_NEW = [
+  ['🎤 Promos and angles stand out', 'No more VS on talking segments. Matches, promos and angles each get their own coloured tag. Promos show as a speech bubble with the wrestler\'s line, and angles look like backstage camera footage. New options: write their line yourself, pick where it happens (ring, backstage, big screen, crowd, parking lot), how long it runs and how it ends (brawl, walk-off, or someone interrupts). New types: Open Challenge, Sit-down Debate, Brawl, Hype Video and Celebration.'],
   ['🎲 Twice the surprises', 'There are now twice as many backstage events (46) and surprise moments on the live show (18), and every one of them can be told three different ways, so the same event rarely reads the same twice. New ones include fan conventions, charity visits, stolen gear, pay leaks, travel trouble, crossover fights, a heated press event, the save, a stolen belt, an off-script mic and a replay that shows the ref got it wrong. Your assistant, your producer, your wrestlers and The Dirt Sheet have twice as many things to say, too.'],
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
   ['💾 Huge rosters, safer saving', 'Saves take about half the room, and a save too big for the browser\'s small storage moves to the device\'s game storage, which has far more room, so huge rosters with photos fit. If a save ever fails, a red bar stays on screen until it works again, and Menu → Storage shows what is using the space. Closing the wrestler editor with changes asks before throwing them away, and unsaved edits come back after a reload.'],
