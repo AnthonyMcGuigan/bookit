@@ -3979,6 +3979,9 @@ function crownR(r, t, w, why) {
 }
 // a team title goes to the best free wrestlers who fit it; team belts never share holders with another team belt
 function rTeamPick(r, t, used, n = rN(t)) {
+  const ok = w => w && !w.injury && fitsT(r, t, w) && !used.has(w.id);
+  const tms = (r.teams || []).filter(x => (x.kind === 'trios' ? 3 : 2) === n).map(x => x.members.map(id => rW(r, id))).filter(ms => ms.length === n && ms.every(ok) && ms.every(w => sameDiv(w, ms[0])));
+  if (tms.length && Math.random() < .75) return tms.sort((a, b) => sum(b.map(w => w.pop + pushB(r, w))) - sum(a.map(w => w.pop + pushB(r, w))) + rnd(-8, 8))[0];
   return r.roster.filter(w => !w.injury && fitsT(r, t, w) && !used.has(w.id)).sort((a, b) => (b.pop + pushB(r, b) + rnd(0, 10)) - (a.pop + pushB(r, a) + rnd(0, 10))).filter((w, i, a) => sameDiv(w, a[0])).slice(0, n);
 }
 // titles always have a holder while the company has someone who can hold them
@@ -6821,7 +6824,8 @@ function viewOffice() {
   ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleArt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${tkindName(ti).toLowerCase()}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
-  <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
+  <button class="btn block" style="margin-top:12px" data-act="beltPhotos">📷 Import belt photos</button>
+  <div class="grid2" style="margin-top:8px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
   <button class="btn block" style="margin-top:8px" data-act="trophies">🏅 Booker career &amp; achievements</button>
   <button class="btn block" style="margin-top:8px" data-act="editTitle" data-id="">+ Create a championship</button>` : ''}`;
 }
@@ -7727,7 +7731,11 @@ const canUndo = wk => !!UNDO && UNDO.created === G.created && UNDO.wk === wk && 
 let BPX = null; // { draft, src (wide canvas), jpeg, mode, zoom, detail, colors, bg }
 const BPX_DEF = { mode: 'pixel', zoom: 1, detail: 48, colors: 10, bg: 'cut' };
 const BPX_ROWS = () => ({ mode: PX_ROWS.mode, zoom: ['Framing', [[1, 'As taken'], [0.8, 'Closer'], [0.64, 'Plate only']]], detail: PX_ROWS.detail, colors: PX_ROWS.colors, bg: ['Background', [['cut', 'Cut out'], ['keep', 'Keep photo']]] });
-function bpxRow(f) { const [label, opts] = BPX_ROWS()[f]; return `<label class="f"><span>${label}</span><div class="seg-ctl">${opts.map(([v, t]) => `<button class="${String(BPX[f]) === String(v) ? 'on' : ''}" data-act="bdPx" data-f="${f}" data-id="${v}">${t}</button>`).join('')}</div></label>`; }
+function bpxRow(f, S = BPX, act = 'bdPx') { const [label, opts] = BPX_ROWS()[f]; return `<label class="f"><span>${label}</span><div class="seg-ctl">${opts.map(([v, t]) => `<button class="${String(S[f]) === String(v) ? 'on' : ''}" data-act="${act}" data-f="${f}" data-id="${v}">${t}</button>`).join('')}</div></label>`; }
+// the belt photo settings under the style row: framing always, the pixel rows only for a pixel version
+const bpxSettings = (S, act) => `${bpxRow('zoom', S, act)}${S.mode === 'pixel' ? `${bpxRow('detail', S, act)}${bpxRow('colors', S, act)}${bpxRow('bg', S, act)}` : ''}`;
+// a belt photo as it is saved: the pixel version or the real photo cut to 12:5
+const beltPic = (src, o) => o.mode === 'pixel' ? pixelBelt(src, o) : photoData(beltCrop(src, 360, o.zoom), .82);
 // the photo cropped to 12:5 around the middle, at a given width
 function beltCrop(img, W, zoom) {
   const H = Math.round(W * 5 / 12), c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
@@ -7774,13 +7782,26 @@ function pixelBelt(src, o) {
   }
   x.putImageData(id, 0, 0); return c.toDataURL('image/png');
 }
-function applyBPX() { const d = UI.modal?.draft; if (!BPX || !d || BPX.draft !== d) return; d.photo = BPX.mode === 'pixel' ? pixelBelt(BPX.src, BPX) : photoData(beltCrop(BPX.src, 360, BPX.zoom), .82); }
+function applyBPX() { const d = UI.modal?.draft; if (!BPX || !d || BPX.draft !== d) return; d.photo = beltPic(BPX.src, BPX); }
+// a belt photo file as a canvas up to 960 wide
+function beltSrc(f) {
+  return new Promise((ok, no) => { const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => { URL.revokeObjectURL(url); const k = Math.min(1, 960 / img.width), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); ok(c); };
+    img.onerror = () => { URL.revokeObjectURL(url); no(new Error('unreadable')); }; img.src = url; });
+}
 function pickBeltPhoto(cb) {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
-  inp.onchange = () => { const f = inp.files[0]; if (!f) return; const img = new Image(), url = URL.createObjectURL(f);
-    img.onload = () => { URL.revokeObjectURL(url); const k = Math.min(1, 960 / img.width), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); cb(c); };
-    img.onerror = () => { URL.revokeObjectURL(url); toast('That image could not be read.'); }; img.src = url; };
+  inp.onchange = () => { const f = inp.files[0]; if (!f) return; beltSrc(f).then(cb, () => toast('That image could not be read.')); };
   inp.click();
+}
+// A belt photo for sharing (rosters, worlds): pixel belts go as they are; a big real photo is made smaller so
+// ten belts still fit in a player's Community space
+async function beltShare(ph) {
+  ph = safePhoto(ph); if (!ph || ph.length <= 16000 || isPixPng(ph, 160)) return ph;
+  const im = await pixImg(ph); if (!im?.naturalWidth) return '';
+  const W = Math.min(240, im.naturalWidth), c = document.createElement('canvas'); c.width = W; c.height = Math.round(im.naturalHeight * W / im.naturalWidth); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, c.width, c.height);
+  let out = photoData(c, .72, 16000, 150); if (out.length > 16000) out = photoData(c, .55, 16000, 150);
+  return out.length <= 24000 ? safePhoto(out) : '';
 }
 // a title's look: its photo when it has one, otherwise the drawn belt
 const titleArt = (t, cls) => { const ph = safePhoto(t.photo); return ph ? `<img class="${cls || 'belt-art'} belt-ph${isPixPng(ph, 160) ? ' px' : ''}" alt="${esc((t.name || 'Championship') + ' belt')}" src="${esc(ph)}">` : titleBelt(t, cls); };
@@ -8705,9 +8726,17 @@ function roleFromText(v) {
 function toPackW(w) { const o = {}; for (const k of PACK_FIELDS) { const v = w[k]; if (k === 'photo' && w.photoLocal) continue; if (v !== undefined && v !== null && v !== '') o[k] = typeof v === 'number' ? Math.round(v) : v; } return o; }
 function makePack(ws, opt) {
   const p = { rb: 1, kind: ws.length === 1 ? 'wrestler' : 'roster', title: opt?.title || (ws.length === 1 ? ws[0].name : G.promo.name + ' roster'), promo: G.promo.name, wrestlers: ws.map(toPackW) };
-  if (opt?.titles) p.titles = G.titles.map(t => ({ name: t.name, short: t.short, tag: t.tag, ...(tsz(t) === 3 ? { size: 3 } : {}), prestige: Math.round(t.prestige), holders: t.holder.map(nameOf) }));
+  if (opt?.titles) p.titles = G.titles.map(t => ({ name: t.name, short: t.short, tag: t.tag, ...(tsz(t) === 3 ? { size: 3 } : {}), prestige: Math.round(t.prestige), holders: t.holder.map(nameOf),
+    ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), tier: titleTier(t), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: 1 } : {}), ...(t.division && t.division !== 'Open' ? { division: t.division } : {}) }));
+  // tag teams, trios teams and factions whose members are all in the pack, by name
+  if (opt?.titles && ws.length > 1) { const ids = new Set(ws.map(w => w.id)), nms = a => a.map(nameOf);
+    p.teams = (G.teams || []).filter(t => t.members.length >= 2 && t.members.every(id => ids.has(id))).slice(0, 80).map(t => ({ name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: nms(t.members) }));
+    p.factions = (G.factions || []).filter(f => f.members.filter(id => ids.has(id)).length >= 2).slice(0, 40).map(f => ({ name: f.name, members: nms(f.members.filter(id => ids.has(id))), ...(ids.has(f.leader) ? { leader: nameOf(f.leader) } : {}) }));
+    if (!p.teams.length) delete p.teams; if (!p.factions.length) delete p.factions; }
   return p;
 }
+// before a pack goes to Community: real belt photos are made smaller so they fit
+async function packShrink(p) { for (const t of p.titles || []) if (t.photo) { t.photo = await beltShare(t.photo); if (!t.photo) delete t.photo; } return p; }
 const packCode = p => 'RB1:' + btoa(unescape(encodeURIComponent(JSON.stringify(p))));
 const ROSTER_MAX = 2000; // the most wrestlers a shared roster or import can hold
 function cleanPack(p) {
@@ -8715,8 +8744,32 @@ function cleanPack(p) {
   const ws = p.wrestlers.slice(0, ROSTER_MAX).map(cleanW).filter(Boolean);
   for (const w of ws) for (const k of ['name', 'nick', 'bio', 'finisher', 'signature', 'theme', 'hometown']) if (w[k]) w[k] = maskRude(w[k]);
   if (!ws.length) return null;
-  const titles = Array.isArray(p.titles) ? p.titles.slice(0, 12).map(t => t && typeof t.name === 'string' ? { name: t.name.slice(0, 50), short: String(t.short || t.name).slice(0, 16), tag: !!t.tag, ...(t.tag && +t.size === 3 ? { size: 3 } : {}), prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 3).map(h => String(h).slice(0, 40)) : [] } : null).filter(Boolean) : null;
-  return { kind: ws.length === 1 ? 'wrestler' : 'roster', title: String(p.title || '').slice(0, 60) || (ws.length === 1 ? ws[0].name : 'Imported roster'), promo: String(p.promo || '').slice(0, 40), wrestlers: ws, titles };
+  const titles = Array.isArray(p.titles) ? p.titles.slice(0, 12).map(t => t && typeof t.name === 'string' ? { name: cmText(t.name, 50), short: cmText(t.short || t.name, 16), tag: !!t.tag, ...(t.tag && +t.size === 3 ? { size: 3 } : {}), prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 3).map(h => String(h).slice(0, 40)) : [],
+    ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...(TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier, cl: 1 } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...(DIVISIONS.includes(t.division) ? { division: t.division } : {}) } : null).filter(Boolean) : null;
+  // teams and factions only keep members who are in the pack
+  const inPack = new Set(ws.map(w => w.name.toLowerCase())), mem = a => [...new Set((Array.isArray(a) ? a : []).map(x => String(x).slice(0, 40)).filter(x => inPack.has(x.toLowerCase())))];
+  const teams = (Array.isArray(p.teams) ? p.teams : []).slice(0, 80).map(t => t && typeof t.name === 'string' ? { name: maskRude(cmText(t.name, 40)), ...(t.kind === 'trios' ? { kind: 'trios' } : {}), members: mem(t.members).slice(0, t.kind === 'trios' ? 3 : 2) } : null).filter(t => t?.name && t.members.length === (t.kind === 'trios' ? 3 : 2));
+  const factions = (Array.isArray(p.factions) ? p.factions : []).slice(0, 40).map(f => { if (!f || typeof f.name !== 'string') return null; const ms = mem(f.members).slice(0, 8), ld = ms.find(x => x === String(f.leader || '')); return { name: maskRude(cmText(f.name, 40)), members: ms, ...(ld ? { leader: ld } : {}) }; }).filter(f => f?.name && f.members.length >= 2);
+  return { kind: ws.length === 1 ? 'wrestler' : 'roster', title: String(p.title || '').slice(0, 60) || (ws.length === 1 ? ws[0].name : 'Imported roster'), promo: String(p.promo || '').slice(0, 40), wrestlers: ws, titles, ...(teams.length ? { teams } : {}), ...(factions.length ? { factions } : {}) };
+}
+const cmText = (v, n) => String(v || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, n);
+// a pack's tag teams, trios teams and factions, matched to wrestlers in this game by name. Skips any that would break
+// the team rules (one tag team and one trios team each, no duplicate names or groups).
+function packTeams(pack) {
+  let n = 0; G.teams ||= []; G.factions ||= [];
+  const byName = x => G.wrestlers.find(w => w.name.toLowerCase() === String(x).toLowerCase())?.id;
+  for (const t of pack.teams || []) {
+    const ms = [...new Set(t.members.map(byName).filter(Boolean))], kind = t.kind === 'trios' ? 'trios' : 'tag';
+    if (ms.length !== (kind === 'trios' ? 3 : 2) || grpNameTaken(t.name) || G.teams.some(x => sameSet(x.members, ms)) || ms.some(id => otherTeamOf(id, null, kind))) continue;
+    G.teams.push({ id: uid(), name: t.name, members: ms, w: 0, l: 0, d: 0, ...(kind === 'trios' ? { kind: 'trios' } : {}) }); n++;
+  }
+  for (const f of pack.factions || []) {
+    const ms = [...new Set(f.members.map(byName).filter(Boolean))].slice(0, 8);
+    if (ms.length < 2 || grpNameTaken(f.name) || G.factions.some(x => sameSet(x.members, ms))) continue;
+    const ld = f.leader ? byName(f.leader) : null;
+    G.factions.push({ id: uid(), name: f.name, members: ms, tms: G.teams.filter(t => t.members.every(id => ms.includes(id))).map(t => t.id), leader: ms.includes(ld) ? ld : null, w: 0, l: 0, d: 0 }); n++;
+  }
+  return n;
 }
 
 // ---- reading whatever the player pastes: a share code, a JSON file, or a plain list ----
@@ -8761,7 +8814,9 @@ function parseImport(text) {
     if (/^[{[]/.test(t)) {
       let j = JSON.parse(t);
       if (Array.isArray(j)) j = { wrestlers: j };
-      if (j.week && j.promo && Array.isArray(j.wrestlers)) j = { title: (j.promo.name || 'Save') + ' roster', promo: j.promo.name, wrestlers: j.wrestlers.filter(w => w.contract), titles: (j.titles || []).map(x => ({ ...x, holders: (x.holder || []).map(id => j.wrestlers.find(w => w.id === id)?.name).filter(Boolean) })) };
+      if (j.week && j.promo && Array.isArray(j.wrestlers)) { const nm = id => j.wrestlers.find(w => w.id === id)?.name, nms = a => (Array.isArray(a) ? a : []).map(nm).filter(Boolean);
+        j = { title: (j.promo.name || 'Save') + ' roster', promo: j.promo.name, wrestlers: j.wrestlers.filter(w => w.contract), titles: (j.titles || []).map(x => ({ ...x, holders: nms(x.holder) })),
+          teams: (Array.isArray(j.teams) ? j.teams : []).map(t => ({ name: t?.name, kind: t?.kind, members: nms(t?.members) })), factions: (Array.isArray(j.factions) ? j.factions : []).map(f => ({ name: f?.name, members: nms(f?.members), leader: nm(f?.leader) })) }; }
       const p = cleanPack(j); return p ? { pack: p } : { error: 'No wrestlers found in that file.' };
     }
   } catch (e) { return { error: 'That code or file looks damaged. Copy it again in full.' }; }
@@ -8781,7 +8836,7 @@ function fromPack(pw, signIt) {
 function importPack(pack, mode) {
   let added = 0, updated = 0;
   if (mode === 'replace') {
-    G.wrestlers = []; G.stories = []; G.card = []; G.future = {};
+    G.wrestlers = []; G.stories = []; G.card = []; G.future = {}; G.teams = []; G.factions = [];
     for (const t of G.titles) { t.holder = []; t.defenses = 0; t.since = G.week; t.lastDefense = G.week; }
   }
   for (const pw of pack.wrestlers) {
@@ -8791,11 +8846,16 @@ function importPack(pack, mode) {
   }
   if (mode === 'replace' && pack.titles?.length) {
     const byName = n => G.wrestlers.find(w => w.name.toLowerCase() === String(n).toLowerCase())?.id;
-    G.titles = pack.titles.map(t => ({ id: uid(), name: t.name, short: t.short, tag: t.tag, ...(t.size === 3 ? { size: 3 } : {}), prestige: t.prestige, holder: t.holders.map(byName).filter(Boolean).slice(0, tsz(t)), since: G.week, defenses: 0, lastDefense: G.week }));
+    G.titles = pack.titles.map(t => ({ id: uid(), name: t.name, short: t.short, tag: t.tag, ...(t.size === 3 ? { size: 3 } : {}), prestige: t.prestige, holder: t.holders.map(byName).filter(Boolean).slice(0, tsz(t)), since: G.week, defenses: 0, lastDefense: G.week,
+      ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}), ...(t.cl ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...(t.division ? { division: t.division } : {}) }));
+  } else for (const t of pack.titles || []) { // a title you already have with the same name picks up the belt photo if it has none
+    const mine = G.titles.find(x => x.name.toLowerCase() === t.name.toLowerCase()); if (mine && t.photo && !safePhoto(mine.photo)) mine.photo = t.photo;
   }
+  const teams = packTeams(pack);
   if (mode === 'replace') news(`📦 New roster loaded: "${pack.title}" (${added} wrestlers). Set your champions in Office → Titles.`, 'office');
   else news(`📦 Imported "${pack.title}": ${added} new${updated ? ', ' + updated + ' updated' : ''}${mode === 'free' ? ' (as free agents)' : ''}.`, 'contract');
-  return { added, updated };
+  if (teams) news(`👥 ${teams} team${teams > 1 ? 's and factions' : ' or faction'} came with "${pack.title}". See Office → Teams.`, 'story');
+  return { added, updated, teams };
 }
 
 // ---- photo: shrink to a small square so saves stay light ----
@@ -8958,6 +9018,22 @@ function photoBatch(m) {
     </div>`;
 }
 
+// the belt version of the mass photo import: one look for every belt, and each photo can be pointed at any title
+function beltBatch(m) {
+  const b = m.bbatch, it = b.items[b.i], n = b.items.length, k = b.items.filter(x => x.tid).length, t = G.titles.find(x => x.id === it.tid);
+  const usedBy = id => b.items.findIndex((x, j) => j !== b.i && x.tid === id);
+  return `<div class="rt-found"><div class="sp"><b>${k} of ${n} photo${n > 1 ? 's' : ''} matched to a title</b><div class="tiny muted">${b.miss.length ? b.miss.length + ' could not be read' : n > k ? 'Pick a title for the rest, or they are skipped' : 'Every photo has a title'}</div></div></div>
+    <p class="small muted">Pick the look on this one. The same settings are used for ${k > 1 ? `all ${k}` : 'it'}.</p>
+    <div class="px-panel">
+      ${bpxRow('mode', b.o, 'rtBtx')}
+      <div style="text-align:center;margin:6px 0">${b.prev ? `<img class="belt-art belt-ph${b.o.mode === 'pixel' ? ' px' : ''}" alt="Preview of ${esc(t?.name || 'this belt')}" src="${esc(b.prev)}">` : ''}</div>
+      <label class="f"><span>Championship <span class="muted">· ${esc(it.f.name.slice(0, 40))}</span></span><select data-in="rtBtTitle" aria-label="Which championship is this photo">${`<option value="" ${it.tid ? '' : 'selected'}>Skip this photo</option>`}${G.titles.map(x => `<option value="${x.id}" ${x.id === it.tid ? 'selected' : ''}>${esc(x.name)}${usedBy(x.id) >= 0 ? ' (photo ' + (usedBy(x.id) + 1) + ')' : ''}</option>`).join('')}</select></label>
+      ${n > 1 ? `<div class="row" style="gap:6px;margin:2px 0 8px;justify-content:center"><button class="btn sm" data-act="rtBti" data-id="-1" aria-label="Previous photo">‹</button><span class="tiny muted">${b.i + 1} of ${n}</span><button class="btn sm" data-act="rtBti" data-id="1" aria-label="Next photo">›</button></div>` : ''}
+      ${bpxSettings(b.o, 'rtBtx')}
+      ${b.o.mode === 'pixel' ? '<div class="tiny muted" style="margin:-4px 0 6px">Made on this device. Only this version is saved, never your photo. Plain backgrounds cut out best.</div>' : ''}
+    </div>`;
+}
+
 // the face maker in the wrestler editor: changes one place of the look code at a time
 function faceMaker(d) {
   const c = faceCode(d), at = i => +c[i];
@@ -9040,7 +9116,21 @@ function modalRoster(m) {
   if (t === 'photos' && G && m.batch) {
     return modal('Photos', body + photoBatch(m), `<button class="btn" data-act="rtBatchOff">Cancel</button><button class="btn pri" data-act="rtBatchGo">${m.batch.items.length > 1 ? `Apply to all ${m.batch.items.length}` : 'Add photo'}</button>`);
   }
-  if (t === 'photos' && G) {
+  if (t === 'photos' && G && m.bbatch) {
+    const k = m.bbatch.items.filter(x => x.tid).length;
+    return modal('Photos', body + beltBatch(m), `<button class="btn" data-act="rtBatchOff">Cancel</button><button class="btn pri" data-act="rtBeltGo" ${k ? '' : 'disabled'}>${k > 1 ? `Apply to all ${k}` : 'Add belt photo'}</button>`);
+  }
+  if (t === 'photos' && G) body += `<div class="seg-ctl" style="margin-bottom:10px"><button class="${m.pk !== 't' ? 'on' : ''}" aria-pressed="${m.pk !== 't'}" data-act="rtPk" data-id="w">🧍 Superstars</button><button class="${m.pk === 't' ? 'on' : ''}" aria-pressed="${m.pk === 't'}" data-act="rtPk" data-id="t">🏆 Championships</button></div>`;
+  if (t === 'photos' && G && m.pk === 't') {
+    const r = m.res, n = G.titles.filter(x => safePhoto(x.photo)).length;
+    body += `<p class="small muted" style="margin-top:0">Add belt photos for many championships at once. You pick the look on the first one, then it is used for all of them.</p>
+      <p class="tiny muted">Name each file after the title, like <b>${esc(G.titles[0]?.short || 'World')}.png</b> or <b>${esc(G.titles[0]?.name || 'World Championship')}.jpg</b>. You can pick the title for any photo that doesn't match. Only use photos you're allowed to use.</p>
+      <div class="alert" style="margin-bottom:10px"><span class="ic">🌐</span><div class="small">Belt photos are part of your titles, so they go with your shared rosters and worlds.</div></div>
+      ${G.titles.length ? `<button class="btn pri block" data-act="rtBelts" ${m.busy ? 'disabled' : ''}>${m.busy ? 'Working… ' + esc(m.busy) : '📷 Choose belt photos'}</button>` : '<div class="empty">No championships yet. Make one in Office → Titles first.</div>'}
+      ${r ? `<div class="card" style="margin-top:10px;padding:10px 12px"><div class="small"><b>${r.ok.length} added</b>${r.miss.length ? ` · ${r.miss.length} skipped` : ''}</div>${r.miss.length ? `<div class="tiny muted" style="margin-top:4px">Skipped: ${r.miss.slice(0, 20).map(esc).join(', ')}${r.miss.length > 20 ? '…' : ''}</div>` : ''}</div>` : ''}
+      ${G.titles.length ? `<div class="sec">Your championships</div><div class="list">${G.titles.map(x => `<div class="item">${titleArt(x, 'belt-sm')}<div class="main"><div class="t">${esc(x.name)}</div><div class="d">${safePhoto(x.photo) ? (isPixPng(x.photo, 160) ? 'Pixel photo' : 'Real photo') : 'Drawn belt'}</div></div></div>`).join('')}</div>` : ''}
+      ${n ? `<button class="btn bad block" style="margin-top:10px" data-act="rtBeltsOff">Remove all ${n} belt photo${n > 1 ? 's' : ''}</button><div class="tiny muted" style="margin-top:4px">The drawn belts come back. You can still change each one in Office → Titles.</div>` : ''}`;
+  } else if (t === 'photos' && G) {
     const n = G.wrestlers.filter(w => w.photoLocal).length, r = m.res;
     body += `<p class="small muted" style="margin-top:0">Add photos for many wrestlers at once. You pick the look on the first one, then it is used for all of them.</p>
       <div class="alert" style="margin-bottom:10px"><span class="ic">🔒</span><div class="small"><b>Private to you.</b> These photos stay in this save on this device. They are left out of share codes, Community and shared saves.</div></div>
@@ -9061,7 +9151,10 @@ function modalRoster(m) {
     // step 2: confirm. The choice comes first and the Import button is pinned to the bottom.
     const parsed = m.parsed, n = parsed.wrestlers.length;
     const modes = [['sign', 'Sign them to my roster', 'Added to your roster on fresh contracts.'], ['free', 'Add as free agents', 'You negotiate with each one in the Office.'], ['replace', 'Replace my whole roster', 'Swap everyone out. Stories and the card are cleared.'], ['rival', 'Make it a rival promotion', 'They become a rival company with their own shows.']];
+    const nT = (parsed.teams || []).length + (parsed.factions || []).length, nP = (parsed.titles || []).filter(t => t.photo).length;
     body = `<div class="rt-found"><div class="sp"><b>${n} wrestler${n > 1 ? 's' : ''}${parsed.titles?.length ? ' and ' + parsed.titles.length + ' titles' : ''}</b><div class="tiny muted">${esc(parsed.title || 'Ready to import')}</div></div><button class="link" data-act="rtBack">Change</button></div>
+      ${parsed.titles?.length ? `<div class="belt-row" style="display:flex;gap:6px;overflow-x:auto;margin-top:8px">${parsed.titles.map(t => titleArt(t, 'belt-sm')).join('')}</div>` : ''}
+      ${nT || parsed.titles?.length ? `<div class="tiny muted" style="margin-top:6px">${[nT ? `${nT} tag team${nT > 1 ? 's and factions' : ' or faction'} come with them, except in a rival promotion` : '', parsed.titles?.length ? `The titles${nP ? ` and ${nP} belt photo${nP > 1 ? 's' : ''}` : ''} come in when you replace your roster${nP ? '. A title with the same name as one of yours picks up its photo' : ''}` : ''].filter(Boolean).join('. ')}.</div>` : ''}
       <div class="sec" style="margin-top:12px">How should they join?</div>
       <div class="list">${modes.filter(x => G || x[0] !== 'rival').map(([k, l, dsc]) => `<button class="pick ${m.mode === k ? 'sel' : ''}" data-act="rtMode" data-id="${k}"><span class="ck">${m.mode === k ? '✓' : ''}</span><div><b>${l}</b><div class="tiny muted">${dsc}</div></div></button>`).join('')}</div>
       <details class="rt-list" style="margin-top:12px"><summary class="small"><b>See who's in it</b> ▾</summary>
@@ -9381,7 +9474,9 @@ const pxList = i => [...new Set((Array.isArray(i?.px) ? i.px : [i?.px]).filter(k
 const pixWaiting = i => pxList(i).length > 0 && !PIX.has(pixKey(i));
 function pixPack(i) {
   const a = i.px && PIX.get(pixKey(i)); if (!a || !Array.isArray(i.pack?.wrestlers)) return i.pack;
-  return { ...i.pack, wrestlers: i.pack.wrestlers.map((w, k) => w && typeof w === 'object' && !w.photo && a[k] ? { ...w, photo: a[k] } : w) };
+  // belt photos sit after the wrestlers' photos
+  const nW = i.pack.wrestlers.length, put = (x, k) => x && typeof x === 'object' && !x.photo && a[k] ? { ...x, photo: a[k] } : x;
+  return { ...i.pack, wrestlers: i.pack.wrestlers.map(put), ...(Array.isArray(i.pack.titles) ? { titles: i.pack.titles.map((t, k) => put(t, nW + k)) } : {}) };
 }
 function pixLoad(i, retry) {
   if (!pixWaiting(i) || !cdb) return Promise.resolve();
@@ -9394,7 +9489,7 @@ function pixLoad(i, retry) {
         : await Promise.all(ks.map(k => cdb.doc('pix' + k + '/' + i.author).get().then(r => r.data())));
       const parts = rows.filter(d => d && d.item === i.id && typeof d.z === 'string' && d.z.length < 1600000);
       if (parts.length === ks.length) { a = [];
-        for (const d of parts) { const x = JSON.parse(await ungz(d.z)), at = Math.max(0, Math.floor(+d.start) || 0); if (!Array.isArray(x)) throw 0; x.forEach((v, k) => { if (at + k < ROSTER_MAX) a[at + k] = pixGrow(v); }); }
+        for (const d of parts) { const x = JSON.parse(await ungz(d.z)), at = Math.max(0, Math.floor(+d.start) || 0); if (!Array.isArray(x)) throw 0; x.forEach((v, k) => { if (at + k < ROSTER_MAX + 12) a[at + k] = pixGrow(v); }); }
         a = Array.from(a, v => v || ''); }
     } catch (e) {}
     PIX_LOAD.delete(k);
@@ -9409,7 +9504,7 @@ function pixLoad(i, retry) {
 const pixImg = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
 async function pixShrink(src) {
   if (!src) return '';
-  const im = await pixImg(src), w = im?.naturalWidth, h = im?.naturalHeight; if (!w || !h || w > 128 || h > 128) return src;
+  const im = await pixImg(src), w = im?.naturalWidth, h = im?.naturalHeight; if (!w || !h || w > 160 || h > 128) return src;
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0);
   const px = cx.getImageData(0, 0, w, h).data, pal = [], at = new Map(); let d = '';
   for (let k = 0; k < px.length; k += 4) {
@@ -9422,14 +9517,14 @@ async function pixShrink(src) {
 function pixGrow(x) {
   if (typeof x === 'string') return safePhoto(x);
   if (!x || typeof x !== 'object' || !Array.isArray(x.p) || typeof x.d !== 'string') return '';
-  const w = Math.floor(+x.w), h = Math.floor(+x.h); if (!(w > 0 && h > 0 && w <= 128 && h <= 128) || x.d.length !== w * h || x.p.length > 256) return '';
+  const w = Math.floor(+x.w), h = Math.floor(+x.h); if (!(w > 0 && h > 0 && w <= 160 && h <= 128) || x.d.length !== w * h || x.p.length > 256) return '';
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'), img = cx.createImageData(w, h), pal = x.p.map(c => parseInt(c, 16) >>> 0);
   for (let k = 0; k < w * h; k++) { const c = pal[x.d.charCodeAt(k) - 0x100] || 0; img.data[k * 4] = c >>> 24; img.data[k * 4 + 1] = (c >>> 16) & 255; img.data[k * 4 + 2] = (c >>> 8) & 255; img.data[k * 4 + 3] = c & 255; }
   cx.putImageData(img, 0, 0); return safePhoto(cv.toDataURL('image/png'));
 }
 // moves a pack's photos into a free photo slot when they are too big to sit in the player's space
 async function pixSplit(pack, itemId) {
-  const photos = pack.wrestlers.map(w => w.photo || '');
+  const photos = [...pack.wrestlers, ...(pack.titles || [])].map(w => w.photo || '');
   if (sum(photos.map(x => x.length)) <= PIX_INLINE || typeof CompressionStream === 'undefined') return 0;
   const shr = await Promise.all(photos.map(pixShrink));
   // split into parts that each fit one slot (halving until they do)
@@ -9440,7 +9535,7 @@ async function pixSplit(pack, itemId) {
   const px = free.slice(0, parts.length), done = [];
   try { for (let k = 0; k < parts.length; k++) { await cdb.doc('pix' + px[k] + '/' + COMM.me).set({ item: itemId, z: parts[k].z, n: parts[k].n, start: parts[k].start, updated: Date.now() }); done.push(px[k]); } }
   catch (e) { await pixDrop(COMM.me, done); throw e; }
-  for (const w of pack.wrestlers) delete w.photo;
+  for (const w of [...pack.wrestlers, ...(pack.titles || [])]) delete w.photo;
   return px.length === 1 ? px[0] : px;
 }
 const pixDrop = (author, px) => Promise.all(pxList({ px }).map(k => cdb.doc('pix' + k + '/' + author).delete().catch(() => {})));
@@ -9509,7 +9604,11 @@ function worldW(w) {
 function worldCo(r) {
   liven(r);
   const c = { id: r.id, name: r.name, short: r.short, color: r.color, prestige: Math.round(r.prestige), fans: Math.round(r.fans), show: r.show, phil: r.phil, ppvs: r.ppvs, bigOne: r.ppvs?.includes(r.bigOne) ? r.bigOne : r.ppvs?.[0] || '', money: Math.max(50000, Math.round(r.money)), custom: !!r.custom, safe: !!r.safe, roster: r.roster.map(worldW), hist: [], last: 0 };
-  c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, ...(rN(t) > 1 ? { n: rN(t) } : {}), div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, rN(t)), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
+  // tag teams, trios teams and factions travel as member ids from this company's roster
+  const ids = new Set(c.roster.map(w => w.id)), grp = (a, n) => (Array.isArray(a) ? a : []).filter(g => g && g.members?.filter(id => ids.has(id)).length >= n);
+  c.teams = grp(r.teams, 2).filter(t => t.members.every(id => ids.has(id))).slice(0, 40).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
+  c.facs = grp(r.facs, 2).slice(0, 20).map(f => ({ id: f.id, name: f.name, members: f.members.filter(id => ids.has(id)), leader: ids.has(f.leader) ? f.leader : null }));
+  c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, rN(t)), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
   return c;
 }
 // a company the player runs, written as an AI company for the world
@@ -9521,11 +9620,15 @@ function coAsRival(g) {
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
   for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; r.roster.push(x); }
   const sing = (g.titles || []).filter(t => !t.tag), teamT = [2, 3].map(n => (g.titles || []).find(t => tsz(t) === n)).filter(Boolean);
-  r.titles = sing.slice(0, 3).map((t, i) => ({ id: t.id, name: t.name, short: t.short, div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
+  const look = t => ({ ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}) });
+  r.titles = sing.slice(0, 3).map((t, i) => ({ id: t.id, name: t.name, short: t.short, ...look(t), div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
   if (r.titles.length && r.titles.every(t => t.mid || t.div)) r.titles[0].mid = false;
   // its tag and trios belts come along too
-  for (const t of teamT) { const h = t.holder.filter(id => r.roster.some(w => w.id === id)); r.titles.push({ id: t.id, name: t.name, short: t.short, n: tsz(t), div: '', mid: true, holder: h.length === tsz(t) ? h : [], since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }); }
+  for (const t of teamT) { const h = t.holder.filter(id => r.roster.some(w => w.id === id)); r.titles.push({ id: t.id, name: t.name, short: t.short, n: tsz(t), ...look(t), div: '', mid: true, holder: h.length === tsz(t) ? h : [], since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }); }
   r.titles.forEach(t => { const cur = t.reigns.at(-1); if (cur && !cur.to && t.holder.length) { t.past = t.reigns.slice(0, -1).map(x => x.nm); t.reigns = [{ nm: cur.nm, from: 1, to: 0, d: 0 }]; } else { t.past = t.reigns.map(x => x.nm); t.reigns = []; } });
+  const onR = new Set(r.roster.map(w => w.id));
+  r.teams = (g.teams || []).filter(t => t.members.every(id => onR.has(id))).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
+  r.facs = (g.factions || []).map(f => ({ id: f.id, name: f.name, members: f.members.filter(id => onR.has(id)), leader: onR.has(f.leader) ? f.leader : null })).filter(f => f.members.length >= 2);
   return liven(r);
 }
 function makeWorld(withMine) {
@@ -9547,7 +9650,10 @@ function cleanWorld(raw) {
   const cos = out.map(r => {
     r.name = String(r.name).slice(0, 40); r.short = String(r.short).slice(0, 5); r.show = String(r.show).slice(0, 40); r.color = safeColor(r.color) || pick(RIV_COLORS);
     r.roster = r.roster.slice(0, 60).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
-    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 6).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
+    const onR = new Set(r.roster.map(w => w.id)), gName = v => maskRude(String(v || '').slice(0, 40).trim());
+    r.teams = (Array.isArray(r.teams) ? r.teams : []).slice(0, 40).map(t => { const ms = [...new Set((Array.isArray(t?.members) ? t.members : []).filter(id => onR.has(id)))], k = t?.kind === 'trios' ? 3 : 2; return ms.length === k && gName(t.name) ? { id: SAFE_ID.test(t.id) ? t.id : uid(), name: gName(t.name), ...(k === 3 ? { kind: 'trios' } : {}), members: ms } : null; }).filter(Boolean);
+    r.facs = (Array.isArray(r.facs) ? r.facs : []).slice(0, 20).map(f => { const ms = [...new Set((Array.isArray(f?.members) ? f.members : []).filter(id => onR.has(id)))].slice(0, 8); return ms.length >= 2 && gName(f.name) ? { id: SAFE_ID.test(f.id) ? f.id : uid(), name: gName(f.name), members: ms, leader: ms.includes(f.leader) ? f.leader : null } : null; }).filter(Boolean);
+    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 6).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
     for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
     r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
     return r;
@@ -10044,7 +10150,9 @@ function applyWorld(z) {
     G.wrestlers = [];
     for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156) }; delete x.rival; delete x.rWeeks; delete x.rSal; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
     const tag = G.titles.find(t => t.tag);
-    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70, holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}) }));
+    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70, holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}) }));
+    G.teams = (take.teams || []).filter(t => t.members.every(id => W(id))).map(t => ({ ...t, w: 0, l: 0, d: 0 }));
+    G.factions = (take.facs || []).map(f => ({ ...f, members: f.members.filter(id => W(id)), tms: G.teams.filter(t => t.members.every(id => f.members.includes(id))).map(t => t.id), w: 0, l: 0, d: 0 })).filter(f => f.members.length >= 2);
     if (tag && !G.titles.some(t => t.tag)) G.titles.push({ ...tag, holder: [] });
     G.titles.forEach(t => ensureReigns(t));
     G.promo.prestige = take.prestige; G.fans = Math.max(5000, take.fans);
@@ -10091,7 +10199,7 @@ function fixCustomMatch(c) {
   return o;
 }
 function scrubGame(raw) {
-  const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES), topic: Object.keys(PROMO_TOPICS), tone: Object.keys(PROMO_TONES), loc: Object.keys(SEG_PLACES), span: Object.keys(SEG_LENS), outro: Object.keys(SEG_ENDS) };
+  const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle', 'trios'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES), topic: Object.keys(PROMO_TOPICS), tone: Object.keys(PROMO_TONES), loc: Object.keys(SEG_PLACES), span: Object.keys(SEG_LENS), outro: Object.keys(SEG_ENDS) };
   const idMap = new Map(), fixId = v => { v = String(v); if (SAFE_ID.test(v)) return v; if (!idMap.has(v)) idMap.set(v, uid()); return idMap.get(v); };
   const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|corner|coId|brand|bid|showId|loan|cutBy|inter|ans)$/;
   let budget = 400000;
@@ -10570,7 +10678,8 @@ function modalCView(m) {
   const body = `${cvHead(i, m.key, kindLbl({ ...i, count: p.wrestlers.length }))}
     ${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
     ${pixWaiting(i) ? (PIX_FAIL.has(pixKey(i)) ? `<div class="row small" style="margin-bottom:6px;gap:8px" role="status"><span class="sp muted">The photos didn't load.</span><button class="btn sm" data-act="pixRetry" data-id="${esc(m.key)}">Try again</button></div>` : '<div class="tiny muted" style="margin-bottom:6px" role="status">Loading photos…</div>') : ''}
-    ${p.titles?.length ? `<div class="tiny muted" style="margin-bottom:6px">Includes ${p.titles.length} championships: ${p.titles.map(t => esc(t.short)).join(', ')}</div>` : ''}
+    ${p.titles?.length ? `<div class="tiny muted" style="margin-bottom:6px">Includes ${p.titles.length} championships: ${p.titles.map(t => esc(t.short)).join(', ')}</div><div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:8px">${p.titles.map(t => titleArt(t, 'belt-sm')).join('')}</div>` : ''}
+    ${p.teams?.length || p.factions?.length ? `<div class="tiny muted" style="margin-bottom:6px">Teams: ${[...(p.teams || []), ...(p.factions || [])].slice(0, 12).map(t => esc(t.name)).join(', ')}${(p.teams || []).length + (p.factions || []).length > 12 ? '…' : ''}</div>` : ''}
     ${p.wrestlers.length > 1 ? `<div class="alert" style="margin-bottom:8px"><span class="ic">📚</span><div class="small sp">Keep any of them in your library to use in every save, no save needed.</div></div>` : ''}
     <div class="list">${p.wrestlers.map((w, k) => `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : '', w.ring != null ? 'Ring ' + w.ring : '', w.finisher ? 'Finisher: ' + w.finisher : ''].filter(Boolean).join(' · '))}</div></div>${p.wrestlers.length > 1 ? (inLib(m.key + '|' + k) ? `<span class="tag" aria-label="In your library">✓ 📚</span>` : `<button class="btn sm" data-act="libAdd" data-id="${esc(m.key + '|' + k)}" aria-label="Save ${esc(w.name)} to your library">📚 +</button>`) : ''}</div>`).join('')}</div>`;
   return modal(esc(i.title), body, `${COMM.owner && i.author !== COMM.me ? '<button class="btn bad" data-act="cDel" data-id="' + esc(m.key) + '">Remove</button>' : ''}${COMM.me && i.author !== COMM.me && i.author !== 'featured' ? `<button class="btn" data-act="cReport" data-id="${esc(m.key)}" aria-label="Report this">🚩</button>` : ''}${libBtn(m.key, p.wrestlers.length > 1 ? 'Save all ' + p.wrestlers.length : 'Library')}<button class="btn pri" data-act="cGet" data-id="${esc(m.key)}">${G ? '⬇ Add to my game' : '🏟️ Start a company'}</button>`);
@@ -10578,7 +10687,57 @@ function modalCView(m) {
 
 const CREATOR_ACTIONS = {
   rosterTools(tab) { openModal({ type: 'rtools', tab: tab || 'import', mode: G && signed().length ? 'sign' : 'replace' }); },
-  rtTab(t) { UI.modal.tab = t; UI.modal.res = null; UI.modal.batch = null; render(); },
+  rtTab(t) { UI.modal.tab = t; UI.modal.res = null; UI.modal.batch = null; UI.modal.bbatch = null; render(); },
+  rtPk(k) { const m = UI.modal; if (m.busy) return; m.pk = k === 't' ? 't' : 'w'; m.res = null; m.batch = m.bbatch = null; render(); },
+  beltPhotos() { if (!G) return; openModal({ type: 'rtools', tab: 'photos', pk: 't', mode: signed().length ? 'sign' : 'replace' }); },
+  // mass belt photos: match each file to a title by its name, short name or the name without "Championship"
+  rtBelts() {
+    const m = UI.modal; if (!G || m.busy || !G.titles.length) return;
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+    inp.onchange = async () => {
+      const files = [...inp.files].slice(0, 30); if (!files.length) return;
+      const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const keys = []; for (const t of G.titles) for (const k of [t.name, t.short, String(t.name).replace(/championship|title|belt/ig, '')]) { const n = norm(k); if (n.length >= 2) keys.push([n, t]); }
+      keys.sort((a, b) => b[0].length - a[0].length);
+      const taken = new Set(), items = files.map(f => {
+        const nb = norm(f.name.replace(/\.[^.]+$/, '').replace(/belt|photo|pic|image|img/ig, ''));
+        const hit = (keys.find(([k, t]) => k === nb && !taken.has(t.id)) || keys.find(([k, t]) => nb.length >= 2 && (nb.includes(k) || k.includes(nb)) && !taken.has(t.id)))?.[1];
+        if (hit) taken.add(hit.id); return { f, tid: hit?.id || '' };
+      });
+      // one photo and one title: that's the one
+      if (items.length === 1 && G.titles.length === 1) items[0].tid = G.titles[0].id;
+      m.res = null; m.bbatch = { items, miss: [], i: 0, o: { ...BPX_DEF } };
+      const first = Math.max(0, items.findIndex(x => x.tid));
+      for (let k = 0; k < items.length; k++) { if (await CREATOR_ACTIONS.rtBti(0, null, (first + k) % items.length)) return; m.bbatch?.miss.push(items[(first + k) % items.length].f.name.replace(/\.[^.]+$/, '').slice(0, 40)); }
+      m.bbatch = null; m.res = { ok: [], miss: files.map(f => f.name.replace(/\.[^.]+$/, '').slice(0, 40)) }; commit('Those photos could not be read.');
+    };
+    inp.click();
+  },
+  async rtBti(d, el, at) {
+    const m = UI.modal, b = m?.bbatch; if (!b) return false;
+    const n = b.items.length, i = at != null ? at : (b.i + (+d || 0) + n) % n, it = b.items[i];
+    try { it.src = it.src || await beltSrc(it.f); } catch (e) { it.bad = 1; it.tid = ''; if (at == null) toast('That photo could not be read.'); return false; }
+    if (UI.modal !== m || m.bbatch !== b) return false;
+    b.i = i; try { b.prev = beltPic(it.src, b.o); } catch (e) { b.o.mode = 'photo'; b.prev = beltPic(it.src, b.o); toast('Could not make a pixel version. Using the photo.'); }
+    render(); return true;
+  },
+  rtBtx(v, el) { const b = UI.modal.bbatch; if (!b) return; const f = el.dataset.f; b.o[f] = ['detail', 'colors', 'zoom'].includes(f) ? +v : v; const it = b.items[b.i]; b.prev = beltPic(it.src, b.o); render(); },
+  async rtBeltGo() {
+    const m = UI.modal, b = m.bbatch; if (!b || m.busy) return;
+    const todo = b.items.filter(x => x.tid && !x.bad); if (!todo.length) return toast('Pick a title for at least one photo.');
+    m.bbatch = null; const res = { ok: [], miss: [...b.miss, ...b.items.filter(x => !x.tid && !x.bad).map(x => x.f.name.replace(/\.[^.]+$/, '').slice(0, 40))] };
+    for (let i = 0; i < todo.length; i++) {
+      const it = todo[i], t = G.titles.find(x => x.id === it.tid);
+      m.busy = (i + 1) + ' of ' + todo.length; if (UI.modal === m) render();
+      try {
+        if (!t) throw 0; const src = it.src || await beltSrc(it.f); it.src = null;
+        const pic = safePhoto(beltPic(src, b.o)); if (!pic) throw new Error('too big');
+        t.photo = pic; if (!res.ok.includes(t.name)) res.ok.push(t.name);
+      } catch (e) { res.miss.push(it.f.name.replace(/\.[^.]+$/, '').slice(0, 40)); }
+    }
+    m.busy = null; m.res = res; commit(res.ok.length ? `Added ${res.ok.length} belt photo${res.ok.length > 1 ? 's' : ''}.` : 'No belt photos were added.');
+  },
+  rtBeltsOff() { confirmBox('Remove belt photos?', 'Every championship goes back to its drawn belt.', 'Remove', () => { for (const t of G.titles) delete t.photo; UI.modal = { type: 'rtools', tab: 'photos', pk: 't' }; commit('Removed.'); }, true); },
   rtPhotos() {
     const m = UI.modal; if (!G || m.busy) return;
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
@@ -10612,7 +10771,7 @@ const CREATOR_ACTIONS = {
     render(); return true;
   },
   rtBx(v, el) { const b = UI.modal.batch; pxSet(b.o, el.dataset.f, v); const it = b.items[b.i]; b.prev = batchPic(b, it.w, it.sq); render(); },
-  rtBatchOff() { UI.modal.batch = null; render(); },
+  rtBatchOff() { UI.modal.batch = UI.modal.bbatch = null; render(); },
   async rtBatchGo() {
     const m = UI.modal, b = m.batch; if (!b || m.busy) return;
     m.batch = null; const res = { ok: [], miss: b.miss.slice() };
@@ -10642,7 +10801,7 @@ const CREATOR_ACTIONS = {
       setRivalChamp(r); G.rivalPromos.push(r); syncRivals();
       news(`🏢 ${r.name} arrived as a rival promotion with ${r.roster.length} wrestlers.`, 'office');
       UI.tab = 'office'; UI.faTab = 'rivals'; UI.modal = { type: 'rival', id: r.id }; return commit(`${r.name} is now a rival.`);
-    } const go = () => { const r = importPack(m.parsed, m.mode); UI.modal = null; UI.tab = 'roster'; commit(`${r.added} added${r.updated ? ', ' + r.updated + ' updated' : ''}.`); };
+    } const go = () => { const r = importPack(m.parsed, m.mode); UI.modal = null; UI.tab = 'roster'; commit(`${r.added} added${r.updated ? ', ' + r.updated + ' updated' : ''}${r.teams ? ', ' + r.teams + ' team' + (r.teams > 1 ? 's' : '') : ''}.`); };
     if (m.mode === 'replace' && G.wrestlers.length) confirmBox('Replace your whole roster?', 'Everyone is removed and stories and cards are cleared. Titles go vacant unless the import has champions.', 'Replace roster', go, true);
     else go();
   },
@@ -10800,7 +10959,7 @@ const CREATOR_ACTIONS = {
     if (isRude(m.title) || isRude(m.desc) || (m.what === 'roster' ? signed() : (m.sel || []).map(W).filter(Boolean)).some(w => isRude(w.name) || isRude(w.nick) || isRude(w.bio))) return toast('Please remove the rude words first. Check the title, description and wrestler names.');
     const ws = m.what === 'roster' ? signed() : (m.sel || []).map(W).filter(Boolean);
     if (!ws.length) return toast('Pick at least one wrestler.');
-    const pack = makePack(ws, { titles: m.what === 'roster', title: (m.title || '').trim() || (m.what === 'roster' ? G.promo.name + ' roster' : ws.length === 1 ? ws[0].name : 'Custom wrestlers') });
+    const pack = await packShrink(makePack(ws, { titles: m.what === 'roster', title: (m.title || '').trim() || (m.what === 'roster' ? G.promo.name + ' roster' : ws.length === 1 ? ws[0].name : 'Custom wrestlers') }));
     const item = { id: uid(), title: pack.title, desc: (m.desc || '').trim().slice(0, 300), kind: m.what === 'roster' ? 'roster' : 'wrestler', count: ws.length, created: Date.now(), pack };
     let px = 0;
     try {
@@ -10817,6 +10976,7 @@ const CREATOR_ACTIONS = {
     if (COMM.mine.filter(x => x.kind === 'world').length >= saveShareMax()) return toast('Remove an old world first.');
     try {
       const wd = makeWorld(m.mine !== false);
+      for (const c of wd.cos) for (const t of c.titles || []) if (t.photo) { t.photo = await beltShare(t.photo); if (!t.photo) delete t.photo; }
       if (wd.cos.some(c => isRude(c.name) || c.roster.some(w => isRude(w.name)))) return toast('Please rename anything rude in the world first.');
       const data = await gz(JSON.stringify(wd));
       const item = { id: uid(), title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe', desc: (m.desc || '').trim().slice(0, 300), kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: Date.now(), sum: worldSummary(wd), save: data };
@@ -12342,6 +12502,7 @@ document.addEventListener('change', e => {
   if (el.dataset.in) {
     const k = el.dataset.in;
     if (k === 'rosterSort') { UI.rosterSort = el.value; render(); }
+    else if (k === 'rtBtTitle') { const b = UI.modal?.bbatch, it = b?.items[b.i]; if (it) { it.tid = G.titles.some(x => x.id === el.value) ? el.value : ''; render(); } }
     else if (k === 'pickSort') { UI.pickSort = el.value; try { localStorage.setItem('bookit-pickSort', el.value); } catch (e) { } render(); }
     else if (k === 'faSort') { UI.faSort = el.value; try { localStorage.setItem('bookit-faSort', el.value); } catch (e) { } render(); }
     else if (k === 'shDay') { const x = showById(el.dataset.id); if (x) { const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, el.value) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); } }
@@ -12570,7 +12731,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.43';
+const VERSION = '1.9.44';
 const WHATS_NEW = [
   ['📖 Story Mode', 'The BookIt Universe: six original companies and 172 wrestlers in one world. Take over any company from the start screen. The owner sets you three goals every season, and written story moments happen as the weeks go by: talent raids, a legend\'s farewell tour, an invasion from the bayou and more.'],
   ['🎨 Pixel faces', 'Every wrestler without a photo now has a pixel headshot instead of initials, with masks, face paint, beards and ring gear. Make anyone\'s face in their editor under Pixel face, or reroll everyone in Roster tools. Prefer initials? Switch in Settings.'],
