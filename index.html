@@ -9746,6 +9746,11 @@ function worldW(w) {
 function worldCo(r) {
   liven(r);
   const c = { id: r.id, name: r.name, short: r.short, color: r.color, prestige: Math.round(r.prestige), fans: Math.round(r.fans), show: r.show, phil: r.phil, ppvs: r.ppvs, bigOne: r.ppvs?.includes(r.bigOne) ? r.bigOne : r.ppvs?.[0] || '', money: Math.max(50000, Math.round(r.money)), custom: !!r.custom, safe: !!r.safe, roster: r.roster.map(worldW), hist: [], last: 0 };
+  // a player's company keeps its show night, other weekly shows, by-month big events and signature matches
+  if (r.day != null) c.day = clamp(+r.day || 0, 0, 6);
+  if (r.months?.some(Boolean)) c.months = cleanMonths(r.months);
+  if (r.wkShows?.length) { c.wkShows = r.wkShows.map(x => ({ name: x.name, day: x.day })); c.split = !!r.split; }
+  if (r.sigs?.length) c.sigs = r.sigs.map(x => ({ name: x.name, mt: x.mt || '', gm: x.gm || '' }));
   // tag teams, trios teams and factions travel as member ids from this company's roster
   const ids = new Set(c.roster.map(w => w.id)), grp = (a, n) => (Array.isArray(a) ? a : []).filter(g => g && g.members?.filter(id => ids.has(id)).length >= n);
   c.teams = grp(r.teams, 2).filter(t => t.members.every(id => ids.has(id))).slice(0, 40).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
@@ -9756,8 +9761,13 @@ function worldCo(r) {
 // a company the player runs, written as an AI company for the world
 function coAsRival(g) {
   const ros = (g === G ? signed() : (g.roster || []).filter(w => w.contract)).filter(w => !w.loan);
-  const r = { id: uid(), name: g.promo.name, short: abbr(g.promo.name), color: g.promo.color, prestige: clamp(+g.promo.prestige || 40, 1, 100), fans: +g.fans || 20000, show: g.promo.show, roster: [], champId: null, last: 0, hist: [], custom: true, born: 1, money: MON() ? +g.money || 0 : (+g.fans || 20000) * 5, ppvs: (g.bigEvents || []).slice(0, 12) };
+  // the main show by name (g.promo.show is whichever show is being booked, even a big event); the others come along by name and night
+  const shs = Array.isArray(g.shows) && g.shows.length ? g.shows : [{ name: g.promo.show, day: g.promo.day }];
+  const r = { id: uid(), name: g.promo.name, short: abbr(g.promo.name), color: g.promo.color, prestige: clamp(+g.promo.prestige || 40, 1, 100), fans: +g.fans || 20000, show: shs[0].name || g.promo.show, day: clamp(+shs[0].day || 0, 0, 6), roster: [], champId: null, last: 0, hist: [], custom: true, born: 1, money: MON() ? +g.money || 0 : (+g.fans || 20000) * 5, ppvs: (g.bigEvents || []).slice(0, 12) };
   if (r.ppvs.length) r.bigOne = g === G ? bigOne() : r.ppvs.includes(g.bigOne) ? g.bigOne : r.ppvs[r.ppvs.length - 1];
+  if (monthMode(g.bigMonths, g.settings || G.settings)) r.months = cleanMonths(g.bigMonths);
+  r.wkShows = shs.slice(1, MAX_SHOWS).map(x => ({ name: x.name || 'Weekly Show', day: clamp(+x.day || 0, 0, 6) })); r.split = !!g.split;
+  r.sigs = (g.ppvSig || []).filter(x => x && (x.mt || x.gm)).slice(0, 24).map(x => ({ name: x.name, mt: x.mt || '', gm: x.gm || '' }));
   const a = k => avg(ros.map(w => +w[k] || 0));
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
   for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; r.roster.push(x); }
@@ -9798,6 +9808,13 @@ function cleanWorld(raw) {
     r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 6).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
     for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
     r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
+    // show names and big event setup, so whoever takes this company over keeps them
+    if (r.day != null) r.day = clamp(Math.floor(+r.day) || 0, 0, 6); else delete r.day;
+    if (Array.isArray(r.months) && r.months.some(Boolean)) r.months = cleanMonths(r.months.map(x => maskRude(String(x || '')))); else delete r.months;
+    r.wkShows = (Array.isArray(r.wkShows) ? r.wkShows : []).slice(0, MAX_SHOWS - 1).map(x => ({ name: maskRude(ppvList(x?.name)[0] || ''), day: clamp(Math.floor(+x?.day) || 0, 0, 6) })).filter(x => x.name);
+    if (!r.wkShows.length) { delete r.wkShows; delete r.split; } else r.split = !!r.split;
+    r.sigs = (Array.isArray(r.sigs) ? r.sigs : []).slice(0, 24).map(x => ({ name: ppvList(x?.name)[0] || '', mt: cmName(x?.mt), gm: cmName(x?.gm) })).filter(x => x.name && (x.mt || x.gm));
+    if (!r.sigs.length) delete r.sigs;
     return r;
   });
   if (!cos.length) throw 0;
@@ -10265,7 +10282,7 @@ const STORY_ACTIONS = {
       if (G) save();
       UI.modal = null; wizStart(false);
       const z = UI.wiz; Object.assign(z, { step: 'company', world: wd, take: take?.id || null, slot: n, source: 'world', count: 1, nth: 1, every: wd.every, suMode: id });
-      if (take) { z.name = take.name; z.show = take.show; z.color = safeColor(take.color) || z.color; z.day = c.day; }
+      if (take) { wizTake(z, take); z.day = c.day; }
       render(); pageTop();
     };
     if (info) confirmBox(`Replace slot ${n}?`, `${info.name} (week ${info.week}) in slot ${n} will be replaced by Story Mode. Back it up first from Menu if you want to keep it.`, 'Replace and start', go, true);
@@ -10284,6 +10301,16 @@ function startBeforeBigOne() {
   for (const w of G.wrestlers) { if (w.joined != null) w.joined = Math.max(+w.joined || 0, S); if (w.lastBooked != null) w.lastBooked = Math.max(+w.lastBooked || 0, S - 1); }
   for (const r of G.rivalPromos || []) { r.born = Math.min(+r.born || S, S); r.last = Math.max(+r.last || 0, S - 1); }
 }
+// taking over a company in a world: its name, shows and big events come with it, so the setup skips naming them
+function wizTake(z, take) {
+  z.name = take.name; z.show = take.show; z.color = safeColor(take.color) || z.color;
+  if (take.day != null) z.day = clamp(+take.day || 0, 0, 6);
+  const mo = !!take.months?.some(Boolean);
+  z.mode = mo ? 'month' : 'weeks'; z.months = mo ? cleanMonths(take.months) : Array(12).fill(''); z.ppv = mo ? '' : (take.ppvs || []).join('\n');
+  z.extra = (take.wkShows || []).slice(0, MAX_SHOWS - 1).map(x => ({ name: x.name, day: clamp(+x.day || 0, 0, 6) })); z.split = !!take.split && z.extra.length > 0;
+  z.sig = Object.fromEntries((take.sigs || []).map(x => [x.name, x.mt ? 'mt:' + x.mt : 'gm:' + x.gm]));
+  z.step = 'budget';
+}
 function applyWorld(z) {
   const wd = z.world, cos = JSON.parse(JSON.stringify(wd.cos)), take = z.take && cos.find(c => c.id === z.take);
   G.wseed = 1;
@@ -10298,7 +10325,8 @@ function applyWorld(z) {
     if (tag && !G.titles.some(t => t.tag)) G.titles.push({ ...tag, holder: [] });
     G.titles.forEach(t => ensureReigns(t));
     G.promo.prestige = take.prestige; G.fans = Math.max(5000, take.fans);
-    if (Array.isArray(take.ppvs) && take.ppvs.length) { G.bigEvents = ppvList(take.ppvs.join('\n')); G.bigOne = take.bigOne; G.ppvSig = []; }
+    if (byMonth()) G.bigEvents = monthNames(G.bigMonths); else if (Array.isArray(take.ppvs) && take.ppvs.length) G.bigEvents = ppvList(take.ppvs.join('\n'));
+    if (G.bigEvents.includes(take.bigOne)) G.bigOne = take.bigOne;
     cos.splice(cos.indexOf(take), 1);
   } else {
     // a brand-new company starts with nobody signed when it came for the world's free agents
@@ -11138,7 +11166,7 @@ const CREATOR_ACTIONS = {
       markUsed(key); UI.modal = null;
       wizStart(false);
       const z = UI.wiz; Object.assign(z, { step: 'company', world: wd, take: take?.id || null, slot: n, source: 'world', count: 1, nth: 1, every: wd.every });
-      if (take) { z.name = take.name; z.show = take.show; z.color = safeColor(take.color) || z.color; }
+      if (take) wizTake(z, take);
       render(); pageTop();
     };
     if (info) confirmBox(`Replace slot ${n}?`, `${info.name} (week ${info.week}) in slot ${n} will be replaced by your new game in this world. Back it up first from Menu if you want to keep it.`, 'Replace and start', go, true);
@@ -12239,7 +12267,7 @@ function joinWorld(host) {
 }
 function wizSteps(cur) {
   const z = UI.wiz;
-  const steps = z.source === 'draft' ? ['company', 'budget', 'roster', 'draft', 'titles'] : z.world && z.take ? ['company', 'budget', 'roster'] : ['company', 'budget', 'roster', 'titles'];
+  const steps = z.source === 'draft' ? ['company', 'budget', 'roster', 'draft', 'titles'] : z.world && z.take ? ['budget', 'roster'] : ['company', 'budget', 'roster', 'titles'];
   const i = steps.indexOf(cur);
   return `<div class="wz-steps">${steps.map((s, j) => `<span class="${j < i ? 'done' : j === i ? 'on' : ''}"></span>`).join('')}</div>${(z.count || 1) > 1 ? `<div class="tiny muted" style="margin:-6px 0 8px;font-weight:700;letter-spacing:.04em">COMPANY ${z.nth || 1} OF ${z.count}</div>` : ''}`;
 }
@@ -12283,7 +12311,7 @@ function viewWizard() {
   }
   if (z.step === 'budget') {
     return `<div class="app wz">${wizSteps('budget')}
-      <div class="wz-k">Step 2 · Sim settings</div><h2 class="wz-h">How do you want to run ${esc(z.name)}?</h2>
+      <div class="wz-k">Step ${z.take ? 1 : 2} · Sim settings</div><h2 class="wz-h">How do you want to run ${esc(z.name)}?</h2>
       ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="list" style="margin-bottom:14px">${[['deep', '🧠 Deep sim', 'See every skill (psychology, selling, consistency, safety and more) and each wrestler\'s potential. Also turns on money and contracts, which you can then switch off. Off: the simple six stats, with no money or contracts.'], ['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.'], ['sandbox', '🛠️ Sandbox', 'Build the whole world: edit every company, title and roster, and move anyone anywhere. Share it when it\'s ready. Switch it on or off any time.']].map(([k, l, d]) => { const lock = (k === 'money' || k === 'contracts') && !z.deep; return `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}" ${lock ? 'disabled aria-disabled="true" style="opacity:.5"' : ''}><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}${lock ? ' Turn on Deep sim to use this.' : ''}</div></div></button>`; }).join('')}</div>
       ${z.world ? '' : `<div class="sec">Rival companies</div>
       <div class="seg-ctl" style="margin-bottom:6px">${[2, 3, 4, 5, 6].map(n => `<button class="${(z.rivN || 4) === n ? 'on' : ''}" data-act="wzSet" data-f="rivN" data-id="${n}">${n}</button>`).join('')}</div>
@@ -12294,13 +12322,14 @@ function viewWizard() {
       ${z.money ? `<div class="sec">Starting budget</div>
       <p class="muted small" style="margin-top:0">This sets your bank balance${z.contracts ? ' and the weekly payroll you can spend in the draft' : ''}.</p>
       <div class="list">${Object.entries(BUDGETS).sort((a, b) => a[1].money - b[1].money).map(([k, b]) => `<button class="pick wz-opt ${z.budget === k ? 'sel' : ''}" data-act="wzSet" data-f="budget" data-id="${k}"><span class="ck">${z.budget === k ? '✓' : ''}</span><div><b>${b.label}</b> <span class="muted small">· ${money(b.money)} bank · ${money(b.cap)}/wk payroll</span><div class="small muted">${b.desc}</div></div></button>`).join('')}</div>` : `<div class="tip">Money is off: no budget to manage. ${z.contracts ? 'Contracts still matter, but you can pay whatever it takes.' : 'Just book the shows you want.'}</div>`}
-      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="company">Back</button><button class="btn pri" data-act="wzGo" data-id="roster">Next</button></div></div>`;
+      <div class="wz-nav">${z.take ? '<button class="btn" data-act="wzCancel">Cancel</button>' : '<button class="btn" data-act="wzGo" data-id="company">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="roster">Next</button></div></div>`;
   }
   if (z.step === 'roster' && z.world) {
     const tk = z.take && z.world.cos.find(c => c.id === z.take);
     return `<div class="app wz">${wizSteps('roster')}
-      <div class="wz-k">Step 3 · Your roster</div><h2 class="wz-h">${tk ? `Taking over ${esc(tk.name)}` : 'Where does your talent come from?'}</h2>
-      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(t.holder.map(id => tk.roster.find(w => w.id === id)?.name).filter(Boolean).join(' & ') || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>
+      <div class="wz-k">Step ${tk ? 2 : 3} · Your roster</div><h2 class="wz-h">${tk ? `Taking over ${esc(tk.name)}` : 'Where does your talent come from?'}</h2>
+      ${tk ? `<div class="card"><div class="row small"><span class="sp muted">📺 ${esc(DAYS[z.day])}</span><b>${esc(z.show)}</b></div>${(z.extra || []).map(x => `<div class="row small"><span class="sp muted">📺 ${esc(DAYS[x.day])}</span><b>${esc(x.name)}</b></div>`).join('')}${wzNames(z).length ? `<div class="small" style="margin-top:4px"><span class="muted">🎟️ Big events</span><div><b>${wzNames(z).map(esc).join(' · ')}</b></div></div>` : ''}<div class="tiny muted" style="margin-top:6px">Their shows and big events keep their names. Rename them any time in Office → Setup.</div></div>
+      <div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(t.holder.map(id => tk.roster.find(w => w.id === id)?.name).filter(Boolean).join(' & ') || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>
       <div class="tip small" style="margin-top:10px">📅 You start at the beginning of the month leading to ${tk.bigOne ? `<b>${esc(tk.bigOne)}</b>, their big one` : 'their big one, the biggest show of their year'}.</div>`
       : `<div class="tip small" style="margin-bottom:10px">📅 You start at the beginning of the month leading to your big one: ${ppvList(z.ppv).length ? `<b>${esc(ppvList(z.ppv).at(-1))}</b>, the last big event you named` : 'your last big event of the year'}. Pick a different big one later in Office → Setup.</div><div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button>${tk ? '<button class="btn pri" data-act="wzFinish">Open for business</button>' : '<button class="btn pri" data-act="wzGo" data-id="titles">Next</button>'}</div></div>`;
@@ -12873,7 +12902,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.45';
+const VERSION = '1.9.46';
 const WHATS_NEW = [
   ['🗂 Draft war room', 'Brand drafts feel like the real thing. Each brand shows what it needs (star power, champions, tag teams, faces and heels) and gets a letter grade. Every pick gets a reveal with a commentary line and a crowd reaction, and you can trade wrestlers between brands during the draft or any time from Office → Brands.'],
   ['📖 Story Mode', 'The BookIt Universe: six original companies and 172 wrestlers in one world. Take over any company from the start screen. The owner sets you three goals every season, and written story moments happen as the weeks go by: talent raids, a legend\'s farewell tour, an invasion from the bayou and more.'],
