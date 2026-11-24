@@ -368,6 +368,14 @@ button.mrow:active { background: var(--card2); }
 .bld-ovr { margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
 .bld-ovr b { font-size: 22px; color: var(--accent-t); margin-left: 4px; font-variant-numeric: tabular-nums; }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.fm { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card); }
+.fm > summary { font-weight: 700; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 2; background: var(--card); padding: 2px 0; }
+.fm > summary::after { content: '▾'; margin-left: auto; color: var(--dim); }
+.fm[open] > summary::after { content: '▴'; }
+.fm-row { margin-top: 10px; } .fm-row > span { display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px; font-weight: 600; }
+.fm .filters { flex-wrap: wrap; margin-bottom: 0; }
+.fm .sw { width: 26px; height: 26px; }
+.fm .sw.mine { background: conic-gradient(#c8102e 0 25%, #1f4fbf 0 50%, #f2b705 0 75%, #1f8a3b 0) !important; }
 .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); }
 .sw.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 /* stat sliders: name + value on top, then − [ slider ] +. Big touch area, tap anywhere on the bar, the sheet doesn't scroll mid-drag */
@@ -1532,7 +1540,7 @@ function migrate(g) {
   g.booker.cxp ??= +g.booker.xp || 0; g.booker.coPaid ??= coLvlOf(+g.booker.cxp || 0); g.booker.perks = (Array.isArray(g.booker.perks) ? g.booker.perks : []).map(k => ({ medic: 'fans', heat: 'tv' })[k] || k).filter(k => Object.hasOwn(PERKS, k)).slice(0, 6);
   if (g.sponsor && (typeof g.sponsor !== 'object' || !(+g.sponsor.pay >= 0))) g.sponsor = null;
   if (g.sponsor) g.sponsor = { n: String(g.sponsor.n || 'Sponsor').replace(/[<>&"'`]/g, '').slice(0, 30), pay: clamp(+g.sponsor.pay || 0, 0, 1e6), T: clamp(+g.sponsor.T || 60, 1, 100), left: clamp(Math.floor(+g.sponsor.left) || 0, 0, 52), paidWk: +g.sponsor.paidWk || 0 };
-  for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; }
+  for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; if (w.photoGen) { w.photo = ''; delete w.photoGen; } } // old random placeholders give way to pixel faces
   for (const s of g.stories) { s.notes ??= ''; s.log ||= []; }
   for (const c of [g.card, ...Object.values(g.future || {})]) if (Array.isArray(c)) for (const x of c) if (x && OLD_FIN[x.finish]) x.finish = OLD_FIN[x.finish];
   g.settings.aging ??= true; g.settings.persona ??= false;
@@ -5372,10 +5380,10 @@ function photoURL(ph) {
 }
 function lvFaces(seg, main) {
   const sides = (seg.kind === 'match' ? seg.sides : [seg.who || [], seg.target || []]).map(sd => (sd || []).map(W).filter(Boolean)).filter(sd => sd.length);
-  if (!sides.flat().some(w => safePhoto(w.photo))) return '';
+  if (!sides.flat().some(w => (facesOn() || safePhoto(w.photo)))) return '';
   const sz = main ? 72 : 52, face = w => `<div class="lv-face">${av(w, sz, true)}<span>${esc(shortOf(w.id))}</span></div>`;
   const cls = `lv-faces${main ? '' : ' sm'}`;
-  if (sides.length > 4) return `<div class="${cls}">${sides.flat().filter(w => safePhoto(w.photo)).slice(0, main ? 6 : 8).map(face).join('')}</div>`;
+  if (sides.length > 4) return `<div class="${cls}">${sides.flat().filter(w => (facesOn() || safePhoto(w.photo))).slice(0, main ? 6 : 8).map(face).join('')}</div>`;
   return `<div class="${cls}">${sides.map(sd => `<div class="lv-side">${sd.slice(0, 4).map(face).join('')}</div>`).join(seg.kind === 'match' ? '<span class="vs">VS</span>' : `<span class="verb">${segVerb(seg)}</span>`)}</div>`;
 }
 // promos as a speech bubble, angles as backstage camera footage with a caption bar
@@ -6086,12 +6094,120 @@ function ding() {
   document.body.appendChild(el); setTimeout(() => el.remove(), 1400);
 }
 
+// ---- pixel faces: every wrestler without a photo gets a 32x32 pixel headshot drawn from a 10-character look code ----
+// code positions: skin, hair, hair colour, beard, face (paint/mask), gear, gear colour (0 = their colour), extra, mask colour, mask trim
+const FACE = {
+  skin: [['#f6d3b3', '#dcaa86'], ['#eab98f', '#cc9068'], ['#d29a6a', '#b07a4c'], ['#b0774a', '#8c5a34'], ['#8a5532', '#6a3d22'], ['#5e3820', '#452814']],
+  hair: ['Bald', 'Buzz', 'Spiky', 'Slicked', 'Mohawk', 'Long', 'Ponytail', 'Bob', 'Curly'],
+  hairC: ['#1b1410', '#3b2414', '#6b3f1e', '#b8792f', '#e3c06a', '#d8d8d8', '#a3261f', '#2d5fd0', '#9b3fd0', '#e23a8a'],
+  beard: ['None', 'Stubble', 'Goatee', 'Full'],
+  face: ['Plain', 'Eye black', 'War paint', 'Half paint', 'Skull', 'Mask'],
+  gear: ['Bare', 'Singlet', 'Tee', 'Jacket', 'Hood'],
+  col: ['', '#c8102e', '#1f4fbf', '#111111', '#f2b705', '#1f8a3b', '#7b2cbf', '#f4f4f4', '#ff6b00', '#0891b2'],
+  extra: ['None', 'Headband', 'Shades', 'Earring'],
+};
+const FACE_MAX = [6, 9, 10, 4, 6, 5, 10, 4, 10, 10];
+const faceOK = c => typeof c === 'string' && /^[0-9]{10}$/.test(c) && [...c].every((d, i) => +d < FACE_MAX[i]);
+function faceRandom(seed, women) {
+  let h = 2166136261; for (const ch of String(seed)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const r = () => { h += 0x6D2B79F5; let t = h; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const p = a => a[Math.floor(r() * a.length)];
+  const x = r(), face = x < .08 ? 5 : x < .13 ? 1 : x < .17 ? 2 : x < .2 ? 3 : x < .22 ? 4 : 0;
+  const m1 = p([1, 2, 3, 4, 5, 6, 8, 9]);
+  return [Math.floor(r() * 6), women ? p([5, 5, 6, 6, 7, 8, 2]) : p([0, 0, 1, 1, 2, 3, 4, 5, 8]), p([0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]), women ? 0 : p([0, 0, 0, 1, 2, 3, 3]), face,
+    women ? p([1, 2, 3, 3]) : p([0, 0, 1, 1, 2, 3, 4]), p([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), r() < .15 ? p([1, 2, 3]) : 0, m1, p([4, 7, 3, 1, 2].filter(c => c !== m1))].join('');
+}
+const faceCode = w => faceOK(w.look) ? w.look : faceRandom(w.id || w.name || '?', isWomen(w));
+function faceShade(hex, f) { const n = parseInt(hex.slice(1), 16), m = v => Math.max(0, Math.min(255, Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f))); return '#' + [n >> 16, n >> 8 & 255, n & 255].map(v => m(v).toString(16).padStart(2, '0')).join(''); }
+function faceSVG(code, align, wcol, women, tight) {
+  const [S, H, HC, B, F, GR, GC, X, M1, M2] = [...code].map(Number), N = 32;
+  const g = Array.from({ length: N }, () => Array(N).fill(null));
+  const set = (x, y, c) => { if (x >= 0 && x < N && y >= 0 && y < N && c) g[y][x] = c; };
+  const rect = (x, y, w, h, c) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) set(i, j, c); };
+  const [sk, sd] = FACE.skin[S], hc = FACE.hairC[HC], hd = faceShade(hc, -.35), lip = faceShade(sk, -.45);
+  const gc = GC ? FACE.col[GC] : safeColor(wcol) || '#c8102e', gd = faceShade(gc, -.3);
+  const isSk = (x, y) => g[y][x] === sk || g[y][x] === sd;
+  const sh = y => Math.min(14, 6 + (y - 24) * 2);
+  const mask = F === 5, hair = !mask && H;
+  // hair that falls behind
+  if (hair === 5) { rect(8, 7, 16, 18, hc); rect(7, 12, 18, 13, hc); }
+  if (hair === 8) for (let y = 4; y < 20; y++) for (let x = 6; x < 26; x++) if ((x - 16) ** 2 / 100 + (y - 12) ** 2 / 64 < 1) set(x, y, (x + y) % 3 ? hc : hd);
+  // shoulders, neck, chest
+  for (let y = 24; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, sk);
+  rect(11, 20, 10, 6, sk); rect(19, 20, 2, 6, sd);
+  for (let y = 26; y < N; y++) { set(15, y, sd); set(16, y, sd); }
+  if (GR === 1) { for (let y = 25; y < N; y++) { rect(9, y, 3, 1, gc); rect(20, y, 3, 1, gc); } rect(9, 29, 14, 3, gc); }
+  if (GR === 2) { for (let y = 26; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); rect(12, 26, 8, 1, sk); rect(13, 27, 6, 1, sk); }
+  if (GR === 3) { for (let y = 25; y < N; y++) { rect(15 - sh(y), y, sh(y) - 2, 1, gc); rect(21, y, sh(y) - 3, 1, gc); } for (let y = 24; y < 29; y++) { set(35 - y, y, gd); set(y - 4, y, gd); } rect(3, 30, 2, 2, '#e9c46a'); rect(27, 30, 2, 2, '#e9c46a'); }
+  if (GR === 4) { for (let y = 4; y < N; y++) for (let x = 3; x < 29; x++) { const inH = (x - 16) ** 2 / 64 + (y - 13) ** 2 / 110 < 1; if (y > 24 ? Math.abs(x - 15.5) <= sh(y) + 1 : inH) set(x, y, x > 22 ? gd : gc); } rect(13, 25, 6, 7, sk); }
+  // head, ears
+  for (let y = 6; y < 23; y++) { const i = y < 8 ? 2 : y > 19 ? y - 18 : 0; rect(9 + i, y, 14 - i * 2, 1, sk); }
+  for (let y = 9; y < 21; y++) set(22 - (y > 19 ? y - 18 : 0), y, sd);
+  rect(8, 12, 1, 4, sk); rect(23, 12, 1, 4, sd);
+  // eyes, brows, nose, mouth
+  const eyes = () => { rect(11, 14, 3, 2, '#fff'); rect(18, 14, 3, 2, '#fff'); for (const x of [12, 19]) { set(x, 14, '#151515'); set(x, 15, '#151515'); } };
+  eyes();
+  const brow = women ? faceShade(hc, -.2) : hd; rect(11, 12, 3, 1, brow); rect(18, 12, 3, 1, brow);
+  if (align === 'heel') { set(13, 12, sk); set(13, 13, brow); set(18, 12, sk); set(18, 13, brow); }
+  rect(15, 16, 2, 2, sd); set(16, 17, faceShade(sd, -.2));
+  if (women) { rect(14, 19, 4, 1, '#b8324a'); set(10, 14, '#151515'); set(21, 14, '#151515'); }
+  else { rect(14, 19, 4, 1, lip); if (align === 'heel') set(17, 18, lip); else { set(13, 18, lip); set(18, 18, lip); } }
+  // paint
+  const pc = GC ? gc : '#c8102e';
+  if (F === 1) { rect(11, 16, 3, 1, '#111'); rect(18, 16, 3, 1, '#111'); }
+  if (F === 2) { for (const x of [10, 12, 19, 21]) rect(x, 16, 1, 4, pc); rect(15, 7, 2, 5, pc); }
+  if (F === 3) { for (let y = 7; y < 23; y++) for (let x = 16; x < 23; x++) if (isSk(x, y)) set(x, y, y % 4 ? '#f4f4f4' : '#dddddd'); rect(18, 13, 4, 4, '#111'); rect(19, 14, 2, 2, '#fff'); set(19, 14, '#c00'); }
+  if (F === 4) { for (let y = 7; y < 23; y++) for (let x = 9; x < 23; x++) if (isSk(x, y)) set(x, y, x > 20 ? '#cfcfcf' : '#f2f2f2'); rect(10, 13, 5, 4, '#111'); rect(17, 13, 5, 4, '#111'); set(12, 15, '#e33'); set(19, 15, '#e33'); rect(15, 17, 2, 1, '#111'); for (let x = 12; x < 20; x++) set(x, 19, x % 2 ? '#111' : '#f2f2f2'); }
+  // beard
+  if (!mask && B === 3) { for (let y = 17; y < 24; y++) { const i = y > 20 ? y - 20 : 0; rect(9 + i, y, 14 - i * 2, 1, hc); } rect(13, 19, 6, 1, lip); rect(14, 18, 4, 1, sk); rect(14, 20, 4, 1, hc); set(15, 16, sd); }
+  if (!mask && B === 2) { rect(13, 18, 6, 1, hc); rect(13, 19, 1, 3, hc); rect(18, 19, 1, 3, hc); rect(14, 20, 4, 3, hc); }
+  if (!mask && B === 1) for (let y = 17; y < 22; y++) for (let x = 10; x < 22; x++) if ((x + y * 3) % 3 === 0 && g[y][x] === sk) set(x, y, faceShade(sk, -.25));
+  // lucha mask
+  if (mask) {
+    const m1 = FACE.col[M1] || '#f2b705', m2 = FACE.col[M2] || '#c8102e', md = faceShade(m1, -.3);
+    for (let y = 5; y < 23; y++) for (let x = 7; x < 25; x++) if (isSk(x, y) || (y < 8 && x > 9 && x < 22)) set(x, y, x > 20 ? md : m1);
+    for (let y = 5; y < 20; y++) { set(15, y, m2); set(16, y, m2); }
+    rect(10, 13, 5, 4, m2); rect(17, 13, 5, 4, m2); eyes();
+    for (const [x, y] of [[9, 11], [10, 10], [11, 11], [20, 11], [21, 10], [22, 11]]) set(x, y, m2);
+    rect(13, 18, 6, 3, m2); rect(14, 19, 4, 1, lip); rect(14, 20, 4, 1, sk);
+  }
+  // hair on top
+  const top = (y0, y1, x0, x1) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) set(x, y, (x * 7 + y * 3) % 5 ? hc : hd); };
+  if (hair === 1) { top(5, 7, 10, 22); top(7, 9, 9, 23); rect(9, 9, 1, 3, hc); rect(22, 9, 1, 3, hd); }
+  if (hair === 2) { top(5, 9, 9, 23); for (let x = 9; x < 23; x += 2) { set(x, 4, hc); set(x + 1, 3, hd); } rect(8, 8, 1, 4, hc); rect(23, 8, 1, 4, hd); }
+  if (hair === 3) { top(4, 9, 9, 23); top(9, 11, 8, 10); top(9, 11, 22, 24); rect(11, 6, 8, 1, faceShade(hc, .35)); }
+  if (hair === 4) { top(1, 9, 14, 18); for (let y = 7; y < 11; y++) set(9, y, faceShade(sk, -.15)); }
+  if (hair >= 5 && hair <= 7) { top(4, 9, 9, 23); top(8, 12, 8, 11); top(8, 12, 21, 24); if (hair !== 6) { top(12, hair === 7 ? 20 : 25, 7, 9); top(12, hair === 7 ? 20 : 25, 23, 25); } rect(12, 5, 6, 1, faceShade(hc, .35)); if (hair === 6) { top(4, 7, 22, 26); top(7, 14, 24, 27); } }
+  if (hair === 8) for (let y = 4; y < 10; y++) for (let x = 8; x < 24; x++) if ((x - 16) ** 2 / 70 + (y - 9) ** 2 / 25 < 1) set(x, y, (x + y) % 3 ? hc : hd);
+  if (!mask && !H) { rect(12, 7, 2, 1, faceShade(sk, .35)); set(11, 8, faceShade(sk, .35)); }
+  // extras
+  if (X === 1) rect(9, 10, 14, 2, pc);
+  if (X === 2) { rect(10, 13, 5, 3, '#111'); rect(17, 13, 5, 3, '#111'); rect(15, 14, 2, 1, '#111'); set(11, 13, '#6ab0ff'); set(18, 13, '#6ab0ff'); }
+  if (X === 3) set(8, 16, '#f2c94c');
+  // dark outline, then the ropes behind
+  const out = g.map(r => r.slice());
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!g[y][x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => g[y + b]?.[x + a])) out[y][x] = '#0b0b0f';
+  const bg = align === 'heel' ? '#4a0d14' : '#0d2a5c', bl = faceShade(bg, .25);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}`;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N;) { const c = out[y][x]; if (!c) { x++; continue; } let e = x; while (e < N && out[y][e] === c) e++; s += `<rect x="${x}" y="${y}" width="${e - x}" height="1" fill="${c}"/>`; x = e; }
+  return s + '</svg>';
+}
+const FACE_CACHE = new Map();
+// tight: a closer crop for small round avatars, so the face fills the circle
+function faceURL(w, tight) {
+  const k = faceCode(w) + (w.align === 'heel' ? 'h' : 'f') + (isWomen(w) ? 'w' : 'm') + (tight ? 't' : '') + (safeColor(w.color) || '');
+  let u = FACE_CACHE.get(k);
+  if (!u) { if (FACE_CACHE.size > 1500) FACE_CACHE.clear(); u = 'data:image/svg+xml,' + encodeURIComponent(faceSVG(faceCode(w), w.align, w.color, isWomen(w), tight)); FACE_CACHE.set(k, u); }
+  return u;
+}
+const facesOn = () => meta.faces !== 'initials';
 function av(w, size, lazy) {
   const s = size || 38;
   const ph = safePhoto(w.photo);
   const ac = w.align === 'face' || w.align === 'heel' ? ' av-' + w.align : '';
   // small PNG photos are pixel art, so keep their pixels crisp
   if (ph) return `<img class="av${ac}${isPixPng(ph) ? ' px' : ''}" alt="" src="${esc(lazy ? photoURL(ph) : ph)}"${lazy ? ' loading="lazy" decoding="async"' : ''} style="width:${s}px;height:${s}px;object-fit:cover">`;
+  if (facesOn() && w.name) return `<img class="av${ac} px" alt="" src="${faceURL(w, s < 60)}" style="width:${s}px;height:${s}px">`;
   return `<div class="av${ac}" style="width:${s}px;height:${s}px;font-size:${Math.round(s * .37)}px;background:${safeColor(w.color) || `hsl(${hue(w.name || '?')} 45% 32%)`}${safeColor(w.color) ? ';color:' + inkOn(safeColor(w.color)) : ''}">${esc(initials(w.name || '?'))}</div>`;
 }
 function wTags(w) {
@@ -6875,6 +6991,7 @@ const displaySettings = () => `
     <label class="f"><span>Music volume</span><input type="range" min="0" max="100" step="5" data-in="musicVol" value="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}" aria-valuetext="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}%" ${meta.sound === false || meta.music === false ? 'disabled' : ''}></label>
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
+    <label class="f"><span>Wrestlers without a photo</span><select data-in="faces"><option value="pixel">Pixel faces</option><option value="initials" ${meta.faces === 'initials' ? 'selected' : ''}>Initials</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
     ${sbOn() ? `<div class="small muted" style="margin:14px 0 8px">Privacy</div>
     <label class="todo"><input type="checkbox" data-in="statsOn" ${meta.stats === true || (meta.stats !== false && !navigator.globalPrivacyControl) ? 'checked' : ''}><span>Share anonymous play stats (how many play, shows run, screens used). No name, email or account. <button class="link" data-act="privacy">Details</button></span></label>` : ''}
@@ -8203,6 +8320,7 @@ const A = {
     d.short = String(d.short || '').replace(/[<>&"'`]/g, '').trim().slice(0, 20); if (!d.short) delete d.short;
     d.age = clamp(+d.age || 25, 16, 70); d.injury = clamp(+d.injury || 0, 0, 52); d.morale = clamp(+d.morale || 60, 0, 100);
     d.name = d.name.trim().slice(0, 40); d.photo = safePhoto(d.photo); d.color = safeColor(d.color);
+    if (!d.photo && !faceOK(d.look)) d.look = faceCode(d); // keep the face they saw, even once a new wrestler gets an id
     if (SANDBOX() && +d.askSet > 0) d.askSet = clamp(Math.round(+d.askSet / 100) * 100, 100, 10000000); else if (SANDBOX() || !(+d.askSet > 0)) delete d.askSet;
     const cSal = SANDBOX() && d.cSal !== '' && d.cSal != null && isFinite(+d.cSal) ? clamp(Math.round(+d.cSal / 100) * 100, 0, 10000000) : null, cWks = SANDBOX() && d.cWks !== '' && d.cWks != null && isFinite(+d.cWks) ? clamp(Math.round(+d.cWks), 1, 520) : null;
     delete d.cSal; delete d.cWks;
@@ -8512,7 +8630,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 // true when a canvas has see-through pixels (a PNG with its background already cut out)
@@ -8558,6 +8676,7 @@ function cleanW(o) {
   const sh = str(o.short, 20).replace(/[<>&"'`]/g, ''); if (sh) w.short = sh;
   const age = num(o.age, 16, 70); if (age !== undefined) w.age = age;
   const rl = roleFromText(o.role); if (rl && rl !== 'wrestler') w.role = rl;
+  if (faceOK(o.look)) w.look = o.look;
   return w;
 }
 // "Manager", "GM", "commentary", "on hiatus"... from a spreadsheet or pasted list
@@ -8688,82 +8807,6 @@ function pickPhoto(cb) {
 
 // ---- generic placeholder wrestlers: a random pixel character drawn on this device ----
 // Not anyone in particular: skin, hair, facial hair, masks, paint and gear are mixed at random.
-function placeholderPic(seed, color, women) {
-  let h = 2166136261; for (const ch of String(seed)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
-  const rnd = () => { h += 0x6D2B79F5; let t = h; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  const pick = a => a[Math.floor(rnd() * a.length)], hex = c => [0, 2, 4].map(i => parseInt(c.slice(1 + i, 3 + i), 16));
-  const N = 32, P = new Array(N * N).fill(null), set = (x, y, c) => { if (x >= 0 && y >= 0 && x < N && y < N) P[y * N + x] = c; }, get = (x, y) => x >= 0 && y >= 0 && x < N && y < N ? P[y * N + x] : null;
-  const mul = (c, f) => c.map(v => Math.max(0, Math.min(255, Math.round(v * f))));
-  const gear = hex(safeColor(color) || pick(['#c8102e', '#1f6feb', '#16a34a', '#7c3aed', '#0891b2', '#db2777', '#ea580c', '#0d9488']));
-  const skin = hex(pick(['#f3cfb3', '#e8b892', '#d29b72', '#b97a4f', '#8d5a3b', '#6b4029', '#4a2c1d']));
-  const hair = hex(pick(['#141414', '#141414', '#2b1d14', '#4a2f1b', '#7a4b26', '#c9a14a', '#e3c77a', '#a23b1d', '#9ca3af', '#e5e7eb', pick(['#ec4899', '#3b82f6', '#22c55e', '#a855f7'])]));
-  const dark = [22, 18, 26], white = [240, 240, 240];
-  const style = women ? pick(['long', 'long', 'long', 'pony', 'bun', 'short', 'side']) : pick(['bald', 'buzz', 'short', 'short', 'long', 'mohawk', 'spiky', 'pony', 'side']);
-  const fhair = women ? 'none' : pick(['none', 'none', 'beard', 'beard', 'goatee', 'stache', 'stubble']);
-  const extra = rnd() < .12 ? 'mask' : rnd() < .1 ? 'paint' : rnd() < .1 ? 'shades' : 'none';
-  const top = women ? pick(['top', 'top', 'jacket', 'straps']) : pick(['bare', 'bare', 'straps', 'tank', 'jacket']);
-  const W = women ? 8 : 11; // shoulder half-width
-  // head
-  const hw = { 6: 3, 7: 4, 8: 5, 9: 5, 10: 5, 11: 5, 12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 4, 18: 3, 19: 2 };
-  // long hair goes behind everything
-  if (style === 'long' || style === 'side') for (let y = 8; y <= (women ? 25 : 22); y++) for (let x = 10; x <= 21; x++) set(x, y, mul(hair, .8));
-  // body
-  for (let y = 22; y < N; y++) { const w = y === 22 ? W - 3 : y === 23 ? W - 1 : W; for (let x = 16 - w; x < 16 + w; x++) set(x, y, x >= 16 + w - 3 ? mul(skin, .85) : skin); }
-  for (let y = 19; y <= 22; y++) for (let x = 14; x <= 17; x++) set(x, y, mul(skin, .82));
-  if (!women && top === 'bare') { for (let x = 12; x <= 19; x++) if (x !== 15 && x !== 16) set(x, 27, mul(skin, .8)); set(15, 28, mul(skin, .8)); set(16, 28, mul(skin, .8)); }
-  const torso = (y, w, x) => x >= 16 - w + 3 && x < 16 + w - 3;
-  for (let y = 23; y < N; y++) { const w = y === 23 ? W - 1 : W; for (let x = 0; x < N; x++) {
-    if (!get(x, y)) continue;
-    if (top === 'tank' && torso(y, w, x)) set(x, y, x > 17 ? mul(gear, .82) : gear);
-    if (top === 'top' && torso(y, w, x) && y >= 24 && y <= 28) set(x, y, x > 17 ? mul(gear, .82) : gear);
-    if (top === 'straps' && (x === 16 - w + 4 || x === 16 + w - 5 || (y >= 29 && torso(y, w, x)))) set(x, y, gear);
-    if (top === 'jacket' && (x <= 13 || x >= 18)) set(x, y, (x === 13 || x === 18) ? mul(gear, 1.25) : x > 18 ? mul(gear, .8) : gear);
-  } }
-  if (women && top === 'jacket') for (let y = 24; y <= 27; y++) for (let x = 14; x <= 17; x++) set(x, y, dark);
-  // face
-  for (let y = 6; y <= 19; y++) for (let x = 16 - hw[y]; x < 16 + hw[y]; x++) set(x, y, x >= 16 + hw[y] - 2 ? mul(skin, .86) : skin);
-  set(10, 12, mul(skin, .85)); set(10, 13, mul(skin, .85)); set(21, 12, mul(skin, .75)); set(21, 13, mul(skin, .75)); // ears
-  // hair on top
-  const hairTop = (y0) => { for (let y = y0; y <= 9; y++) for (let x = 16 - (hw[Math.max(6, y)] || 3) - (y >= 8 ? 1 : 0); x < 16 + (hw[Math.max(6, y)] || 3) + (y >= 8 ? 1 : 0); x++) set(x, y, x > 18 ? mul(hair, .8) : hair); };
-  if (style === 'buzz') for (let y = 6; y <= 8; y++) for (let x = 16 - hw[y]; x < 16 + hw[y]; x++) set(x, y, mul(hair, .85));
-  if (['short', 'long', 'pony', 'bun', 'spiky', 'side'].includes(style)) { hairTop(5); for (let y = 10; y <= 11; y++) { set(10, y, hair); set(21, y, mul(hair, .8)); } }
-  if (style === 'long' || style === 'side') for (let y = 10; y <= (women ? 21 : 18); y++) { set(10, y, hair); set(9, y, mul(hair, .85)); set(21, y, mul(hair, .8)); set(22, y, mul(hair, .7)); }
-  if (style === 'side') for (let x = 11; x <= 15; x++) set(x, 9, hair), set(x - 1, 10, hair);
-  if (style === 'mohawk') for (let y = 2; y <= 8; y++) { set(15, y, hair); set(16, y, mul(hair, .85)); }
-  if (style === 'spiky') for (let x = 11; x <= 20; x += 2) { set(x, 4, hair); set(x, 3, hair); }
-  if (style === 'bun') for (let y = 2; y <= 4; y++) for (let x = 14; x <= 17; x++) set(x, y, y === 2 && (x === 14 || x === 17) ? null : hair);
-  if (style === 'pony') for (let y = 8; y <= 17; y++) set(22, y, mul(hair, .8)), set(23, y + 1, mul(hair, .7));
-  // features
-  const brow = mul(hair, .7);
-  if (extra === 'mask') {
-    for (let y = 5; y <= 15; y++) for (let x = 16 - (hw[Math.max(6, y)] || 4) - (y >= 8 && y <= 13 ? 1 : 0); x < 16 + (hw[Math.max(6, y)] || 4) + (y >= 8 && y <= 13 ? 1 : 0); x++) set(x, y, x > 18 ? mul(gear, .8) : gear);
-    for (const ex of [12, 17]) { for (let x = ex; x <= ex + 2; x++) { set(x, 11, white); set(x, 13, white); } set(ex, 12, white); set(ex + 2, 12, white); set(ex + 1, 12, dark); }
-    for (let x = 14; x <= 17; x++) set(x, 7, white);
-  } else {
-    if (style !== 'bald' || rnd() < .7) { set(12, 11, brow); set(13, 11, brow); set(18, 11, brow); set(19, 11, brow); }
-    set(13, 12, dark); set(18, 12, dark); set(12, 12, white); set(19, 12, white);
-    if (extra === 'shades') for (let x = 12; x <= 19; x++) set(x, 12, x === 15 || x === 16 ? [60, 60, 70] : dark), set(x, 13, x === 15 || x === 16 ? get(x, 13) : dark);
-    if (extra === 'paint') { const pc = rnd() < .5 ? white : gear; for (let y = 13; y <= 15; y++) { set(13, y, pc); set(18, y, pc); } set(12, 10, pc); set(19, 10, pc); }
-  }
-  set(15, 14, mul(skin, .8)); set(16, 14, mul(skin, .72));
-  const mouth = women ? [170, 70, 80] : mul(skin, .6); set(15, 16, mouth); set(16, 16, mouth);
-  if (extra !== 'mask') {
-    if (fhair === 'beard') for (let y = 15; y <= 19; y++) for (let x = 16 - hw[y]; x < 16 + hw[y]; x++) if (!(y === 16 && (x === 15 || x === 16)) && !(y === 15 && x > 12 && x < 19)) set(x, y, x > 18 ? mul(hair, .8) : hair);
-    if (fhair === 'beard' || fhair === 'stache') for (let x = 14; x <= 17; x++) set(x, 15, hair);
-    if (fhair === 'goatee') for (let y = 17; y <= 19; y++) for (let x = 15; x <= 16; x++) set(x, y, hair);
-    if (fhair === 'stubble') for (let y = 16; y <= 19; y++) for (let x = 16 - hw[y]; x < 16 + hw[y]; x++) if ((x + y) % 2 && !(y === 16 && (x === 15 || x === 16))) set(x, y, mul(skin, .7));
-  }
-  // outline, then background spotlight in their color
-  const out = P.slice();
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (P[y * N + x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const X = x + dx, Y = y + dy; return X >= 0 && Y >= 0 && X < N && Y < N && !P[Y * N + X]; })) out[y * N + x] = dark;
-  const c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), id = x.createImageData(N, N);
-  for (let i = 0; i < N * N; i++) {
-    let px = out[i];
-    if (!px) { const xx = (i % N + .5) / N - .5, yy = (Math.floor(i / N) + .5) / N - .3, d = Math.hypot(xx, yy); px = mul(gear, d < .32 ? .62 : d < .5 ? .44 : .3); if (d >= .5 && (i % N + Math.floor(i / N)) % 6 === 0) px = mul(gear, .38); }
-    id.data.set([px[0], px[1], px[2], 255], i * 4);
-  }
-  x.putImageData(id, 0, 0); return c.toDataURL('image/png');
-}
 
 // ---- photo to pixel character ----
 // Turns the photo into pixel art and cuts the background around the
@@ -8904,6 +8947,23 @@ function photoBatch(m) {
     </div>`;
 }
 
+// the face maker in the wrestler editor: changes one place of the look code at a time
+function faceMaker(d) {
+  const c = faceCode(d), at = i => +c[i];
+  const chips = (i, list, skip) => `<div class="filters">${list.map((l, j) => skip && skip(j) ? '' : `<button class="${at(i) === j ? 'on' : ''}" data-act="bFace" data-f="${i}" data-id="${j}">${l}</button>`).join('')}</div>`;
+  const sws = (i, cols, from, label) => `<div class="swatches">${cols.map((col, j) => j < from ? '' : `<button class="sw ${at(i) === j ? 'on' : ''}${col ? '' : ' mine'}" style="background:${col || safeColor(d.color) || '#c8102e'}" data-act="bFace" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : 'their colour'}"></button>`).join('')}</div>`;
+  const row = (l, h) => `<div class="fm-row"><span>${l}</span>${h}</div>`;
+  const mask = at(4) === 5, women = isWomen(d);
+  return `<details class="fm" ${UI.fmOpen ? 'open' : ''}><summary data-act="fmTog">${av(d, 40)}<span>Pixel face<span class="tiny muted" style="display:block;font-weight:500">Shown when there's no photo</span></span></summary>
+    <div class="fm-row"><button class="btn" data-act="bFaceRand">🎲 Random face</button></div>
+    ${row('Skin', `<div class="swatches">${FACE.skin.map(([a], j) => `<button class="sw ${at(0) === j ? 'on' : ''}" style="background:${a}" data-act="bFace" data-f="0" data-id="${j}" aria-label="Skin tone ${j + 1}"></button>`).join('')}</div>`)}
+    ${row('Face', chips(4, FACE.face))}
+    ${mask ? row('Mask colour', sws(8, FACE.col, 1, 'Mask')) + row('Mask trim', sws(9, FACE.col, 1, 'Trim')) : row('Hair', chips(1, FACE.hair)) + row('Hair colour', sws(2, FACE.hairC, 0, 'Hair')) + (women && !at(3) ? '' : row('Beard', chips(3, FACE.beard)))}
+    ${row('Gear', chips(5, FACE.gear))}
+    ${row('Gear and paint colour', sws(6, FACE.col, 0, 'Gear'))}
+    ${row('Extra', chips(7, FACE.extra))}
+  </details>`;
+}
 // ---- the builder screen ----
 function modalBuilder(m) {
   const d = m.draft;
@@ -8921,8 +8981,9 @@ function modalBuilder(m) {
        <div class="bld-ovr">Overall <b id="ew-ovr">${overall(d)}</b></div>
      </div>
    </div>
-   <div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPlace">🎲 ${d.photo && d.photoGen ? 'Another placeholder' : 'Use a placeholder'}</button>${d.photo ? ' · <button class="link" data-act="bPhotoDel">Remove photo</button>' : ''}</div>${d.photoLocal ? '<div class="tiny muted" style="text-align:center;margin:-2px 0 8px">🔒 Private photo. It stays on this device and is never shared.</div>' : ''}
+   ${d.photo ? `<div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPhotoDel">Remove photo${facesOn() ? ' and use a pixel face' : ''}</button></div>` : ''}${d.photoLocal ? '<div class="tiny muted" style="text-align:center;margin:-2px 0 8px">🔒 Private photo. It stays on this device and is never shared.</div>' : ''}
    ${pxPanel(d)}
+   ${!d.photo && facesOn() ? faceMaker(d) : ''}
    <div class="swatches">${SWATCHES.map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bColor" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div>
 
    <div class="sec">Character</div>
@@ -8976,10 +9037,9 @@ function modalRoster(m) {
       <button class="btn pri block" data-act="rtPhotos" ${m.busy ? 'disabled' : ''}>${m.busy ? 'Working… ' + esc(m.busy) : '📷 Choose photos'}</button>
       ${r ? `<div class="card" style="margin-top:10px;padding:10px 12px"><div class="small"><b>${r.ok.length} added</b>${r.miss.length ? ` · ${r.miss.length} not matched` : ''}</div>${r.miss.length ? `<div class="tiny muted" style="margin-top:4px">No wrestler named: ${r.miss.slice(0, 20).map(esc).join(', ')}${r.miss.length > 20 ? '…' : ''}</div>` : ''}</div>` : ''}
       ${n ? `<button class="btn bad block" style="margin-top:10px" data-act="rtPhotosOff">Remove all ${n} private photos</button>` : ''}
-      <div class="sec">Placeholders</div>
-      <p class="tiny muted" style="margin-top:0">Generic pixel wrestlers, made up at random. Not anyone real. They can be shared like any other picture.</p>
-      <div class="grid2"><button class="btn" data-act="rtPlace" data-id="empty" ${G.wrestlers.some(w => !w.photo) ? '' : 'disabled'}>🎲 ${G.wrestlers.some(w => !w.photo) ? 'Fill the ' + G.wrestlers.filter(w => !w.photo).length + ' without a photo' : 'Everyone has a picture'}</button><button class="btn" data-act="rtPlace" data-id="redo" ${G.wrestlers.some(w => w.photoGen) ? '' : 'disabled'}>🔄 Reroll placeholders</button></div>
-      ${G.wrestlers.some(w => w.photoGen) ? '<button class="link" style="margin-top:8px" data-act="rtPlaceOff">Remove placeholders</button>' : ''}`;
+      <div class="sec">Pixel faces</div>
+      <p class="tiny muted" style="margin-top:0">Everyone without a photo gets a pixel face. Change anyone's face in their editor, or reroll them all here.${facesOn() ? '' : ' Pixel faces are off in Settings, so initials show instead.'}</p>
+      <button class="btn block" data-act="rtPlace" data-id="empty" ${G.wrestlers.some(w => !w.photo) ? '' : 'disabled'}>🎲 ${G.wrestlers.some(w => !w.photo) ? 'New faces for the ' + G.wrestlers.filter(w => !w.photo).length + ' without a photo' : 'Everyone has a photo'}</button>`;
   } else if (t === 'export') {
     const code = packCode(makePack(signed(), { titles: true, title: G.promo.name + ' roster' }));
     body += `<p class="small muted" style="margin-top:0">A share code for your whole signed roster (${signed().length} wrestlers) and your championships. Send it to a friend or keep it as a backup. They paste it into Import.</p>
@@ -9638,6 +9698,7 @@ function sanitizeGame(g) {
   for (const w of g.wrestlers) {
     w.id = String(w.id || uid()); w.name = String(w.name || 'Unknown').slice(0, 40); w.nick = String(w.nick || '').slice(0, 40);
     w.photo = safePhoto(w.photo); w.color = safeColor(w.color); w.align = w.align === 'heel' ? 'heel' : 'face';
+    if (w.look != null && !faceOK(w.look)) delete w.look;
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
     if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520) };
@@ -10085,8 +10146,7 @@ const CREATOR_ACTIONS = {
     }
     m.busy = null; m.res = res; commit(res.ok.length ? `Added ${res.ok.length} private photo${res.ok.length > 1 ? 's' : ''}.` : 'No photos were added.');
   },
-  rtPlace(k) { let n = 0; for (const w of G.wrestlers) if (k === 'redo' ? w.photoGen : !w.photo) { w.photo = placeholderPic(w.id + ':' + Math.random(), w.color, w.division === "Women's"); w.photoGen = true; n++; } commit(n ? `${k === 'redo' ? 'Rerolled' : 'Added'} ${n} placeholder${n > 1 ? 's' : ''}.` : 'Everyone already has a picture.'); },
-  rtPlaceOff() { for (const w of G.wrestlers) if (w.photoGen) { w.photo = ''; delete w.photoGen; } commit('Placeholders removed.'); },
+  rtPlace() { const ws = G.wrestlers.filter(w => !w.photo); if (!ws.length) return; confirmBox('New faces for everyone?', `The ${ws.length} wrestlers without a photo get a new random pixel face. Faces you made in the editor are replaced too.`, 'New faces', () => { for (const w of ws) w.look = faceRandom(Math.random(), isWomen(w)); UI.modal = { type: 'rtools', tab: 'photos' }; commit(`${ws.length} new face${ws.length > 1 ? 's' : ''}.`); }); },
   rtPhotosOff() { confirmBox('Remove private photos?', 'Wrestlers with a private photo go back to their initials. Other photos stay.', 'Remove', () => { for (const w of G.wrestlers) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; } UI.modal = { type: 'rtools', tab: 'photos' }; commit('Removed.'); }, true); },
   rtParse() { const m = UI.modal; m.text = document.getElementById('rtIn').value; const r = parseImport(m.text); m.parsed = r.pack || null; m.error = r.error || ''; render(); rtTop(); },
   rtBack() { const m = UI.modal; if (m.fromLib) return A.library(); m.parsed = null; m.error = ''; render(); rtTop(); },
@@ -10122,7 +10182,9 @@ const CREATOR_ACTIONS = {
     });
   },
   bPhotoDel() { UI.modal.draft.photo = ''; delete UI.modal.draft.photoLocal; delete UI.modal.draft.photoGen; PX = null; render(); },
-  bPlace() { const d = UI.modal.draft; d.photo = placeholderPic((d.id || d.name || 'x') + ':' + Math.random(), d.color, d.division === "Women's"); d.photoGen = true; delete d.photoLocal; PX = null; render(); },
+  bFace(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < 10) || !(n >= 0 && n < FACE_MAX[i])) return; const c = [...faceCode(d)]; c[i] = String(n); if (i === 4 && n === 5) c[7] = c[7] === '2' ? '2' : '0'; d.look = c.join(''); UI.fmOpen = true; render(); },
+  bFaceRand() { const d = UI.modal.draft; d.look = faceRandom(Math.random(), isWomen(d)); UI.fmOpen = true; render(); },
+  fmTog(v, el) { UI.fmOpen = !el.parentElement.open; },
   bPx(v, el) { pxSet(PX, el.dataset.f, v); applyPX(); render(); },
   bColor(c) { UI.modal.draft.color = c; if (PX?.bg === 'color') applyPX(); render(); },
   bSet(v, el) { UI.modal.draft[el.dataset.f] = v; render(); },
@@ -11833,6 +11895,7 @@ document.addEventListener('change', e => {
       if (el.checked) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40);
       commit();
     }
+    else if (k === 'faces') { meta.faces = el.value === 'initials' ? 'initials' : 'pixel'; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'theme') { meta.theme = ['light', 'auto'].includes(el.value) ? el.value : 'dark'; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'motion') { meta.motion = ['reduce', 'full'].includes(el.value) ? el.value : ''; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'statsMine') { meta.statsOwner = !el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) PLAYLOG.start(); toast(el.checked ? 'Your play on this device now counts.' : 'Your play on this device is no longer counted.'); }
@@ -12025,8 +12088,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.41';
+const VERSION = '1.9.42';
 const WHATS_NEW = [
+  ['🎨 Pixel faces', 'Every wrestler without a photo now has a pixel headshot instead of initials, with masks, face paint, beards and ring gear. Make anyone\'s face in their editor under Pixel face, or reroll everyone in Roster tools. Prefer initials? Switch in Settings.'],
   ['🎤 Promos and angles stand out', 'No more VS on talking segments. Matches, promos and angles each get their own coloured tag. Promos show as a speech bubble with the wrestler\'s line, and angles look like backstage camera footage. New options: write their line yourself, pick where it happens (ring, backstage, big screen, crowd, parking lot), how long it runs and how it ends (brawl, walk-off, or someone interrupts). New types: Open Challenge, Sit-down Debate, Brawl, Hype Video and Celebration.'],
   ['🎲 Twice the surprises', 'There are now twice as many backstage events (46) and surprise moments on the live show (18), and every one of them can be told three different ways, so the same event rarely reads the same twice. New ones include fan conventions, charity visits, stolen gear, pay leaks, travel trouble, crossover fights, a heated press event, the save, a stolen belt, an off-script mic and a replay that shows the ref got it wrong. Your assistant, your producer, your wrestlers and The Dirt Sheet have twice as many things to say, too.'],
   ['📸 Bigger Community', 'Share rosters of up to 2,000 wrestlers. A big roster\'s photos now spread over several photo slots (5 free, 10 for Supporters), your Community space is bigger, shared worlds can be much bigger, and your wrestler library holds 2,000. New photos take less room on Android and Chrome.'],
