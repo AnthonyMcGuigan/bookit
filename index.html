@@ -9743,6 +9743,7 @@ function shareableSave(g, keepNotes) {
 // A shared save is someone's game in progress. A world is the setting only: every company in it becomes an AI promotion,
 // the calendar starts at week 1, and the new player either opens their own company or takes one over.
 const WORLD_V = 1;
+const CO_ROSTER_MAX = 400; // the most wrestlers one company can bring through a shared world or a save
 function worldW(w) {
   const x = JSON.parse(JSON.stringify(w));
   for (const k of ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', 'both', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem']) delete x[k];
@@ -9809,7 +9810,7 @@ function cleanWorld(raw) {
   const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156); return w; };
   const cos = out.map(r => {
     r.name = String(r.name).slice(0, 40); r.short = String(r.short).slice(0, 5); r.show = String(r.show).slice(0, 40); r.color = safeColor(r.color) || pick(RIV_COLORS);
-    r.roster = r.roster.slice(0, 60).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
+    r.roster = r.roster.slice(0, CO_ROSTER_MAX).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
     const onR = new Set(r.roster.map(w => w.id)), gName = v => maskRude(String(v || '').slice(0, 40).trim());
     r.teams = (Array.isArray(r.teams) ? r.teams : []).slice(0, 40).map(t => { const ms = [...new Set((Array.isArray(t?.members) ? t.members : []).filter(id => onR.has(id)))], k = t?.kind === 'trios' ? 3 : 2; return ms.length === k && gName(t.name) ? { id: SAFE_ID.test(t.id) ? t.id : uid(), name: gName(t.name), ...(k === 3 ? { kind: 'trios' } : {}), members: ms } : null; }).filter(Boolean);
     r.facs = (Array.isArray(r.facs) ? r.facs : []).slice(0, 20).map(f => { const ms = [...new Set((Array.isArray(f?.members) ? f.members : []).filter(id => onR.has(id)))].slice(0, 8); return ms.length >= 2 && gName(f.name) ? { id: SAFE_ID.test(f.id) ? f.id : uid(), name: gName(f.name), members: ms, leader: ms.includes(f.leader) ? f.leader : null } : null; }).filter(Boolean);
@@ -10444,12 +10445,12 @@ function scrubGame(raw) {
   };
   fixCo(g);
   g.cos = (Array.isArray(g.cos) ? g.cos : []).filter(c => c && typeof c === 'object' && !Array.isArray(c) && c.promo && typeof c.promo === 'object').slice(0, MAX_COS - 1)
-    .map(c => { fixCo(c); c.roster = (Array.isArray(c.roster) ? c.roster : []).filter(w => w && w.id && w.name).slice(0, 200); c.coId ||= uid(); return c; });
+    .map(c => { fixCo(c); c.roster = (Array.isArray(c.roster) ? c.roster : []).filter(w => w && w.id && w.name).slice(0, CO_ROSTER_MAX); c.coId ||= uid(); return c; });
   if (!g.cos.length) delete g.cos; else g.coId ||= uid();
   for (const k of ['news', 'todos', 'bigEvents', 'rivals']) if (!Array.isArray(g[k])) delete g[k];
   if (g.dirt !== undefined) { const D = g.dirt; if (!D || typeof D !== 'object' || !Array.isArray(D.list)) delete g.dirt; else { D.list = D.list.filter(x => x && typeof x === 'object' && !Array.isArray(x) && +x.no > 0).slice(0, DIRT_KEEP); D.n = Math.max(+D.n || 0, ...D.list.map(x => +x.no)); D.seen = +D.seen || 0; } }
   if (g.rivalPromos !== undefined) g.rivalPromos = (Array.isArray(g.rivalPromos) ? g.rivalPromos : []).filter(r => r && r.id).slice(0, 12).map(r => ({ ...r, name: r.name || 'Rival', short: r.short || 'RIV', show: r.show || 'Weekly Show', hist: Array.isArray(r.hist) ? r.hist.slice(-12) : [],
-    roster: (Array.isArray(r.roster) ? r.roster : []).filter(w => w && w.id && w.name).slice(0, 150).map(w => ({ ...w, contract: null, align: w.align === 'heel' ? 'heel' : 'face', style: STYLES.includes(w.style) ? w.style : 'Brawler', pop: clamp(+w.pop || 30, 0, 100), ring: clamp(+w.ring || 40, 0, 100), mic: clamp(+w.mic || 40, 0, 100), cha: clamp(+w.cha || 40, 0, 100), stam: clamp(+w.stam || 50, 0, 100) })) }));
+    roster: (Array.isArray(r.roster) ? r.roster : []).filter(w => w && w.id && w.name).slice(0, CO_ROSTER_MAX).map(w => ({ ...w, contract: null, align: w.align === 'heel' ? 'heel' : 'face', style: STYLES.includes(w.style) ? w.style : 'Brawler', pop: clamp(+w.pop || 30, 0, 100), ring: clamp(+w.ring || 40, 0, 100), mic: clamp(+w.mic || 40, 0, 100), cha: clamp(+w.cha || 40, 0, 100), stam: clamp(+w.stam || 50, 0, 100) })) }));
   if (!g.settings || typeof g.settings !== 'object' || Array.isArray(g.settings)) g.settings = {};
   for (const k of ['injuries', 'finances', 'contracts', 'organic', 'aging']) if (k in g.settings) g.settings[k] = g.settings[k] !== false;
   return g;
@@ -12910,8 +12911,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.48';
+const VERSION = '1.9.49';
 const WHATS_NEW = [
+  ['🌍 Full rosters in shared worlds', 'Taking over a company in a shared world now brings its whole roster. Worlds used to cut each company down to its first 60 wrestlers. A company can now carry up to 400.'],
   ['👀 Face maker previews', 'In the Pixel face maker, every hair, face, beard, gear and extra choice now shows your wrestler wearing it, and the preview at the top is bigger and stays in view while you scroll.'],
   ['🗂 Draft war room', 'Brand drafts feel like the real thing. Each brand shows what it needs (star power, champions, tag teams, faces and heels) and gets a letter grade. Every pick gets a reveal with a commentary line and a crowd reaction, and you can trade wrestlers between brands during the draft or any time from Office → Brands.'],
   ['📖 Story Mode', 'The BookIt Universe: six original companies and 172 wrestlers in one world. Take over any company from the start screen. The owner sets you three goals every season, and written story moments happen as the weeks go by: talent raids, a legend\'s farewell tour, an invasion from the bayou and more.'],
