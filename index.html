@@ -368,6 +368,14 @@ button.mrow:active { background: var(--card2); }
 .bld-ovr { margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
 .bld-ovr b { font-size: 22px; color: var(--accent-t); margin-left: 4px; font-variant-numeric: tabular-nums; }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.su-hero { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin: 14px 0 4px; padding: 14px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line)); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--card)), var(--card)); color: var(--ink); }
+.su-hero b { display: block; font-size: 18px; } .su-hero-ic { font-size: 28px; }
+.su-cos { display: grid; gap: 10px; margin-top: 12px; }
+.su-co { display: grid; gap: 6px; text-align: left; padding: 12px 14px 12px 16px; border-radius: 12px; border: 1px solid var(--line); border-left: 5px solid var(--co); background: var(--card); color: var(--ink); }
+.su-co-top { display: flex; align-items: center; gap: 8px; justify-content: space-between; } .su-co-top b { font-size: 16px; }
+.su-card { margin: 10px 0; padding: 12px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); background: var(--card); }
+.su-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; } .su-k { font-weight: 800; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-t, var(--accent)); }
+.su-g { display: flex; gap: 8px; align-items: center; padding: 5px 0; font-size: 14px; } .su-g b { font-size: 13px; white-space: nowrap; } .su-g.done .sp { text-decoration: line-through; color: var(--dim); } .su-g.fail .sp { color: var(--dim); }
 .fm { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card); }
 .fm > summary { font-weight: 700; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 2; background: var(--card); padding: 2px 0; }
 .fm > summary::after { content: '▾'; margin-left: auto; color: var(--dim); }
@@ -2579,7 +2587,7 @@ function advanceWeek() {
   G.card = (G.future[G.week] || []).filter(s => { removeGone(s); return segPeople(s).length; });
   delete G.future[G.week];
   UI.selWeek = G.week; UI.calMonth = null;
-  rollEvent(); ensureGoals();
+  storyTick(); rollEvent(); ensureGoals();
 }
 function catchUpCo() {
   if (!G.curWk || G.curWk >= G.week) { G.curWk = G.week; return; }
@@ -5201,6 +5209,7 @@ Object.assign(EVENTS, {
 });
 function rollEvent() {
   G.event = null;
+  { const se = storyEvent(); if (se) return setEvent(se[0], se[1]); } // Story Mode's written events come first, when one is due
   if (G.week < 2 || Math.random() > .55) return;
   // business offers from company level unlocks come up more often than a random backstage moment
   for (const k of shuffle(['sponsor', 'special', 'viralSeg'])) if (Math.random() < .3) { const d = EVENTS[k].when(); if (d) return setEvent(k, d); }
@@ -6392,6 +6401,7 @@ function viewStart() {
   <p class="muted">Book the shows. Write the stories. Sign the talent.</p></div>
   ${top ? `<button class="hs-cont" data-act="loadSlot" data-id="${top.n}"><span class="hs-k">Continue</span><span class="hs-ct">${esc(top.info.name)}</span><span class="hs-cd">Week ${top.info.week} · saved ${new Date(top.info.savedAt).toLocaleDateString()}</span><span class="hs-arrow">›</span></button>
     ${rest.length ? `<div class="list" style="margin-top:8px">${rest.map(s => `<button class="item" data-act="loadSlot" data-id="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">${esc(s.info.name)}</div><div class="d">Week ${s.info.week} · saved ${new Date(s.info.savedAt).toLocaleDateString()}</div></div></button>`).join('')}</div>` : ''}` : ''}
+  <button class="su-hero" data-act="story"><span class="su-hero-ic">📖</span><span class="sp"><span class="hs-k">Story Mode</span><b>The BookIt Universe</b><span class="tiny muted">Six companies and ${SU_COS.reduce((n, c) => n + c.roster.split('\n').length, SU_FA.split('\n').length)} original wrestlers. Take one over and write what happens next.</span></span><span class="hs-arrow">›</span></button>
   <div class="hs-sec"><div><b>Jump into a universe</b><div class="tiny muted">Worlds from the community. Run your own company or take one over, starting the month before its big one.</div></div>${st === 'ready' && saves.length ? '<button class="link" data-act="homeComm">See all</button>' : ''}</div>
   ${shelf}
   <div class="hs-sec"><div><b>Or start your own</b></div></div>
@@ -6565,7 +6575,7 @@ function viewBookCard() {
   ${card.length || !isNow ? `<div class="runbar">${isNow
     ? `<button class="btn pri block" data-act="runShow">🔔 Run ${esc(showName(wk))} <span class="runproj">· ${starStr(proj)}</span></button>`
     : `<div class="small muted" style="text-align:center;padding:4px 0">Books ahead for week ${wk}. <button class="link" data-act="calToday">Back to tonight</button></div>`}</div>` : ''}
-  ${isNow ? `<div class="later">${tourneyCard()}${eventCard()}${roadCard()}${goalCard()}</div>` : ''}`;
+  ${isNow ? `<div class="later">${tourneyCard()}${eventCard()}${roadCard()}${storyCard()}${goalCard()}</div>` : ''}`;
 }
 function tourneyCard() {
   return (G.tourneys || []).filter(T => !T.done).map(T => {
@@ -6928,6 +6938,7 @@ function renderModal() {
     case 'rtools': return modalRoster(m);
     case 'community': return modalCommunity(m);
     case 'cview': return modalCView(m);
+    case 'story': return modalStory(m);
     case 'shareOne': return modal('Share ' + esc(m.pack.wrestlers[0].name), `<p class="small muted" style="margin-top:0">Send this code to a friend. They paste it into Roster tools → Import.</p><textarea id="oneCode" readonly style="min-height:110px;font-size:11px;font-family:ui-monospace,monospace">${esc(m.code)}</textarea><button class="btn block" style="margin-top:8px" data-act="copyEl" data-id="oneCode">📋 Copy code</button>${m.draftBack?.draft?.id && W(m.draftBack.draft.id) ? `<button class="btn block" style="margin-top:8px" data-act="shareOneComm">🌐 Share in Community</button>` : ''}`, `<button class="btn" data-act="shareBack">Back to builder</button>`);
     case 'negotiate': return modalNegotiate(m);
     case 'guest': return modalGuest(m);
@@ -9544,6 +9555,475 @@ function cleanWorld(raw) {
   if (!cos.length) throw 0;
   return { cos, fa: free.slice(0, 80).map(fixW), every: [3, 4, 5, 6, 8].includes(+raw.every) ? +raw.every : 4 };
 }
+// ---------- Story Mode: the BookIt Universe ----------
+// Six companies in one hand-made world. Every wrestler, belt and past champion is original.
+// A row: name | nickname | f/h | style (B T H P S) | M/W | ring mic cha pop stam age | hometown | finisher | look code (blank = from their id) | bio
+const SU_COS = [
+  { id: 'apex', name: 'Apex Pro Wrestling', short: 'APW', color: '#d4a017', show: 'Apex Uprising', day: 1, phil: 'vets', prestige: 82, fans: 900000, money: 9000000, ppvs: ['Ascension', 'Heatwave', 'Iron Summit', 'Final Ascent'], big: 'Final Ascent', diff: 'Hard',
+    pitch: 'The giant. National TV, the biggest stars and the biggest egos. The ratings are slipping, the owner\'s son wants the belt, and your hero is on his last run.',
+    titles: [['Apex World Championship', 'World', '', 0, 1, ['Jax Calloway'], ['Bruno Vale', 'Rex Montana', 'Jax Calloway', 'Cole Mercer']], ["Apex Women's Championship", "Women's", "Women's", 0, 1, ['Vera Lockhart'], ['Lana Price', 'Nadia Petrova', 'Brooke Harlan']], ['Apex National Championship', 'National', '', 1, 1, ['Andre Fontaine'], ['Rico Valdez', 'Shane Doyle']], ['Apex Tag Team Championship', 'Tag', '', 1, 2, ['Wade Pike', 'Luke Pike'], ['Kofi Mensah & Rico Valdez']]],
+    feuds: [['Jax Calloway', 'Dorian Kingsley', 'The Crown Prince Wants the Crown', 'World'], ['Vera Lockhart', 'Brooke Harlan', 'Golden Girl\'s Rematch', "Women's"], ['Kofi Mensah', 'Cole Mercer', 'The Franchise Problem']],
+    roster: `Jax Calloway|The Iron Saint|f|P|M|78 80 88 92 62 39|Pittsburgh|Saint's Hammer|1113012000|Eight-time Apex World Champion, and everyone says this is his last run.
+Dorian Kingsley|The Crown Prince|h|S|M|70 88 86 84 70 29|Greenwich|Royal Decree|0430036020|The owner's son. Talks like he already runs the place, because one day he will.
+Cole Mercer|The Franchise|h|T|M|88 72 76 82 80 31|Columbus|Mercer Lock|1230032000|Calloway's old protege, and tired of waiting for the torch.
+Vera Lockhart|The Viper|h|S|W|78 84 86 86 72 32|Las Vegas|Venom Kiss|2500033030|Apex Women's Champion. Treats every challenger like a nuisance.
+Kofi Mensah|The Thunder|f|P|M|80 70 82 80 70 30|Accra|Thunderclap|5002000000|Gentle off camera, a landslide between the ropes.
+Brooke Harlan|Golden Girl|f|H|W|80 70 80 78 82 26|San Diego|Sunset Splash|0640024000|Lost the title to Vera on a cheap shot and has not let it go.
+Rico Valdez|Smooth|f|S|M|72 80 84 70 70 33|Miami|Velvet Drop||Former tag champion. Still the best-dressed man in the building.
+Hoss Garrett|The Texas Tank|h|P|M|66 60 66 66 58 36|Amarillo|Hoss Bomb||Three hundred pounds of bad attitude and barbecue.
+Shane Doyle||f|T|M|78 58 62 60 76 28|Boston|Doyle Driver||Quiet, tough and always overlooked.
+Ivy Cross|The Thorn|h|B|W|74 70 72 68 76 28|Detroit|Thornbreaker||Picks fights in catering. Usually wins them.
+Wade Pike||h|B|M|74 62 66 66 78 30|Tulsa|Pike Drop||The older Pike brother. Does the talking.
+Luke Pike||h|P|M|74 50 60 64 76 28|Tulsa|Pike Drop||The younger Pike brother. Does the hitting.
+Andre Fontaine|The Gentleman|h|T|M|80 76 70 64 70 34|Montreal|Fontaine Clutch||National Champion. Shakes your hand, then breaks it.
+Mia Torres|La Chispa|f|H|W|76 64 74 66 80 24|San Antonio|Chispa Cutter||The spark of the women's division.
+Grant Bishop|The Bulldozer|f|P|M|70 54 60 58 64 30|Omaha|Bishop's Bomb||A gentle giant who loves his mother and suplexes.
+Tommy Rivers|The Kid|f|H|M|74 56 70 62 84 22|Tampa|River Rush||Signed at 19. Apex still treats him like the intern.
+Sloane Mercer|Ice|h|T|W|78 66 70 64 74 30|Columbus|Cold Front||Cole's sister, and colder than he is.
+Darius Knox|The Knockout|h|B|M|72 64 70 66 72 29|Newark|Knox Out||Former boxer. Wants everyone to know it.
+Gideon Frost|The Glacier|h|P|M|68 50 60 56 60 34|Duluth|Avalanche||Slow, huge and impossible to move.
+Jules Laurent|Le Magnifique|h|S|M|70 78 80 66 66 31|Paris|Grand Finale||Never lets the cameras forget he is French.
+Tara Quinn||f|T|W|72 58 62 54 74 25|Dublin|Quinn Lock||Trained in Ireland. Wrestles like it is still the 1980s.
+Ben Okafor|The Engine|f|B|M|70 60 66 58 82 27|Atlanta|Overdrive||Never stops coming forward.
+Reese Calder|The Prodigy|f|T|M|76 60 66 56 80 23|Denver|Calder Clutch||Apex's next big thing, if they ever let him be.
+Lana Price|Money|h|S|W|62 76 78 60 62 29|Los Angeles|Payday||Former champion who now mostly talks about money.
+Victor Crane|The Executive|h|S|M|50 86 78 62 50 45|New York|Hostile Takeover||Head of talent relations. Still laces up when it suits him.
+Duke Ramsey|Hardtack|f|B|M|68 62 66 58 66 37|Norfolk|Anchor Drop||Navy veteran and locker room leader.
+Nadia Petrova|The Siberian|h|P|W|72 54 64 58 70 31|Novosibirsk|Tundra Bomb||The strongest woman on the roster, and she knows it.
+Eli Vance|Hotshot|f|H|M|70 58 70 54 82 24|Phoenix|Sky High||All flips, no fear.
+Hector Ruiz|Torito|f|B|M|66 56 62 50 72 26|El Paso|Bull Rush||Little bull. Big heart.
+Kendra Blake|Rocket|f|H|W|68 60 70 52 80 23|Orlando|Liftoff||Former gymnast still learning to take a punch.
+Owen Stark|The Stallion|h|P|M|64 58 62 50 64 28|Lexington|Stampede||Thinks he is a main eventer. Is not.
+Cass Monroe|Showtime|f|S|W|60 74 78 56 64 27|Nashville|Encore||A country singer who wandered into wrestling and stayed.
+Felix Grant|Mr. Reliable|f|T|M|72 50 52 44 76 33|Cleveland|Grant Lock||Makes everyone he wrestles look good.
+Paul Dempsey|The Veteran|f|B|M|62 64 58 46 54 42|Scranton|Dempsey Roll||Has wrestled everyone. Remembers every one of them.` },
+  { id: 'iron', name: 'Iron Coast Championship', short: 'ICC', color: '#1f4fbf', show: 'Iron Coast Fight Night', day: 4, phil: 'work', prestige: 68, fans: 260000, money: 1800000, ppvs: ['Riptide', 'Breakwater', 'Undertow', 'King of the Coast'], big: 'King of the Coast', diff: 'Medium',
+    pitch: 'Stiff strikes and long matches. Fans here respect wrestling, not talk. Apex wants your best wrestler, and she might go.',
+    titles: [['ICC World Championship', 'World', '', 0, 1, ['Ryo Takeda'], ['Hugo Strand', 'Theo Lindqvist', 'Mateo Cruz']], ["ICC Women's Championship", "Women's", "Women's", 0, 1, ['Hana Sato'], ['Lena Kowalski', 'Iris Wolfe']], ['ICC Pacific Championship', 'Pacific', '', 1, 1, ['Dante Rook'], ['Jun Park', 'Silas Varga']], ['ICC Tag Team Championship', 'Tag', '', 1, 2, ['Bear Hollis', 'Cody Grimm'], ['Rafe Okoro & Silas Varga']]],
+    feuds: [['Ryo Takeda', 'Mateo Cruz', 'The Surgeon Wants It Back', 'World'], ['Hana Sato', 'Lena Kowalski', 'Sledge vs The Blade', "Women's"], ['Makoa Reed', 'Gunnar Voss', 'Storm Against the Wall']],
+    roster: `Ryo Takeda|The Iron Fist|f|B|M|88 60 70 80 86 33|Kobe|Iron Fist Lariat|1101012000|ICC World Champion. Hits harder than anyone alive.
+Hana Sato|The Blade|h|T|W|90 66 78 84 84 29|Osaka|Blade Runner Lock|1070036200|ICC Women's Champion, and the best wrestler in the world by most counts.
+Makoa Reed|The Storm|f|H|M|86 64 76 76 88 27|Honolulu|Eye of the Storm||Moves like weather. Fans travel just to see him fly.
+Gunnar Voss|The Wall|h|P|M|84 56 64 72 80 34|Bergen|Voss Bomb|0440201000|Nobody has knocked him off his feet in two years.
+Lena Kowalski|Sledge|f|B|W|84 58 64 66 84 30|Chicago|Sledgehammer||Former champion who wants the Blade more than the belt.
+Mateo Cruz|The Surgeon|h|T|M|90 58 60 70 82 32|Tijuana|Scalpel Lock||Targets one body part for twenty minutes. Every time.
+Aiko Mori|Firefly|f|H|W|84 54 72 62 90 22|Nagoya|Firefly Splash||Came over from Japan last year. Already a fan favourite.
+Dante Rook|The Bruiser|h|B|M|80 62 66 64 82 30|Glasgow|Rook's Gambit||Pacific Champion. Starts brawls in the crowd for fun.
+Theo Lindqvist|The Professor|f|T|M|88 66 58 62 80 37|Malmö|Final Exam||Former world champion who now teaches as much as he wrestles.
+Shay Brennan|Banshee|h|B|W|80 70 72 60 80 27|Belfast|Banshee Wail||Screams before every strike. It works.
+Jun Park|Lightspeed|f|H|M|84 50 66 60 92 24|Busan|Hyperdrive||The fastest man in the company, and maybe anywhere.
+Rafe Okoro|The Anvil|f|P|M|80 52 60 58 76 29|Lagos|Anvil Drop||Former tag champion looking for a new partner.
+Iris Wolfe|Lone Wolf|h|T|W|84 56 62 58 84 31|Portland|Wolf Trap||Trusts nobody. Has good reasons.
+Bastian Kroll||h|P|M|78 48 54 54 74 35|Hamburg|Kroll Krusher||Says about four words a year.
+Silas Varga|The Hungarian Hammer|f|B|M|78 54 58 52 80 31|Budapest|Hammerfall||Blue-collar brawler. Fans love him.
+Nico Brandt||f|T|M|80 46 54 46 84 23|Tacoma|Bridge to Nowhere||The best young technician on the coast.
+Ember Hale|Ember|f|H|W|76 60 70 52 86 23|Spokane|Ember Burst||Hot-headed, fast and fearless.
+Bear Hollis|Bear|h|P|M|76 50 58 54 74 33|Anchorage|Hibernation||One half of The Long Winter, the tag champions.
+Cody Grimm|Grim|h|B|M|76 54 58 54 80 31|Juneau|Grim Ending||The other half of The Long Winter. The mean one.
+Yuki Tanaka|The Typhoon|f|T|W|82 50 58 54 86 26|Sendai|Typhoon Clutch||Aiko's best friend and greatest rival.
+Marco Ferri|The Butcher|h|B|M|74 62 60 52 72 36|Naples|Butcher's Block||Veteran enforcer. Older, slower, meaner.
+Owen Ashby|The Tactician|f|T|M|78 52 50 44 82 28|Olympia|Ashby Lock||Plans every match like a chess game.
+Kira Lund|Valkyrie|h|P|W|76 52 62 50 78 29|Oslo|Valhalla Slam||Built like a shield wall.
+Toby Reyes||f|H|M|72 48 58 42 86 21|Fresno|Reyes Rocket||The youngest on the roster. Learning fast.
+Hugo Strand|The Old Lion|f|B|M|74 60 62 56 60 43|Stockholm|Lion's Den||Founded the ICC locker room culture. Two more years, he says.
+Pia Castellano||f|T|W|74 46 56 42 82 22|Barcelona|Castell Clutch||Fresh from the Spanish indies.
+Ravi Desai|The Mantis|h|T|M|80 54 58 48 84 27|Mumbai|Mantis Lock||Twists people into shapes they did not know they had.
+Joe Halloran|Iron Joe|f|B|M|70 58 54 46 70 38|Pittsburgh|Steel Toe||Steelworker by day for fifteen years. Still wrestles like one.` },
+  { id: 'neon', name: 'Neon City Grappling', short: 'NCG', color: '#e23a8a', show: 'Afterglow', day: 5, phil: 'ent', prestige: 60, fans: 220000, money: 1200000, ppvs: ['Glow Up', 'Blackout', 'Prism', 'Overload'], big: 'Overload', diff: 'Medium',
+    pitch: 'High flyers, masked luchadores and a huge online fan base. Every company wants your masked star, and your loudest heel is a streamer who will not stop talking.',
+    titles: [['NCG Neon Championship', 'Neon', '', 0, 1, ['El Relámpago'], ['La Sombra', 'Zane Nova']], ["NCG Women's Championship", "Women's", "Women's", 0, 1, ['Roxy Blaze'], ['Valentina Ortiz', 'Gemma Starr']], ['NCG Voltage Championship', 'Voltage', '', 1, 1, ['Chico Fuego'], ['Kid Kaos', 'Myles Banks']], ['NCG Tag Team Championship', 'Tag', '', 1, 2, ['Static', 'Feedback'], ['Ricky Dazzle & Trey Lomax']]],
+    feuds: [['El Relámpago', 'La Sombra', 'Light and Shadow', 'Neon'], ['Roxy Blaze', 'Valentina Ortiz', 'Queen V Wants Her Crown', "Women's"], ['Kid Kaos', 'Zane Nova', 'Glitch in the System']],
+    roster: `El Relámpago|Lightning|f|H|M|86 60 88 86 90 27|Monterrey|Relámpago Dive|3000500041|Neon Champion. The mask has never come off, and every company wants him.
+Zane Nova|The Glitch|h|S|M|78 82 86 78 80 26|Los Angeles|System Crash|0730032200|A streamer with two million followers who never stops talking.
+Roxy Blaze|Wildfire|f|H|W|80 72 84 80 86 24|Austin|Wildfire|0690128000|Women's Champion and the face of the company's merch table.
+La Sombra|The Shadow|h|H|M|82 56 76 72 86 29|Guadalajara|Eclipse|2000500037|Relámpago's oldest rival. Wants his mask more than his belt.
+Pixie Moon|Pixie|f|H|W|76 64 82 66 88 21|Tokyo|Moonsault Magic||Cute, chaotic and impossible to catch.
+Kid Kaos|The Kid|f|H|M|78 66 80 70 92 20|Phoenix|Kaos Theory||The future of Neon City. Already has a cartoon in development.
+Valentina Ortiz|Queen V|h|S|W|74 80 84 70 74 30|Miami|Royal Flush||Former champion. Says the belt was stolen. It was not.
+Dash Kimura|Turbo|f|H|M|80 52 72 62 90 23|Seattle|Turbo Charge||Races cars on his days off.
+Myles Banks|Money Myles|h|S|M|70 82 80 66 72 28|Atlanta|Bankroll||Throws fake cash into the crowd. They throw it back.
+Gemma Starr|Supernova|f|S|W|70 74 82 64 78 25|Las Vegas|Star Struck||Former singer. Her entrance is longer than most matches.
+Chico Fuego|Fuego|f|H|M|78 60 76 60 88 25|Puebla|Fuego Driver|2000500014|Voltage Champion and the hottest luchador on the indies.
+Static||h|H|M|76 50 68 58 88 24|Detroit|Dead Air|1200102300|One half of Signal Lost, the tag champions. Never speaks.
+Feedback||h|H|M|74 54 66 56 86 25|Detroit|Distortion|3300102300|The other half of Signal Lost. Only speaks in screeches.
+Luna Vega|Starlight|f|H|W|74 56 74 58 88 22|San Juan|Starfall||Grew up watching Relámpago. Now wrestles on his shows.
+Ricky Dazzle|Dazzle|f|S|M|66 76 82 60 70 30|Reno|Razzle Dazzle||Sequins, lasers and a surprisingly good dropkick.
+Nikki Jinx|Jinx|h|H|W|74 64 76 58 84 24|Portland|Bad Luck||Bad things happen to whoever stands near her.
+El Hijo del Trueno|Son of Thunder|f|H|M|76 52 74 56 86 23|Mexico City|Trueno Spike|3000500027|Third-generation luchador with a lot to live up to.
+Cyrus Black|The Void|h|B|M|76 64 72 62 78 31|Baltimore|Black Hole||Lights go out when he walks to the ring.
+Sky Harper|Skylar|f|H|W|72 58 72 54 88 22|San Diego|Harper's Flight||Jumps off anything taller than she is.
+Trey Lomax|Hype|f|S|M|66 74 80 56 74 27|Chicago|Hype Machine||The crowd's personal hype man.
+Pogo Peterson|Pogo|f|H|M|70 60 78 52 90 21|Boise|Pogo Stick||Bounces. Constantly.
+Dahlia Rush|Dahlia|h|S|W|70 70 76 56 76 27|New Orleans|Wilted||Smiles while she does terrible things.
+Omar Haddad|The Falcon|f|H|M|78 54 66 54 90 24|Dearborn|Falcon Dive||Quiet, precise and always in the air.
+Ziggy Starburst|Ziggy|f|S|M|62 72 80 50 70 28|Brighton|Starburst||A glam rocker who came for one show and never left.
+Mariposa|Butterfly|f|H|W|74 50 72 52 90 23|Oaxaca|Alas de Mariposa|3000500064|Masked flyer. Nobody knows her real name.
+Lenny Lux|Luxury|h|S|M|64 74 74 52 68 32|Monaco|Luxury Tax||Rich, rude and genuinely bad at wrestling.
+Toshi Arai|Arcade|f|H|M|76 48 68 50 90 22|Osaka|Game Over||Video game fan who wrestles like a combo string.
+Max Mayhem|Mayhem|h|B|M|72 58 66 52 76 29|Las Vegas|Total Mayhem||Breaks things. Tables, chairs, rules.` },
+  { id: 'north', name: 'Northern Lights Wrestling', short: 'NLW', color: '#22b8cf', show: 'Aurora', day: 3, phil: 'stars', prestige: 55, fans: 150000, money: 900000, ppvs: ['Polar Night', 'Ice Breaker', 'Northern Fury', 'Aurora Borealis'], big: 'Aurora Borealis', diff: 'Medium',
+    pitch: 'A proud company out of Halifax with the best young talent in the business. That is the problem: Apex keeps coming to take them.',
+    titles: [['NLW Championship', 'NLW', '', 0, 1, ['Callum MacLeod'], ['Rusty Gallant', 'Claude Bellerose', 'Ronan Burke']], ["NLW Women's Championship", "Women's", "Women's", 0, 1, ['Madeleine Roy'], ['Grace Tremblay', 'Sadie Fraser']], ['NLW Maritime Championship', 'Maritime', '', 1, 1, ['Ronan Burke'], ['Liam Doucette', 'Brody Lachance']], ['NLW Tag Team Championship', 'Tag', '', 1, 2, ['Mike Leblanc', 'Gus Leblanc'], ['Erik Thorsen & Malik Osei']]],
+    feuds: [['Callum MacLeod', 'Ronan Burke', 'The Ironman Wants Gold', 'NLW'], ['Madeleine Roy', 'Sadie Fraser', 'Maritime Menace', "Women's"], ['Simon Pelletier', 'Dev Sandhu', 'Blueprint for a Prodigy']],
+    roster: `Callum MacLeod|The Highlander|f|T|M|86 70 76 78 82 33|Halifax|Highland Clutch|0232031100|NLW Champion and the heart of the company. Turned down Apex twice.
+Madeleine Roy|Maddie|f|T|W|86 62 72 74 86 26|Quebec City|Fleur de Lock|0530022000|Women's Champion. Apex's scouts call her every week.
+Sadie Fraser|The Maritime Menace|h|B|W|80 72 74 72 80 28|Sydney, NS|Nor'easter||Grew up two streets from Maddie. They have hated each other since high school.
+Brody Lachance|The Lumberjack|f|P|M|78 58 68 66 76 31|Moncton|Timber||Still works at the mill. Carries logs to the ring.
+Erik Thorsen|The Viking|h|P|M|80 56 64 64 78 32|Thunder Bay|Ragnarok||Shouts in a language nobody can identify.
+Jade Whitlock|Polaris|f|H|W|80 56 70 62 88 22|Victoria|North Star||Youngest women's champion in NLW history. Wants it back.
+Liam Doucette|The Acadian|f|T|M|82 54 60 56 84 25|Moncton|Doucette Driver||Proud Acadian. Never misses a show.
+Grace Tremblay|The Technician|f|T|W|84 50 58 56 84 29|Montreal|Tremblay Stretch||The best technical wrestler in the division.
+Ronan Burke|The Ironman|h|T|M|84 66 62 64 88 30|St. John's|Burke's Law||Maritime Champion. Wrestled 60 minutes four times last year.
+Wren Mackenzie|Wren|f|H|W|76 54 72 58 88 21|Charlottetown|Wren's Nest||Small, quick and very loud.
+Mike Leblanc|Big Mike|f|P|M|74 56 64 56 70 34|Saint John|Cargo Drop||One half of the Dock Workers, the tag champions.
+Gus Leblanc|Little Gus|f|B|M|72 58 66 54 74 31|Saint John|Shipyard Slam||The other Dock Worker. Little only next to his brother.
+Nora Kemp|Frostbite|h|T|W|80 62 64 58 82 27|Winnipeg|Frostbite Lock||Wins with holds that leave you numb.
+Dev Sandhu|The Natural|f|T|M|82 52 62 54 86 23|Brampton|Natural Selection||The best prospect in Canada. Everyone knows it, including Apex.
+Claude Bellerose|Old Reliable|f|T|M|78 58 56 52 66 41|Trois-Rivières|Bellerose Bridge||Former champion who now trains the kids.
+Tessa Moreau|The Spark|f|H|W|74 60 70 52 88 22|Ottawa|Spark Plug||Fast, fiery and always smiling.
+Jared Cole|Mr. Grit|h|B|M|76 64 62 54 80 29|Hamilton|Grit Bomb||Blames everyone else for everything.
+Ingrid Solberg|The Glacier Queen|h|P|W|76 54 62 52 76 31|Yellowknife|Ice Age||Silent and enormous.
+Noah Arsenault|The Comet|f|H|M|76 50 66 50 90 20|Bathurst|Comet Crash||Nineteen when he debuted. Twenty now.
+Bridget Kerr|Brick|f|P|W|74 54 62 50 76 28|Sudbury|Brick Wall||Former hockey enforcer.
+Malik Osei|The Machine|h|P|M|78 50 58 54 78 27|Toronto|Assembly Line||Never tires. Never smiles.
+Caleb Snow|Whiteout|h|T|M|78 56 60 52 84 25|Banff|Whiteout||Cold, clinical and new to being a villain.
+Amelie Gagnon|Amie|f|T|W|76 48 60 46 84 20|Sherbrooke|Gagnon Roll||Trained by Claude Bellerose since she was fourteen.
+Rusty Gallant|Rusty|f|B|M|68 62 62 48 64 44|Truro|Gallant Charge||The first NLW Champion. Still wrestles when they need him.
+Kit Fairweather|Fair Weather|h|S|W|66 74 72 50 70 30|Kelowna|Forecast||Switches sides whenever it suits her.
+Simon Pelletier|The Architect|h|T|M|82 70 60 56 80 34|Laval|Blueprint||Thinks he built NLW. He did not.
+Josie Arcand|Jo|f|H|W|72 50 64 44 88 19|Edmundston|Arcand Arrow||The youngest wrestler in the company.
+Graham Hunter|Hunter|f|B|M|72 56 58 48 76 29|Calgary|Hunter's Moon||Rodeo cowboy turned wrestler.` },
+  { id: 'bayou', name: 'Steel Bayou Pro', short: 'SBP', color: '#d35400', show: 'Bayou Brawl', day: 6, phil: 'hard', prestige: 50, fans: 120000, money: 600000, ppvs: ['Mardi Brawl', 'Hurricane Season', 'Swamp Fever', 'Bayou Bloodbath'], big: 'Bayou Bloodbath', diff: 'Medium',
+    pitch: 'A wild southern territory of brawlers, monsters and barbed wire. Mortis Graves is building a cult in your locker room, and he is looking at other companies too.',
+    titles: [['SBP Heavyweight Championship', 'Heavyweight', '', 0, 1, ['Boone Tucker'], ['Hoyt Barlow', 'Mortis Graves', 'Earl Thibodeaux']], ["SBP Women's Championship", "Women's", "Women's", 0, 1, ['Jolene Briggs'], ['Raven LeBeau', 'Cora Hatch']], ['SBP Tag Team Championship', 'Tag', '', 1, 2, ['Saul Ketch', 'Abel Ketch'], ['Dale Pruitt & Buck Lawson']]],
+    feuds: [['Boone Tucker', 'Mortis Graves', 'The Reaper Comes for the Gator', 'Heavyweight'], ['Jolene Briggs', 'Raven LeBeau', 'Moonshine and Witchcraft', "Women's"], ['Tank Brody', 'Earl Thibodeaux', 'Big Earl Stands Up']],
+    roster: `Mortis Graves|The Reaper|h|B|M|80 84 88 82 76 35|Houma|The Last Rites|0500443000|Cult leader. Says he hears the swamp talking. People are starting to listen.
+Boone Tucker|The Gator|f|B|M|78 66 76 76 80 32|Lafayette|Gator Roll|2033022000|Heavyweight Champion. Wrestled alligators before he wrestled people.
+Tank Brody|The Wall|h|P|M|76 50 62 64 70 30|Shreveport|Brody Bomb|1460201000|Paints his face before every match. Nobody asks why.
+Raven LeBeau|The Swamp Witch|h|S|W|72 80 84 72 74 30|Baton Rouge|Hex|0500033300|Mortis's first follower. Some say she leads him.
+Jolene Briggs|Moonshine|f|B|W|76 70 78 70 80 28|Biloxi|Moonshine Run|1630024000|Women's Champion. Fights dirty because that is how she learned.
+Earl Thibodeaux|Big Earl|f|P|M|72 64 72 60 66 40|Thibodaux|Crawfish Boil||Former champion. Cooks for the whole locker room.
+Jesse Marchand|Cajun Kid|f|H|M|76 56 70 58 86 23|Lafayette|Bayou Dive||Boone's protege. Mortis has been whispering to him.
+Saul Ketch|Hollow|h|B|M|74 50 60 56 74 31|Houma|Hollowpoint|0000301300|One of the Ketch twins, Mortis's followers and the tag champions.
+Abel Ketch|Ketch|h|B|M|74 50 60 56 74 31|Houma|Hollowpoint|0000301300|The other Ketch twin. Nobody can tell them apart.
+Dixie Lowe|Dynamite|f|B|W|74 60 72 56 78 26|Mobile|Boom Town||Loves explosions. Has been asked to stop.
+Rufus Boudreaux|The Hog|h|P|M|70 54 62 54 64 36|Lake Charles|Hog Wild||Snorts. Charges. Repeats.
+Cash Dupree|Outlaw|h|B|M|74 66 70 60 76 29|Natchez|Outlaw Justice||Rides to the ring on a motorcycle he does not own.
+Willa Fontenot|Wildcat|f|B|W|72 56 66 52 82 24|Opelousas|Cat Scratch||Scrapper from the backwoods.
+Dale Pruitt|Bulldog|f|B|M|72 58 62 52 72 34|Jackson|Bulldog Bite||Former tag champion. Lost his partner to the cult.
+Marisol Dubois|La Reina|h|T|W|74 62 66 54 78 29|New Orleans|Royal Lock||Old money. Wrestles in pearls.
+Buck Lawson|Buckshot|f|B|M|70 60 64 50 74 30|Tupelo|Buckshot||Dale's former partner. Now he follows Mortis, sometimes.
+Eli Crowley|Scarecrow|h|B|M|70 52 68 54 80 26|Natchitoches|Harvest|0500301300|Newest member of the cult. Used to be a nice kid.
+Tammy Jo Pickett|TJ|f|P|W|72 54 62 48 74 31|Hattiesburg|Pickett Fence||Truck driver and powerlifter.
+Junior Landry|Junebug|f|H|M|70 50 66 46 88 20|Houma|Junebug Splash||Grew up in Mortis's town. Scared of him.
+Vic Savoy|Big Easy|f|S|M|64 72 76 52 64 35|New Orleans|Mardi Gras Drop||Throws beads to every kid in the front row.
+Cora Hatch|The Widow|h|S|W|66 70 74 50 70 33|Vicksburg|Widow's Veil||Three husbands. All of them wrestlers. All retired early.
+Ox Mahoney|Ox|f|P|M|70 48 58 48 66 33|Beaumont|Plow||Strong. Kind. Not much else.
+Lucien Batiste|The Gravedigger|h|P|M|72 54 66 52 70 38|Algiers|Grave Mistake||Digs a hole at the ringside before each match.
+Rosie Clements|Rosie|f|T|W|70 52 62 44 80 22|Pensacola|Rosie Roll||The only technical wrestler in the territory.
+Hoyt Barlow|Mad Dog|h|B|M|68 58 62 48 72 37|Monroe|Mad Dog Bite||Former champion. Bites.
+Pete Arceneaux|Pistol Pete|f|H|M|70 54 64 46 86 24|Breaux Bridge|Pistol Whip||Fast-talking flyer.` },
+  { id: 'harbor', name: 'Harborline Wrestling', short: 'HBW', color: '#0d9488', show: 'Harborline Live', day: 6, phil: 'stars', prestige: 22, fans: 6000, money: 60000, ppvs: ['Low Tide', 'High Tide'], big: 'High Tide', diff: 'Hardest',
+    pitch: 'A harbour-town indie one bad month from closing. A tiny roster, no TV deal and a hall that smells like fish. Build it into something the big companies fear.',
+    titles: [['Harborline Championship', 'Harborline', '', 0, 1, ['Mel Carver'], ['Ray Corrigan', 'Big Mac MacIsaac']], ["Harborline Women's Championship", "Women's", "Women's", 0, 1, ['Lucy Fenwick'], ['Annie Wells']]],
+    feuds: [['Danny Shore', 'Mel Carver', 'The Hometown Kid', 'Harborline'], ['Annie Wells', 'Lucy Fenwick', 'Luck Runs Out', "Women's"]],
+    roster: `Danny Shore|The Dockside Kid|f|T|M|70 66 72 44 80 25|Port Haven|Shore Thing|1121022000|Hometown hero with big dreams and a broken car.
+Big Mac MacIsaac|The Lighthouse|f|P|M|62 58 68 40 60 38|Port Haven|Lighthouse Slam||Former champion and the owner's best friend.
+Mel Carver|The Hook|h|B|M|64 70 66 38 72 31|Port Haven|Fish Hook|2103033000|Harborline Champion. Runs the fish market and bullies everyone in it.
+Annie Wells|Anchor|f|T|W|66 56 62 34 80 23|Port Haven|Anchors Away||Fisherman's daughter. Tougher than the boats.
+Lucy Fenwick|Lady Luck|h|S|W|56 68 70 32 66 28|Port Haven|Jackpot||Women's Champion. Won it in a card game, she says.
+Tommy Drake|Gull|f|H|M|62 48 60 30 86 19|Port Haven|Gull Dive||Dives off the balcony every week. The hall has asked him to stop.
+Hal Burgess|The Bouncer|h|P|M|60 44 52 30 62 36|Port Haven|Last Call||Works the door at the pub next door.
+Kenji Ota|The Cook|f|B|M|60 56 64 30 72 30|Port Haven|Fry Up||Runs the chip stand at the hall. Wrestles after the dinner rush.
+Darcy Pell|The Ferry|h|B|W|60 54 58 30 74 27|Port Haven|Ferry Crossing||Works the ferry. Hates the tourists.
+Wes Kendall|Quiet Wes|f|T|M|66 40 48 28 82 22|Port Haven|Kendall Clutch||Never says a word. Wrestles beautifully.
+Ray Corrigan|Mr. Harborline|f|S|M|54 70 66 34 54 47|Port Haven|Old Salt||Founded the company in his garage. Still does the ring announcing.
+Jessie Tran|Rookie|f|H|W|58 48 60 26 86 19|Port Haven|First Light||First month as a pro.
+Brick Logan|Brick|h|P|M|60 42 50 28 66 29|Port Haven|Wrecking Ball||Mel Carver's muscle.
+Sal Fiorini|The Fishmonger|h|S|M|54 66 62 30 58 40|Port Haven|Catch of the Day||Mel's business partner and loudest supporter.` },
+];
+const SU_FA = `Bruno Vale|The Legend|f|P|M|62 78 84 70 40 52|Chicago|Vale Drop|1050302000|The greatest Apex champion ever. Retired five years ago. Itching to come back.
+Rex Montana|The Cowboy|h|B|M|64 76 78 64 48 49|Cheyenne|Rodeo Ride||Former Apex World Champion. Bitter and cheap.
+Kat Navarro|Gata|f|H|W|80 64 74 62 86 25|Santo Domingo|Gata Spin||Released by Apex last month for no good reason.
+Damon Holt|Heartbreak|h|S|M|74 76 80 64 70 30|Dallas|Heartbreaker||Just finished a contract overseas. Wants a big stage.
+Lexi Caine|The Comeback|f|T|W|78 64 70 60 72 33|Indianapolis|Second Chance||Back from a two-year injury.
+Gage Whitaker|The Prospect|f|P|M|66 48 60 36 74 21|Boise|Prospect Bomb||Former college wrestler. Raw, strong, cheap.
+Priya Nair|Thunderbolt|f|H|W|72 52 66 40 88 22|Chennai|Thunderbolt||Indie darling with no contract.
+Odin Brandvold|The Giant|h|P|M|62 40 64 50 54 30|Trondheim|Giant Fall||Seven feet tall. Still learning.
+Marcy Klein|Sweet Science|f|T|W|74 50 54 38 80 30|Milwaukee|Ten Count||Former amateur boxer.
+Jimmy Kwan|Kwan Do|f|H|M|72 52 64 40 86 24|San Francisco|Kwan Kick||Martial artist turned wrestler.
+Selena Achebe|Queen Bee|h|S|W|66 72 76 48 70 28|Houston|Bee Sting||Has a podcast. Mentions it a lot.
+Tito Morales|Tito|f|H|M|70 50 62 38 88 20|Tucson|Tito Twister||Fearless teenager from the backyard scene.
+Viktor Orlov|The Bear|h|P|M|72 46 56 44 70 33|Vladivostok|Bear Hug||Former strongman champion.
+Hope Lindsay|Hope|f|T|W|70 46 60 34 82 20|Fredericton|Lindsay Lock||Trained in NLW's school. Nobody signed her.`;
+const SU_STY = { B: 'Brawler', T: 'Technician', H: 'High Flyer', P: 'Powerhouse', S: 'Showman' };
+const suId = n => 'su-' + String(n).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const suCo = id => SU_COS.find(c => c.id === id);
+function suW(row) {
+  const [name, nick, a, st, dv, nums, town, fin, look, bio] = row.split('|');
+  const [ring, mic, cha, pop, stam, age] = nums.split(' ').map(Number);
+  const w = makeWrestler(name, nick, a === 'h' ? 'heel' : 'face', SU_STY[st], pop / 100);
+  for (const k of SK_ALL) delete w[k];
+  Object.assign(w, { id: suId(name), ring, mic, cha, pop, stam, age, hometown: town, finisher: fin, bio, division: dv === 'W' ? "Women's" : 'Open' });
+  if (faceOK(look)) w.look = look;
+  return ensureSkills(w);
+}
+// the whole universe as a shared world, so it starts through the same setup as a Community world
+function storyRaw() {
+  const cos = SU_COS.map(c => ({
+    id: 'su-' + c.id, name: c.name, short: c.short, color: c.color, show: c.show, phil: c.phil, prestige: c.prestige, fans: c.fans, money: c.money, ppvs: c.ppvs, bigOne: c.big, custom: true,
+    roster: c.roster.split('\n').map(suW),
+    titles: c.titles.map(([name, short, div, mid, n, hold, past]) => ({ id: suId('t ' + c.id + ' ' + short), name, short, ...(n > 1 ? { n } : {}), div, mid: !!mid, holder: hold.map(suId), since: 1, d: 0, past, reigns: [{ nm: hold.join(' & '), from: 1, to: 0, d: 0 }] })),
+  }));
+  return { wv: WORLD_V, cos, fa: SU_FA.split('\n').map(suW), every: 4 };
+}
+const storyOn = () => !!G?.story;
+// anyone in the universe, wherever they are now: your roster, a rival's or free agency
+const suWho = name => { const id = suId(name); return W(id) || (G.rivalPromos || []).flatMap(r => r.roster).find(w => w.id === id) || null; };
+const suRV = id => RV('su-' + id);
+const suHere = name => { const w = W(suId(name)); return w && w.contract ? w : null; };
+const suGone = r => !r || !(G.rivalPromos || []).includes(r);
+function suSign(w, weeks) {
+  if (!w) return;
+  const r = (G.rivalPromos || []).find(x => x.roster.includes(w));
+  const c = { salary: CON() ? Math.round(asking(w) / 100) * 100 : 0, weeks: weeks || rint(52, 104) };
+  if (r) fromRival(w, r, c); else { w.contract = c; w.joined = G.week; w.lastBooked = G.week; if (!G.wrestlers.includes(w)) G.wrestlers.push(w); }
+}
+function suLose(w, rid, why) { if (!w || !w.contract) return; const r = suRV(rid); leaveCompany(w, why); goRival(w, r && !suGone(r) ? r.name : ''); }
+const suFans = f => { const d = Math.round(G.fans * f); G.fans = Math.max(1000, G.fans + d); return d; };
+const suCash = n => { if (MON()) G.money += n; return MON() ? (n >= 0 ? '+' : '') + money(n) : ''; };
+const suPrest = n => { G.promo.prestige = clamp(G.promo.prestige + n, 1, 100); };
+function suFeud(a, b, title, tShort) {
+  if (!a || !b || !a.contract || !b.contract || storyBetween([a.id], [b.id])) return;
+  const t = tShort ? G.titles.find(x => x.short === tShort && x.holder.includes(b.id)) : null;
+  G.stories.push({ id: uid(), title: title.slice(0, 60), type: t ? 'Title Chase' : 'Feud', a: [a.id], b: [b.id], titleId: t?.id || null, heat: 35, start: G.week, status: 'active', notes: 'Story Mode', log: [{ wk: G.week, text: 'Story Mode: ' + title }], autoEnd: true, _touched: G.week });
+}
+
+// ---- owner goals: three a season, 26 weeks a season ----
+const SU_SEASON = 26;
+const SU_GOALS = {
+  apex: [['fans', 1.1], ['avg', 72], ['big', 80]],
+  iron: [['avg', 74], ['fans', 1.2], ['keep', ['Hana Sato']]],
+  neon: [['fans', 1.25], ['prest', 8], ['big', 75]],
+  north: [['keep', ['Callum MacLeod', 'Madeleine Roy']], ['fans', 1.2], ['prest', 6]],
+  bayou: [['fans', 1.2], ['big', 74], ['beat', 'neon']],
+  harbor: [['fansN', 15000], ['avg', 60], ['prest', 8]],
+};
+function suGoal([k, v]) {
+  const g = { k, done: false, fail: false };
+  if (k === 'fans') { g.T = Math.round(G.fans * v / 1000) * 1000; g.text = `Grow to ${kfmt(g.T)} fans`; }
+  if (k === 'fansN') { g.k = 'fans'; g.T = v; g.text = `Grow to ${kfmt(v)} fans`; }
+  if (k === 'prest') { g.T = clamp(Math.round(G.promo.prestige + v), 1, 100); g.text = `Raise prestige to ${g.T}`; }
+  if (k === 'avg') { g.T = v; g.text = `Average ${v}+ over four shows in a row`; }
+  if (k === 'big') { g.T = v; g.text = `Put on a big event rated ${v} or better`; }
+  if (k === 'keep') { g.ids = v.map(suId).filter(id => W(id)?.contract); g.text = `Keep ${v.join(' and ')} signed all season`; if (!g.ids.length) return null; }
+  if (k === 'beat') { const r = suRV(v); if (suGone(r)) return null; g.rid = r.id; g.text = `Finish the season with more fans than ${r.name}`; }
+  return g;
+}
+function suSeasonGoals() {
+  const s = G.story, list = s.season === 1 ? SU_GOALS[s.co] : [['fans', 1.2], ['avg', clamp(Math.round(avg(G.history.slice(-8).map(h => h.rating)) || 60) + 3, 55, 85)], ['prest', 5]];
+  s.goals = list.map(suGoal).filter(Boolean); s.sEnd = G.week + SU_SEASON; s.sStart = G.week;
+}
+function suCheck(g, end) {
+  if (g.done || g.fail) return;
+  const s = G.story, since = G.history.filter(h => h.wk >= s.sStart);
+  if (g.k === 'fans' && G.fans >= g.T) g.done = true;
+  if (g.k === 'prest' && G.promo.prestige >= g.T) g.done = true;
+  if (g.k === 'avg') { const l = since.slice(-4).map(h => h.rating); if (l.length >= 4 && avg(l) >= g.T) g.done = true; }
+  if (g.k === 'big' && since.some(h => h.big && h.rating >= g.T)) g.done = true;
+  if (g.k === 'keep') { if (g.ids.some(id => !W(id)?.contract)) g.fail = true; else if (end) g.done = true; }
+  if (g.k === 'beat') { const r = RV(g.rid); if (suGone(r)) g.done = true; else if (end) g.done = G.fans > r.fans; }
+  if (end && !g.done) g.fail = true;
+  if (g.done) {
+    const f = suFans(.03), c = suCash(Math.max(5000, Math.round(G.fans * .4 / 1000) * 1000)); addXP(40);
+    news(`🏆 Owner goal met: ${g.text}. +${kfmt(f)} fans${c ? ', ' + c : ''}.`, 'office');
+    try { asstText('Owner goal met', `The owner called. "${g.text}": done. They're happy.${c ? ' Bonus: ' + c + '.' : ''}`); } catch (e) { }
+  }
+}
+function storyTick() {
+  const s = G?.story; if (!s) return;
+  const end = G.week >= s.sEnd;
+  for (const g of s.goals) suCheck(g, end);
+  if (!end) return;
+  const n = s.goals.filter(g => g.done).length;
+  suPrest(n - 1);
+  const t = n === s.goals.length ? 'A perfect season. The owner is thrilled.' : n ? `You hit ${n} of ${s.goals.length} goals. The owner wants more next season.` : 'You missed every goal. The owner is worried, but still believes in you.';
+  (s.past ||= []).push({ season: s.season, n, of: s.goals.length });
+  news(`📖 Season ${s.season} review: ${t}`, 'office');
+  try { asstText(`Season ${s.season} review`, t + ' New goals are on the Shows screen.'); } catch (e) { }
+  s.season++; suSeasonGoals();
+}
+function storyBegin(co) {
+  const c = suCo(co); if (!c) return;
+  G.story = { u: 1, co, w0: G.week, season: 1, ev: {} };
+  suSeasonGoals();
+  for (const [a, b, title, t] of c.feuds) suFeud(suHere(a), suHere(b), title, t);
+  news(`📖 Story Mode: you run ${G.promo.name}. ${c.pitch}`, 'office');
+  try { asstText(`Welcome to ${G.promo.name}`, `Boss, welcome aboard. ${c.pitch} The owner has set three goals for the season. They're on the Shows screen.`); } catch (e) { }
+}
+function storyCard() {
+  const s = G?.story; if (!s) return '';
+  const left = Math.max(0, s.sEnd - G.week);
+  return `<div class="su-card"><div class="su-top"><span class="su-k">📖 Story Mode · Season ${s.season}</span><span class="tiny muted">${left ? left + ' week' + (left > 1 ? 's' : '') + ' left' : 'Last week'}</span></div>
+    ${s.goals.map(g => `<div class="su-g ${g.done ? 'done' : g.fail ? 'fail' : ''}"><span>${g.done ? '✅' : g.fail ? '❌' : '🎯'}</span><span class="sp">${esc(g.text)}</span>${g.done || g.fail ? '' : `<b>${suProg(g)}</b>`}</div>`).join('')}</div>`;
+}
+function suProg(g) {
+  if (g.k === 'fans') return kfmt(G.fans) + ' / ' + kfmt(g.T);
+  if (g.k === 'prest') return Math.round(G.promo.prestige) + ' / ' + g.T;
+  if (g.k === 'avg') { const l = G.history.filter(h => h.wk >= G.story.sStart).slice(-4).map(h => h.rating); return l.length ? Math.round(avg(l)) + ' avg' : '—'; }
+  if (g.k === 'beat') { const r = RV(g.rid); return r ? kfmt(G.fans) + ' vs ' + kfmt(r.fans) : ''; }
+  return '';
+}
+
+// ---- written story events: they arrive as backstage moments, one at a time, each once ----
+// at: weeks after Story Mode starts; co: only for that company (or '!co' for everyone else)
+const SU_EV = {
+  su_kingsley: { co: 'apex', at: 3,
+    when: () => suHere('Dorian Kingsley') && suHere('Jax Calloway') && {},
+    title: '👑 The Crown Prince demands a title shot', text: () => `Dorian Kingsley walked into your office with his father on speakerphone. He wants Jax Calloway and the World title at ${bigName(nextBig())}. The owner "would appreciate it".`,
+    choices: () => [['Give him the shot', 'The owner is happy. The locker room rolls its eyes.'], ['Make him earn it', 'Dorian sulks. The owner goes quiet.']],
+    pick(i) { const d = suHere('Dorian Kingsley'), j = suHere('Jax Calloway'); if (!i) { suFeud(d, j, 'The Crown Prince Wants the Crown', 'World'); addPop(d, 4); suPrest(1); return 'Kingsley gets his shot. The owner sent a fruit basket.'; } d.morale = clamp(d.morale - 25, 0, 100); suPrest(-1); return 'Kingsley stormed out. His father has not called back.'; } },
+  su_tour: { at: 9,
+    when: () => { const j = suWho('Jax Calloway'); return j && !j.retired && { mine: !!(j.contract && W(j.id)) }; },
+    title: '🎤 Jax Calloway announces his farewell tour', text: d => d.mine ? 'Jax Calloway told you in private: this is his last year. He wants to go out on top, but Cole Mercer is waiting for the torch.' : `Jax Calloway's farewell tour wants a stop on ${G.promo.show}. One night, one match against your best, and a big fee.`,
+    choices: d => d.mine ? [['Let him go out on top', 'Calloway stays happy. Mercer does not.'], ['Pass the torch to Mercer', 'Mercer\'s time is now. Calloway agrees, quietly.']] : [['Book the farewell match', `${MON() ? 'Costs ' + money(Math.round(G.fans * .3 / 1000) * 1000) + '. ' : ''}A big night for your fans.`], ['Pass', 'Nothing changes']],
+    pick(i, d) {
+      const j = suWho('Jax Calloway'), m = suHere('Cole Mercer');
+      if (d.mine) { if (!i) { j.morale = 100; if (m) m.morale = clamp(m.morale - 20, 0, 100); return 'Calloway thanks you. Mercer slammed a door.'; } if (m) { addPop(m, 6); suFeud(m, j, 'Passing the Torch', 'World'); } return 'The torch is coming. Mercer vs Calloway is on.'; }
+      if (i) return 'You passed on the farewell tour.';
+      const c = suCash(-Math.round(G.fans * .3 / 1000) * 1000), f = suFans(.04); suPrest(2); return `The building was full for the legend. +${kfmt(f)} fans${c ? ', ' + c : ''}.`;
+    } },
+  su_raid: { co: '!apex', at: 7,
+    when: () => { const r = suRV('apex'); if (suGone(r)) return null; const w = signed().filter(w => +w.age <= 27 && !isNW(w)).sort((a, b) => b.pop - a.pop)[0]; return w && { id: w.id, amt: Math.round(asking(w) * 1.4 / 100) * 100 }; },
+    title: '💼 Apex comes calling', text: d => `Apex Pro Wrestling has offered ${W(d.id)?.name} a contract. ${G.story.co === 'north' ? 'Again. They do this every few months. ' : ''}They'll stay if you match it${CON() ? `: ${money(d.amt)} a week` : ''}.`,
+    choices: d => [['Match the offer', CON() ? `Their pay goes up to ${money(d.amt)} a week.` : 'They stay, happier than ever.'], ['Let them go to Apex', `You lose ${W(d.id)?.name}.`]],
+    pick(i, d) { const w = W(d.id); if (!w?.contract) return 'They already made up their mind.'; if (!i) { if (CON()) w.contract.salary = d.amt; w.morale = clamp(w.morale + 15, 0, 100); return `${w.name} is staying.`; } suLose(w, 'apex', 'signed with Apex'); return `${w.name} is off to Apex.`; } },
+  su_apexraid: { co: 'apex', at: 7,
+    when: () => { const w = suWho('Madeleine Roy') || suWho('Dev Sandhu'); return w && !w.contract && W(w.id) === undefined && { id: w.id }; },
+    title: '🧭 Raid Northern Lights?', text: d => `Your scouts say ${suWhoId(d.id)?.name} would jump to Apex for the right money. Northern Lights would be furious.`,
+    choices: () => [['Sign them', 'A new star for Apex. Northern Lights won\'t forget it.'], ['Leave them be', 'No new enemies']],
+    pick(i, d) { const w = suWhoId(d.id); if (i || !w) return 'You let Northern Lights keep their star.'; suSign(w); addPop(w, 3); return `${w.name} signed with Apex.`; } },
+  su_invasion: { co: '!bayou', at: 13,
+    when: () => { const m = suWho('Mortis Graves'); if (!m || W(m.id)) return null; const f = signed().filter(w => w.align === 'face' && !isWomen(w) && !isNW(w)).sort((a, b) => b.pop - a.pop)[0]; return f && { id: f.id }; },
+    title: '🕯️ The Reaper is here', text: d => `The lights went out during ${G.promo.show}. When they came back, Mortis Graves and his followers were standing over ${W(d.id)?.name}. Steel Bayou is invading.`,
+    choices: d => [['Fight back', `${W(d.id)?.name} leads the charge. Big ratings, some risk.`], ['Make a deal with Steel Bayou', 'A cut of their gate. The locker room thinks you went soft.']],
+    pick(i, d) { const w = W(d.id); if (!i) { if (w) { addPop(w, 5); w.momentum = clamp((w.momentum || 0) + 10, -50, 50); } const f = suFans(.04); return `Your locker room ran them off. +${kfmt(f)} fans.`; } const c = suCash(Math.round(G.fans * .2 / 1000) * 1000); for (const x of signed()) x.morale = clamp(x.morale - 5, 0, 100); return `Steel Bayou backed off${c ? ' and paid ' + c : ''}. Morale dipped.`; } },
+  su_cult: { co: 'bayou', at: 5,
+    when: () => suHere('Mortis Graves') && suHere('Jesse Marchand') && {},
+    title: '🕯️ Mortis wants Jesse Marchand', text: () => 'Jesse Marchand hasn\'t been himself. Mortis Graves has been whispering to him for weeks, and now Jesse wants to join the cult on TV. Boone Tucker is begging you to stop it.',
+    choices: () => [['Let Jesse join the cult', 'Jesse turns heel. Boone takes it personally.'], ['Stop it', 'Boone and Jesse stand together against Mortis.']],
+    pick(i) { const j = suHere('Jesse Marchand'), b = suHere('Boone Tucker'), m = suHere('Mortis Graves'); if (!i) { j.align = 'heel'; addPop(j, 5); suFeud(b, j, 'The Cajun Kid Turns'); return 'Jesse Marchand knelt to the Reaper. The crowd was stunned.'; } addPop(j, 3); suFeud(j, m, 'Saving the Cajun Kid'); return 'Jesse walked away from Mortis, and Mortis took it badly.'; } },
+  su_storm: { co: 'bayou', at: 16,
+    when: () => ({}), title: '🌀 Hurricane warning', text: () => 'A hurricane is heading for this week\'s venue. You can move the show and turn it into a benefit for the families hit by the storm, or cancel it.',
+    choices: () => [['Run a benefit show', `${MON() ? 'Costs money. ' : ''}The whole state will remember it.`], ['Cancel the show', 'Safe, and nobody gets hurt. Some fans are let down.']],
+    pick(i) { if (!i) { const c = suCash(-Math.round(G.fans * .25 / 1000) * 1000), f = suFans(.05); for (const x of signed()) x.morale = clamp(x.morale + 8, 0, 100); return `The benefit show was a hit. +${kfmt(f)} fans${c ? ', ' + c : ''}.`; } const f = suFans(-.02); return `Show cancelled. ${kfmt(f)} fans.`; } },
+  su_hana: { co: 'iron', at: 8,
+    when: () => { const h = suHere('Hana Sato'); return h && !suGone(suRV('apex')) && { amt: Math.round(asking(h) * 1.5 / 100) * 100 }; },
+    title: '🗡️ Apex wants The Blade', text: d => `Apex offered Hana Sato the biggest deal a women's wrestler has ever seen. She says she'd rather stay${CON() ? `, if you can pay ${money(d.amt)} a week` : ', if you make her the face of the company'}.`,
+    choices: d => [['Pay her', CON() ? `${money(d.amt)} a week` : 'She headlines your big events'], ['Let her go', 'Apex gets the best wrestler in the world']],
+    pick(i, d) { const h = suHere('Hana Sato'); if (!h) return 'She already left.'; if (!i) { if (CON()) h.contract.salary = d.amt; h.contract.weeks = Math.max(h.contract.weeks, 104); h.morale = 100; return 'Hana Sato signed for two more years.'; } suLose(h, 'apex', 'signed with Apex'); return 'Hana Sato is going to Apex.'; } },
+  su_japan: { co: 'iron', at: 17,
+    when: () => ({}), title: '🗾 An invitation from Japan', text: () => 'A big Japanese promotion wants your roster for a three-city tour. Great for your name, hard on bodies.',
+    choices: () => [['Go on tour', 'Fans and prestige up. Everyone comes home tired.'], ['Stay home', 'Nothing changes']],
+    pick(i) { if (i) return 'You stayed home.'; const f = suFans(.05); suPrest(3); for (const x of signed()) x.fatigue = clamp((x.fatigue || 0) + 20, 0, 100); return `The tour was a hit. +${kfmt(f)} fans, prestige up. The roster is tired.`; } },
+  su_zane: { co: 'neon', at: 5,
+    when: () => suHere('Zane Nova') && suHere('El Relámpago') && {},
+    title: '📱 Zane Nova went viral', text: () => 'Zane Nova\'s stream called El Relámpago "a fake in a mask". Three million views overnight. He wants a match. Relámpago wants you to shut him up.',
+    choices: () => [['Give Zane the match', 'Huge hype. Relámpago is not thrilled.'], ['Tell Zane to delete it', 'Zane sulks, and keeps streaming.']],
+    pick(i) { const z = suHere('Zane Nova'), r = suHere('El Relámpago'); if (!i) { addPop(z, 6); suFeud(z, r, 'Fake in a Mask', 'Neon'); suFans(.02); return 'Zane Nova vs El Relámpago is on. The internet is melting.'; } z.morale = clamp(z.morale - 20, 0, 100); return 'Zane deleted it, then posted about deleting it.'; } },
+  su_mask: { co: 'neon', at: 18,
+    when: () => suHere('El Relámpago') && suHere('La Sombra') && {},
+    title: '🎭 Mask against mask', text: () => `La Sombra has challenged El Relámpago to the oldest bet in lucha libre: mask against mask at ${bigName(nextBig())}. The loser unmasks forever.`,
+    choices: () => [['Make the match', 'The biggest match in Neon City history.'], ['Not yet', 'Save it for another day.']],
+    pick(i) { if (i) return 'You said not yet. La Sombra says he can wait.'; const a = suHere('El Relámpago'), b = suHere('La Sombra'); const st = storyBetween([a.id], [b.id]); if (st) st.heat = clamp(st.heat + 25, 0, 100); else suFeud(a, b, 'Mask Against Mask'); suFans(.03); return 'Mask against mask is official.'; } },
+  su_investor: { co: 'neon', at: 12,
+    when: () => ({}), title: '💸 An investor wants in', text: () => 'A tech millionaire wants to buy a slice of Neon City. Lots of money, but he wants his name on the show and a say in who wins.',
+    choices: () => [['Take the money', MON() ? `+${money(Math.round(G.fans * 2 / 1000) * 1000)}. Prestige takes a hit.` : 'Big promotion. Prestige takes a hit.'], ['Say no', 'Keep the company yours']],
+    pick(i) { if (i) { suPrest(1); return 'You kept the company yours. The fans respect it.'; } const c = suCash(Math.round(G.fans * 2 / 1000) * 1000), f = suFans(.03); suPrest(-3); return `Deal done. ${c ? c + '. ' : ''}+${kfmt(f)} fans, but critics are not impressed.`; } },
+  su_halifax: { co: 'north', at: 5,
+    when: () => ({}), title: '🎟️ Halifax wants more', text: () => 'The Halifax show sold out in nine minutes. The big arena downtown has an open date. Bigger crowd, bigger bill.',
+    choices: () => [['Book the arena', MON() ? 'Costs more. Could be huge.' : 'Could be huge.'], ['Keep it small', 'The fans love the small hall']],
+    pick(i) { if (i) return 'You stayed in the hall. It was loud.'; const c = suCash(-Math.round(G.fans * .25 / 1000) * 1000), f = suFans(.06); suPrest(2); return `The arena was packed. +${kfmt(f)} fans${c ? ', ' + c : ''}.`; } },
+  su_callum: { co: 'north', at: 14,
+    when: () => { const w = suHere('Callum MacLeod'); return w && { amt: Math.round(asking(w) * 1.3 / 100) * 100 }; },
+    title: '🏴 Callum MacLeod\'s last offer', text: () => 'Apex made Callum MacLeod an offer for the third time. He says he will stay, but he needs to know you believe in him: a new deal, and the main event of your big one.',
+    choices: d => [['Give him the new deal', CON() ? `${money(d.amt)} a week for three years` : 'He stays for three years'], ['Let him decide', 'He might go.']],
+    pick(i, d) { const w = suHere('Callum MacLeod'); if (!w) return 'He already decided.'; if (!i) { if (CON()) w.contract.salary = d.amt; w.contract.weeks = Math.max(w.contract.weeks, 156); w.morale = 100; return 'Callum MacLeod is staying home.'; } if (Math.random() < .5) { suLose(w, 'apex', 'signed with Apex'); return 'Callum MacLeod signed with Apex. Halifax is heartbroken.'; } return 'Callum stayed, for now.'; } },
+  su_rent: { co: 'harbor', at: 2,
+    when: () => ({}), title: '🏚️ The landlord doubles the rent', text: () => 'The hall\'s owner wants twice the rent from next month. The bingo hall across town is cheaper, but it\'s small and the ring barely fits.',
+    choices: () => [['Pay the rent', MON() ? 'Costs money. The fans stay happy.' : 'The fans stay happy.'], ['Move to the bingo hall', 'Saves money. Smaller crowds for a while.']],
+    pick(i) { if (!i) { const c = suCash(-6000); return `You paid up. ${c}`; } const c = suCash(4000), f = suFans(-.05); return `Harborline moved to the bingo hall. ${c ? c + ', ' : ''}${kfmt(f)} fans.`; } },
+  su_localtv: { co: 'harbor', at: 10,
+    when: () => G.fans >= 7000 && {}, title: '📺 Local TV calls', text: () => 'The local cable channel will put Harborline Live on TV on Saturday nights. No money up front, but people will finally see you.',
+    choices: () => [['Take the TV slot', 'More fans, every week.'], ['Wait for something better', 'Maybe they come back.']],
+    pick(i) { if (i) return 'You turned down local TV.'; const f = suFans(.15); suPrest(4); if (MON()) G.tv = (+G.tv || 0) + 1500; return `Harborline Live is on TV. +${kfmt(f)} fans.`; } },
+  su_danny: { co: 'harbor', at: 15,
+    when: () => { const w = suHere('Danny Shore'); return w && !suGone(suRV('north')) && {}; },
+    title: '⚓ Northern Lights wants Danny Shore', text: () => 'Northern Lights wants to buy out Danny Shore\'s contract. It would pay your bills for months. Danny says he\'ll go wherever you think is best.',
+    choices: () => [['Keep Danny', 'He stays the hometown hero.'], ['Sell his contract', MON() ? 'A lot of money. You lose your best wrestler.' : 'You lose your best wrestler.']],
+    pick(i) { const w = suHere('Danny Shore'); if (!w) return 'Danny already left.'; if (!i) { w.morale = 100; addPop(w, 4); return 'Danny Shore is staying. Port Haven cheered.'; } const c = suCash(60000); suLose(w, 'north', 'bought out by Northern Lights'); return `Danny Shore is off to Northern Lights. ${c}`; } },
+  su_bidding: { co: '!apex', at: 20,
+    when: () => G.fans >= 50000 && {}, title: '📡 A streaming service wants wrestling', text: () => 'A new streaming service wants a wrestling show and you are on their shortlist. They want an answer this week.',
+    choices: () => [['Sign with them', 'More money and more viewers.'], ['Hold out for more', 'They might come back with a better offer, or not at all.']],
+    pick(i) { if (!i || Math.random() < .5) { const f = suFans(i ? .12 : .08); if (MON()) G.tv = Math.round((+G.tv || 0) * (i ? 1.35 : 1.2) + 2000); return `${i ? 'Holding out paid off. ' : ''}You signed the streaming deal. +${kfmt(f)} fans.`; } return 'They went with someone else.'; } },
+  su_legend: { at: 24,
+    when: () => { const w = suWho('Bruno Vale'); return w && !w.contract && W(w.id) && {}; },
+    title: '🦁 Bruno Vale wants one more run', text: () => 'Bruno Vale, the greatest Apex champion ever, called you himself. Five years retired, and he wants one more run. He chose your company.',
+    choices: () => [['Sign the legend', 'A one-year deal. Huge for your fans.'], ['Politely decline', 'He will understand. Probably.']],
+    pick(i) { const w = suWho('Bruno Vale'); if (i || !w) return 'You turned down the legend.'; suSign(w, 52); suFans(.03); return 'Bruno Vale is back, and he is yours.'; } },
+};
+const suWhoId = id => W(id) || (G.rivalPromos || []).flatMap(r => r.roster).find(w => w.id === id) || null;
+// a written event that's due now, if any
+function storyEvent() {
+  const s = G?.story; if (!s) return null;
+  for (const [k, e] of Object.entries(SU_EV)) {
+    if (s.ev[k] || G.week < s.w0 + e.at) continue;
+    if (e.co && (e.co[0] === '!' ? s.co === e.co.slice(1) : s.co !== e.co)) { s.ev[k] = 'skip'; continue; }
+    let d = null; try { d = e.when(); } catch (x) { d = null; }
+    if (d) return [k, d];
+    if (G.week > s.w0 + e.at + 12) s.ev[k] = 'skip'; // waited long enough
+  }
+  return null;
+}
+// the written events live in EVENTS too, so they use the same card, phone text and answer flow; the random roll never picks them
+for (const [k, e] of Object.entries(SU_EV)) EVENTS[k] = { title: e.title, text: d => e.text(d || {}), choices: d => e.choices(d || {}), pick(i, d) { if (G.story) G.story.ev[k] = 'done'; return e.pick(i, d || {}); }, when: () => null };
+function suClean(g) {
+  const s = g.story; if (!s) return;
+  if (typeof s !== 'object' || !suCo(s.co)) { delete g.story; return; }
+  const num = (v, a, b, d) => { const x = Math.floor(+v); return isFinite(x) ? clamp(x, a, b) : d; };
+  const wk = +g.week || 1;
+  g.story = { u: 1, co: s.co, w0: num(s.w0, 1, wk, 1), season: num(s.season, 1, 999, 1), sStart: num(s.sStart, 1, wk, 1), sEnd: num(s.sEnd, 1, wk + SU_SEASON, wk + SU_SEASON),
+    ev: Object.fromEntries(Object.entries(s.ev && typeof s.ev === 'object' ? s.ev : {}).filter(([k, v]) => Object.hasOwn(SU_EV, k) && (v === 'done' || v === 'skip'))),
+    goals: (Array.isArray(s.goals) ? s.goals : []).slice(0, 5).filter(x => x && ['fans', 'prest', 'avg', 'big', 'keep', 'beat'].includes(x.k)).map(x => ({ k: x.k, T: +x.T || 0, done: !!x.done, fail: !!x.fail, text: String(x.text || '').slice(0, 120), ...(Array.isArray(x.ids) ? { ids: x.ids.map(String).slice(0, 4) } : {}), ...(x.rid ? { rid: String(x.rid).slice(0, 40) } : {}) })),
+    past: (Array.isArray(s.past) ? s.past : []).slice(-50).map(p => ({ season: num(p?.season, 1, 999, 1), n: num(p?.n, 0, 5, 0), of: num(p?.of, 0, 5, 0) })) };
+}
+// the Story Mode picker: one of the six companies, which save slot
+function modalStory() {
+  const slots = Array.from({ length: SLOTS }, (_, i) => ({ n: i + 1, info: slotInfo(i + 1) })), free = slots.find(s => !s.info)?.n || meta.slot || 1;
+  const ros = c => c.roster.split('\n').length, champ = c => c.titles[0][5].join(' & ');
+  return modal('Story Mode', `<p class="small" style="margin-top:0">The BookIt Universe: six companies, ${sum(SU_COS.map(ros)) + SU_FA.split('\n').length} original wrestlers and a world that keeps moving. Pick a company to run. The other five run themselves, and the owner sets you goals every season.</p>
+    <label class="f"><span>Save to</span><select id="su-slot">${slots.map(s => `<option value="${s.n}" ${s.n === free ? 'selected' : ''}>Slot ${s.n}${s.info ? ' (replaces ' + esc(s.info.name) + ')' : ' (empty)'}</option>`).join('')}</select></label>
+    <div class="su-cos">${SU_COS.map(c => `<button class="su-co" data-act="storyGo" data-id="${c.id}" style="--co:${c.color}"><span class="su-co-top"><b>${esc(c.name)}</b><span class="tag ${c.diff === 'Hardest' ? 'bad' : c.diff === 'Hard' ? 'warn' : ''}">${c.diff}</span></span><span class="small">${esc(c.pitch)}</span><span class="tiny muted">🏆 ${esc(champ(c))} · ${ros(c)} wrestlers · ${esc(c.show)}</span></button>`).join('')}</div>`);
+}
+const STORY_ACTIONS = {
+  story() { UI.modal = { type: 'story' }; render(); },
+  storyGo(id) {
+    const c = suCo(id); if (!c) return;
+    const n = clamp(+(document.getElementById('su-slot')?.value || meta.slot || 1), 1, SLOTS), info = slotInfo(n);
+    const go = () => {
+      let wd; try { wd = cleanWorld(storyRaw()); } catch (e) { return toast('Story Mode could not start. Try again.'); }
+      wd.title = 'The BookIt Universe';
+      const take = wd.cos.find(x => x.id === 'su-' + id);
+      if (G) save();
+      UI.modal = null; wizStart(false);
+      const z = UI.wiz; Object.assign(z, { step: 'company', world: wd, take: take?.id || null, slot: n, source: 'world', count: 1, nth: 1, every: wd.every, suMode: id });
+      if (take) { z.name = take.name; z.show = take.show; z.color = safeColor(take.color) || z.color; z.day = c.day; }
+      render(); pageTop();
+    };
+    if (info) confirmBox(`Replace slot ${n}?`, `${info.name} (week ${info.week}) in slot ${n} will be replaced by Story Mode. Back it up first from Menu if you want to keep it.`, 'Replace and start', go, true);
+    else go();
+  },
+};
 // start a new game in a world: the AI companies and free agents arrive, and a company taken over becomes yours
 // a shared world opens at the start of the month leading to the company's big one, so there's a big show to build to right away
 function startBeforeBigOne() {
@@ -9690,6 +10170,7 @@ function scrubGame(raw) {
 }
 function sanitizeGame(g) {
   g = scrubGame(g); migrate(g);
+  suClean(g);
   if (!g || typeof g !== 'object' || !g.promo || !Array.isArray(g.wrestlers)) throw 0;
   g.wrestlers = g.wrestlers.filter(w => w && typeof w === 'object');
   g.promo.name = String(g.promo.name || 'Shared Promotion').slice(0, 40); g.promo.show = String(g.promo.show || 'Weekly Show').slice(0, 40);
@@ -11406,6 +11887,7 @@ function wizFinish() {
   }
   if (!host) { G.settings.sandbox = !!z.sandbox; G.wseedN = +z.rivN || 4; }
   if (z.world) applyWorld(z);
+  if (z.world && z.suMode) storyBegin(z.suMode);
   news(`🎉 ${G.promo.name} is open for business. ${G.promo.show} airs ${DAYS[G.promo.day]}s.`, 'office');
   G.todos = [
     { t: `Book and run your first ${G.promo.show}. Tap + Match, or Auto-fill and tweak it`, done: false, auto: 'firstShow' },
@@ -11695,7 +12177,7 @@ const WIZ_ACTIONS = {
   },
 };
 
-Object.assign(A, WIZ_ACTIONS, TUT_ACTIONS);
+Object.assign(A, WIZ_ACTIONS, TUT_ACTIONS, STORY_ACTIONS);
 
 // ---------- event wiring ----------
 // ---------- stat sliders (.sl): tap or drag anywhere on the bar, − / + buttons that repeat while held ----------
@@ -12088,8 +12570,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.42';
+const VERSION = '1.9.43';
 const WHATS_NEW = [
+  ['📖 Story Mode', 'The BookIt Universe: six original companies and 172 wrestlers in one world. Take over any company from the start screen. The owner sets you three goals every season, and written story moments happen as the weeks go by: talent raids, a legend\'s farewell tour, an invasion from the bayou and more.'],
   ['🎨 Pixel faces', 'Every wrestler without a photo now has a pixel headshot instead of initials, with masks, face paint, beards and ring gear. Make anyone\'s face in their editor under Pixel face, or reroll everyone in Roster tools. Prefer initials? Switch in Settings.'],
   ['🎤 Promos and angles stand out', 'No more VS on talking segments. Matches, promos and angles each get their own coloured tag. Promos show as a speech bubble with the wrestler\'s line, and angles look like backstage camera footage. New options: write their line yourself, pick where it happens (ring, backstage, big screen, crowd, parking lot), how long it runs and how it ends (brawl, walk-off, or someone interrupts). New types: Open Challenge, Sit-down Debate, Brawl, Hype Video and Celebration.'],
   ['🎲 Twice the surprises', 'There are now twice as many backstage events (46) and surprise moments on the live show (18), and every one of them can be told three different ways, so the same event rarely reads the same twice. New ones include fan conventions, charity visits, stolen gear, pay leaks, travel trouble, crossover fights, a heated press event, the save, a stolen belt, an off-script mic and a replay that shows the ref got it wrong. Your assistant, your producer, your wrestlers and The Dirt Sheet have twice as many things to say, too.'],
