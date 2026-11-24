@@ -383,6 +383,12 @@ button.mrow:active { background: var(--card2); }
 .fm-row { margin-top: 10px; } .fm-row > span { display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px; font-weight: 600; }
 .fm .filters { flex-wrap: wrap; margin-bottom: 0; }
 .fm .sw { width: 26px; height: 26px; }
+.fm-big { width: 72px; height: 72px; border-radius: 12px; flex: none; box-shadow: 0 0 0 2px var(--line); }
+.fm[open] > summary { padding-bottom: 8px; border-bottom: 1px solid var(--line); box-shadow: 0 -24px 0 var(--card); }
+.fm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 8px; }
+.fm-tile { display: grid; justify-items: center; gap: 4px; padding: 6px 4px 5px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); color: var(--dim); font-family: var(--f-cond); font-weight: 700; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; line-height: 1.1; }
+.fm-tile img { width: 52px; height: 52px; border-radius: 8px; display: block; }
+.fm-tile.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--ink); }
 .fm .sw.mine { background: conic-gradient(#c8102e 0 25%, #1f4fbf 0 50%, #f2b705 0 75%, #1f8a3b 0) !important; }
 .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); }
 .sw.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
@@ -9179,11 +9185,13 @@ function beltBatch(m) {
 // the face maker in the wrestler editor: changes one place of the look code at a time
 function faceMaker(d) {
   const c = faceCode(d), at = i => +c[i];
-  const chips = (i, list, skip) => `<div class="filters">${list.map((l, j) => skip && skip(j) ? '' : `<button class="${at(i) === j ? 'on' : ''}" data-act="bFace" data-f="${i}" data-id="${j}">${l}</button>`).join('')}</div>`;
+  // each choice shows this wrestler's face with that choice applied, so you can see it before you pick
+  const peek = (i, j) => faceURL({ ...d, look: c.slice(0, i) + j + c.slice(i + 1) });
+  const chips = (i, list) => `<div class="fm-tiles">${list.map((l, j) => `<button class="fm-tile ${at(i) === j ? 'on' : ''}" data-act="bFace" data-f="${i}" data-id="${j}" aria-pressed="${at(i) === j}"><img class="px" alt="" src="${peek(i, j)}"><span>${l}</span></button>`).join('')}</div>`;
   const sws = (i, cols, from, label) => `<div class="swatches">${cols.map((col, j) => j < from ? '' : `<button class="sw ${at(i) === j ? 'on' : ''}${col ? '' : ' mine'}" style="background:${col || safeColor(d.color) || '#c8102e'}" data-act="bFace" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : 'their colour'}"></button>`).join('')}</div>`;
   const row = (l, h) => `<div class="fm-row"><span>${l}</span>${h}</div>`;
   const mask = at(4) === 5, women = isWomen(d);
-  return `<details class="fm" ${UI.fmOpen ? 'open' : ''}><summary data-act="fmTog">${av(d, 40)}<span>Pixel face<span class="tiny muted" style="display:block;font-weight:500">Shown when there's no photo</span></span></summary>
+  return `<details class="fm" ${UI.fmOpen ? 'open' : ''}><summary data-act="fmTog"><img class="fm-big px av-${d.align === 'heel' ? 'heel' : 'face'}" alt="Face preview" src="${faceURL(d)}"><span>Pixel face<span class="tiny muted" style="display:block;font-weight:500">Shown when there's no photo</span></span></summary>
     <div class="fm-row"><button class="btn" data-act="bFaceRand">🎲 Random face</button></div>
     ${row('Skin', `<div class="swatches">${FACE.skin.map(([a], j) => `<button class="sw ${at(0) === j ? 'on' : ''}" style="background:${a}" data-act="bFace" data-f="0" data-id="${j}" aria-label="Skin tone ${j + 1}"></button>`).join('')}</div>`)}
     ${row('Face', chips(4, FACE.face))}
@@ -12902,8 +12910,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.46';
+const VERSION = '1.9.47';
 const WHATS_NEW = [
+  ['👀 Face maker previews', 'In the Pixel face maker, every hair, face, beard, gear and extra choice now shows your wrestler wearing it, and the preview at the top is bigger and stays in view while you scroll.'],
   ['🗂 Draft war room', 'Brand drafts feel like the real thing. Each brand shows what it needs (star power, champions, tag teams, faces and heels) and gets a letter grade. Every pick gets a reveal with a commentary line and a crowd reaction, and you can trade wrestlers between brands during the draft or any time from Office → Brands.'],
   ['📖 Story Mode', 'The BookIt Universe: six original companies and 172 wrestlers in one world. Take over any company from the start screen. The owner sets you three goals every season, and written story moments happen as the weeks go by: talent raids, a legend\'s farewell tour, an invasion from the bayou and more.'],
   ['🎨 Pixel faces', 'Every wrestler without a photo now has a pixel headshot instead of initials, with masks, face paint, beards and ring gear. Make anyone\'s face in their editor under Pixel face, or reroll everyone in Roster tools. Prefer initials? Switch in Settings.'],
