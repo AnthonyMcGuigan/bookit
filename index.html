@@ -1575,7 +1575,7 @@ function migrate(g) {
   g.booker.cxp ??= +g.booker.xp || 0; g.booker.coPaid ??= coLvlOf(+g.booker.cxp || 0); g.booker.perks = (Array.isArray(g.booker.perks) ? g.booker.perks : []).map(k => ({ medic: 'fans', heat: 'tv' })[k] || k).filter(k => Object.hasOwn(PERKS, k)).slice(0, 6);
   if (g.sponsor && (typeof g.sponsor !== 'object' || !(+g.sponsor.pay >= 0))) g.sponsor = null;
   if (g.sponsor) g.sponsor = { n: String(g.sponsor.n || 'Sponsor').replace(/[<>&"'`]/g, '').slice(0, 30), pay: clamp(+g.sponsor.pay || 0, 0, 1e6), T: clamp(+g.sponsor.T || 60, 1, 100), left: clamp(Math.floor(+g.sponsor.left) || 0, 0, 52), paidWk: +g.sponsor.paidWk || 0 };
-  for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; if (w.photoGen) { w.photo = ''; delete w.photoGen; } } // old random placeholders give way to pixel faces
+  for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; } // never clear a photo here: photoGen can be stale on a real photo
   for (const s of g.stories) { s.notes ??= ''; s.log ||= []; }
   for (const c of [g.card, ...Object.values(g.future || {})]) if (Array.isArray(c)) for (const x of c) if (x && OLD_FIN[x.finish]) x.finish = OLD_FIN[x.finish];
   g.settings.aging ??= true; g.settings.persona ??= false;
@@ -8989,7 +8989,7 @@ function importPack(pack, mode) {
   }
   for (const pw of pack.wrestlers) {
     const ex = G.wrestlers.find(w => w.name.toLowerCase() === pw.name.toLowerCase());
-    if (ex && mode !== 'replace') { Object.assign(ex, pw); updated++; if (mode === 'sign' && !ex.contract) ex.contract = { salary: asking(ex), weeks: rint(52, 130) }; continue; }
+    if (ex && mode !== 'replace') { if (pw.photo) { delete ex.photoGen; delete ex.photoLocal; } Object.assign(ex, pw); updated++; if (mode === 'sign' && !ex.contract) ex.contract = { salary: asking(ex), weeks: rint(52, 130) }; continue; }
     G.wrestlers.push(fromPack(pw, mode !== 'free')); added++;
   }
   if (mode === 'replace' && pack.titles?.length) {
@@ -12910,7 +12910,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.47';
+const VERSION = '1.9.48';
 const WHATS_NEW = [
   ['👀 Face maker previews', 'In the Pixel face maker, every hair, face, beard, gear and extra choice now shows your wrestler wearing it, and the preview at the top is bigger and stays in view while you scroll.'],
   ['🗂 Draft war room', 'Brand drafts feel like the real thing. Each brand shows what it needs (star power, champions, tag teams, faces and heels) and gets a letter grade. Every pick gets a reveal with a commentary line and a crowd reaction, and you can trade wrestlers between brands during the draft or any time from Office → Brands.'],
