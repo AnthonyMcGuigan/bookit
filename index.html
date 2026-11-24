@@ -1086,6 +1086,27 @@ html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw
 .brand-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .brand-col { padding: 10px; margin: 0; min-width: 0; }
 .brand-n { font-family: var(--f-display); font-size: 17px; text-transform: uppercase; line-height: 1.1; overflow-wrap: anywhere; }
+/* draft war room: brand needs, pick reveal, trades */
+.bd-needs { padding: 8px 9px; }
+.bd-grade { font-family: var(--f-display); font-size: 18px; line-height: 1; color: var(--accent); }
+.bd-need { display: grid; grid-template-columns: minmax(0, 72px) 1fr 34px; gap: 6px; align-items: center; font-size: 11px; margin: 3px 0; }
+.bd-need > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-need i { height: 7px; border-radius: 5px; background: var(--line); position: relative; overflow: hidden; }
+.bd-need i b { position: absolute; inset: 0 auto 0 0; border-radius: 5px; background: var(--good); transition: width .4s ease; }
+.bd-need i b.mid { background: var(--warn); } .bd-need i b.lo { background: var(--bad); }
+.bd-toast { border: 1px solid var(--accent); border-radius: 12px; padding: 8px 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent); display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.bd-toast.in { animation: bdIn .45s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes bdIn { from { transform: translateY(-10px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.bd-wr .mf .bd-undo { flex: 0 0 52px; }
+.bd-tr { display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); gap: 6px; align-items: start; }
+.bd-swap { align-self: center; text-align: center; font-size: 20px; }
+.bd-side { margin: 0; padding: 8px; text-align: center; min-width: 0; }
+.bd-pickd { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 6px 0; }
+.bd-pickd > div { min-width: 0; max-width: 100%; }
+.bd-roster { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; text-align: left; border-top: 1px solid var(--line); padding-top: 6px; }
+.bd-roster button { font: inherit; font-size: 12px; text-align: left; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); min-height: 32px; }
+.bd-roster button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+@media (prefers-reduced-motion: reduce) { .bd-toast.in { animation: none; } .bd-need i b { transition: none; } }
 .brand-t { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 4px; }
 .seg-ctl.wrap button { font-size: 12px; letter-spacing: .02em; line-height: 1.15; padding: 6px 2px; }
 .seg-ctl.wrap .cnt { display: block; margin: 2px auto 0; width: max-content; }
@@ -2715,9 +2736,9 @@ function brandsView() {
     <div class="empty" style="margin-bottom:10px">You run one weekly show. Add a second show to start a brand split.</div>
     <button class="btn pri block" data-act="addShow">＋ Add a weekly show</button>
     <button class="btn block" style="margin-top:8px" data-act="shows">📺 Shows and nights</button>`;
-  const both = signed().filter(w => w.both).sort((a, b) => b.pop - a.pop);
+  const both = signed().filter(w => w.both).sort((a, b) => b.pop - a.pop), grades = bdGrades(trRosters(), bdAll(both.map(w => w.id)));
   const col = x => { const ws = signed().filter(w => !w.both && brandOf(w) === x.id).sort((a, b) => b.pop - a.pop), n = ws.length + both.length, ts = G.titles.filter(t => t.brand === x.id);
-    return `<div class="card brand-col"><div class="brand-n">${esc(brandName(x.id))}</div>
+    return `<div class="card brand-col"><div class="row" style="gap:6px;align-items:flex-start"><div class="brand-n sp">${esc(brandName(x.id))}</div><b class="bd-grade" title="Brand grade">${grades[x.id]}</b></div>
       <div class="tiny ${n < 10 ? '' : 'muted'}" ${n < 10 ? 'style="color:var(--warn)"' : ''}>${esc(showNight(x))} · ${n} wrestlers${n < 10 ? ' (thin)' : ''}</div>
       ${ts.length ? `<div class="brand-t">${ts.map(t => `<span class="tag gold">🏆 ${esc(t.short)}</span>`).join('')}</div>` : ''}
       ${ws.slice(0, 5).map(w => `<div class="small clip" style="padding:2px 0">${esc(w.name)}</div>`).join('') || '<div class="tiny muted" style="padding:2px 0">Nobody yet</div>'}
@@ -2729,8 +2750,8 @@ function brandsView() {
     ${G.split ? `<div class="brand-grid">${sh.map(col).join('')}</div>
     <div class="card" style="margin-top:10px;padding:10px 12px"><div class="row" style="gap:8px;align-items:flex-start"><span class="sp"><b>${ic('layers')} On ${allBrands(0)}</b><div class="tiny muted">They can work any show. Their pay and merch are split between the shows.</div></span></div>
       <div class="chips" style="margin-top:8px">${both.map(w => `<span class="chip">${esc(w.name)} <button data-act="brandBoth" data-id="${w.id}" aria-label="Take ${esc(w.name)} off ${allBrands(0)}">✕</button></span>`).join('')}<button class="chip add" data-act="brandBothPick">＋ Add</button></div></div>
-    <button class="btn pri block" style="margin-top:10px" data-act="bdStart">🎤 Hold a brand draft</button>
-    <div class="grid2" style="margin-top:8px"><button class="btn" data-act="brandDraft">🎲 Quick auto-split</button><button class="btn" data-act="shows">📺 Shows and nights</button></div>
+    <button class="btn pri block" style="margin-top:10px" data-act="bdStart">🗂 Hold a brand draft</button>
+    <div class="grid3" style="margin-top:8px"><button class="btn" data-act="brandTrade">🔁 Trade</button><button class="btn" data-act="brandDraft">🎲 Auto-split</button><button class="btn" data-act="shows">📺 Shows</button></div>
     ${G.titles.length ? `<div class="sec">Championships</div><div class="small muted" style="margin:-4px 0 8px">Pick which brand defends each title. Shared titles can be defended on any show.</div>
     ${G.titles.map(t => `<label class="f"><span>${esc(t.name)} <span class="muted">· ${esc(tierName(t))}</span></span><select data-in="tBrand" data-id="${esc(t.id)}"><option value="">Shared</option>${sh.map(x => `<option value="${esc(x.id)}" ${t.brand === x.id ? 'selected' : ''}>${esc(brandName(x.id))}</option>`).join('')}</select></label>`).join('')}` : ''}`
     : `<button class="btn block" data-act="shows">📺 Shows and nights</button>`}
@@ -2739,34 +2760,135 @@ function brandsView() {
       ${bigLast ? `<div class="row small" style="padding:7px 0;border-top:1px solid var(--line)"><span class="sp">🎆 ${esc(bigLast.name)}</span><b style="color:${bigLast.net >= 0 ? 'var(--good)' : 'var(--bad)'}">${bigLast.net >= 0 ? '+' : '−'}${money(Math.abs(bigLast.net))}</b><span class="tiny muted" style="margin-left:6px">wk ${bigLast.wk}</span></div>` : ''}
       <div class="row small" style="padding:7px 0;border-top:1px solid var(--line)"><b class="sp">Company bank</b><b>${money(G.money)}</b></div></div>` : ''}`;
 }
-// the draft board: brands take turns, snake order, you make every pick. Tag teams go together. Nothing changes until you finish.
+// ---------- the draft war room: brands take turns (snake order) and you make every pick ----------
+// Brand needs show what each brand is short of, every pick gets a quick reveal with a commentary line and a crowd reaction,
+// and brands can trade during the draft. Tag teams go together. Nothing changes until you finish.
 function bdNew() {
   const sh = SHOWS();
-  return { type: 'bdraft', order: sh.map(x => x.id), picks: Object.fromEntries(sh.map(x => [x.id, []])), both: signed().filter(w => w.both).map(w => w.id), k: 0, hist: [], f: '' };
+  return { type: 'bdraft', order: sh.map(x => x.id), picks: Object.fromEntries(sh.map(x => [x.id, []])), both: signed().filter(w => w.both).map(w => w.id), k: 0, hist: [], f: '', last: null, tr: null };
 }
 const bdTaken = m => new Set([...Object.values(m.picks).flat(), ...m.both]);
 const bdPool = m => { const tk = bdTaken(m); return signed().filter(w => !tk.has(w.id)).sort((a, b) => b.pop - a.pop); };
 const bdTurn = m => { const n = m.order.length, r = Math.floor(m.k / n), i = m.k % n; return m.order[r % 2 ? n - 1 - i : i]; };
 const bdGroup = (m, w) => { const tk = bdTaken(m); return [w, ...(G.teams || []).filter(t => t.members.includes(w.id)).flatMap(t => t.members.map(W))].filter((x, i, a) => x?.contract && !tk.has(x.id) && a.indexOf(x) === i); };
+const BD_VOICES = ['Max Steele', 'Rita Cole'];
+const inTeam = w => (G.teams || []).some(t => t.members.includes(w.id));
+// the wrestlers being split up (not the ones on every brand), and the pop a star needs: the top quarter
+const bdAll = both => signed().filter(w => !both.includes(w.id));
+const bdStarLine = all => { const p = all.map(w => w.pop).sort((a, b) => b - a); return p.length ? p[Math.min(p.length - 1, Math.floor(p.length / 4))] : 60; };
+// brand needs, each 0-100 where 100 is a fair share for how far the brand's roster has got. null = not counted yet
+function bdMeters(ids, all, n) {
+  const ws = ids.map(W).filter(Boolean), share = Math.max(1, all.length / n), frac = Math.min(1, (ws.length + 1) / share), thr = bdStarLine(all);
+  const fair = f => { const t = all.filter(f).length / n * frac; return t < .5 ? null : clamp(Math.round(ws.filter(f).length / t * 100), 0, 100); };
+  const out = [{ k: 'star', l: 'Star power', v: fair(w => w.pop >= thr), f: w => w.pop >= thr }];
+  if (G.titles.some(t => t.holder.length)) out.push({ k: 'champ', l: 'Champions', v: fair(w => titlesOf(w.id).length > 0), f: w => titlesOf(w.id).length > 0 });
+  if ((G.teams || []).length) out.push({ k: 'tag', l: 'Tag teams', v: fair(inTeam), f: inTeam });
+  if (all.filter(isWomen).length >= 4 && all.filter(w => !isWomen(w)).length >= 4) out.push({ k: 'women', l: 'Women', v: fair(isWomen), f: isWomen });
+  const fc = ws.filter(w => w.align !== 'heel').length, hc = ws.length - fc, short = fc < hc ? 'face' : 'heel';
+  out.push({ k: 'fh', l: 'Faces/heels', v: ws.length < 2 ? null : clamp(Math.round(Math.min(fc, hc) / (ws.length / 2) * 100), 0, 100), f: w => (w.align === 'heel' ? 'heel' : 'face') === short, need: short === 'heel' ? 'Heels' : 'Faces' });
+  return out;
+}
+const bdNeedTag = x => x.k === 'fh' ? x.need : x.l;
+const bdLvl = v => v == null ? '' : v < 40 ? 'lo' : v < 65 ? 'mid' : '';
+const bdLvlTxt = v => v == null ? '—' : v < 40 ? 'Need' : v < 65 ? 'OK' : '✓';
+// a letter grade: half how well the brand's needs are covered, half how strong its picks are next to the other brands
+function bdGrades(rosters, all) {
+  const n = Object.keys(rosters).length, val = ids => { const ws = ids.map(W).filter(Boolean); return ws.length ? ws.reduce((s, w) => s + (overall(w) + w.pop) / 2, 0) / ws.length : 0; };
+  const vs = Object.fromEntries(Object.entries(rosters).map(([id, ids]) => [id, val(ids)])), live = Object.values(vs).filter(Boolean), mean = live.reduce((a, b) => a + b, 0) / (live.length || 1);
+  return Object.fromEntries(Object.entries(rosters).map(([id, ids]) => {
+    if (!ids.length) return [id, '—'];
+    const ms = bdMeters(ids, all, n).map(x => x.v).filter(v => v != null), need = ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : 75;
+    const s = need * .5 + clamp(75 + (vs[id] / (mean || 1) - 1) * 250, 0, 100) * .5;
+    return [id, [[92, 'A+'], [85, 'A'], [80, 'A-'], [75, 'B+'], [70, 'B'], [65, 'B-'], [60, 'C+'], [55, 'C'], [50, 'C-'], [40, 'D']].find(([t]) => s >= t)?.[1] || 'F'];
+  }));
+}
+function bdNeedsCard(name, grade, ms, on) {
+  return `<div class="card brand-col bd-needs" ${on ? 'style="border-color:var(--accent)"' : ''}><div class="row" style="gap:6px"><b class="small sp clip">${esc(name)}</b><b class="bd-grade">${grade}</b></div>
+    ${ms.map(x => `<div class="bd-need"><span>${esc(x.l)}</span><i><b class="${bdLvl(x.v)}" style="width:${x.v ?? 0}%"></b></i><span class="tiny muted">${bdLvlTxt(x.v)}</span></div>`).join('')}</div>`;
+}
+// what the crowd and the commentary team make of a pick
+function bdCall(m, on, w, grp, rank, all) {
+  const b = brandName(on), name = w.name, x = showById(on), night = x ? showNight(x) : '', thr = bdStarLine(all), heel = w.align === 'heel', ts = titlesOf(w.id);
+  const crowd = w.pop >= thr ? (heel ? 'Huge heat' : 'Big pop') : w.pop < 40 ? 'Polite applause' : heel ? 'Boos' : 'Cheers';
+  const lines = ts.length ? [`${b} lands a champion! The ${ts[0].short} title goes with ${name}.`, `That's gold for ${b}. ${name} brings the ${ts[0].short} title.`]
+    : grp.length > 1 ? [`Two for the price of one! ${grp.map(g => g.name).join(' and ')} stay together.`, `${b} keeps the team together. Smart.`]
+    : rank === 0 ? [`No surprise there. ${name} was the best one left.`, `The obvious pick, and the right one.`, `${b} fans are going wild!`]
+    : rank >= 6 ? [`Wow, nobody saw that coming!`, `A reach? Maybe. A sleeper? We'll find out.`, `${name}? Bold. Very bold.`]
+    : [`Smart pick. That fills a hole for ${b}.`, `${name} is going to love ${night} nights.`, `${b} fans are going to like that one.`, `Solid, solid pick.`];
+  return { id: w.id, on, n: m.k + 1, crowd, line: lines[m.k % lines.length], voice: BD_VOICES[m.k % 2], fresh: true };
+}
+// the next best pick for a brand: popular wrestlers first, with a nudge toward what the brand needs
+function bdBest(m, on) {
+  const all = bdAll(m.both), ms = bdMeters(m.picks[on], all, m.order.length).filter(x => x.v != null && x.v < 65);
+  return bdPool(m).map(w => ({ w, s: w.pop + ms.filter(x => x.f(w)).length * 8 })).sort((a, b) => b.s - a.s)[0]?.w;
+}
 function modalBDraft(m) {
+  if (m.tr) return modalBTrade(m.tr, m);
   const pool = bdPool(m), on = bdTurn(m), total = signed().length - m.both.length, made = Object.values(m.picks).flat().length;
-  const n = m.order.length, round = Math.floor(m.k / n) + 1;
+  const n = m.order.length, round = Math.floor(m.k / n) + 1, all = bdAll(m.both), grades = bdGrades(m.picks, all);
+  const meters = Object.fromEntries(m.order.map(id => [id, bdMeters(m.picks[id], all, n)]));
+  const needs = meters[on].filter(x => x.v != null && x.v < 65), fills = w => needs.filter(x => x.f(w)).slice(0, 2);
   let list = pool;
-  if (m.f === 'men') list = list.filter(w => w.division !== "Women's");
-  else if (m.f === 'women') list = list.filter(w => w.division === "Women's");
-  else if (m.f === 'teams') list = list.filter(w => (G.teams || []).some(t => t.members.includes(w.id)));
+  if (m.f === 'need') list = list.filter(w => fills(w).length);
+  else if (m.f === 'men') list = list.filter(w => !isWomen(w));
+  else if (m.f === 'women') list = list.filter(isWomen);
+  else if (m.f === 'teams') list = list.filter(inTeam);
   const champ = w => titlesOf(w.id).map(t => t.short).join(', ');
-  const body = pool.length ? `<div style="text-align:center;margin-bottom:8px"><div class="tiny muted">Round ${round} · ${made} of ${total} drafted</div></div>
-    <div class="alert" style="margin-bottom:10px;border-color:var(--accent)"><span class="ic">📺</span><div><b>${esc(brandName(on))} is on the clock</b><div class="tiny muted">Tap Draft to pick for them. Tag team partners go too. ${ic('layers')} puts someone on ${allBrands(0)} without using a pick.</div></div></div>
-    <div class="brand-grid" style="margin-bottom:10px">${m.order.map(id => { const ps = m.picks[id].map(W).filter(Boolean); return `<div class="card brand-col" ${id === on ? 'style="border-color:var(--accent)"' : ''}><b class="small">${esc(brandName(id))}</b><div class="tiny muted">${ps.length} picked${ps.length ? ': ' + ps.slice(-3).reverse().map(w => esc(w.name)).join(', ') + (ps.length > 3 ? '…' : '') : ''}</div></div>`; }).join('')}</div>
-    <div class="filters">${[['', 'Best left'], ['men', 'Men'], ['women', 'Women'], ['teams', 'Teams']].map(([k, l]) => `<button class="${m.f === k ? 'on' : ''}" data-act="bdF" data-id="${k}">${l}</button>`).join('')}</div>
-    <div class="list">${list.slice(0, 40).map(w => { const tm = bdGroup(m, w).slice(1); return `<div class="item">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">OVR ${overall(w)} · Pop ${Math.round(w.pop)}${champ(w) ? ` · 🏆 ${esc(champ(w))}` : ''}${tm.length ? ` · with ${tm.map(x => esc(x.name)).join(', ')}` : ''}</div></div><button class="btn sm pri" data-act="bdPick" data-id="${w.id}">Draft</button><button class="btn sm" data-act="bdBoth" data-id="${w.id}" aria-label="Put ${esc(w.name)} on ${allBrands(0)}">${ic('layers')}</button></div>`; }).join('') || '<div class="empty">Nobody left in this group.</div>'}</div>`
-    : `<div style="text-align:center;margin:6px 0 12px"><div style="font-family:var(--f-display);font-size:22px;text-transform:uppercase">Draft complete</div><div class="small muted">Here are your brands. Finish to make it official.</div></div>
+  const L = m.last, lw = L && W(L.id), fresh = L?.fresh; if (L) L.fresh = false;
+  const reveal = !L ? '' : L.trade ? `<div class="bd-toast ${fresh ? 'in' : ''}"><span class="ic" style="font-size:24px">🔁</span><div class="sp small"><b>Trade!</b> ${esc(L.head)}<div class="tiny muted">🎙 ${esc(L.voice)}: "${esc(L.line)}"</div></div></div>`
+    : lw ? `<div class="bd-toast ${fresh ? 'in' : ''}">${av(lw, 38)}<div class="sp small"><b>Pick ${L.n} · ${esc(brandName(L.on))} takes ${esc(lw.name)}</b><div class="tiny muted">🎙 ${esc(L.voice)}: "${esc(L.line)}" · 🔊 ${esc(L.crowd)}</div></div></div>` : '';
+  const body = pool.length ? `${reveal}
+    <div class="brand-grid" style="margin-bottom:10px">${m.order.map(id => bdNeedsCard(brandName(id), grades[id], meters[id], id === on)).join('')}</div>
+    <div class="alert" style="margin-bottom:10px;border-left-color:var(--accent)"><span class="ic">📺</span><div><b>${esc(brandName(on))} is making their selection</b><div class="tiny muted">Round ${round} · Pick ${m.k % n + 1} · ${made} of ${total} drafted${needs.length ? ` · Needs: ${needs.map(bdNeedTag).join(', ').toLowerCase()}` : ''}</div></div></div>
+    <div class="filters">${[['', 'Best left'], ['need', 'Fills a need'], ['men', 'Men'], ['women', 'Women'], ['teams', 'Teams']].map(([k, l]) => `<button class="${m.f === k ? 'on' : ''}" data-act="bdF" data-id="${k}">${l}</button>`).join('')}</div>
+    <div class="list">${list.slice(0, 40).map(w => { const tm = bdGroup(m, w).slice(1), fl = fills(w); return `<div class="item">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">OVR ${overall(w)} · Pop ${Math.round(w.pop)}${champ(w) ? ` · 🏆 ${esc(champ(w))}` : ''}${tm.length ? ` · with ${tm.map(x => esc(x.name)).join(', ')}` : ''}${fl.map(x => ` <span class="tag good">Fills: ${esc(bdNeedTag(x))}</span>`).join('')}</div></div><button class="btn sm pri" data-act="bdPick" data-id="${w.id}">Draft</button><button class="btn sm" data-act="bdBoth" data-id="${w.id}" aria-label="Put ${esc(w.name)} on ${allBrands(0)}" title="Put on ${allBrands(0)}">${ic('layers')}</button></div>`; }).join('') || '<div class="empty">Nobody left in this group.</div>'}</div>
+    <div class="tiny muted" style="margin-top:8px">Tag team partners go together. ${ic('layers')} puts someone on ${allBrands(0)} without using a pick.</div>`
+    : `${reveal}<div style="text-align:center;margin:6px 0 12px"><div style="font-family:var(--f-display);font-size:22px;text-transform:uppercase">Draft complete</div><div class="small muted">Here are your brands. You can still trade, then finish to make it official.</div></div>
+    <div class="brand-grid" style="margin-bottom:6px">${m.order.map(id => bdNeedsCard(brandName(id), grades[id], meters[id])).join('')}</div>
     ${m.order.map(id => { const ps = m.picks[id].map(W).filter(Boolean); return `<div class="sec">${esc(brandName(id))} · ${ps.length}</div><div class="small">${ps.map(w => esc(w.name)).join(', ') || '<span class="muted">Nobody</span>'}</div>`; }).join('')}
     ${m.both.length ? `<div class="sec">${ic('layers')} ${allBrands()} · ${m.both.length}</div><div class="small">${m.both.map(W).filter(Boolean).map(w => esc(w.name)).join(', ')}</div>` : ''}
     <div class="tiny muted" style="margin-top:10px">Champions take their titles to their new brand. Shared titles stay shared.</div>`;
-  const foot = pool.length ? `<button class="btn" data-act="bdUndoPick" ${m.hist.length ? '' : 'disabled'}>↶ Undo</button><button class="btn" data-act="bdAuto">⏩ Auto-pick the rest</button>` : `<button class="btn" data-act="bdUndoPick">↶ Undo</button><button class="btn pri" data-act="bdFinish">Finish the draft</button>`;
-  return modal('🎤 Brand draft', body, foot);
+  const foot = pool.length ? `<button class="btn bd-undo" data-act="bdUndoPick" ${m.hist.length ? '' : 'disabled'} aria-label="Undo">↶</button><button class="btn" data-act="bdTrade" ${made ? '' : 'disabled'}>🔁 Trade</button><button class="btn" data-act="bdAuto">⏩ Auto-pick</button>`
+    : `<button class="btn bd-undo" data-act="bdUndoPick" aria-label="Undo">↶</button><button class="btn" data-act="bdTrade">🔁 Trade</button><button class="btn pri" data-act="bdFinish">Finish the draft</button>`;
+  return modal('🗂 Draft war room', body, foot, { cls: 'bd-wr' });
+}
+// ---------- trades between brands: during the draft (on the draft board) or any time from Office → Brands ----------
+// tr = { a, b, ga: [ids a gives], gb: [ids b gives] }. In the draft, rosters are the picks so far.
+const trRosters = m => m ? m.picks : Object.fromEntries(SHOWS().map(x => [x.id, signed().filter(w => !w.both && brandOf(w) === x.id).map(w => w.id)]));
+function trNew(m) { const sh = m ? m.order : SHOWS().map(x => x.id), a = m ? (sh.includes(bdTurn(m)) ? bdTurn(m) : sh[0]) : sh[0]; return { a, b: sh.find(x => x !== a), ga: [], gb: [] }; }
+function trAfter(tr, rs) {
+  const out = { ...rs }; out[tr.a] = rs[tr.a].filter(id => !tr.ga.includes(id)).concat(tr.gb); out[tr.b] = rs[tr.b].filter(id => !tr.gb.includes(id)).concat(tr.ga); return out;
+}
+// morale when a trade is made for real: a bigger fish on the new brand is happy, a smaller one isn't
+function trMood(id, from, to, rs) { const w = W(id), rank = (ids, x) => ids.map(W).filter(Boolean).filter(y => y.pop > x.pop).length; return w ? clamp(Math.round((rank(rs[from], w) - rank(to, w)) * 1.5), -8, 8) : 0; }
+function modalBTrade(tr, m) {
+  const rs = trRosters(m), sh = m ? m.order : SHOWS().map(x => x.id), all = bdAll(m ? m.both : signed().filter(w => w.both).map(w => w.id)), n = sh.length;
+  const side = (k, id, give) => { const ws = rs[id].map(W).filter(Boolean).sort((x, y) => y.pop - x.pop);
+    return `<div class="card bd-side"><div class="tiny muted">${esc(brandName(id))} gives</div>
+      <div class="bd-pickd">${give.map(W).filter(Boolean).map(w => `<div>${av(w, 44)}<div class="small"><b>${esc(w.name)}</b></div><div class="tiny muted">Pop ${Math.round(w.pop)}</div></div>`).join('') || '<div class="tiny muted" style="padding:14px 0">Nobody yet</div>'}</div>
+      <div class="bd-roster">${ws.map(w => `<button class="${give.includes(w.id) ? 'on' : ''}" data-act="trTog" data-id="${k}|${w.id}" aria-pressed="${give.includes(w.id)}">${esc(w.name)} <span class="tiny muted">${Math.round(w.pop)}</span></button>`).join('') || '<div class="tiny muted">Nobody on this brand yet.</div>'}</div></div>`; };
+  const pickBrand = k => n > 2 ? `<div class="filters" style="margin-bottom:6px"><span class="tiny muted" style="align-self:center;white-space:nowrap">${k === 'a' ? 'From' : 'With'}</span>${sh.filter(id => id !== tr[k === 'a' ? 'b' : 'a']).map(id => `<button class="${tr[k] === id ? 'on' : ''}" data-act="trSide" data-id="${k}|${id}">${esc(brandName(id))}</button>`).join('')}</div>` : '';
+  const any = tr.ga.length || tr.gb.length;
+  let lands = '';
+  if (any) {
+    const af = trAfter(tr, rs), b4 = Object.fromEntries([tr.a, tr.b].map(id => [id, bdMeters(rs[id], all, n)])), nw = Object.fromEntries([tr.a, tr.b].map(id => [id, bdMeters(af[id], all, n)]));
+    const g0 = bdGrades(rs, all), g1 = bdGrades(af, all);
+    const rows = [tr.a, tr.b].flatMap(id => [...nw[id].map((x, i) => { const d = (x.v ?? 0) - (b4[id][i].v ?? 0); return d ? [`${brandName(id)} ${x.l.toLowerCase()}`, (d > 0 ? '+' : '−') + Math.abs(d), d > 0 ? 'good' : 'bad'] : null; }).filter(Boolean),
+      ...(g0[id] !== g1[id] ? [[`${brandName(id)} grade`, `${g0[id]} → ${g1[id]}`, 'accent']] : [])]);
+    if (!m) for (const [ids, from, to] of [[tr.ga, tr.a, af[tr.b]], [tr.gb, tr.b, af[tr.a]]]) for (const id of ids) { const d = trMood(id, from, to, rs); if (d) rows.push([`${nameOf(id)}'s morale`, (d > 0 ? '+' : '−') + Math.abs(d) + (d > 0 ? ' (bigger star there)' : ' (smaller fish there)'), d > 0 ? 'good' : 'bad']); }
+    lands = `<div class="sec">How it lands</div><div class="card" style="padding:4px 12px">${rows.map(([a, b, c], k) => `<div class="row small" style="padding:6px 0;${k ? 'border-top:1px solid var(--line)' : ''}"><span class="sp">${esc(a)}</span><b style="color:var(--${c})">${esc(b)}</b></div>`).join('') || '<div class="small muted" style="padding:6px 0">Barely changes either brand.</div>'}</div>`;
+  }
+  const body = `<div class="small muted" style="margin-top:0">${m ? 'Swap wrestlers between brands during the draft. It doesn\'t use a pick.' : 'Swap wrestlers between your brands. Champions take their titles with them.'} Tap names to add them. Tag team partners move together.</div>
+    ${pickBrand('a')}${pickBrand('b')}
+    <div class="bd-tr" style="margin-top:10px">${side('a', tr.a, tr.ga)}<div class="bd-swap">⇄</div>${side('b', tr.b, tr.gb)}</div>${lands}`;
+  const foot = `<button class="btn" data-act="trCancel">Cancel</button><button class="btn pri" data-act="trGo" ${any ? '' : 'disabled'}>${tr.ga.length && tr.gb.length ? 'Make the trade' : 'Make the move'}</button>`;
+  return modal('🔁 Trade between brands', body, foot, m ? { cls: 'bd-wr' } : undefined);
+}
+function trLine(tr) {
+  const gn = ids => ids.map(nameOf).join(' and '), a = brandName(tr.a), b = brandName(tr.b);
+  const head = tr.ga.length && tr.gb.length ? `${a} sends ${gn(tr.ga)} to ${b} for ${gn(tr.gb)}.` : tr.ga.length ? `${gn(tr.ga)} moves from ${a} to ${b}.` : `${gn(tr.gb)} moves from ${b} to ${a}.`;
+  const lines = tr.ga.length && tr.gb.length ? ['A blockbuster trade!', 'Now that is a shake-up.', 'Both brands think they won that one.'] : ['A straight move. Interesting.', 'That roster just got deeper.'];
+  return { head, line: lines[(tr.ga.length + tr.gb.length) % lines.length] };
 }
 function modalBothPick(m) {
   const q = (m.q || '').toLowerCase(), list = signed().filter(w => !w.both && (!q || w.name.toLowerCase().includes(q))).sort((a, b) => b.pop - a.pop);
@@ -6915,6 +7037,7 @@ function renderModal() {
     case 'shows': return modalShows();
     case 'bdraft': return modalBDraft(m);
     case 'bothPick': return modalBothPick(m);
+    case 'btrade': return modalBTrade(m.tr);
     case 'live': return liveScreen(m);
     case 'trophies': return modalTrophies();
     case 'phone': return modalPhone();
@@ -8239,12 +8362,31 @@ const A = {
     commit(`Big events now air on ${DAYS[d]}s.`); },
   shDaySet(v) { const [id, k] = String(v).split('|'), x = showById(id); if (!x) return; const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, k) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); },
   goBrands() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; render(); pageTop(); },
-  bdStart() { if (!splitOn()) return; openModal(bdNew()); },
+  bdStart() { if (!splitOn()) return; SFX.load(); openModal(bdNew()); },
   bdF(v) { UI.modal.f = v || ''; render(); },
-  bdPick(id) { const m = UI.modal, w = W(id); if (!w || bdTaken(m).has(id)) return; const on = bdTurn(m), grp = bdGroup(m, w).map(x => x.id); m.picks[on].push(...grp); m.hist.push({ t: 'pick', on, ids: grp }); m.k++; render(); },
-  bdBoth(id) { const m = UI.modal; if (!W(id) || bdTaken(m).has(id)) return; m.both.push(id); m.hist.push({ t: 'both', ids: [id] }); render(); },
-  bdUndoPick() { const m = UI.modal, h = m.hist.pop(); if (!h) return; if (h.t === 'pick') { m.picks[h.on] = m.picks[h.on].filter(x => !h.ids.includes(x)); m.k--; } else m.both = m.both.filter(x => !h.ids.includes(x)); render(); },
-  bdAuto() { const m = UI.modal; let p; while ((p = bdPool(m)).length) A.bdPick(p[0].id); },
+  bdPick(id, el, quiet) { const m = UI.modal, w = W(id); if (!w || bdTaken(m).has(id)) return; const on = bdTurn(m), all = bdAll(m.both), rank = bdPool(m).indexOf(w), grp = bdGroup(m, w);
+    m.last = bdCall(m, on, w, grp, rank, all); m.picks[on].push(...grp.map(x => x.id)); m.hist.push({ t: 'pick', on, ids: grp.map(x => x.id) }); m.k++;
+    if (quiet) return; if (m.last.crowd === 'Big pop' || m.last.crowd === 'Huge heat') SFX.crowd(m.last.crowd === 'Big pop' ? 'cheer' : 'applause', .5, .2); render(); },
+  bdBoth(id) { const m = UI.modal; if (!W(id) || bdTaken(m).has(id)) return; m.both.push(id); m.hist.push({ t: 'both', ids: [id] }); m.last = null; render(); },
+  bdUndoPick() { const m = UI.modal, h = m.hist.pop(); if (!h) return;
+    if (h.t === 'pick') { m.picks[h.on] = m.picks[h.on].filter(x => !h.ids.includes(x)); m.k--; }
+    else if (h.t === 'trade') { const { a, b, ga, gb } = h.tr; m.picks[a] = m.picks[a].filter(x => !gb.includes(x)).concat(ga); m.picks[b] = m.picks[b].filter(x => !ga.includes(x)).concat(gb); }
+    else m.both = m.both.filter(x => !h.ids.includes(x));
+    m.last = null; render(); },
+  bdAuto() { const m = UI.modal; let w; while ((w = bdBest(m, bdTurn(m)))) A.bdPick(w.id, null, true); render(); },
+  bdTrade() { const m = UI.modal; if (m?.type !== 'bdraft') return; m.tr = trNew(m); render(); },
+  brandTrade() { if (!splitOn() || SHOWS().length < 2) return; openModal({ type: 'btrade', tr: trNew() }); },
+  trSide(v) { const tr = UI.modal?.tr; if (!tr) return; const [k, id] = String(v).split('|'); if (!showById(id) || tr[k === 'a' ? 'b' : 'a'] === id) return; tr[k] = id; tr.ga = []; tr.gb = []; render(); },
+  trTog(v) { const m = UI.modal, tr = m?.tr; if (!tr) return; const [k, id] = String(v).split('|'), w = W(id), rs = trRosters(m.type === 'bdraft' ? m : null)[tr[k]] || [], g = k === 'a' ? 'ga' : 'gb'; if (!w || !rs.includes(id)) return;
+    const grp = [id, ...(G.teams || []).filter(t => t.members.includes(id)).flatMap(t => t.members)].filter((x, i, a) => rs.includes(x) && a.indexOf(x) === i);
+    tr[g] = tr[g].includes(id) ? tr[g].filter(x => !grp.includes(x)) : [...new Set([...tr[g], ...grp])]; render(); },
+  trCancel() { const m = UI.modal; if (m?.type === 'bdraft') { m.tr = null; render(); } else { UI.modal = null; render(); } },
+  trGo() { const m = UI.modal, tr = m?.tr; if (!tr || !(tr.ga.length || tr.gb.length)) return; const { head, line } = trLine(tr);
+    if (m.type === 'bdraft') { m.picks = trAfter(tr, m.picks); m.hist.push({ t: 'trade', tr: { ...tr } }); m.last = { trade: true, head, line, voice: BD_VOICES[m.hist.length % 2], fresh: true }; m.tr = null; return render(); }
+    const rs = trRosters(), af = trAfter(tr, rs);
+    for (const [ids, from, to] of [[tr.ga, tr.a, tr.b], [tr.gb, tr.b, tr.a]]) for (const id of ids) { const w = W(id); if (!w) continue; momMood(w, trMood(id, from, af[to], rs)); w.brand = to; }
+    for (const t of G.titles) { const h = W(t.holder[0]); if (h && !h.both && showById(t.brand) && [...tr.ga, ...tr.gb].includes(h.id)) t.brand = brandOf(h); }
+    news(`🔁 Brand trade: ${head}`, 'office'); UI.modal = null; commit(head); },
   bdFinish() { const m = UI.modal; if (bdPool(m).length) return; bdApply(m); UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; commit('The brand draft is done.'); },
   brandBoth(id) { const w = W(id); if (!w?.contract) return; const pick = UI.modal?.type === 'bothPick'; w.both = !w.both; if (!w.both) delete w.both; if (pick) UI.modal = null; commit(w.both ? `${w.name} now works ${allBrands(0)}.` : `${w.name} now works ${brandName(brandOf(w))} only.`); },
   brandBothPick() { openModal({ type: 'bothPick', q: '' }); },
@@ -12570,8 +12712,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.43';
+const VERSION = '1.9.44';
 const WHATS_NEW = [
+  ['🗂 Draft war room', 'Brand drafts feel like the real thing. Each brand shows what it needs (star power, champions, tag teams, faces and heels) and gets a letter grade. Every pick gets a reveal with a commentary line and a crowd reaction, and you can trade wrestlers between brands during the draft or any time from Office → Brands.'],
   ['📖 Story Mode', 'The BookIt Universe: six original companies and 172 wrestlers in one world. Take over any company from the start screen. The owner sets you three goals every season, and written story moments happen as the weeks go by: talent raids, a legend\'s farewell tour, an invasion from the bayou and more.'],
   ['🎨 Pixel faces', 'Every wrestler without a photo now has a pixel headshot instead of initials, with masks, face paint, beards and ring gear. Make anyone\'s face in their editor under Pixel face, or reroll everyone in Roster tools. Prefer initials? Switch in Settings.'],
   ['🎤 Promos and angles stand out', 'No more VS on talking segments. Matches, promos and angles each get their own coloured tag. Promos show as a speech bubble with the wrestler\'s line, and angles look like backstage camera footage. New options: write their line yourself, pick where it happens (ring, backstage, big screen, crowd, parking lot), how long it runs and how it ends (brawl, walk-off, or someone interrupts). New types: Open Challenge, Sit-down Debate, Brawl, Hype Video and Celebration.'],
