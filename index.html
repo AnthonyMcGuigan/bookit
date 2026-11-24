@@ -9811,19 +9811,6 @@ async function worldPhotos(i, raw) {
   await pixLoad(i); const a = PIX.get(pixKey(i)); if (!a) return;
   worldAllW(raw).forEach((w, k) => { if (!w.photo && a[k]) w.photo = a[k]; });
 }
-// fills in photos from this player's own wrestlers by name: the library, this save and the other saves on this device.
-// Private photos stay private (photoLocal), so they are never shared again.
-function photoFill(ws) {
-  const need = ws.filter(w => w && !w.photo && w.name); if (!need.length) return 0;
-  const map = new Map(), put = (w, local) => { const k = libNorm(w?.name), p = safePhoto(w?.photo); if (k && p && !map.has(k)) map.set(k, { p, local: !!(local || w.photoLocal) }); };
-  const fromGame = g => { if (!g) return; for (const w of g.wrestlers || []) put(w); for (const r of g.rivalPromos || []) for (const w of r.roster || []) put(w); for (const c of g.cos || []) for (const w of c.roster || []) put(w); };
-  fromGame(G);
-  for (const e of lib()) put(e.w);
-  for (let n = 1; n <= SLOTS; n++) if (n !== meta.slot) { try { fromGame(loadSlot(n)); } catch (e) {} }
-  let got = 0;
-  for (const w of need) { const f = map.get(libNorm(w.name)); if (f) { w.photo = f.p; if (f.local) w.photoLocal = true; else delete w.photoLocal; delete w.photoGen; got++; } }
-  return got;
-}
 // a world from outside is untrusted: run it through the same deep clean as a save, then rebuild the AI companies
 function cleanWorld(raw) {
   if (!raw || raw.wv !== WORLD_V || !Array.isArray(raw.cos)) throw 0;
@@ -11199,7 +11186,7 @@ const CREATOR_ACTIONS = {
       let raw; try { raw = JSON.parse(await ungz(i.save)); } catch (e) { return toast('This world is damaged and can\'t be opened.'); }
       if (pxList(i).length) { toast('Loading photos…'); try { await worldPhotos(i, raw); } catch (e) {} }
       let wd; try { wd = cleanWorld(raw); } catch (e) { return toast('This world is damaged and can\'t be opened.'); }
-      wd.title = i.title; photoFill(worldAllW(wd));
+      wd.title = i.title;
       const take = k ? wd.cos[k - 1] : null;
       if (G) save();
       markUsed(key); UI.modal = null;
@@ -11217,7 +11204,6 @@ const CREATOR_ACTIONS = {
     const go = async () => {
       if (typeof DecompressionStream === 'undefined') return toast('This browser can\'t open shared saves. Try an up-to-date browser.');
       let g; try { g = sanitizeGame(JSON.parse(await ungz(i.save))); } catch (e) { return toast('This save is damaged and can\'t be opened.'); }
-      photoFill([...g.wrestlers, ...(g.rivalPromos || []).flatMap(r => r.roster || [])]);
       if (G) save();
       g.event = null; G = g; meta.slot = n; save(); markUsed(key); PLAYLOG.ev('new_game', 'community');
       UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; render();
@@ -12944,7 +12930,7 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9.51';
 const WHATS_NEW = [
-  ['📸 Photos in shared worlds', 'Shared worlds now carry their wrestlers\' photos in your photo slots, the same way shared rosters do. When you load a world or a shared save, any wrestler without a photo gets yours by name from your library and your other saves. Private photos stay private.'],
+  ['📸 Photos in shared worlds', 'Shared worlds now carry their wrestlers\' photos in your photo slots, the same way shared rosters do. Private photos stay private.'],
   ['🏆 Every title in shared worlds', 'A company you share in a world now brings all its championships (up to 10), with their holders and prestige, including women\'s and tag titles. Before, only three singles belts and one tag belt came along, and generic belts filled the gaps. Share your world again to update it.'],
   ['🌍 Full rosters in shared worlds', 'Taking over a company in a shared world now brings its whole roster. Worlds used to cut each company down to its first 60 wrestlers. A company can now carry up to 400.'],
   ['👀 Face maker previews', 'In the Pixel face maker, every hair, face, beard, gear and extra choice now shows your wrestler wearing it, and the preview at the top is bigger and stays in view while you scroll.'],
