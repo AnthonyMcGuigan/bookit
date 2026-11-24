@@ -4088,7 +4088,7 @@ function liven(r) {
 // a company adds a second title and a women's title once it has the roster for them
 function rivTitles(r) {
   if (r.tset) return;
-  const has = s => r.titles.some(t => t.short === s);
+  const has = s => r.titles.some(t => t.short === s || (s === 'TV' ? t.mid && !t.div && rN(t) === 1 : s === "Women's" ? t.div === "Women's" && rN(t) === 1 : s === 'Tag' ? rN(t) === 2 : s === 'Trios' ? rN(t) === 3 : false));
   if (!has('TV') && r.roster.length >= 10) r.titles.push({ id: uid(), name: `${r.short} Television Championship`, short: 'TV', div: '', mid: true, holder: [], since: G.week, d: 0, reigns: [] });
   if (!has("Women's") && r.roster.filter(isWomen).length >= 4) r.titles.push({ id: uid(), name: `${r.short} Women's Championship`, short: "Women's", div: "Women's", mid: false, holder: [], since: G.week, d: 0, reigns: [] });
   // team belts once there's a deep enough roster: tag titles first, then trios (sooner at a show-first company)
@@ -9764,7 +9764,8 @@ function worldCo(r) {
   const ids = new Set(c.roster.map(w => w.id)), grp = (a, n) => (Array.isArray(a) ? a : []).filter(g => g && g.members?.filter(id => ids.has(id)).length >= n);
   c.teams = grp(r.teams, 2).filter(t => t.members.every(id => ids.has(id))).slice(0, 40).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
   c.facs = grp(r.facs, 2).slice(0, 20).map(f => ({ id: f.id, name: f.name, members: f.members.filter(id => ids.has(id)), leader: ids.has(f.leader) ? f.leader : null }));
-  c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, rN(t)), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
+  if (r.tset) c.tset = 1;
+  c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(+t.pres ? { pres: t.pres } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, rN(t)), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
   return c;
 }
 // a company the player runs, written as an AI company for the world
@@ -9780,12 +9781,13 @@ function coAsRival(g) {
   const a = k => avg(ros.map(w => +w[k] || 0));
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
   for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; r.roster.push(x); }
-  const sing = (g.titles || []).filter(t => !t.tag), teamT = [2, 3].map(n => (g.titles || []).find(t => tsz(t) === n)).filter(Boolean);
+  const sing = (g.titles || []).filter(t => !t.tag), teamT = (g.titles || []).filter(t => tsz(t) > 1).slice(0, 4);
   const look = t => ({ ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}) });
-  r.titles = sing.slice(0, 3).map((t, i) => ({ id: t.id, name: t.name, short: t.short, ...look(t), div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
+  r.titles = sing.slice(0, 10 - teamT.length).map((t, i) => ({ id: t.id, name: t.name, short: t.short, ...look(t), ...(+t.prestige ? { pres: clamp(Math.round(+t.prestige), 1, 100) } : {}), div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
   if (r.titles.length && r.titles.every(t => t.mid || t.div)) r.titles[0].mid = false;
+  if (r.titles.length) r.tset = true; // the company's own belts: don't add generic ones on top
   // its tag and trios belts come along too
-  for (const t of teamT) { const h = t.holder.filter(id => r.roster.some(w => w.id === id)); r.titles.push({ id: t.id, name: t.name, short: t.short, n: tsz(t), ...look(t), div: '', mid: true, holder: h.length === tsz(t) ? h : [], since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }); }
+  for (const t of teamT) { const h = t.holder.filter(id => r.roster.some(w => w.id === id)); r.titles.push({ id: t.id, name: t.name, short: t.short, n: tsz(t), ...look(t), ...(+t.prestige ? { pres: clamp(Math.round(+t.prestige), 1, 100) } : {}), div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: true, holder: h.length === tsz(t) ? h : [], since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }); }
   r.titles.forEach(t => { const cur = t.reigns.at(-1); if (cur && !cur.to && t.holder.length) { t.past = t.reigns.slice(0, -1).map(x => x.nm); t.reigns = [{ nm: cur.nm, from: 1, to: 0, d: 0 }]; } else { t.past = t.reigns.map(x => x.nm); t.reigns = []; } });
   const onR = new Set(r.roster.map(w => w.id));
   r.teams = (g.teams || []).filter(t => t.members.every(id => onR.has(id))).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
@@ -9814,7 +9816,7 @@ function cleanWorld(raw) {
     const onR = new Set(r.roster.map(w => w.id)), gName = v => maskRude(String(v || '').slice(0, 40).trim());
     r.teams = (Array.isArray(r.teams) ? r.teams : []).slice(0, 40).map(t => { const ms = [...new Set((Array.isArray(t?.members) ? t.members : []).filter(id => onR.has(id)))], k = t?.kind === 'trios' ? 3 : 2; return ms.length === k && gName(t.name) ? { id: SAFE_ID.test(t.id) ? t.id : uid(), name: gName(t.name), ...(k === 3 ? { kind: 'trios' } : {}), members: ms } : null; }).filter(Boolean);
     r.facs = (Array.isArray(r.facs) ? r.facs : []).slice(0, 20).map(f => { const ms = [...new Set((Array.isArray(f?.members) ? f.members : []).filter(id => onR.has(id)))].slice(0, 8); return ms.length >= 2 && gName(f.name) ? { id: SAFE_ID.test(f.id) ? f.id : uid(), name: gName(f.name), members: ms, leader: ms.includes(f.leader) ? f.leader : null } : null; }).filter(Boolean);
-    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 6).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
+    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 10).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(+t.pres ? { pres: clamp(Math.round(+t.pres), 1, 100) } : {}), ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
     for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
     r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
     // show names and big event setup, so whoever takes this company over keeps them
@@ -10328,7 +10330,7 @@ function applyWorld(z) {
     G.wrestlers = [];
     for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156) }; delete x.rival; delete x.rWeeks; delete x.rSal; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
     const tag = G.titles.find(t => t.tag);
-    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70, holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}) }));
+    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: +t.pres || (rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70), holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}) }));
     G.teams = (take.teams || []).filter(t => t.members.every(id => W(id))).map(t => ({ ...t, w: 0, l: 0, d: 0 }));
     G.factions = (take.facs || []).map(f => ({ ...f, members: f.members.filter(id => W(id)), tms: G.teams.filter(t => t.members.every(id => f.members.includes(id))).map(t => t.id), w: 0, l: 0, d: 0 })).filter(f => f.members.length >= 2);
     if (tag && !G.titles.some(t => t.tag)) G.titles.push({ ...tag, holder: [] });
@@ -12911,8 +12913,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.49';
+const VERSION = '1.9.50';
 const WHATS_NEW = [
+  ['🏆 Every title in shared worlds', 'A company you share in a world now brings all its championships (up to 10), with their holders and prestige, including women\'s and tag titles. Before, only three singles belts and one tag belt came along, and generic belts filled the gaps. Share your world again to update it.'],
   ['🌍 Full rosters in shared worlds', 'Taking over a company in a shared world now brings its whole roster. Worlds used to cut each company down to its first 60 wrestlers. A company can now carry up to 400.'],
   ['👀 Face maker previews', 'In the Pixel face maker, every hair, face, beard, gear and extra choice now shows your wrestler wearing it, and the preview at the top is bigger and stays in view while you scroll.'],
   ['🗂 Draft war room', 'Brand drafts feel like the real thing. Each brand shows what it needs (star power, champions, tag teams, faces and heels) and gets a letter grade. Every pick gets a reveal with a commentary line and a crowd reaction, and you can trade wrestlers between brands during the draft or any time from Office → Brands.'],
