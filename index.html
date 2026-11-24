@@ -9547,7 +9547,7 @@ async function commInit() {
       const body = d.data() || {};
       for (const it of Array.isArray(body.items) ? body.items.slice(0, 25) : []) {
         if (!it || typeof it !== 'object') continue;
-        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 800000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {} }); continue; }
+        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 800000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {}, ...(it.kind === 'world' && pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}) }); continue; }
         if (!it.pack) continue;
         items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack, ...(pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}) });
       }
@@ -9735,7 +9735,7 @@ function shareableSave(g, keepNotes) {
   const c = JSON.parse(JSON.stringify(g));
   c.history = (c.history || []).slice(-24); c.news = (c.news || []).slice(0, 60);
   if (!keepNotes) { c.notebook = ''; c.todos = []; for (const w of c.wrestlers || []) w.notes = ''; for (const st of c.stories || []) st.notes = ''; }
-  for (const w of c.wrestlers || []) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; }
+  for (const w of [...(c.wrestlers || []), ...(c.rivalPromos || []).flatMap(r => r.roster || [])]) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; }
   delete c.cos; delete c.coId; delete c.ranWk; delete c.curWk;
   delete c.savedAt; return c;
 }
@@ -9747,7 +9747,7 @@ const CO_ROSTER_MAX = 400; // the most wrestlers one company can bring through a
 function worldW(w) {
   const x = JSON.parse(JSON.stringify(w));
   for (const k of ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', 'both', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem']) delete x[k];
-  if (w.photoLocal || String(x.photo || '').length > 6000) x.photo = '';
+  if (w.photoLocal || !safePhoto(x.photo)) x.photo = ''; // private photos stay home; the rest move to photo slots when the world is shared
   x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
   return x;
 }
@@ -9802,6 +9802,14 @@ function makeWorld(withMine) {
 }
 function worldSummary(wd) {
   return { cos: wd.cos.slice(0, 10).map(c => [String(c.name).slice(0, 40), tierOf(c), c.roster.length, String(c.roster.find(w => w.id === c.titles?.find(t => !t.mid && !t.div)?.holder[0])?.name || '').slice(0, 40)]), fa: wd.fa.length, n: sum(wd.cos.map(c => c.roster.length)) + wd.fa.length };
+}
+// every wrestler in a world, in a fixed order: company rosters, then free agents (photo slots are stored in this order)
+const worldAllW = wd => [...(wd.cos || []).flatMap(c => Array.isArray(c?.roster) ? c.roster : []), ...(Array.isArray(wd.fa) ? wd.fa : [])].filter(w => w && typeof w === 'object');
+// a shared world's photos sit in the sharer's photo slots: put them back on its wrestlers before it is cleaned
+async function worldPhotos(i, raw) {
+  if (!pxList(i).length) return;
+  await pixLoad(i); const a = PIX.get(pixKey(i)); if (!a) return;
+  worldAllW(raw).forEach((w, k) => { if (!w.photo && a[k]) w.photo = a[k]; });
 }
 // a world from outside is untrusted: run it through the same deep clean as a save, then rebuild the AI companies
 function cleanWorld(raw) {
@@ -11159,10 +11167,15 @@ const CREATOR_ACTIONS = {
       const wd = makeWorld(m.mine !== false);
       for (const c of wd.cos) for (const t of c.titles || []) if (t.photo) { t.photo = await beltShare(t.photo); if (!t.photo) delete t.photo; }
       if (wd.cos.some(c => isRude(c.name) || c.roster.some(w => isRude(w.name)))) return toast('Please rename anything rude in the world first.');
+      const id = uid(), all = worldAllW(wd); let px = 0, left = 0;
+      // photos travel in the player's photo slots, like a shared roster's; with no room, only small pixel photos come along
+      try { px = await pixSplit({ wrestlers: all, titles: [] }, id); }
+      catch (e) { if (e?.code !== 'pix_slots' && e?.code !== 'pix_big') throw e; for (const w of all) if (String(w.photo || '').length > 6000) { w.photo = ''; left++; } }
       const data = await gz(JSON.stringify(wd));
-      const item = { id: uid(), title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe', desc: (m.desc || '').trim().slice(0, 300), kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: Date.now(), sum: worldSummary(wd), save: data };
-      await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30));
-      UI.modal = { type: 'community', tab: 'mine' }; render(); toast('World shared with the community.');
+      const item = { id, title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe', desc: (m.desc || '').trim().slice(0, 300), kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: Date.now(), sum: worldSummary(wd), save: data, ...(px ? { px } : {}) };
+      try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); } catch (e) { if (px) pixDrop(COMM.me, px); throw e; }
+      UI.modal = { type: 'community', tab: 'mine' }; render();
+      toast(left ? `World shared. ${left} photo${left === 1 ? '' : 's'} didn't fit in your free photo slots, so ${left === 1 ? 'that wrestler shows' : 'those wrestlers show'} a pixel face for other players. Delete an older roster with photos to make room.` : 'World shared with the community.');
     } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   cWorldGo(key, el) {
@@ -11170,7 +11183,9 @@ const CREATOR_ACTIONS = {
     const info = slotInfo(n);
     const go = async () => {
       if (typeof DecompressionStream === 'undefined') return toast('This browser can\'t open shared worlds. Try an up-to-date browser.');
-      let wd; try { wd = cleanWorld(JSON.parse(await ungz(i.save))); } catch (e) { return toast('This world is damaged and can\'t be opened.'); }
+      let raw; try { raw = JSON.parse(await ungz(i.save)); } catch (e) { return toast('This world is damaged and can\'t be opened.'); }
+      if (pxList(i).length) { toast('Loading photos…'); try { await worldPhotos(i, raw); } catch (e) {} }
+      let wd; try { wd = cleanWorld(raw); } catch (e) { return toast('This world is damaged and can\'t be opened.'); }
       wd.title = i.title;
       const take = k ? wd.cos[k - 1] : null;
       if (G) save();
@@ -12913,8 +12928,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.50';
+const VERSION = '1.9.51';
 const WHATS_NEW = [
+  ['📸 Photos in shared worlds', 'Shared worlds now carry their wrestlers\' photos in your photo slots, the same way shared rosters do. Private photos stay private.'],
   ['🏆 Every title in shared worlds', 'A company you share in a world now brings all its championships (up to 10), with their holders and prestige, including women\'s and tag titles. Before, only three singles belts and one tag belt came along, and generic belts filled the gaps. Share your world again to update it.'],
   ['🌍 Full rosters in shared worlds', 'Taking over a company in a shared world now brings its whole roster. Worlds used to cut each company down to its first 60 wrestlers. A company can now carry up to 400.'],
   ['👀 Face maker previews', 'In the Pixel face maker, every hair, face, beard, gear and extra choice now shows your wrestler wearing it, and the preview at the top is bigger and stays in view while you scroll.'],
