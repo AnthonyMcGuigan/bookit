@@ -4038,6 +4038,7 @@ function dirtRumours() {
     if (w.courted && w.contract.weeks <= 12) add(pick([`${w.courted} has been in touch with ${w.name}'s people about their next deal.`, `${w.name} took a meeting with ${w.courted}. Their deal is nearly up.`]), 1, 3);
     if (w.morale < 30) add(pick([`${w.name} is said to be unhappy with how ${G.promo.name} is using them.`, `Friends of ${w.name} say they're miserable at ${G.promo.name} right now.`]), 1, 2.5);
   }
+  for (const w of mine.filter(w => w.xt)) add(pick([`${w.name} has been tearing it up on the indies as ${w.xt.p}'s champion. ${G.promo.name} lets them work outside dates.`, `Indie fans can't get enough of ${w.name}, who still holds the ${w.xt.n}.`]), 1, 1.3);
   const happy = mine.filter(w => w.morale >= 70 && w.pop >= 45);
   if (happy.length) { const w = pick(happy); add(pick([`${w.name} has quietly asked for their release from ${G.promo.name}.`, `${w.name} is said to be eyeing the exit at ${G.promo.name}.`]), 0, 1.2); }
   const champ = (G.titles || []).find(t => t.holder.length === 1 && W(t.holder[0])); if (champ && Math.random() < .5) add(pick([`${nameOf(champ.holder[0])} wants out of the ${champ.short} title picture and has told management so.`, `${nameOf(champ.holder[0])} is tired of carrying the ${champ.short} title and wants a break.`]), 0, .8);
@@ -5731,6 +5732,8 @@ function offerChance(w, salary, weeks, o) {
   if (!o?.team) { const tp = teamPay(w); if (tp && salary < tp.sal * 0.85) c -= 0.1; if (partnersFor(w).length) c -= 0.06; }
   // a public blast makes other free agents wary for a while
   if (!w.contract && blastOn()) c -= 0.05;
+  // a workhorse wants indie dates in the deal
+  if (o?.indie != null && wantsIndie(w)) c += o.indie ? 0.06 : -0.15;
   return clamp(c, 0, 1);
 }
 // ---------- tag teams talk money together ----------
@@ -5759,8 +5762,8 @@ function teamAsk(m, ws, wk) {
   if (m.pers === 'team' || m.pers === 'loyal') return Math.min(avgA, own);
   return (avgA + own) / 2;
 }
-function teamChance(ws, salary, wk) {
-  const each = ws.map(x => offerChance(x, salary, wk, { team: true, ask: teamAsk(x, ws, wk) }));
+function teamChance(ws, salary, wk, indie) {
+  const each = ws.map(x => offerChance(x, salary, wk, { team: true, ask: teamAsk(x, ws, wk), indie }));
   return { each, c: clamp(Math.min(...each) + 0.05, 0, 1) };
 }
 // what the partners say to each other about the offer
@@ -5800,7 +5803,7 @@ function teamPayWeek() {
 // ---------- going public (personalities on) ----------
 // Some wrestlers blast you on social media after a lowball offer or a broken promise.
 // It costs prestige and a few fans, makes free agents warier for a while, and you can answer it from your phone.
-const BLAST_ODDS = { hot: .6, ego: .45, money: .4, star: .35, team: .05, loyal: .03 };
+const BLAST_ODDS = { hot: .6, ego: .45, money: .4, star: .35, work: .15, team: .05, loyal: .03 };
 const blastOn = () => !!(G.blast && G.blast.until > G.week);
 const handle = w => '@' + String(w.short || w.name).replace(/[^A-Za-z0-9]/g, '').slice(0, 18);
 function blastText(w, why, x) {
@@ -6492,7 +6495,8 @@ function wTags(w) {
   if (G.leader === w.id && w.contract) t.push('<span class="tag">👑 Leader</span>');
   if (w.creative >= G.week && w.contract) t.push('<span class="tag">💼 Creative control</span>');
   if (w.loan && w.contract) t.push(`<span class="tag">🚪 Invader${RV(w.loan) ? ' · ' + esc(RV(w.loan).short) : ''}</span>`);
-  if (w.away && w.contract) t.push(`<span class="tag warn">${MEDIA[w.away.k]?.ic || '🎬'} Away ${awayLeft(w)}wk</span>`);
+  if (w.away && w.contract) t.push(`<span class="tag warn">${MEDIA[w.away.k]?.ic || '🎬'} ${w.away.k === 'gig' ? 'Indie date' : `Away ${awayLeft(w)}wk`}</span>`);
+  if (w.xt && PER()) t.push(`<span class="tag gold">🏆 ${esc(w.xt.p)}</span>`);
   if (w.injury > 0) t.push(`<span class="tag bad">🩹 ${w.injury}wk</span>`);
   const sk = streakTag(w); if (sk) t.push(sk);
   if (CON() && w.contract && w.contract.weeks <= TALKS_OPEN) t.push(`<span class="tag ${w.contract.weeks <= 4 ? 'warn' : ''}">📝 ${w.contract.weeks}wk</span>`);
@@ -6814,7 +6818,7 @@ function viewBookCard() {
   let bestIx = -1;
   if (card.length > 2) { const live = prs.map((r, i) => card[i].kind === 'match' ? r.rating : -1), mx = Math.max(...live.slice(0, -1)); if (mx > 0 && (card[card.length - 1].kind !== 'match' || live[live.length - 1] < mx - 5)) bestIx = live.indexOf(mx); }
   const isNow = wk === G.week;
-  return `${statusBar}${isNow ? eventAlert() + dirtAlert() : ''}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
+  return `${statusBar}${isNow ? eventAlert() + gigAlert() + dirtAlert() : ''}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
   <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showTitle(wk))}</h2>
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
@@ -7776,7 +7780,7 @@ function modalWrestler(m) {
      <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Indie star'}</b></div>`}
    </div>
    ${w.retired ? '' : skillsBlock(w)}
-   ${w.contract ? personaBlock(w) : ''}
+   ${w.contract ? personaBlock(w) : ''}${indieBlock(w)}
    ${(() => { const st = STATS(w), ranks = G.titles.filter(t => !t.tag).map(t => [t, contenders(t, 10).findIndex(x => x.id === w.id)]).filter(x => x[1] >= 0);
      return `<div class="sec">Career stats</div><div class="grid3 cstats"><div><b>${st.m}</b><span>matches</span></div><div><b>${st.m ? Math.round(st.sum / st.m) : '–'}</b><span>avg rating</span></div><div><b>${st.best || '–'}</b><span>best match</span></div><div><b>${st.tw}</b><span>title wins</span></div><div><b>${st.def}</b><span>defenses</span></div><div><b>${st.motn}</b><span>match of the night</span></div></div>
      ${ranks.length ? `<div class="small" style="margin-top:6px">${ranks.map(([t, i]) => `🏆 <b>#${i + 1}</b> contender for the ${esc(t.short)} title`).join('<br>')}</div>` : ''}${shotsOf(w.id).length ? `<div class="small" style="margin-top:6px">${shotsOf(w.id).map(x => esc(shotLine(x))).join('<br>')}</div>` : ''}`; })()}
@@ -7808,8 +7812,13 @@ function modalNegotiate(m) {
   const teamBox = ps.length ? `<div class="card" style="margin-top:10px"><div class="row small" style="margin-bottom:8px"><span class="sp"><b>👥 ${esc(tm?.name || 'Tag team')}</b><div class="tiny muted">${w.contract ? 'Their deals end within 6 months of each other. Re-sign them together and the deals end the same week.' : `${esc(ps.map(p => p.name).join(' & '))} ${ps.length === 1 ? 'is' : 'are'} an indie star too. They'd rather sign together.`}</div></span></div>
      <div class="seg-ctl"><button class="${team ? 'on' : ''}" data-act="negTeam" data-id="1">Team deal</button><button class="${team ? '' : 'on'}" data-act="negTeam" data-id="0">Just ${esc(lastName(w))}</button></div>
      ${team ? `<div class="team-talk" id="negTalk">${teamTalkHTML(ws, m)}</div>` : `<div class="tiny muted" style="margin-top:6px">Signing one partner alone is harder. They want to stay a team.</div>`}</div>` : '';
+  const iw = ws.filter(wantsIndie);
+  if (iw.length && m.indie == null) m.indie = true;
+  const indieBox = iw.length ? `<div class="card" style="margin-top:10px"><div class="small" style="margin-bottom:8px"><b>🤼 Indie dates clause</b><div class="tiny muted">${esc(iw.map(x => lastName(x)).join(' & '))} ${iw.length === 1 ? 'is a Workhorse and wants' : 'are Workhorses and want'} to keep wrestling outside shows on nights off. It gives a small boost and they might win titles elsewhere. Now and then a booking lands on your show night, and you'd have to say no.</div></div>
+     <div class="seg-ctl"><button class="${m.indie ? 'on' : ''}" data-act="negIndie" data-id="1">Allow indie dates</button><button class="${m.indie ? '' : 'on'}" data-act="negIndie" data-id="0">No outside bookings</button></div>
+     <div class="tiny ${m.indie ? 'muted' : ''}" style="margin-top:6px${m.indie ? '' : ';color:var(--bad)'}">${m.indie ? 'They\'re more likely to say yes.' : 'Harder to sign, and they\'ll remember you said no.'}</div></div>` : '';
   const body = `${!w.contract ? paSwitch(w, false) : ''}<div class="row" style="margin-bottom:12px">${team ? ws.map(x => av(x, 44)).join('') : av(w, 48)}<div class="sp"><b>${team ? esc(tm?.name || ws.map(x => x.name).join(' & ')) : esc(w.name)}</b><div class="small muted">${team ? ws.map(x => `${esc(lastName(x))}: pop ${Math.round(x.pop)}, asks ${money(askFor(x, m.weeks))}`).join(' · ') : `Pop ${Math.round(w.pop)} · Morale ${Math.round(w.morale)} · Age ${w.age}`}</div></div></div>
-   <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' : 'None (indie star)'}</b></div>
+   <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' + (indieOn(w) ? ' · indie dates' : '') : 'None (indie star)'}</b></div>
    ${team && w.contract ? ps.map(p => `<div class="row small"><span class="sp muted">${esc(lastName(p))}'s deal</span><b>${money(p.contract.salary)}/wk · ${lenLabel(p.contract.weeks)} left</b></div>`).join('') : ''}
    ${w.contract ? `<div class="row small"><span class="sp muted">Signed through</span><b>Week ${G.week + w.contract.weeks} · ${showDate(G.week + w.contract.weeks).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</b></div>` : ''}
    <div class="row small"><span class="sp muted">Wants</span><b>${lenLabel(prefLen(w))} deal</b></div>
@@ -7818,7 +7827,7 @@ function modalNegotiate(m) {
    ${tp ? `<div class="tiny muted" style="margin-top:4px">👥 Partner ${esc(tp.w.name)} earns ${money(tp.sal)}/wk. ${esc(lastName(w))} will compare.</div>` : ''}
    ${!w.contract && blastOn() ? `<div class="tiny" style="color:var(--bad);margin-top:4px">📢 Indie stars saw ${esc(nameOf(G.blast.wid))}'s posts about you. They're a little warier until week ${G.blast.until}.</div>` : ''}
    ${ws.some(x => x.refusedWk === G.week) ? '<div class="small" style="color:var(--bad);margin-top:6px">They said no. Try again next week.</div>' : ''}</div>
-   ${teamBox}
+   ${teamBox}${indieBox}
    <label class="f"><span id="negSalLbl">Weekly salary${team ? ', each' : ''}: ${money(m.salary)}</span><input type="range" min="${Math.max(300, Math.round(ask * 0.4 / 100) * 100)}" max="${Math.round(ask * 2 / 100) * 100}" step="100" value="${m.salary}" data-in="negSal" style="width:100%"></label>
    <label class="f"><span>Length</span><div class="seg-ctl">${DEAL_LENS.map(([n, l]) => `<button class="${m.weeks === n ? 'on' : ''}" data-act="negLen" data-id="${n}">${l}${n === prefLen(w) ? ' ★' : ''}</button>`).join('')}</div></label>
    <div id="negChance">${negChanceHTML(w, m)}</div>
@@ -7854,7 +7863,7 @@ function teamTalkHTML(ws, m) {
 }
 function negChanceHTML(w, m) {
   const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
-  const c = team ? teamChance(ws, m.salary, m.weeks).c : offerChance(w, m.salary, m.weeks);
+  const c = team ? teamChance(ws, m.salary, m.weeks, m.indie).c : offerChance(w, m.salary, m.weeks, { indie: m.indie });
   const [lbl, cls] = chanceLabel(c), n = ws.length;
   return `<div class="alert ${cls}"><span class="ic">🤝</span><div><b>${lbl}</b> <span class="muted small">(${Math.round(c * 100)}%)</span><div class="small muted">${lenLabel(m.weeks)}, through week ${G.week + m.weeks}. Total cost ${money(m.salary * m.weeks * n)}${team ? ` for ${n}` : ''}.${m.weeks < 52 ? ' Short deals cost more per week.' : m.weeks > 104 ? ' Long deals get a small discount per week.' : ''}${PER() && ws.some(x => m.salary < askFor(x, m.weeks) * 0.8 && BLAST_ODDS[x.pers] >= .3) ? ' <b style="color:var(--bad)">A lowball like this could end up on social media.</b>' : ''}</div></div></div>`;
 }
@@ -8751,23 +8760,25 @@ const A = {
   },
   pickTab(t) { UI.picker.tab = t === 'guests' ? 'guests' : 'roster'; render(); },
   negLen(n) { const m = UI.modal, w = W(m.id), old = askFor(w, m.weeks); m.weeks = +n; m.salary = Math.round(m.salary * askFor(w, m.weeks) / old / 100) * 100; render(); },
+  negIndie(v) { const m = UI.modal; if (!m) return; m.indie = v === '1'; render(); },
   negTeam(v) { const m = UI.modal, w = W(m.id); if (!w) return; m.team = v === '1' && partnersFor(w).length > 0; const ws = [w, ...partnersFor(w)]; m.salary = m.team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, m.weeks))) / 100) * 100 : askFor(w, m.weeks); render(); },
   offer() {
     const m = UI.modal, w = W(m.id); if (!w) return;
     const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
-    const c = team ? teamChance(ws, m.salary, m.weeks).c : offerChance(w, m.salary, m.weeks);
+    const c = team ? teamChance(ws, m.salary, m.weeks, m.indie).c : offerChance(w, m.salary, m.weeks, { indie: m.indie });
     const newbies = ws.filter(x => !x.contract);
     if (G.settings.finances && newbies.length && G.money < m.salary * 2 * newbies.length) return toast(`Not enough money to cover their first weeks.`);
     const tn = team ? (teamFor(w)?.name || ws.map(x => lastName(x)).join(' & ')) : '';
     if (Math.random() < c) {
       for (const x of ws) {
         const was = !!x.contract, ask = team ? teamAsk(x, ws, m.weeks) : askFor(x, m.weeks);
-        x.contract = { salary: m.salary, weeks: m.weeks }; x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100); delete x.courted; delete x.payGap;
+        x.contract = { salary: m.salary, weeks: m.weeks, ...(wantsIndie(x) && m.indie ? { indie: true } : {}) }; x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100); delete x.courted; delete x.payGap;
         if (G.guests) G.guests = G.guests.filter(d => d.id !== x.id);
         if (!was) { x.joined = G.week; x.lastBooked = G.week; }
-        if (!team) news(`✍️ ${x.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks}).`, 'contract');
+        if (!team) news(`✍️ ${x.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks})${x.contract.indie ? ', with indie dates' : ''}.`, 'contract');
       }
       if (team) news(`✍️ ${tn} (${ws.map(x => x.name).join(' & ')}) ${ws.every(x => newbies.includes(x)) ? 'signed' : 're-signed'} together: ${lenLabel(m.weeks)} at ${money(m.salary)}/wk each (through week ${G.week + m.weeks}).`, 'contract');
+      for (const x of ws) if (wantsIndie(x) && !m.indie) remember(x, -3, 'You said no to indie dates in my deal');
       UI.modal = null; commit(team ? `${tn} said yes!` : `${w.name} said yes!`);
     } else {
       let blasted = null;
@@ -10707,7 +10718,11 @@ function sanitizeGame(g) {
     if (w.look != null && !faceOK(w.look)) delete w.look;
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
-    if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520) };
+    if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520), ...(w.contract.indie === true ? { indie: true } : {}) };
+    if (w.xt) w.xt = w.xt && typeof w.xt === 'object' ? { n: String(w.xt.n || 'Indie Championship').slice(0, 80), p: String(w.xt.p || 'an indie').slice(0, 60), wk: Math.floor(+w.xt.wk) || 0, d: clamp(Math.floor(+w.xt.d) || 0, 0, 999) } : undefined;
+    if (!w.xt) delete w.xt;
+    if (w.xtPast) w.xtPast = (Array.isArray(w.xtPast) ? w.xtPast : []).filter(x => x && typeof x === 'object').slice(0, 5).map(x => ({ n: String(x.n || 'Indie Championship').slice(0, 80), p: String(x.p || '').slice(0, 60), wk: Math.floor(+x.wk) || 0, to: Math.floor(+x.to) || 0, d: clamp(Math.floor(+x.d) || 0, 0, 999) }));
+    for (const k of ['gigs', 'gigClash']) if (w[k] != null) { w[k] = Math.floor(+w[k]); if (!isFinite(w[k])) delete w[k]; }
     if (w.role !== undefined && (!Object.hasOwn(ROLES, w.role) || w.role === 'wrestler')) delete w.role;
     if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && MEDIA[a.k].long ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3) } : undefined; if (!w.away) delete w.away; }
     if (w.mediaWk != null) w.mediaWk = Math.floor(+w.mediaWk) || 0;
@@ -10719,6 +10734,7 @@ function sanitizeGame(g) {
     .map(x => ({ wk: Math.floor(+x.wk) || 0, wid: x.wid, k: x.k, ...(x.short ? { short: 1 } : {}), ...(x.long ? { long: 1, wks: clamp(Math.floor(+x.wks) || 1, 1, 20) } : {}), ...(x.back ? { back: 1 } : {}), ...(x.bad ? { bad: 1 } : {}), ...(x.d != null ? { d: clamp(+x.d || 0, -50, 50) } : {}) }));
   cleanTraining(g, true);
   if (g.blast) g.blast = g.blast && typeof g.blast === 'object' && typeof g.blast.wid === 'string' ? { wid: g.blast.wid, until: clamp(Math.floor(+g.blast.until) || 0, 0, g.week + 20) } : undefined;
+  if (Array.isArray(g.phone)) for (const m of g.phone) if (m && m.gig) m.gig = { wk: Math.floor(+m.gig.wk) || 0, p: String(m.gig.p || 'an indie show').slice(0, 60), big: m.gig.big ? 1 : 0, pulled: clamp(Math.floor(+m.gig.pulled) || 0, 0, 20) };
   if (Array.isArray(g.phone)) for (const m of g.phone) if (m && m.social) m.social = { why: m.social.why === 'promise' ? 'promise' : 'lowball', sev: clamp(+m.social.sev || 1, 1, 3), shares: Math.max(0, Math.round(+m.social.shares) || 0), lost: Math.max(0, Math.round(+m.social.lost) || 0) };
   return g;
 }
@@ -11464,10 +11480,11 @@ const PERS = {
   hot: { n: 'Hothead', ic: '🔥', d: 'Big reactions both ways. Wants payback after a loss.' },
   money: { n: 'Money first', ic: '💰', d: 'Pay matters most. Easier for rivals to tempt.' },
   star: { n: 'Spotlight seeker', ic: '🎤', d: 'Wants TV time and the mic. Hates sitting at home.' },
-  team: { n: 'Team player', ic: '👥', d: 'Happy to help others. Losing does not bother them much.' }
+  team: { n: 'Team player', ic: '👥', d: 'Happy to help others. Losing does not bother them much.' },
+  work: { n: 'Workhorse', ic: '🤼', d: 'Lives to wrestle. Wants indie dates in their contract and hates a night off.' }
 };
 function persFor(w) {
-  const wt = { ego: 1 + (w.pop >= 60 ? 1.2 : 0), loyal: 1 + (w.age >= 33 ? .6 : 0), hot: 1 + (w.style === 'Brawler' ? 1 : 0), money: 1 + (w.pop >= 50 ? .4 : 0), star: 1 + (w.style === 'Showman' || w.mic >= 70 ? 1 : 0), team: 1 + (w.age >= 35 || w.style === 'Technician' ? .6 : 0) };
+  const wt = { ego: 1 + (w.pop >= 60 ? 1.2 : 0), loyal: 1 + (w.age >= 33 ? .6 : 0), hot: 1 + (w.style === 'Brawler' ? 1 : 0), money: 1 + (w.pop >= 50 ? .4 : 0), star: 1 + (w.style === 'Showman' || w.mic >= 70 ? 1 : 0), team: 1 + (w.age >= 35 || w.style === 'Technician' ? .6 : 0), work: .8 + (w.ring >= 65 ? .6 : 0) + (w.age <= 28 ? .3 : 0) };
   let r = Math.random() * sum(Object.values(wt));
   for (const [k, v] of Object.entries(wt)) if ((r -= v) <= 0) return k;
   return 'team';
@@ -11489,6 +11506,8 @@ function ensurePers() {
   ensurePhone();
   if (!Array.isArray(G.promises)) G.promises = [];
   G.promises = G.promises.filter(p => p && ASKS[p.key] && W(p.wid));
+  // saves from before Workhorses: some indie stars turn out to be one
+  if (!G.workMig) { G.workMig = 1; if (!first) for (const w of G.wrestlers) if (!w.contract && !w.retired && Object.hasOwn(PERS, w.pers) && Math.random() < .15) w.pers = 'work'; }
   for (const w of G.wrestlers) {
     if (!Object.hasOwn(PERS, w.pers)) w.pers = persFor(w);
     w.trust = clamp(isFinite(+w.trust) && w.trust !== null ? +w.trust : 50, 0, 100);
@@ -11512,7 +11531,7 @@ function textFrom(w, t, ask, x) {
 const phoneNew = () => Array.isArray(G.phone) ? G.phone.filter(m => !m.read).length : 0;
 // a message still waiting on you: an open ask from a wrestler, or a backstage moment you haven't decided
 const talksOpen = (m, w = W(m.wid)) => m.act === 'talks' && CON() && !!w?.contract && !w.loan && w.contract.weeks <= TALKS_OPEN;
-const msgOpen = m => m.from === 'asst' ? (m.feud ? feudMsgOpen(m) : evOpen(m)) : !!(m.ask && m.ans == null && W(m.wid)?.contract) || talksOpen(m) || !!(m.social && m.ans == null && W(m.wid) && G.week - m.wk < 2);
+const msgOpen = m => m.from === 'asst' ? (m.feud ? feudMsgOpen(m) : evOpen(m)) : !!(m.ask && m.ans == null && W(m.wid)?.contract) || talksOpen(m) || !!(m.social && m.ans == null && W(m.wid) && G.week - m.wk < 2) || gigOpen(m);
 const openAsk = w => (G.phone || []).some(m => m.wid === w.id && m.ask && m.ans == null) || (G.promises || []).some(p => p.wid === w.id);
 const mainedIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.length > 1 && segPeople(h.results.at(-1).seg).includes(w.id));
 const promoIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.some(r => r.seg.kind === 'promo' && (r.seg.who || []).includes(w.id)));
@@ -11602,11 +11621,110 @@ function personaWeek(booked) {
   for (const m of G.phone) if (m.ask && m.ans == null && G.week - m.wk >= 2) { m.ans = -1; const w = W(m.wid); if (w?.contract) remember(w, -4, 'You ignored my message'); }
   for (const w of signed()) {
     w.trust += ((w.pers === 'loyal' ? 60 : 50) - w.trust) * 0.01;
-    if (w.pers === 'star' && inRing(w) && !booked.has(w.id) && !w.injury && !w.away && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
+    if (w.pers === 'work' && !w.loan && CON() && !w.contract.indie) w.morale = clamp(w.morale - .5, 0, 100);
+    if ((w.pers === 'star' || w.pers === 'work') && inRing(w) && !booked.has(w.id) && !w.injury && !w.away && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
     if (w.pers === 'money' && CON() && w.contract.salary < asking(w) * .85) w.morale = clamp(w.morale - 1, 0, 100);
-    if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? pick(['My deal is up for talks. I want to stay. Let\'s get it done.', 'Contract time. I\'m happy here, so let\'s make it easy.']) : w.trust < 35 ? pick(['My contract is up soon. Honestly, I\'m listening to other offers.', 'My deal\'s nearly done and other companies have called. Just so you know.']) : pick(['My contract is coming up. Make me a fair offer and we can talk.', 'We should talk about my next deal. I\'m open to staying for the right offer.']), null, { act: 'talks' });
+    if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? pick(['My deal is up for talks. I want to stay. Let\'s get it done.', 'Contract time. I\'m happy here, so let\'s make it easy.']) : w.trust < 35 ? pick(['My contract is up soon. Honestly, I\'m listening to other offers.', 'My deal\'s nearly done and other companies have called. Just so you know.']) : pick(['My contract is coming up. Make me a fair offer and we can talk.', 'We should talk about my next deal. I\'m open to staying for the right offer.']) + (wantsIndie(w) ? pick([' And I want indie dates in the new deal.', ' One thing: I want to keep working indie shows on my nights off.']) : ''), null, { act: 'talks' });
   }
   if (G.week >= 2 && G.phone.filter(m => m.ask && m.ans == null).length < 2 && Math.random() < .5) newAsk();
+  indieWeek();
+}
+// ---------- indie dates: workhorses can keep wrestling on outside shows (personalities on) ----------
+// A Workhorse asks for an indie dates clause in contract talks. With it, they work outside shows on their nights off:
+// a small boost each time, now and then a title at an indie company, and once in a while a booking on the same night
+// as your show. They take it unless you say no, and saying no stings.
+const wantsIndie = w => PER() && w?.pers === 'work' && !w.loan;
+const indieOn = w => wantsIndie(w) && !!w.contract?.indie;
+const INDIE_BELTS = ['Championship', 'Heavyweight Championship', 'Openweight Championship', 'Television Championship'];
+function indieName() {
+  const taken = new Set([G.promo.name, ...(G.rivalPromos || []).map(r => r.name), ...(G.cos || []).map(c => c.promo?.name)]);
+  for (let i = 0; i < 8; i++) { const n = `${pick(RIV_PLACES)} ${pick(RIV_KINDS)}`; if (!taken.has(n)) return n; }
+  return 'Backroom Pro Wrestling';
+}
+// one outside show: a little more popular, sharper, happier and a bit more tired; sometimes a title changes hands
+function indieGig(w, p = indieName()) {
+  w.gigs = (w.gigs || 0) + 1;
+  addPop(w, rnd(.5, 1.2)); w.momentum = clamp(w.momentum + 2, -50, 50); w.morale = clamp(w.morale + 3, 0, 100); w.fatigue = clamp(w.fatigue + 8, 0, 100);
+  if (Math.random() < .2) w.ring = clamp(w.ring + 1, 0, 100);
+  if (w.xt) {
+    if (Math.random() < .18) {
+      w.xtPast = [{ n: w.xt.n, p: w.xt.p, wk: w.xt.wk, to: G.week, d: w.xt.d || 0 }, ...(w.xtPast || [])].slice(0, 5);
+      news(`🤼 ${w.name} dropped the ${w.xt.n} on an indie show.`, 'office'); delete w.xt;
+    } else w.xt.d = (w.xt.d || 0) + 1;
+    return null;
+  }
+  if (w.pop >= 20 && Math.random() < .09) {
+    const n = `${p} ${isWomen(w) ? 'Women\'s Championship' : pick(INDIE_BELTS)}`;
+    w.xt = { n, p, wk: G.week, d: 0 }; addPop(w, 2.5);
+    news(`🏆 ${w.name} won the ${n} on an indie date. Your star is a champion somewhere else too.`, 'office');
+    textFrom(w, pick([`Look what I brought home from ${p}! Their title is mine.`, `Won the ${n} last night. Thanks for letting me work those dates.`, `I'm a champion at ${p} now. Imagine what I could do here.`]));
+    return n;
+  }
+  return null;
+}
+// end of the week: who worked outside shows, and maybe a clash with next week's show
+function indieWeek() {
+  if (!PER()) return;
+  const went = [], nx = G.week + 1;
+  for (const w of signed().filter(w => indieOn(w) && !w.away && !(w.injury > 0) && inRing(w))) {
+    if (Math.random() > .32) continue;
+    const open = (G.phone || []).some(m => m.gig && m.wid === w.id && m.ans == null && m.gig.wk >= G.week);
+    if (!open && G.week - (w.gigClash ?? -99) >= 6 && Math.random() < .22) { indieClash(w, nx); continue; }
+    indieGig(w); went.push(w);
+  }
+  if (went.length) news(`🤼 Indie dates: ${went.map(w => w.name).join(', ')} worked outside shows on ${went.length === 1 ? 'a night' : 'nights'} off.`, 'office');
+}
+// an outside booking on the same night as one of your shows: they're out that week unless you say no
+function indieClash(w, wk) {
+  w.gigClash = G.week;
+  const p = indieName(), big = bigWk(wk), sh = big ? bigNameOf(G, wk) : G.promo.show;
+  const pulled = pullFromWeek(w, wk);
+  w.away = { k: 'gig', until: wk + 1, from: wk, m: 1 };
+  const t = big
+    ? pick([`${p} offered me the main event of their biggest show of the year. It's the same weekend as ${sh}. I'm taking it unless you tell me no.`, `I know it's ${sh} week, but ${p} wants me to headline their big show. I'd love to go. Your call.`])
+    : pick([`${p} wants me on their show, and it's the same night as ${sh}. I'd really like to go. I'll take it unless you say no.`, `Got booked for ${p} this week, but it lands on ${sh} night. Can I go? Say no and I'll cancel.`, `${p} called. Big show for them, same night as ${sh}. I want to take it. Let me know if you need me.`]);
+  textFrom(w, t + (pulled ? ' I know you had me booked, so I\'m off that card for now.' : ''), null, { gig: { wk, p, big: big ? 1 : 0, pulled } });
+  news(`🤼 ${w.name} has an indie booking on the same night as ${sh} in week ${wk}. Check your phone.`, 'office');
+}
+// take someone off the cards for one week only
+function pullFromWeek(w, wk) {
+  const cards = [wk === G.week ? G.card : null, G.future?.[wk]];
+  for (const s of G.shows || []) { if (wk === G.week && Array.isArray(s.card)) cards.push(s.card); if (s.future?.[wk]) cards.push(s.future[wk]); }
+  let n = 0;
+  for (const c of new Set(cards)) {
+    if (!Array.isArray(c)) continue;
+    for (let i = c.length - 1; i >= 0; i--) {
+      const seg = c[i]; if (!segPeople(seg).includes(w.id)) continue;
+      n++; removeFromSeg(seg, w.id);
+      if (!segPeople(seg).length || (seg.kind === 'match' && seg.sides.filter(sd => sd.length).length < 2)) c.splice(i, 1);
+    }
+  }
+  return n;
+}
+const gigOpen = (m, w = W(m.wid)) => !!(m.gig && m.ans == null && w?.contract && w.away?.k === 'gig' && w.away.from === m.gig.wk && G.week <= m.gig.wk && !((G.ranWk || 0) >= m.gig.wk));
+const gigChoices = (m, w) => [['Let them go', `Out for week ${m.gig.wk}. Back with a small boost${m.gig.big ? '' : ''}`], ['Say no', `They work your show instead. ${lastName(w)} won't like it`]];
+function gigAnswer(m, i) {
+  const w = W(m.wid); if (!w?.contract || !gigOpen(m, w)) { m.ans = -1; return 'Too late for that one.'; }
+  m.ans = i;
+  if (i === 0) { remember(w, 3, 'You let me work an indie date'); w.morale = clamp(w.morale + 3, 0, 100); textFrom(w, pick(['Thank you! I\'ll make you proud out there.', 'Appreciate it, boss. Back before you know it.'])); G.phone[0].read = true; return `${w.name} is working ${m.gig.p} in week ${m.gig.wk}.`; }
+  delete w.away; w.lastBooked = Math.max(w.lastBooked || 0, G.week - 1);
+  remember(w, m.gig.big ? -8 : -6, `You made me cancel a show at ${m.gig.p}`); w.morale = clamp(w.morale - (m.gig.big ? 10 : 7), 0, 100);
+  textFrom(w, pick([`Fine. I'll call ${m.gig.p} and cancel. They won't book me again soon.`, 'Ok. You\'re the boss. Doesn\'t mean I like it.', `I had to let ${m.gig.p} down. Hope you've got something good for me.`])); G.phone[0].read = true;
+  return `${w.name} cancelled and is available again${m.gig.pulled ? '. Put them back on the card' : ''}. They're not happy.`;
+}
+function gigAlert() {
+  const m = (G.phone || []).find(x => gigOpen(x)); if (!m) return '';
+  const w = W(m.wid);
+  return `<button class="bs-alert" data-act="phone"><span class="bs-alert-i">🤼</span><span class="sp"><span class="bs-alert-k">${esc(w.name)} texted</span><b>Indie booking on your show night</b></span><span class="bs-alert-go">Decide ›</span></button>`;
+}
+function indieBlock(w) {
+  if (!PER() || (!wantsIndie(w) && !w.xt && !(w.xtPast || []).length && !w.gigs)) return '';
+  const on = indieOn(w);
+  return `<div class="sec">Indie dates</div><div class="card">
+    <div class="small">${on ? `🤼 Their contract lets them work outside shows on nights off.${w.gigs ? ` ${w.gigs} indie date${w.gigs === 1 ? '' : 's'} so far.` : ''}` : wantsIndie(w) ? `🤼 ${esc(lastName(w))} wants indie dates in their contract. Offer them at the next contract talks.` : `🤼 ${w.gigs ? `${w.gigs} indie date${w.gigs === 1 ? '' : 's'} worked.` : 'Worked indie dates before.'}`}</div>
+    ${w.xt ? `<div class="small" style="margin-top:6px">🏆 Holds the <b>${esc(w.xt.n)}</b> since week ${+w.xt.wk}${w.xt.d ? ` · ${+w.xt.d} defense${w.xt.d === 1 ? '' : 's'}` : ''}</div>` : ''}
+    ${(w.xtPast || []).map(x => `<div class="tiny muted" style="margin-top:4px">Former ${esc(x.n)} (weeks ${+x.wk} to ${+x.to})</div>`).join('')}
+  </div>`;
 }
 // backstage events you've already answered are remembered by the people in them
 const EV_MEM = {
@@ -11693,6 +11811,15 @@ function phoneMsg(m) {
         : `<div class="ph-you">${m.ans != null && m.ans >= 0 ? `You: ${esc((blastChoices(m, w)[m.ans] || ['answered'])[0])}` : 'You let it blow over'}${m.res && m.ans >= 0 ? `<span>${esc(m.res)}</span>` : ''}</div>`}
     </div></div>`;
   }
+  if (m.gig) {
+    const op = gigOpen(m, w), gc = gigChoices(m, w);
+    return `<div class="ph-m${m.read ? '' : ' new'}${op ? ' open' : ''}"><button class="ph-av" data-act="openW" data-id="${w.id}" aria-label="${esc(w.name)}">${av(w, 36)}</button><div class="sp">
+      <div class="ph-h"><b>${esc(w.name)}</b><span class="tiny muted">Week ${m.wk}</span>${del}</div>
+      <div class="ph-b"><b class="ph-tt">🤼 Indie booking · week ${+m.gig.wk}</b>${esc(m.t)}</div>
+      ${op ? `<div class="bs-c">${gc.map(([l, d], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="gigAns" data-id="${m.id}:${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>`
+        : `<div class="ph-you">${m.ans === 0 ? 'You let them go' : m.ans === 1 ? 'You said no' : 'You didn\'t answer, so they went'}</div>`}
+    </div></div>`;
+  }
   const open = !!(m.ask && m.ans == null && w.contract), ch = open ? phoneChoices(m) : [];
   const talks = talksOpen(m, w);
   return `<div class="ph-m${m.read ? '' : ' new'}${open || talks ? ' open' : ''}"><button class="ph-av" data-act="openW" data-id="${w.id}" aria-label="${esc(w.name)}">${av(w, 36)}</button><div class="sp">
@@ -11740,6 +11867,10 @@ Object.assign(A, {
     const st = G.stories.find(x => x.id === m.feud), ch = feudChoices(m).find(c => c[2] === k); if (!st || !ch) return;
     m.ans = k; m.you = ch[0]; G.booker.xp += 1; commit(feudPlan(st, k));
   },
+  gigAns(v) {
+    const [id, i] = String(v).split(':'), m = (G.phone || []).find(x => x.id === id); if (!m?.gig || !gigOpen(m)) return;
+    const msg = gigAnswer(m, +i); G.booker.xp += 1; commit(msg);
+  },
   blastAns(v) {
     const [id, i] = String(v).split(':'), m = (G.phone || []).find(x => x.id === id); if (!m?.social || !msgOpen(m)) return;
     const msg = blastAnswer(m, +i); G.booker.xp += 1; commit(msg);
@@ -11750,6 +11881,7 @@ Object.assign(A, {
     let msg = 'Message deleted.';
     if (m.from !== 'asst' && m.ask && m.ans == null) { m.ans = -1; const w = W(m.wid); if (w?.contract) { remember(w, -4, 'You ignored my message'); msg = `Deleted. ${w.name} feels ignored.`; } }
     else if (evOpen(m)) msg = 'Deleted. You can still decide on the Shows screen.';
+    else if (gigOpen(m)) msg = `Deleted. ${nameOf(m.wid)} takes the indie booking.`;
     G.phone.splice(G.phone.indexOf(m), 1); commit(msg);
   },
   phoneClear() { const n = G.phone.length; G.phone = G.phone.filter(msgOpen); commit(`Deleted ${n - G.phone.length} message${n - G.phone.length === 1 ? '' : 's'}.`); }
@@ -11764,7 +11896,9 @@ const MEDIA = {
   con: { ic: '🎟️', n: 'Fan signing', d: 'Meet fans at a convention. Safe and steady.', pop: 1.5, risk: .04, stat: 'cha', cash: true },
   movie: { ic: '🎬', n: 'Movie role', d: 'Shoot a movie. They come back a much bigger star.', long: true, wks: 8, pop: 18, mo: 15, min: 50, fee: true },
   tour: { ic: '🌐', n: 'Media tour', d: 'Travel doing press. Your company gains fans too.', long: true, wks: 3, pop: 9, mo: 8, fans: .03, cost: true },
-  indies: { ic: '🤼', n: 'Work the indies', d: 'Wrestle on indie shows. Sharpens their ring work.', long: true, wks: 4, pop: 8, mo: 10, ring: 3, fit: true }
+  indies: { ic: '🤼', n: 'Work the indies', d: 'Wrestle on indie shows. Sharpens their ring work.', long: true, wks: 4, pop: 8, mo: 10, ring: 3, fit: true },
+  // one outside booking from an indie dates clause (indieClash); never picked from the Media screen
+  gig: { ic: '🤼', n: 'Indie date', d: 'An outside booking on the same night as your show.', long: true, wks: 1, pop: 0, mo: 0, hide: true }
 };
 const MEDIA_SLOTS = 3;
 const mText = (w, t) => { if (PER()) { ensurePers(); textFrom(w, t); } };
@@ -11868,6 +12002,13 @@ function mediaWeek() {
     const M = MEDIA[w.away.k];
     if (!w.contract || !M) { delete w.away; continue; }
     if (G.week + 1 < w.away.until) continue;
+    if (w.away.k === 'gig') {
+      const gm = (G.phone || []).find(m => m.gig && m.wid === w.id && m.gig.wk === w.away.from);
+      delete w.away; w.lastBooked = G.week + 1;
+      const t = indieGig(w, gm?.gig.p);
+      if (!t) news(`🤼 ${w.name} worked ${gm?.gig.p || 'an indie show'} instead of your show and is back.`, 'office');
+      continue;
+    }
     const k = w.away.k, m = clamp(+w.away.m || 1, .5, 3), before = w.pop;
     addPop(w, M.pop * m); w.momentum = clamp(w.momentum + M.mo * m, -50, 50);
     if (M.ring) w.ring = clamp(w.ring + Math.round(M.ring * m), 0, 100);
@@ -11893,7 +12034,7 @@ function mediaView() {
     <div class="list">${Object.entries(MEDIA).filter(([, M]) => !M.long).map(([k, M]) => item(k, M, used >= MEDIA_SLOTS)).join('')}</div>
     ${used >= MEDIA_SLOTS ? '<div class="tiny muted" style="margin-top:6px">All media spots are used this week. More open next week.</div>' : ''}
     <div class="sec">Long appearances</div>
-    <div class="list">${Object.entries(MEDIA).filter(([, M]) => M.long).map(([k, M]) => item(k, M, false)).join('')}</div>
+    <div class="list">${Object.entries(MEDIA).filter(([, M]) => M.long && !M.hide).map(([k, M]) => item(k, M, false)).join('')}</div>
     ${log.length ? `<div class="sec">Recent</div><div class="card" style="padding:4px 14px">${log.map(lw).join('')}</div>` : ''}
     <div class="tiny muted" style="margin-top:8px">Bigger offers come up as backstage events.${PER() ? ' Some wrestlers will text you asking for media.' : ''}</div>`;
 }
@@ -11913,7 +12054,7 @@ function modalMedia(m) {
     return modal('Media appearance', body, `<button class="btn" data-act="${m.from === 'w' ? 'mediaFor' : 'mediaType'}" data-id="${m.from === 'w' ? w.id : m.k}">Back</button><button class="btn pri" data-act="mediaGo" ${why || full ? 'disabled' : ''}>${M.long ? 'Send them' : 'Book it'}</button>`);
   }
   if (w) {
-    const body = `<div class="small muted" style="margin-bottom:8px">What should ${esc(lastName(w))} do?</div><div class="list">${Object.entries(MEDIA).map(([k, X]) => { const why = mediaWhyNot(w, k) || (!X.long && mediaUsed() >= MEDIA_SLOTS ? 'No spots left this week' : '');
+    const body = `<div class="small muted" style="margin-bottom:8px">What should ${esc(lastName(w))} do?</div><div class="list">${Object.entries(MEDIA).filter(([, X]) => !X.hide).map(([k, X]) => { const why = mediaWhyNot(w, k) || (!X.long && mediaUsed() >= MEDIA_SLOTS ? 'No spots left this week' : '');
       return `<button class="item" data-act="mediaPickT" data-id="${k}" ${why ? 'style="opacity:.55"' : ''}><span class="mile-i">${X.ic}</span><div class="main"><div class="t">${X.n}</div><div class="d">${why ? esc(why) : X.long ? `Out ${X.wks} weeks · +${Math.round(mediaGain(w, k) * 10) / 10} pop when back` : `+${Math.round(mediaGain(w, k) * 10) / 10} pop · ${Math.round(mediaRisk(w, k) * 100)}% risk`}</div></div></button>`; }).join('')}</div>`;
     return modal('Media appearance', body);
   }
@@ -13238,7 +13379,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.60';
+const VERSION = '1.9.61';
 const WHATS_NEW = [
   ['💾 Clearer saves', 'A save holds your whole world, and now it says so. Backup files are named after every company you run, with the week and date (like BookIt_WWE+AEW_week-12_2026-11-25.json), and Backup & transfer lists what the file holds. Save slots and cloud saves show every company. Cloud saves tell you how much of the cloud limit your game uses and warn you from 80%, before it stops fitting.'],
   ['🔁 Take over a rival', 'With Sandbox on, open any AI company in Office → Companies and tap Take over to run it yourself, as one of up to 4 companies in your world. Its roster, contracts, titles and title history, teams, factions, feuds, photos and big events come with it. It keeps its name and show, and you can add more weekly shows and a brand split as you take it over.'],
