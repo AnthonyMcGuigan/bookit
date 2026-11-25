@@ -5673,8 +5673,8 @@ function startLive() {
   const at = (el, d, fn) => { const job = { d: Math.max(0, d), fn: () => { if (!el.closest('.skip')) fn(); } }; LV.jobs.push(job); lvRun(job); };
   const dOf = el => parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0;
   SFX.load();
-  SFX.bell(3);
-  box.querySelectorAll('.lv-fin').forEach(el => at(el, dOf(el), () => { SFX.bell(1); SFX.show(+el.dataset.rating); }));
+  SFX.bell(3); if (NATIVE) [0, 320, 640].forEach(t => setTimeout(() => buzz(12), t)); // feel the opening bell in the iPhone app
+  box.querySelectorAll('.lv-fin').forEach(el => at(el, dOf(el), () => { SFX.bell(1); if (NATIVE) buzz(12); SFX.show(+el.dataset.rating); }));
   // keep the newest segment in view as it comes in
   box.querySelectorAll('.lv-seg, .lv-fin, .cut').forEach(el => at(el, dOf(el) + .05, () => el.scrollIntoView({ behavior: 'smooth', block: 'center' })));
   // the big surprise moments stop the show for a cutscene
@@ -7349,6 +7349,24 @@ const SUP_LINKS = supTesting ? SUP_TEST : SUP_LIVE;
 // Google requires Play Billing for anything sold inside a Play app, so the Android app sells nothing and links to no
 // checkout or tip page. Perks already bought on the web still work there once the player signs in.
 const PLAY = (() => { const q = /[?&]src=play\b/.test(location.search); try { if (q || /^android-app:\/\//.test(document.referrer)) sessionStorage.setItem('bookit.play', '1'); return sessionStorage.getItem('bookit.play') === '1'; } catch (e) { return q; } })();
+// iPhone app (Capacitor, see ios-app/README.md): the whole game is bundled inside the app, and Capacitor adds
+// window.Capacitor before the page runs. ?src=ios turns the same screens on in a browser, for testing.
+// Apple requires its own in-app purchase for digital goods, so the iPhone app sells Supporter for life through
+// Apple (RevenueCat), never Stripe, and shows no tip link. Perks bought on the web still work after sign-in.
+const NATIVE = (() => { try { return !!window.Capacitor?.isNativePlatform?.(); } catch (e) { return false; } })();
+const IOS = (() => { const n = NATIVE && window.Capacitor.getPlatform?.() === 'ios'; try { if (n || /[?&]src=ios\b/.test(location.search)) sessionStorage.setItem('bookit.ios', '1'); return sessionStorage.getItem('bookit.ios') === '1'; } catch (e) { return n; } })();
+const STORE = PLAY || IOS; // inside a store app: no Stripe checkout and no tip links
+const IOS_APP_ID = ''; // the number App Store Connect gives the app (App Information → Apple ID), for the Rate button
+const RC_IOS_KEY = ''; // RevenueCat public Apple key (appl_...). It is a public key, safe to keep in the page.
+const IAP_LIFE = 'bookit_supporter_life'; // App Store Connect product id (non-consumable, $7.99)
+// call a Capacitor plugin by name, so the game needs no build step
+function capCall(plugin, method, opts = {}) {
+  const C = window.Capacitor; if (!NATIVE || !C) return Promise.reject({ code: 'no_native' });
+  const p = C.Plugins?.[plugin]; if (p && typeof p[method] === 'function') return p[method](opts);
+  return C.nativePromise ? C.nativePromise(plugin, method, opts) : Promise.reject({ code: 'no_plugin' });
+}
+// a small tap you feel: real haptics in the iPhone app (iPhone browsers have no vibrate), a short buzz elsewhere
+const buzz = (ms = 6) => { if (NATIVE) capCall('Haptics', 'impact', { style: ms >= 12 ? 'MEDIUM' : 'LIGHT' }).catch(() => {}); else try { buzz(ms); } catch (e) {} };
 // Stripe customer portal login link, so supporters can cancel or change their card
 const SUP_PORTAL = supTesting ? 'https://billing.stripe.com/p/login/test_8x27sMgDR9qj2ZZaVx2cg00' : 'https://billing.stripe.com/p/login/eVq7sN4BU7UZgB1gAGd3i00';
 
@@ -7370,10 +7388,7 @@ async function supCheck() {
 async function supReturn() {
   if (!/[?&]supporter=done\b/.test(location.search)) return;
   try { history.replaceState(history.state, '', location.pathname + location.hash); } catch (e) {}
-  UI.modal = { type: 'support', waiting: true }; render();
-  for (let i = 0; i < 10; i++) { await supCheck(); if (isSup()) { if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); } SFX.tap?.(); return toast('Thank you! You\'re a BookIt Supporter. ⭐'); } await new Promise(r => setTimeout(r, 3000)); }
-  if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); }
-  toast('Payment received. Your perks can take a minute. Check back here shortly.');
+  return supAwait('Thank you! You\'re a BookIt Supporter. ⭐', 'Payment received. Your perks can take a minute. Check back here shortly.');
 }
 // back from the sign-in email with a plan picked: reopen the Supporter page, ready for checkout
 async function supResume() {
@@ -8311,6 +8326,12 @@ const A = {
     if (dl) {
       try { await dl.save({ filename: name, data }); markBackup(); toast('Backup saved.'); }
       catch (e) { toast(e?.code === 'declined' ? 'Download cancelled.' : e?.code === 'rate_limited' ? 'One moment, then try again.' : 'Downloads are blocked here. Use Copy save text instead.'); }
+      return;
+    }
+    // iPhone app: downloads don't work in an app, so the save goes to the share sheet (Save to Files, AirDrop, Mail...)
+    if (NATIVE) {
+      try { const f = await capCall('Filesystem', 'writeFile', { path: name, data, directory: 'CACHE', encoding: 'utf8' }); await capCall('Share', 'share', { title: name, files: [f.uri] }); markBackup(); toast('Backup saved.'); }
+      catch (e) { if (!/cancel/i.test(String(e?.message || e?.errorMessage || ''))) toast('Could not share the save. Use Copy save text instead.'); }
       return;
     }
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = name;
@@ -9544,7 +9565,7 @@ async function sbToken() {
 // a guest account for this device, so players can post without typing anything
 let sbLinkP = null;
 async function sbGuest() { await sbLinkP; if (await sbToken()) return; sbStore(await sbFetch('/auth/v1/signup', { method: 'POST', body: '{}' }, false)); }
-const sbBack = () => location.origin + location.pathname;
+const sbBack = () => NATIVE ? 'https://anthonymcguigan.github.io/bookit/' : location.origin + location.pathname;
 const sbQ = v => encodeURIComponent(String(v));
 const sbListeners = new Set();
 const FULL_MSG = 'The online space is full for now. Your game is still saved on this phone. Try again later.';
@@ -9622,6 +9643,7 @@ const PLAYLOG = (() => {
   const dev = () => { let d = ls.get(DEV); if (!/^[a-z0-9]{16,40}$/.test(d || '')) { d = rnd(24); ls.set(DEV, d); } return d; };
   const plat = () => { try {
     if (/[?&]src=play\b/.test(location.search) || /^android-app:\/\//.test(document.referrer) || sessionStorage.getItem('bookit.play')) { sessionStorage.setItem('bookit.play', '1'); return 'play'; }
+    if (IOS && NATIVE) return 'app';
     return matchMedia('(display-mode: standalone)').matches || navigator.standalone ? 'app' : 'web';
   } catch (e) { return 'web'; } };
   const P = plat();
@@ -9684,14 +9706,20 @@ function commReset() {
   Object.assign(COMM, { status: 'idle', me: null, owner: false, canWrite: null, items: [], mine: [], body: {}, reports: [], feedback: [] });
   commInit(); render();
 }
+function sbAskCode(email, type) { if (UI.modal) { UI.modal.codeFor = email; UI.modal.codeType = type; } render(); toast('Check your email for a 6-digit code.'); setTimeout(() => document.querySelector('[data-in=sbCode]')?.focus(), 50); }
 function sbAccountCard() {
   if (!sbOn()) return '';
   const u = sbSess?.user, m = UI.modal || {};
-  const form = `<label class="f" style="margin-top:8px"><span>Email</span><input type="email" data-in="sbEmail" value="${esc(m.email || '')}" maxlength="120" autocomplete="email" placeholder="you@example.com"></label>
-    <button class="btn pri block" data-act="sbLink">Email me a link</button><div class="tiny muted" style="margin-top:6px">Open the link on this device. Your email is never shown to other players.</div>`;
+  const form = m.codeFor ? `<div class="small" style="margin-top:8px">We emailed a code to <b>${esc(m.codeFor)}</b>.</div>
+    <label class="f" style="margin-top:8px"><span>Code from the email</span><input data-in="sbCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"></label>
+    <button class="btn pri block" data-act="sbCode">Sign in</button><button class="link" style="margin-top:6px" data-act="sbCodeBack">Use a different email</button>`
+    : `<label class="f" style="margin-top:8px"><span>Email</span><input type="email" data-in="sbEmail" value="${esc(m.email || '')}" maxlength="120" autocomplete="email" placeholder="you@example.com"></label>
+    <button class="btn pri block" data-act="sbLink">${NATIVE ? 'Email me a code' : 'Email me a link'}</button><div class="tiny muted" style="margin-top:6px">${NATIVE ? 'Type the code from the email here.' : 'Open the link on this device.'} Your email is never shown to other players.</div>`;
+  const blocked = hiddenForMe().filter(x => x.startsWith('p:')).length;
   return `<div class="sec">Account</div><div class="card">${u?.email ? `<div class="small">Signed in as <b>${esc(u.email)}</b>. You can sign in with this email on any device.</div><button class="btn block" style="margin-top:8px" data-act="sbOut">Sign out</button>`
     : `<div class="small">${u ? 'You are a guest on this device. Add your email to keep your account if you change phones or clear your browser. Already have an account? Use its email here.' : 'Sign in with your email to share, like and follow.'}</div>${form}`}
-    ${u ? '<button class="btn block bad" style="margin-top:8px" data-act="sbWipe">Remove my Community posts and profile</button>' : ''}</div>`;
+    ${u ? '<button class="btn block bad" style="margin-top:8px" data-act="sbWipe">Remove my Community posts and profile</button><button class="btn block bad" style="margin-top:8px" data-act="sbDelete">Delete my account</button>' : ''}
+    ${blocked ? `<div class="row" style="justify-content:space-between;gap:8px;margin-top:10px"><span class="tiny muted">${blocked} blocked or reported creator${blocked > 1 ? 's' : ''} hidden</span><button class="btn sm" data-act="cUnblockAll">Unblock all</button></div>` : ''}</div>`;
 }
 const verLabel = () => 'v' + VERSION + (BETA ? ' beta' : '');
 // copy a report and open the feedback page (used when Community isn't available)
@@ -10921,16 +10949,17 @@ const SUP_NAME = { month: 'Monthly', year: 'Yearly', life: 'For life' };
 function supporterHTML(m) {
   if (!sbOn()) return '';
   if (PLAY && !isSup()) return '';
+  if (IOS && !isSup()) return iapHTML(m);
   const u = sbSess?.user, on = isSup(), plans = supUrl(SUP_LINKS.life, 'buy.stripe.com') ? ['life'] : ['month', 'year'].filter(k => supUrl(SUP_LINKS[k], 'buy.stripe.com')), life = SUP?.plan === 'life';
   const perks = (done) => `<div class="sup-perks">${SUP_PERKS.map(([ic, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${done ? '✓' : ic}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
   if (on) {
     const portal = supUrl(SUP_PORTAL, 'billing.stripe.com'), bad = SUP.status === 'past_due';
     return `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>You're a BookIt Supporter</h3><p>Thank you for keeping Community and cloud saves running.</p></div>
       <div class="card sup-status">
-        <div class="row" style="justify-content:space-between;gap:10px"><div><div class="tiny muted">Your plan</div><b>${PLAY ? 'Active' : life ? 'For life' : SUP.plan === 'year' ? 'Yearly · $24.99' : 'Monthly · $2.99'}</b></div>
+        <div class="row" style="justify-content:space-between;gap:10px"><div><div class="tiny muted">Your plan</div><b>${life ? 'For life' : STORE ? 'Active' : SUP.plan === 'year' ? 'Yearly · $24.99' : 'Monthly · $2.99'}</b></div>
         <div style="text-align:right"><div class="tiny muted">${bad ? 'Payment' : life ? 'Expires' : 'Renews'}</div><b>${bad ? 'Needs attention' : life ? 'Never' : new Date(SUP.end).toLocaleDateString()}</b></div></div>
         ${bad ? '<div class="alert warn" style="margin-top:10px"><span class="ic">💳</span><div class="small">Your last payment didn\'t go through. Update your card to keep your perks.</div></div>' : ''}
-        ${portal && !PLAY && !life ? `<button class="btn block" style="margin-top:12px" data-act="supManage">${bad ? 'Update card' : 'Manage or cancel'}</button>` : ''}
+        ${portal && !STORE && !life ? `<button class="btn block" style="margin-top:12px" data-act="supManage">${bad ? 'Update card' : 'Manage or cancel'}</button>` : ''}
       </div>
       <div class="sec">Your perks</div>${perks(true)}`;
   }
@@ -10952,16 +10981,51 @@ function supporterHTML(m) {
   }
   return h + `<div class="tiny muted" style="text-align:center;margin-top:8px">🔒 Secure checkout by Stripe. ${pick === 'life' ? 'One payment, no renewals.' : 'Cancel any time.'} Your card never touches the game.</div>`;
 }
+// iPhone app: Supporter for life through Apple. No email needed: the purchase belongs to this game account
+// (a guest account is made if there isn't one), and Restore purchases moves it to the account signed in now.
+function iapHTML(m) {
+  const perks = SUP_PERKS.map(([ic, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${ic}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('');
+  let h = `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>Become a BookIt Supporter</h3><p>Help keep Community and cloud saves running, and get a few extras.</p></div><div class="sup-perks">${perks}</div>`;
+  if (m.waiting) return `<div class="sup-hero"><div class="sup-star spin" aria-hidden="true">⭐</div><h3>Finishing up…</h3><p>Purchase complete. Unlocking your Supporter perks. This takes a few seconds.</p></div>`;
+  if (!NATIVE || !RC_IOS_KEY) return h + `<div class="hs-off" style="margin-top:12px"><div class="small">Supporter opens soon in the iPhone app. Check back shortly.</div></div>`;
+  const price = m.iapPrice || SUP_PLANS.life.price;
+  h += `<button class="btn pri block sup-cta" style="margin-top:14px" data-act="iapBuy" ${m.buying ? 'disabled' : ''}>${m.buying ? 'One moment…' : `Supporter for life · ${esc(price)} one time`}</button>
+    <button class="btn block" style="margin-top:8px" data-act="iapRestore" ${m.buying ? 'disabled' : ''}>Restore purchases</button>
+    <div class="tiny muted" style="text-align:center;margin-top:8px">One payment through your Apple ID. No renewals. Perks belong to this game account, so add your email in Community → Profile to keep them when you change phones.</div>`;
+  return h;
+}
+let iapUser = '';
+async function iapReady() {
+  if (!IOS || !NATIVE || !RC_IOS_KEY || !sbOn()) throw { code: 'off' };
+  await sbGuest(); const id = (sbSess ||= sbLoad())?.user?.id; if (!id) throw { code: 'no_account' };
+  if (!iapUser) await capCall('Purchases', 'configure', { apiKey: RC_IOS_KEY, appUserID: id });
+  else if (iapUser !== id) await capCall('Purchases', 'logIn', { appUserID: id });
+  iapUser = id; return id;
+}
+async function iapProduct() { const r = await capCall('Purchases', 'getProducts', { productIdentifiers: [IAP_LIFE], type: 'NON_SUBSCRIPTION' }); const p = r?.products?.[0]; if (!p) throw { code: 'no_product' }; return p; }
+async function iapPrice() {
+  if (!IOS || !NATIVE || !RC_IOS_KEY || isSup()) return;
+  try { await iapReady(); const p = await iapProduct(); if (UI.modal?.type === 'support' && p.priceString) { UI.modal.iapPrice = String(p.priceString).slice(0, 20); render(); } } catch (e) {}
+}
+const iapCancelled = e => e?.userCancelled || e?.code === '1' || e?.code === 1 || /cancel/i.test(String(e?.message || ''));
+// the RevenueCat webhook writes the supporters row a moment after Apple confirms, so look a few times
+async function supAwait(okMsg, lateMsg) {
+  UI.modal = { type: 'support', waiting: true }; render();
+  for (let i = 0; i < 10; i++) { await supCheck(); if (isSup()) { if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); } SFX.tap?.(); return toast(okMsg); } await new Promise(r => setTimeout(r, 3000)); }
+  if (UI.modal?.type === 'support') { UI.modal.waiting = false; render(); }
+  toast(lateMsg);
+}
 function modalSupport(m) {
   setTimeout(commInit);
   const sp = supportLink(), host = sp ? new URL(sp.url).hostname.replace(/^www\./, '') : '';
   let body = sbOn() && (!PLAY || isSup()) ? supporterHTML(m) : PLAY ? `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">If you enjoy BookIt, here's how to help it grow.</p></div>` : `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">${sp?.note ? esc(sp.note) : 'If you enjoy BookIt, a small tip helps keep new features and fixes coming.'}</p></div>`;
-  if (!PLAY && sp) body += `<div class="sec">One-off tip</div>
+  if (!STORE && sp) body += `<div class="sec">One-off tip</div>
     <a class="btn block sup-go" href="${esc(sp.url)}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center">❤️ Tip on ${esc(host)}</a>
     <div class="tiny muted" style="text-align:center;margin-top:6px">${sp.note && sbOn() ? esc(sp.note) + ' ' : ''}Opens ${esc(host)}. Tips don't unlock anything.</div>`;
-  else if (!PLAY && !sbOn()) body += `<div class="hs-off"><div class="small">Tips aren't open yet. Check back soon.</div></div>`;
+  else if (!STORE && !sbOn()) body += `<div class="hs-off"><div class="small">Tips aren't open yet. Check back soon.</div></div>`;
   body += `<div class="sec">Free ways to help</div><div class="list">
     ${PLAY ? '<div class="item"><div class="main"><div class="t">Rate BookIt on Google Play</div><div class="d">A review helps other wrestling fans find the game.</div></div></div>' : ''}
+    ${IOS ? `<div class="item"><div class="main"><div class="t">Rate BookIt on the App Store</div><div class="d">A review helps other wrestling fans find the game.</div></div>${/^\d+$/.test(IOS_APP_ID) ? '<button class="btn sm" data-act="iosRate">Rate</button>' : ''}</div>` : ''}
     <div class="item"><div class="main"><div class="t">Share the game</div><div class="d">Send the link to a friend who loves wrestling.</div></div></div>
     <div class="item"><div class="main"><div class="t">Share your creations</div><div class="d">Post a roster or a save in Community so others can play it.</div></div></div>
     <div class="item"><div class="main"><div class="t">Like what you play</div><div class="d">Likes help the best creations reach more players.</div></div></div></div>`;
@@ -11050,7 +11114,7 @@ function modalCreator(m) {
   const body = `${symBig(id)}<div class="row" style="gap:12px;margin-bottom:10px">${creatorAv(id, 60)}<div class="sp"><div style="font-size:20px;font-weight:800">${esc(authorName(id))}</div>${flairTag(id)}${pr?.bio ? `<div class="small muted">${esc(pr.bio)}</div>` : ''}</div></div>
     <div class="grid3 cstats"><div><b>${ups.length}</b><span>uploads</span></div><div><b>${likes}</b><span>likes</span></div><div><b>${fans}</b><span>followers</span></div></div>
     <div class="sec">Uploads</div><div class="list">${ups.map(i => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? 'Save' : kindLbl(i)}${i.nLikes ? ' · ❤️ ' + i.nLikes : ''} · ${new Date(i.created).toLocaleDateString()}</div></div></button>`).join('') || '<div class="empty">Nothing shared yet.</div>'}</div>`;
-  const foot = `${COMM.owner && id !== COMM.me && id !== 'featured' ? (pr ? '<button class="btn bad" data-act="cClearProfile" data-id="' + esc(id) + '">Clear profile</button>' : '') + '<button class="btn bad" data-act="cWipe" data-id="' + esc(id) + '">Remove all</button>' : ''}${id !== COMM.me && id !== 'featured' && COMM.me && !COMM.owner ? `<button class="btn" data-act="cReport" data-id="p:${esc(id)}" aria-label="Report this creator">🚩</button>` : ''}${id !== COMM.me && id !== 'featured' && COMM.me ? `<button class="btn ${iFollow(id) ? '' : 'pri'}" data-act="cFollow" data-id="${esc(id)}">${iFollow(id) ? 'Following ✓' : '+ Follow'}</button>` : ''}`;
+  const foot = `${COMM.owner && id !== COMM.me && id !== 'featured' ? (pr ? '<button class="btn bad" data-act="cClearProfile" data-id="' + esc(id) + '">Clear profile</button>' : '') + '<button class="btn bad" data-act="cWipe" data-id="' + esc(id) + '">Remove all</button>' : ''}${id !== COMM.me && id !== 'featured' && COMM.me && !COMM.owner ? `<button class="btn" data-act="cReport" data-id="p:${esc(id)}" aria-label="Report this creator">🚩</button><button class="btn" data-act="cBlock" data-id="${esc(id)}">Block</button>` : ''}${id !== COMM.me && id !== 'featured' && COMM.me ? `<button class="btn ${iFollow(id) ? '' : 'pri'}" data-act="cFollow" data-id="${esc(id)}">${iFollow(id) ? 'Following ✓' : '+ Follow'}</button>` : ''}`;
   return modal('Creator', body, foot || undefined);
 }
 function modalEditProfile(m) {
@@ -11277,11 +11341,11 @@ const CREATOR_ACTIONS = {
   },
   // community
   community() { openModal({ type: 'community', tab: 'browse' }); },
-  support() { openModal({ type: 'support' }); supCheck().then(() => { if (UI.modal?.type === 'support') render(); }); },
+  support() { openModal({ type: 'support' }); supCheck().then(() => { if (UI.modal?.type === 'support') render(); }); iapPrice(); },
   supPlan(k) { if (SUP_PLANS[k]) { UI.modal.plan = k; render(); } },
   // checkout opens in this tab, and Stripe sends the player straight back to the game
   supJoin(k) {
-    if (PLAY) return;
+    if (STORE) return;
     const u = supUrl(SUP_LINKS[k], 'buy.stripe.com'), id = sbSess?.user?.id; if (!u || !id) return;
     u.searchParams.set('client_reference_id', id); // tells the webhook which player paid
     if (sbSess.user.email) u.searchParams.set('prefilled_email', sbSess.user.email);
@@ -11290,7 +11354,24 @@ const CREATOR_ACTIONS = {
   },
   // remember the plan, so tapping the sign-in link brings the player back to checkout
   supEmail() { try { localStorage.setItem('bookit.supIntent', JSON.stringify({ plan: UI.modal?.plan || 'year', at: Date.now() })); } catch (e) {} A.sbLink(); },
-  supManage() { if (PLAY) return; const p = supUrl(SUP_PORTAL, 'billing.stripe.com'); if (p) try { window.open(p.href, '_blank', 'noopener'); } catch (e) { location.href = p.href; } },
+  async iapBuy() {
+    const m = UI.modal; if (!IOS || m?.type !== 'support' || m.buying) return;
+    m.buying = true; render();
+    try { await iapReady(); await capCall('Purchases', 'purchaseStoreProduct', { product: await iapProduct() }); m.buying = false; return supAwait('Thank you! You\'re a BookIt Supporter. ⭐', 'Purchase complete. Your perks can take a minute. Check back here shortly.'); }
+    catch (e) { if (!iapCancelled(e)) toast(e?.code === 'no_product' ? 'The App Store isn\'t answering right now. Try again soon.' : 'The purchase didn\'t go through. You were not charged.'); }
+    if (UI.modal === m) { m.buying = false; render(); }
+  },
+  async iapRestore() {
+    const m = UI.modal; if (!IOS || m?.type !== 'support' || m.buying) return;
+    m.buying = true; render();
+    try { await iapReady(); const r = await capCall('Purchases', 'restorePurchases'), act = r?.customerInfo?.entitlements?.active || {};
+      m.buying = false; if (Object.keys(act).length) return supAwait('Restored. You\'re a BookIt Supporter. ⭐', 'Restored. Your perks can take a minute. Check back here shortly.');
+      toast('No Supporter purchase found for this Apple ID.'); }
+    catch (e) { toast('Could not reach the App Store. Try again soon.'); }
+    if (UI.modal === m) { m.buying = false; render(); }
+  },
+  iosRate() { if (/^\d+$/.test(IOS_APP_ID)) location.href = 'https://apps.apple.com/app/id' + IOS_APP_ID + '?action=write-review'; },
+  supManage() { if (STORE) return; const p = supUrl(SUP_PORTAL, 'billing.stripe.com'); if (p) try { window.open(p.href, '_blank', 'noopener'); } catch (e) { location.href = p.href; } },
   async supSave() {
     if (!COMM.owner || !cdb) return;
     const d = { url: document.querySelector('[data-sup=url]')?.value.trim() || '', note: document.querySelector('[data-sup=note]')?.value || '' };
@@ -11326,13 +11407,45 @@ const CREATOR_ACTIONS = {
     const back = '?redirect_to=' + sbQ(sbBack());
     try {
       if (sbSess?.user && !sbSess.user.email) {
-        try { await sbFetch('/auth/v1/user' + back, { method: 'PUT', body: JSON.stringify({ email }) }); return toast('Check your email and tap the link to keep this account.'); }
+        try { await sbFetch('/auth/v1/user' + back, { method: 'PUT', body: JSON.stringify({ email }) }); if (NATIVE) return sbAskCode(email, 'email_change'); return toast('Check your email and tap the link to keep this account.'); }
         catch (e) { if (e.status !== 422 && e.status !== 400) throw e; }
       }
       await sbFetch('/auth/v1/otp' + back, { method: 'POST', body: JSON.stringify({ email, create_user: true }) }, false);
+      if (NATIVE) return sbAskCode(email, 'email');
       toast('Check your email for a sign-in link.');
     } catch (e) { toast(e?.code === 'rate_limited' ? 'Too many emails. Wait a few minutes and try again.' : 'Could not send the email. Try again.'); }
   },
+  async sbCode() {
+    const m = UI.modal; if (!m?.codeFor) return;
+    const token = (document.querySelector('[data-in=sbCode]')?.value || '').replace(/\D/g, '');
+    if (token.length < 6) return toast('Type the code from the email.');
+    try {
+      const r = await sbFetch('/auth/v1/verify', { method: 'POST', body: JSON.stringify({ type: m.codeType === 'email_change' ? 'email_change' : 'email', email: m.codeFor, token }) }, m.codeType === 'email_change');
+      if (!r?.access_token || !r?.user?.id) throw { code: 'unavailable' };
+      sbStore(r); delete m.codeFor; delete m.codeType; commReset(); supCheck().then(render);
+      toast(r.user.email ? 'Signed in as ' + r.user.email + '.' : 'Signed in.');
+    } catch (e) { toast(e?.status === 403 || e?.status === 400 ? 'That code didn\'t work. It may have expired, so ask for a new one.' : 'Could not sign in. Try again.'); }
+  },
+  sbCodeBack() { if (UI.modal) { delete UI.modal.codeFor; delete UI.modal.codeType; render(); } },
+  // Apple asks for this inside the app: the account, its posts and cloud saves are deleted on the server
+  sbDelete() {
+    if (!sbSess?.user) return;
+    confirmBox('Delete your account?', `Your account, Community posts, profile, likes, follows and cloud saves are deleted for everyone${isSup() ? ', and your Supporter perks end' : ''}. Saves on this device stay. This can't be undone.`, 'Delete account', async () => {
+      try { await sbFetch('/rest/v1/rpc/delete_my_account', { method: 'POST', body: '{}' }); }
+      catch (e) { return toast(e?.status === 404 ? 'Account deletion isn\'t open yet. Email bookitsimgame@gmail.com and it\'s done within 30 days.' : 'Could not delete it. Try again.'); }
+      sbStore(null); SUP = null; try { localStorage.removeItem(SUP_KEY); } catch (e) {}
+      UI.modal = { type: 'community', tab: 'mine' }; commReset(); toast('Your account is deleted.');
+    }, true);
+  },
+  // block a creator: everything they post is hidden for you, without sending a report
+  cBlock(id) {
+    if (!AUTHOR_ID.test(id) || id === COMM.me) return;
+    confirmBox('Block this creator?', 'Their posts and profile are hidden for you. They aren\'t told.', 'Block', () => {
+      meta.hide = ['p:' + id, ...hiddenForMe().filter(x => x !== 'p:' + id)].slice(0, 300); ls.set(META, JSON.stringify(meta));
+      UI.modal = { type: 'community', tab: 'browse' }; render(); toast('Blocked. You won\'t see their posts.');
+    }, true);
+  },
+  cUnblockAll() { meta.hide = hiddenForMe().filter(x => !x.startsWith('p:')); ls.set(META, JSON.stringify(meta)); render(); toast('Unblocked.'); },
   sbOut() {
     confirmBox('Sign out?', 'Your posts stay. Sign back in with the same email to manage them.', 'Sign out', async () => {
       try { await sbFetch('/auth/v1/logout', { method: 'POST', body: '{}' }); } catch (e) {}
@@ -12998,7 +13111,7 @@ function slSet(inp, v) {
   v = clamp(Math.round(v / st) * st, mn, mx);
   if (v === +inp.value) return false;
   const was = +inp.value; inp.value = v;
-  if (Math.floor(was / 10) !== Math.floor(v / 10)) navigator.vibrate?.(4);
+  if (Math.floor(was / 10) !== Math.floor(v / 10)) buzz(4);
   inp.dispatchEvent(new Event('input', { bubbles: true }));
   return true;
 }
@@ -13248,11 +13361,11 @@ function dragUpdate() {
   const d = DRAG.s; if (!d) return;
   const dy = d.y - d.y0 + pageY() - d.sy0;
   if (!d.moved && Math.abs(dy) < 5) return;
-  if (!d.moved) { d.moved = true; d.slot.classList.add('lift'); navigator.vibrate?.(8); }
+  if (!d.moved) { d.moved = true; d.slot.classList.add('lift'); buzz(8); }
   const mid = d.tops[d.from] + d.hs[d.from] / 2 + dy;
   let to = d.from;
   for (let i = 0; i < d.list.length; i++) { const m = d.tops[i] + d.hs[i] / 2; if (i < d.from && mid < m) { to = i; break; } if (i > d.from && mid > m) to = i; }
-  if (to !== d.to) { d.to = to; navigator.vibrate?.(4); }
+  if (to !== d.to) { d.to = to; buzz(4); }
   d.slot.style.transform = `translateY(${dy}px)`;
   const h = d.hs[d.from];
   d.list.forEach((el, i) => { if (i !== d.from) el.style.transform = i > d.from && i <= to ? `translateY(${-h}px)` : i < d.from && i >= to ? `translateY(${h}px)` : ''; });
@@ -13379,7 +13492,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.61';
+const VERSION = '1.9.62';
 const WHATS_NEW = [
   ['💾 Clearer saves', 'A save holds your whole world, and now it says so. Backup files are named after every company you run, with the week and date (like BookIt_WWE+AEW_week-12_2026-11-25.json), and Backup & transfer lists what the file holds. Save slots and cloud saves show every company. Cloud saves tell you how much of the cloud limit your game uses and warn you from 80%, before it stops fitting.'],
   ['🔁 Take over a rival', 'With Sandbox on, open any AI company in Office → Companies and tap Take over to run it yourself, as one of up to 4 companies in your world. Its roster, contracts, titles and title history, teams, factions, feuds, photos and big events come with it. It keeps its name and show, and you can add more weekly shows and a brand split as you take it over.'],
@@ -13492,7 +13605,7 @@ try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
   const done = () => sp.remove(); sp.addEventListener('click', done); sp.addEventListener('animationend', e => { if (e.target === sp) done(); });
   setTimeout(done, 4000); document.body.appendChild(sp);
 } } catch (e) {}
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:' && !NATIVE) navigator.serviceWorker.register('sw.js').catch(() => {});
 // Back swipe (iPhone edge swipe, Android back button, browser Back). The game is one page, so a back
 // used to leave it for whatever page came before, which on an iPhone home-screen app is often a dead
 // Stripe or sign-in page: a black screen, then "Safari couldn't open the page". Now one spare history

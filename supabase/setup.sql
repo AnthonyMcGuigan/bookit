@@ -306,3 +306,18 @@ create or replace view public.play_features with (security_invoker = true) as
   select x as feature, count(distinct dev) as players, sum(greatest(n, 1)) as uses
   from public.play_events where ev = 'feature' and at > now() - interval '30 days' group by 1 order by 2 desc, 3 desc;
 revoke all on public.play_daily, public.play_features from anon, authenticated;
+
+-- Delete my account (added in v1.9.62, safe to run again). Apple requires that players can delete their account
+-- from inside the iPhone app. This removes everything the player has on the server: their Community space, photo
+-- rows, reports, feedback and cloud saves, then the account itself (their supporters row goes with it).
+create or replace function public.delete_my_account() returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare me uuid := auth.uid();
+begin
+  if me is null then raise exception 'not signed in' using errcode = '42501'; end if;
+  delete from public.docs where id = me::text;
+  delete from auth.users where id = me;
+end $$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

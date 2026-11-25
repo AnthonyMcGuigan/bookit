@@ -1,0 +1,17 @@
+{
+  "appId": "com.bookitsim.game",
+  "appName": "BookIt",
+  "webDir": "www",
+  "backgroundColor": "#14111c",
+  "ios": {
+    "scheme": "BookIt",
+    "contentInset": "never",
+    "backgroundColor": "#14111c",
+    "limitsNavigationsToAppBoundDomains": false,
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 600, "launchAutoHide": true, "backgroundColor": "#14111c", "showSpinner": false },
+    "StatusBar": { "style": "DARK", "overlaysWebView": true }
+  }
+}
