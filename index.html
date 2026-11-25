@@ -2495,7 +2495,8 @@ const brandOf = w => showById(w?.brand) ? w.brand : mainShowId();
 const inBrand = (w, id) => !splitOn() || !!w?.both || brandOf(w) === id;
 // "Both brands" with two shows, "All brands" with three or more
 const allBrands = (cap = 1) => (SHOWS().length > 2 ? (cap ? 'All' : 'all') : (cap ? 'Both' : 'both')) + ' brands';
-const brandLabel = w => w?.both && splitOn() ? allBrands() : brandName(brandOf(w));
+// on rosters a wrestler on every brand shows as a free agent, like a TV free agent who can turn up on any show
+const brandLabel = w => w?.both && splitOn() ? 'Free agent' : brandName(brandOf(w));
 const showRanNow = () => (curShow()?.ran || 0) >= G.week;
 // with the brand split on, a weekly show books its own brand; a big event can use anyone
 const onBrand = (w, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || inBrand(w, G.showId);
@@ -7637,7 +7638,7 @@ function modalWrestler(m) {
      ${statLine('Morale', w.morale, w.morale < 35 ? 'var(--bad)' : 'var(--good)')}${statLine('Fatigue', w.fatigue, w.fatigue >= 60 ? 'var(--bad)' : 'var(--info)')}
      <div class="row small" style="margin-top:8px"><span class="muted sp">Record</span><b>${w.record.w}W – ${w.record.l}L${w.record.d ? ' – ' + w.record.d + 'D' : ''} · ${Math.round(winPct(w) * 100)}%</b></div>
      <div class="row small"><span class="muted sp">Last 5</span>${formChips(w)}${w.streak >= 2 ? ` <b style="margin-left:6px;color:var(--good)">W${w.streak}</b>` : w.streak <= -2 ? ` <b style="margin-left:6px;color:var(--bad)">L${-w.streak}</b>` : ''}</div>
-     ${splitOn() && w.contract ? `<div class="row small"><span class="muted sp">Show</span><select data-in="wBrand" data-id="${w.id}" style="width:auto;padding:4px 8px">${SHOWS().map(x => `<option value="${esc(x.id)}" ${!w.both && brandOf(w) === x.id ? 'selected' : ''}>${esc(brandName(x.id))}</option>`).join('')}<option value="*" ${w.both ? 'selected' : ''}>${allBrands()}</option></select></div>` : ''}
+     ${splitOn() && w.contract ? `<div class="row small"><span class="muted sp">Show</span><select data-in="wBrand" data-id="${w.id}" style="width:auto;padding:4px 8px">${SHOWS().map(x => `<option value="${esc(x.id)}" ${!w.both && brandOf(w) === x.id ? 'selected' : ''}>${esc(brandName(x.id))}</option>`).join('')}<option value="*" ${w.both ? 'selected' : ''}>Free agent (${allBrands(0)})</option></select></div>` : ''}
      ${w.retired ? '' : `<div class="row small" style="margin:6px 0 4px"><span class="muted sp">Job</span></div><div class="seg-ctl" style="margin-bottom:6px"><button class="${isNW(w) ? '' : 'on'}" data-act="roleSw" data-id="wrestler" aria-pressed="${!isNW(w)}">🤼 Wrestles</button><button class="${isNW(w) ? 'on' : ''}" data-act="roleSw" data-id="${isNW(w) ? roleOf(w) : 'manager'}" aria-pressed="${isNW(w)}">💼 Doesn't wrestle</button></div>
      ${isNW(w) ? `<label class="f" style="margin-bottom:4px"><span>Role</span><select data-in="wRole" data-id="${w.id}">${Object.entries(ROLES).filter(([k]) => k !== 'wrestler').map(([k, x]) => `<option value="${k}" ${roleOf(w) === k ? 'selected' : ''}>${x.n}</option>`).join('')}</select></label><div class="tiny muted" style="margin-bottom:8px">${esc(ROLES[roleOf(w)].d)} ${offTV(w) ? '' : 'Never booked in a match, auto-filled, ranked or given a title.'}</div>` : ''}`}
      ${(() => { const mg = mgrOf(w), mine = managing(w.id); return `${isNW(w) ? '' : `<div class="row small"><span class="muted sp">Manager</span>${w.retired ? `<b>${mg ? esc(mg.name) : 'None'}</b>` : `<button class="link" data-act="setMgr">${mg ? esc(mg.name) : 'Choose'}</button>`}</div>`}${mine.length ? `<div class="row small"><span class="muted sp">Manages</span><b class="clip">${mine.map(x => esc(x.name)).join(', ')}</b></div>` : ''}`; })()}
@@ -13016,7 +13017,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.53';
+const VERSION = '1.9.54';
 const WHATS_NEW = [
   ['🔎 Search the draft war room', 'The brand draft roster now has a search box and more ways to sort: best for the brand, popularity, overall, momentum, in-ring, mic, charisma, youngest, salary and name, with the reverse button. Filter by men or women, faces or heels, and stack filters for stars, champions, teams and factions, wrestlers in a story or ones that fill a need. Show all lifts the 40-wrestler limit.'],
   ['📷 Imported photos are shared', 'Photos you add with the mass photo import (Roster tools → Photos) now travel with everything you share: worlds, rosters, single wrestlers, share codes and shared saves. Before, they stayed on your device. Share again to include them.'],
