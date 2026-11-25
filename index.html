@@ -2771,7 +2771,7 @@ function brandsView() {
 // and brands can trade during the draft. Tag teams go together. Nothing changes until you finish.
 function bdNew() {
   const sh = SHOWS();
-  return { type: 'bdraft', order: sh.map(x => x.id), picks: Object.fromEntries(sh.map(x => [x.id, []])), both: signed().filter(w => w.both).map(w => w.id), k: 0, hist: [], f: '', last: null, tr: null };
+  return { type: 'bdraft', order: sh.map(x => x.id), picks: Object.fromEntries(sh.map(x => [x.id, []])), both: signed().filter(w => w.both).map(w => w.id), k: 0, hist: [], q: '', g: '', al: '', st: [], more: false, last: null, tr: null };
 }
 const bdTaken = m => new Set([...Object.values(m.picks).flat(), ...m.both]);
 const bdPool = m => { const tk = bdTaken(m); return signed().filter(w => !tk.has(w.id)).sort((a, b) => b.pop - a.pop); };
@@ -2828,17 +2828,37 @@ function bdBest(m, on) {
   const all = bdAll(m.both), ms = bdMeters(m.picks[on], all, m.order.length).filter(x => x.v != null && x.v < 65);
   return bdPool(m).map(w => ({ w, s: w.pop + ms.filter(x => x.f(w)).length * 8 })).sort((a, b) => b.s - a.s)[0]?.w;
 }
+// ----- war room roster: search, sorts and filters (same chip layout as the match picker) -----
+const BD_SORTS = () => [['fit', 'Best for brand'], ['pop', 'Popularity'], ['ovr', 'Overall'], ['mom', 'Momentum'], ['ring', 'In-ring'], ['mic', 'Mic'], ['cha', 'Charisma'], ['age', 'Youngest'], ...(CON() ? [['pay', 'Salary']] : []), ['name', 'Name']];
+const BD_ST = [['need', '✅ Fills a need'], ['star', '⭐ Stars'], ['champ', '🏆 Champions'], ['team', '👥 Teams & factions'], ['story', '🔥 In a story']];
+const bdNF = m => (m.q ? 1 : 0) + (m.g ? 1 : 0) + (m.al ? 1 : 0) + (m.st || []).length;
+const bdSortStat = (s, w) => s === 'mom' ? ` · <b>Momentum ${w.momentum > 0 ? '+' : ''}${Math.round(w.momentum || 0)}</b>` : s === 'ring' ? ` · <b>Ring ${w.ring}</b>` : s === 'mic' ? ` · <b>Mic ${w.mic}</b>` : s === 'cha' ? ` · <b>Charisma ${w.cha ?? '—'}</b>`
+  : s === 'age' ? ` · <b>Age ${w.age || '?'}</b>` : s === 'pay' && w.contract?.salary ? ` · <b>${money(w.contract.salary)}/wk</b>` : '';
+function bdList(m, pool, needs, fills, thr) {
+  const q = (m.q || '').trim().toLowerCase(), st = m.st || [];
+  let list = pool.filter(w => (!q || (w.name + ' ' + (w.nick || '') + ' ' + (w.style || '')).toLowerCase().includes(q))
+    && (!m.g || (m.g === 'women') === isWomen(w)) && (!m.al || (w.align === 'heel' ? 'heel' : 'face') === m.al)
+    && st.every(k => k === 'need' ? fills(w).length > 0 : k === 'star' ? w.pop >= thr : k === 'champ' ? titlesOf(w.id).length > 0 : k === 'team' ? inTeam(w) || factionsOfW(w.id).length > 0 : k === 'story' ? storiesOf(w.id).length > 0 : true));
+  const s = BD_SORTS().some(([k]) => k === UI.bdSort) ? UI.bdSort : 'fit', d = revDir('bd');
+  const fit = w => w.pop + needs.filter(x => x.f(w)).length * 8;
+  const by = { fit: (a, b) => fit(b) - fit(a), pop: (a, b) => b.pop - a.pop, ovr: (a, b) => overall(b) - overall(a), mom: (a, b) => (b.momentum || 0) - (a.momentum || 0), ring: (a, b) => b.ring - a.ring, mic: (a, b) => b.mic - a.mic,
+    cha: (a, b) => (b.cha || 0) - (a.cha || 0), age: (a, b) => (+a.age || 99) - (+b.age || 99), pay: (a, b) => (b.contract?.salary || 0) - (a.contract?.salary || 0), name: (a, b) => a.name.localeCompare(b.name) }[s];
+  return { list: list.sort((a, b) => d * (by(a, b) || b.pop - a.pop)), s };
+}
+function bdControls(m, s) {
+  const chip = (on, act, id, l) => `<button class="${on ? 'on' : ''}" aria-pressed="${!!on}" data-act="${act}" data-id="${esc(id)}">${l}</button>`;
+  return `<div class="row" style="margin-bottom:8px;gap:6px"><input type="search" placeholder="Search" aria-label="Search wrestlers left to draft" value="${esc(m.q || '')}" data-in="bdQ" style="flex:1;min-width:0">
+    <select data-in="bdSort" style="width:auto;max-width:42%" aria-label="Sort wrestlers by">${BD_SORTS().map(([k, l]) => `<option value="${k}" ${s === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${revBtn('bd', 'draft list')}</div>
+    <div class="filters">${chip(!m.g && !m.al, 'bdG', '', 'All')}${[['men', 'Men'], ['women', 'Women']].map(([k, l]) => chip(m.g === k, 'bdG', k, l)).join('')}${[['face', 'Faces'], ['heel', 'Heels']].map(([k, l]) => chip(m.al === k, 'bdAl', k, l)).join('')}</div>
+    <div class="filters" style="flex-wrap:wrap">${BD_ST.map(([k, l]) => chip((m.st || []).includes(k), 'bdF', k, l)).join('')}</div>`;
+}
 function modalBDraft(m) {
   if (m.tr) return modalBTrade(m.tr, m);
   const pool = bdPool(m), on = bdTurn(m), total = signed().length - m.both.length, made = Object.values(m.picks).flat().length;
   const n = m.order.length, round = Math.floor(m.k / n) + 1, all = bdAll(m.both), grades = bdGrades(m.picks, all);
   const meters = Object.fromEntries(m.order.map(id => [id, bdMeters(m.picks[id], all, n)]));
   const needs = meters[on].filter(x => x.v != null && x.v < 65), fills = w => needs.filter(x => x.f(w)).slice(0, 2);
-  let list = pool;
-  if (m.f === 'need') list = list.filter(w => fills(w).length);
-  else if (m.f === 'men') list = list.filter(w => !isWomen(w));
-  else if (m.f === 'women') list = list.filter(isWomen);
-  else if (m.f === 'teams') list = list.filter(inTeam);
+  const { list, s: srt } = bdList(m, pool, needs, fills, bdStarLine(all)), cap = m.more ? list.length : 40;
   const champ = w => titlesOf(w.id).map(t => t.short).join(', ');
   const L = m.last, lw = L && W(L.id), fresh = L?.fresh; if (L) L.fresh = false;
   const reveal = !L ? '' : L.trade ? `<div class="bd-toast ${fresh ? 'in' : ''}"><span class="ic" style="font-size:24px">🔁</span><div class="sp small"><b>Trade!</b> ${esc(L.head)}<div class="tiny muted">🎙 ${esc(L.voice)}: "${esc(L.line)}"</div></div></div>`
@@ -2846,8 +2866,10 @@ function modalBDraft(m) {
   const body = pool.length ? `${reveal}
     <div class="brand-grid" style="margin-bottom:10px">${m.order.map(id => bdNeedsCard(brandName(id), grades[id], meters[id], id === on)).join('')}</div>
     <div class="alert" style="margin-bottom:10px;border-left-color:var(--accent)"><span class="ic">📺</span><div><b>${esc(brandName(on))} is making their selection</b><div class="tiny muted">Round ${round} · Pick ${m.k % n + 1} · ${made} of ${total} drafted${needs.length ? ` · Needs: ${needs.map(bdNeedTag).join(', ').toLowerCase()}` : ''}</div></div></div>
-    <div class="filters">${[['', 'Best left'], ['need', 'Fills a need'], ['men', 'Men'], ['women', 'Women'], ['teams', 'Teams']].map(([k, l]) => `<button class="${m.f === k ? 'on' : ''}" data-act="bdF" data-id="${k}">${l}</button>`).join('')}</div>
-    <div class="list">${list.slice(0, 40).map(w => { const tm = bdGroup(m, w).slice(1), fl = fills(w); return `<div class="item">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">OVR ${overall(w)} · Pop ${Math.round(w.pop)}${champ(w) ? ` · 🏆 ${esc(champ(w))}` : ''}${tm.length ? ` · with ${tm.map(x => esc(x.name)).join(', ')}` : ''}${fl.map(x => ` <span class="tag good">Fills: ${esc(bdNeedTag(x))}</span>`).join('')}</div></div><button class="btn sm pri" data-act="bdPick" data-id="${w.id}">Draft</button><button class="btn sm" data-act="bdBoth" data-id="${w.id}" aria-label="Put ${esc(w.name)} on ${allBrands(0)}" title="Put on ${allBrands(0)}">${ic('layers')}</button></div>`; }).join('') || '<div class="empty">Nobody left in this group.</div>'}</div>
+    ${bdControls(m, srt)}
+    <div class="tiny muted" style="margin-bottom:4px">${bdNF(m) ? `Showing ${list.length} of ${pool.length} left. <button class="link" data-act="bdClear">Clear filters</button>` : `${pool.length} left to draft.`}</div>
+    <div class="list">${list.slice(0, cap).map(w => { const tm = bdGroup(m, w).slice(1), fl = fills(w); return `<div class="item">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">${w.align === 'heel' ? 'Heel' : 'Face'} · OVR ${overall(w)} · Pop ${Math.round(w.pop)}${bdSortStat(srt, w)}${champ(w) ? ` · 🏆 ${esc(champ(w))}` : ''}${tm.length ? ` · with ${tm.map(x => esc(x.name)).join(', ')}` : ''}${fl.map(x => ` <span class="tag good">Fills: ${esc(bdNeedTag(x))}</span>`).join('')}</div></div><button class="btn sm pri" data-act="bdPick" data-id="${w.id}">Draft</button><button class="btn sm" data-act="bdBoth" data-id="${w.id}" aria-label="Put ${esc(w.name)} on ${allBrands(0)}" title="Put on ${allBrands(0)}">${ic('layers')}</button></div>`; }).join('') || `<div class="empty">Nobody left matches.${bdNF(m) ? ' <button class="link" data-act="bdClear">Clear filters</button>' : ''}</div>`}</div>
+    ${list.length > cap ? `<button class="btn block" style="margin-top:8px" data-act="bdMore">Show all ${list.length}</button>` : ''}
     <div class="tiny muted" style="margin-top:8px">Tag team partners go together. ${ic('layers')} puts someone on ${allBrands(0)} without using a pick.</div>`
     : `${reveal}<div style="text-align:center;margin:6px 0 12px"><div style="font-family:var(--f-display);font-size:22px;text-transform:uppercase">Draft complete</div><div class="small muted">Here are your brands. You can still trade, then finish to make it official.</div></div>
     <div class="brand-grid" style="margin-bottom:6px">${m.order.map(id => bdNeedsCard(brandName(id), grades[id], meters[id])).join('')}</div>
@@ -5894,7 +5916,7 @@ function storyIdea() {
 // =====================================================================
 //  UI
 // =====================================================================
-const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', sortRev: (() => { try { return JSON.parse(localStorage.getItem('bookit-sortRev') || '{}') || {}; } catch (e) { return {}; } })(), pickSort: (() => { try { return localStorage.getItem('bookit-pickSort') || 'fit'; } catch (e) { return 'fit'; } })(), faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts', topDown: (() => { try { return localStorage.getItem('bookit-topDown') === '1'; } catch (e) { return false; } })() };
+const UI = { selWeek: 0, calMonth: null, reorder: false, tab: 'book', modal: null, picker: null, rosterQ: '', rosterF: 'all', rosterSort: 'pop', sortRev: (() => { try { return JSON.parse(localStorage.getItem('bookit-sortRev') || '{}') || {}; } catch (e) { return {}; } })(), pickSort: (() => { try { return localStorage.getItem('bookit-pickSort') || 'fit'; } catch (e) { return 'fit'; } })(), faSort: (() => { try { return localStorage.getItem('bookit-faSort') || 'pop'; } catch (e) { return 'pop'; } })(), bdSort: (() => { try { return localStorage.getItem('bookit-bdSort') || 'fit'; } catch (e) { return 'fit'; } })(), newsF: 'all', notesTab: 'todo', faTab: 'contracts', topDown: (() => { try { return localStorage.getItem('bookit-topDown') === '1'; } catch (e) { return false; } })() };
 const root = document.getElementById('root'), modals = document.getElementById('modals');
 // ---------- scroll lock: nothing behind an open sheet, picker or overlay may scroll ----------
 const LOCK_SEL = '.modal-bg, .live, .crash';
@@ -8390,7 +8412,11 @@ const A = {
   shDaySet(v) { const [id, k] = String(v).split('|'), x = showById(id); if (!x) return; const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, k) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); },
   goBrands() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'brands'; render(); pageTop(); },
   bdStart() { if (!splitOn()) return; SFX.load(); openModal(bdNew()); },
-  bdF(v) { UI.modal.f = v || ''; render(); },
+  bdF(v) { const m = UI.modal, st = m.st ||= []; m.st = st.includes(v) ? st.filter(x => x !== v) : [...st, v]; render(); },
+  bdG(v) { const m = UI.modal; if (!v) m.g = m.al = ''; else m.g = m.g === v ? '' : v; render(); },
+  bdAl(v) { const m = UI.modal; m.al = m.al === v ? '' : v; render(); },
+  bdClear() { Object.assign(UI.modal, { q: '', g: '', al: '', st: [] }); render(); },
+  bdMore() { UI.modal.more = true; render(); },
   bdPick(id, el, quiet) { const m = UI.modal, w = W(id); if (!w || bdTaken(m).has(id)) return; const on = bdTurn(m), all = bdAll(m.both), rank = bdPool(m).indexOf(w), grp = bdGroup(m, w);
     m.last = bdCall(m, on, w, grp, rank, all); m.picks[on].push(...grp.map(x => x.id)); m.hist.push({ t: 'pick', on, ids: grp.map(x => x.id) }); m.k++;
     if (quiet) return; if (m.last.crowd === 'Big pop' || m.last.crowd === 'Huge heat') SFX.crowd(m.last.crowd === 'Big pop' ? 'cheer' : 'applause', .5, .2); render(); },
@@ -12689,6 +12715,7 @@ document.addEventListener('input', e => {
     else if (k === 'bothQ' && UI.modal?.type === 'bothPick') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'faQ') { UI.faQ = v; debRender(el, e); }
     else if (k === 'pickQ') { UI.picker.q = v; debRender(el, e); }
+    else if (k === 'bdQ' && UI.modal?.type === 'bdraft') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'cQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'libQ') { UI.modal.lq = v; debRender(el, e); }
     else if (k === 'rrQ') { UI.modal.q = v; debRender(el, e); }
@@ -12760,6 +12787,7 @@ document.addEventListener('change', e => {
     const k = el.dataset.in;
     if (k === 'rosterSort') { UI.rosterSort = el.value; render(); }
     else if (k === 'rtBtTitle') { const b = UI.modal?.bbatch, it = b?.items[b.i]; if (it) { it.tid = G.titles.some(x => x.id === el.value) ? el.value : ''; render(); } }
+    else if (k === 'bdSort') { UI.bdSort = el.value; try { localStorage.setItem('bookit-bdSort', el.value); } catch (e) { } render(); }
     else if (k === 'pickSort') { UI.pickSort = el.value; try { localStorage.setItem('bookit-pickSort', el.value); } catch (e) { } render(); }
     else if (k === 'faSort') { UI.faSort = el.value; try { localStorage.setItem('bookit-faSort', el.value); } catch (e) { } render(); }
     else if (k === 'shDay') { const x = showById(el.dataset.id); if (x) { const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, el.value) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); } }
@@ -12988,8 +13016,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.52';
+const VERSION = '1.9.53';
 const WHATS_NEW = [
+  ['🔎 Search the draft war room', 'The brand draft roster now has a search box and more ways to sort: best for the brand, popularity, overall, momentum, in-ring, mic, charisma, youngest, salary and name, with the reverse button. Filter by men or women, faces or heels, and stack filters for stars, champions, teams and factions, wrestlers in a story or ones that fill a need. Show all lifts the 40-wrestler limit.'],
   ['📷 Imported photos are shared', 'Photos you add with the mass photo import (Roster tools → Photos) now travel with everything you share: worlds, rosters, single wrestlers, share codes and shared saves. Before, they stayed on your device. Share again to include them.'],
   ['🌍 Big worlds share cleanly', 'Shared worlds now handle full-size companies. Each company brings up to 20 championships with their card level, defense deadline, DQ rule and belt photo, up to 80 tag teams and 40 factions, and its brand rosters, so taking over a company with three shows keeps who works which show. Photos pack tighter into your photo slots, and when they still don\'t fit, the biggest ones are saved smaller instead of being dropped. AI companies from a world keep their roster size and a payroll they can afford.'],
   ['📸 Photos in shared worlds', 'Shared worlds now carry their wrestlers\' photos in your photo slots, the same way shared rosters do. Private photos stay private.'],
