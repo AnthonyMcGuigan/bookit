@@ -8871,7 +8871,7 @@ function roleFromText(v) {
   if (/wrestl|active|talent|roster/.test(t)) return 'wrestler';
   return '';
 }
-function toPackW(w) { const o = {}; for (const k of PACK_FIELDS) { const v = w[k]; if (k === 'photo' && w.photoLocal) continue; if (v !== undefined && v !== null && v !== '') o[k] = typeof v === 'number' ? Math.round(v) : v; } return o; }
+function toPackW(w) { const o = {}; for (const k of PACK_FIELDS) { const v = w[k]; if (v !== undefined && v !== null && v !== '') o[k] = typeof v === 'number' ? Math.round(v) : v; } return o; }
 function makePack(ws, opt) {
   const p = { rb: 1, kind: ws.length === 1 ? 'wrestler' : 'roster', title: opt?.title || (ws.length === 1 ? ws[0].name : G.promo.name + ' roster'), promo: G.promo.name, wrestlers: ws.map(toPackW) };
   if (opt?.titles) p.titles = G.titles.map(t => ({ name: t.name, short: t.short, tag: t.tag, ...(tsz(t) === 3 ? { size: 3 } : {}), prestige: Math.round(t.prestige), holders: t.holder.map(nameOf),
@@ -9218,7 +9218,7 @@ function modalBuilder(m) {
        <div class="bld-ovr">Overall <b id="ew-ovr">${overall(d)}</b></div>
      </div>
    </div>
-   ${d.photo ? `<div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPhotoDel">Remove photo${facesOn() ? ' and use a pixel face' : ''}</button></div>` : ''}${d.photoLocal ? '<div class="tiny muted" style="text-align:center;margin:-2px 0 8px">🔒 Private photo. It stays on this device and is never shared.</div>' : ''}
+   ${d.photo ? `<div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPhotoDel">Remove photo${facesOn() ? ' and use a pixel face' : ''}</button></div>` : ''}
    ${pxPanel(d)}
    ${!d.photo && facesOn() ? faceMaker(d) : ''}
    <div class="swatches">${SWATCHES.map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bColor" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div>
@@ -9283,11 +9283,11 @@ function modalRoster(m) {
   } else if (t === 'photos' && G) {
     const n = G.wrestlers.filter(w => w.photoLocal).length, r = m.res;
     body += `<p class="small muted" style="margin-top:0">Add photos for many wrestlers at once. You pick the look on the first one, then it is used for all of them.</p>
-      <div class="alert" style="margin-bottom:10px"><span class="ic">🔒</span><div class="small"><b>Private to you.</b> These photos stay in this save on this device. They are left out of share codes, Community and shared saves.</div></div>
+      <div class="alert" style="margin-bottom:10px"><span class="ic">🌍</span><div class="small"><b>They travel with your shares.</b> These photos go along with anything you share: worlds, rosters, wrestlers, share codes and shared saves.</div></div>
       <p class="tiny muted">Name each file after the wrestler, like <b>Rex Calloway.jpg</b>. Only use photos you're allowed to use.</p>
       <button class="btn pri block" data-act="rtPhotos" ${m.busy ? 'disabled' : ''}>${m.busy ? 'Working… ' + esc(m.busy) : '📷 Choose photos'}</button>
       ${r ? `<div class="card" style="margin-top:10px;padding:10px 12px"><div class="small"><b>${r.ok.length} added</b>${r.miss.length ? ` · ${r.miss.length} not matched` : ''}</div>${r.miss.length ? `<div class="tiny muted" style="margin-top:4px">No wrestler named: ${r.miss.slice(0, 20).map(esc).join(', ')}${r.miss.length > 20 ? '…' : ''}</div>` : ''}</div>` : ''}
-      ${n ? `<button class="btn bad block" style="margin-top:10px" data-act="rtPhotosOff">Remove all ${n} private photos</button>` : ''}
+      ${n ? `<button class="btn bad block" style="margin-top:10px" data-act="rtPhotosOff">Remove all ${n} imported photos</button>` : ''}
       <div class="sec">Pixel faces</div>
       <p class="tiny muted" style="margin-top:0">Everyone without a photo gets a pixel face. Change anyone's face in their editor, or reroll them all here.${facesOn() ? '' : ' Pixel faces are off in Settings, so initials show instead.'}</p>
       <button class="btn block" data-act="rtPlace" data-id="empty" ${G.wrestlers.some(w => !w.photo) ? '' : 'disabled'}>🎲 ${G.wrestlers.some(w => !w.photo) ? 'New faces for the ' + G.wrestlers.filter(w => !w.photo).length + ' without a photo' : 'Everyone has a photo'}</button>`;
@@ -9767,7 +9767,6 @@ function shareableSave(g, keepNotes) {
   const c = JSON.parse(JSON.stringify(g));
   c.history = (c.history || []).slice(-24); c.news = (c.news || []).slice(0, 60);
   if (!keepNotes) { c.notebook = ''; c.todos = []; for (const w of c.wrestlers || []) w.notes = ''; for (const st of c.stories || []) st.notes = ''; }
-  for (const w of [...(c.wrestlers || []), ...(c.rivalPromos || []).flatMap(r => r.roster || [])]) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; }
   delete c.cos; delete c.coId; delete c.ranWk; delete c.curWk;
   delete c.savedAt; return c;
 }
@@ -9783,7 +9782,7 @@ function worldW(w) {
   const x = JSON.parse(JSON.stringify(w));
   for (const k of ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem']) delete x[k];
   if (x.bi == null || !x.both) delete x.both; // bi: which of the company's weekly shows they work (0 is the main show)
-  if (w.photoLocal || !safePhoto(x.photo)) x.photo = ''; // private photos stay home; the rest move to photo slots when the world is shared
+  if (!safePhoto(x.photo)) x.photo = ''; // photos move to photo slots when the world is shared
   x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
   return x;
 }
@@ -11032,10 +11031,10 @@ const CREATOR_ACTIONS = {
         it.w.photo = pic; it.w.photoLocal = true; delete it.w.photoGen; res.ok.push(it.w.name);
       } catch (e) { res.miss.push(it.f.name.replace(/\.[^.]+$/, '').slice(0, 40)); }
     }
-    m.busy = null; m.res = res; commit(res.ok.length ? `Added ${res.ok.length} private photo${res.ok.length > 1 ? 's' : ''}.` : 'No photos were added.');
+    m.busy = null; m.res = res; commit(res.ok.length ? `Added ${res.ok.length} photo${res.ok.length > 1 ? 's' : ''}.` : 'No photos were added.');
   },
   rtPlace() { const ws = G.wrestlers.filter(w => !w.photo); if (!ws.length) return; confirmBox('New faces for everyone?', `The ${ws.length} wrestlers without a photo get a new random pixel face. Faces you made in the editor are replaced too.`, 'New faces', () => { for (const w of ws) w.look = faceRandom(Math.random(), isWomen(w)); UI.modal = { type: 'rtools', tab: 'photos' }; commit(`${ws.length} new face${ws.length > 1 ? 's' : ''}.`); }); },
-  rtPhotosOff() { confirmBox('Remove private photos?', 'Wrestlers with a private photo go back to their initials. Other photos stay.', 'Remove', () => { for (const w of G.wrestlers) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; } UI.modal = { type: 'rtools', tab: 'photos' }; commit('Removed.'); }, true); },
+  rtPhotosOff() { confirmBox('Remove imported photos?', 'Wrestlers with a photo from the mass import go back to their pixel face or initials. Other photos stay.', 'Remove', () => { for (const w of G.wrestlers) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; } UI.modal = { type: 'rtools', tab: 'photos' }; commit('Removed.'); }, true); },
   rtParse() { const m = UI.modal; m.text = document.getElementById('rtIn').value; const r = parseImport(m.text); m.parsed = r.pack || null; m.error = r.error || ''; render(); rtTop(); },
   rtBack() { const m = UI.modal; if (m.fromLib) return A.library(); m.parsed = null; m.error = ''; render(); rtTop(); },
   rtFile() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,.txt,.csv,.tsv,application/json,text/*'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; if (f.size > MAX_FILE) return toast('That file is too big to import.'); f.text().then(t => { UI.modal.text = t; const r = parseImport(t); UI.modal.parsed = r.pack || null; UI.modal.error = r.error || ''; render(); rtTop(); }); }; inp.click(); },
@@ -12991,6 +12990,7 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9.52';
 const WHATS_NEW = [
+  ['📷 Imported photos are shared', 'Photos you add with the mass photo import (Roster tools → Photos) now travel with everything you share: worlds, rosters, single wrestlers, share codes and shared saves. Before, they stayed on your device. Share again to include them.'],
   ['🌍 Big worlds share cleanly', 'Shared worlds now handle full-size companies. Each company brings up to 20 championships with their card level, defense deadline, DQ rule and belt photo, up to 80 tag teams and 40 factions, and its brand rosters, so taking over a company with three shows keeps who works which show. Photos pack tighter into your photo slots, and when they still don\'t fit, the biggest ones are saved smaller instead of being dropped. AI companies from a world keep their roster size and a payroll they can afford.'],
   ['📸 Photos in shared worlds', 'Shared worlds now carry their wrestlers\' photos in your photo slots, the same way shared rosters do. Private photos stay private.'],
   ['🏆 Every title in shared worlds', 'A company you share in a world now brings all its championships (up to 10), with their holders and prestige, including women\'s and tag titles. Before, only three singles belts and one tag belt came along, and generic belts filled the gaps. Share your world again to update it.'],
