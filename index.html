@@ -2707,7 +2707,7 @@ function coBar() {
     <div class="row wrap" style="gap:6px"><button class="btn sm pri" data-act="goNextUp">Go to ${esc(nu.name)}</button><button class="btn sm" data-act="coAuto">Auto-book the rest</button></div></div>`;
   else if (me && nu && nu !== me && UI.selWeek === G.week) msg = `<div class="alert co-wait"><span class="ic">🔔</span><div class="sp small"><b>${esc(unitLabel(nu))} goes on first.</b> Shows run in night order so every calendar stays in step. You can book this one now and run it after.</div>
     <div class="row wrap" style="gap:6px"><button class="btn sm pri" data-act="goNextUp">Go to ${esc(nu.name)}</button></div></div>`;
-  return `<div class="wk-strip"><div class="wk-h"><span class="sp">Week ${G.week} · shows run in night order</span><button class="link small" data-act="shows">Shows</button>${multi() ? '<button class="link small" data-act="cos">Companies</button>' : ''}</div><div class="co-chips">${chips}</div></div>${msg}`;
+  return `<div class="wk-strip"><div class="wk-h"><span class="sp">Week ${G.week} · shows run in night order</span><button class="link small" data-act="shows">Shows</button>${multi() ? '<button class="link small" data-act="cos">Your companies</button>' : ''}</div><div class="co-chips">${chips}</div></div>${msg}`;
 }
 // ---------- weekly shows and brands ----------
 const SHOW_WORDS = ['Clash', 'Rumble', 'Riot', 'Showdown', 'Uprising', 'Collision', 'Rampage', 'Fury'];
