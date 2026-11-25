@@ -2705,7 +2705,7 @@ function modalShows() {
       <div class="row" style="gap:8px;margin-bottom:6px"><b class="sp">${i === 0 ? 'Main show' : 'Show ' + (i + 1)}${on ? ' <span class="tag good">Booking</span>' : ''}${(x.ran || 0) >= G.week ? ' <span class="tag">✓ done this week</span>' : ''}</b>${on ? '' : `<button class="btn sm" data-act="goShow" data-id="${esc(x.id)}">Book it</button>`}${many ? `<button class="btn sm" data-act="delShow" data-id="${esc(x.id)}" aria-label="Remove ${esc(name)}">✕</button>` : ''}</div>
       <input type="text" data-in="shName" data-id="${esc(x.id)}" value="${esc(name)}" maxlength="40" aria-label="Show name" style="margin-bottom:8px">
       <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === +day ? 'on' : ''}" data-act="shDaySet" data-id="${esc(x.id)}|${k}">${d.slice(0, 3)}</button>`).join('')}</div>
-      ${many ? `<div class="tiny muted" style="margin:8px 0 4px">Brand colour</div>${bColRow(x.id)}` : ''}
+      ${many ? `<div class="tiny muted" style="margin:8px 0 4px">Brand color</div>${bColRow(x.id)}` : ''}
       ${many ? `<div class="row small" style="margin-top:8px;gap:8px">${splitOn() ? `<span class="sp ${cnt(x.id) < 10 ? '' : 'muted'}" ${cnt(x.id) < 10 ? 'style="color:var(--warn)"' : ''}>${cnt(x.id)} wrestlers${cnt(x.id) < 10 ? ' (thin)' : ''}${G.titles.filter(t => t.brand === x.id).length ? ' · ' + G.titles.filter(t => t.brand === x.id).map(t => esc(t.short)).join(', ') : ''}</span><button class="link small" data-act="brandRoster" data-id="${esc(x.id)}">See roster</button>` : '<span class="sp"></span>'}<label class="todo" style="margin:0"><input type="checkbox" data-in="shAuto" data-id="${esc(x.id)}" ${x.auto ? 'checked' : ''}><span>Auto-book</span></label></div>` : ''}
     </div>`; }).join('');
   const titles = splitOn() && G.titles.length ? `<div class="sec">Championships</div><p class="small muted" style="margin-top:0">Pick which show defends each title. Shared titles can be defended on any show.</p>
@@ -2723,14 +2723,14 @@ function modalShows() {
 // the colour picker for one brand: the company palette plus any colour you like
 function bColRow(id) {
   const cur = brandCol(id), mine = !BRAND.includes(cur);
-  return `<div class="swatches b-sws" role="group" aria-label="Brand colour for ${esc(brandName(id))}">${BRAND.map(c => `<button class="sw ${cur === c ? 'on' : ''}" style="background:${c}" data-act="bCol" data-id="${esc(id)}|${c}" aria-pressed="${cur === c}" aria-label="${BCOL_NAMES[c] || c}"></button>`).join('')}
-    <label class="sw b-sw-own ${mine ? 'on' : ''}" style="background:${mine ? cur : 'conic-gradient(#ff5a5f, #ffb547, #2fbf71, #22b8cf, #4c8dff, #a463f2, #e84393, #ff5a5f)'}" title="Pick any colour"><input type="color" data-in="bColOwn" data-id="${esc(id)}" value="${cur}" aria-label="Any colour for ${esc(brandName(id))}"></label></div>`;
+  return `<div class="swatches b-sws" role="group" aria-label="Brand color for ${esc(brandName(id))}">${BRAND.map(c => `<button class="sw ${cur === c ? 'on' : ''}" style="background:${c}" data-act="bCol" data-id="${esc(id)}|${c}" aria-pressed="${cur === c}" aria-label="${BCOL_NAMES[c] || c}"></button>`).join('')}
+    <label class="sw b-sw-own ${mine ? 'on' : ''}" style="background:${mine ? cur : 'conic-gradient(#ff5a5f, #ffb547, #2fbf71, #22b8cf, #4c8dff, #a463f2, #e84393, #ff5a5f)'}" title="Pick any color"><input type="color" data-in="bColOwn" data-id="${esc(id)}" value="${cur}" aria-label="Any color for ${esc(brandName(id))}"></label></div>`;
 }
 function modalBCol(id) {
-  if (!showById(id)) return modal('Brand colour', '<div class="empty">That brand is gone.</div>');
+  if (!showById(id)) return modal('Brand color', '<div class="empty">That brand is gone.</div>');
   const sample = `<div class="row wrap" style="gap:8px;margin:12px 0 4px"><span class="tag btag" style="${bVar(id)}">${bDot(id)}${esc(brandName(id))}</span><span class="co-dot" style="background:${brandCol(id)};color:${inkOn(brandCol(id))}">${esc(showNight(showById(id)).slice(0, 2))}</span></div>
     <div class="bd-on" style="${bVar(id)};position:static;margin:8px 0 0"><span class="bd-on-dot" aria-hidden="true">${esc(abbr(brandName(id)).slice(0, 3))}</span><div class="sp"><b>${esc(brandName(id))} is making their selection</b><div class="tiny">How it looks in the draft</div></div></div>`;
-  return modal(`🎨 ${esc(brandName(id))} colour`, `<p class="small muted" style="margin-top:0">Shown on roster tags, the Brands tab, the draft and the week's show strip.</p>${bColRow(id)}${sample}`, '<button class="btn pri" data-act="closeModal">Done</button>');
+  return modal(`🎨 ${esc(brandName(id))} color`, `<p class="small muted" style="margin-top:0">Shown on roster tags, the Brands tab, the draft and the week's show strip.</p>${bColRow(id)}${sample}`, '<button class="btn pri" data-act="closeModal">Done</button>');
 }
 // split the roster across the shows like a draft: best first, snake order, tag teams stay together
 function brandDraft() {
@@ -2783,7 +2783,7 @@ function brandsView() {
     <button class="btn block" style="margin-top:8px" data-act="shows">📺 Shows and nights</button>`;
   const both = signed().filter(w => w.both).sort((a, b) => b.pop - a.pop), grades = bdGrades(trRosters(), bdAll(both.map(w => w.id)));
   const col = x => { const ws = signed().filter(w => !w.both && brandOf(w) === x.id).sort((a, b) => b.pop - a.pop), n = ws.length + both.length, ts = G.titles.filter(t => t.brand === x.id);
-    return `<div class="card brand-col bcol" style="${bVar(x.id)}"><div class="row" style="gap:6px;align-items:flex-start"><div class="brand-n sp">${esc(brandName(x.id))}</div><button class="b-colbtn" data-act="bColOpen" data-id="${esc(x.id)}" aria-label="Change the colour of ${esc(brandName(x.id))}" title="Brand colour">${bDot(x.id)}</button><b class="bd-grade" title="Brand grade">${grades[x.id]}</b></div>
+    return `<div class="card brand-col bcol" style="${bVar(x.id)}"><div class="row" style="gap:6px;align-items:flex-start"><div class="brand-n sp">${esc(brandName(x.id))}</div><button class="b-colbtn" data-act="bColOpen" data-id="${esc(x.id)}" aria-label="Change the color of ${esc(brandName(x.id))}" title="Brand color">${bDot(x.id)}</button><b class="bd-grade" title="Brand grade">${grades[x.id]}</b></div>
       <div class="tiny ${n < 10 ? '' : 'muted'}" ${n < 10 ? 'style="color:var(--warn)"' : ''}>${esc(showNight(x))} · ${n} wrestlers${n < 10 ? ' (thin)' : ''}</div>
       ${ts.length ? `<div class="brand-t">${ts.map(t => `<span class="tag gold">🏆 ${esc(t.short)}</span>`).join('')}</div>` : ''}
       ${ws.slice(0, 5).map(w => `<div class="small clip" style="padding:2px 0">${esc(w.name)}</div>`).join('') || '<div class="tiny muted" style="padding:2px 0">Nobody yet</div>'}
@@ -12252,6 +12252,13 @@ function applyBrand(color) {
 }
 const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w) && !/^(of|the|and|&)$/i.test(w)).map(w => w[0].toUpperCase()).join('').slice(0, 4) || 'PRO';
 
+// setup: a colour for each weekly show (i = -1 is the main show), the same picker as Office → Brands
+const wzCol = (z, i) => safeColor(i < 0 ? z.showCol : z.extra?.[i]?.col) || BRAND_DEF[(i + 1) % BRAND_DEF.length];
+function wzColRow(z, i) {
+  const cur = wzCol(z, i), mine = !BRAND.includes(cur), nm = i < 0 ? (z.show || 'your main show') : (z.extra[i].name || `weekly show ${i + 2}`);
+  return `<div class="swatches b-sws" role="group" aria-label="Color for ${esc(nm)}">${BRAND.map(c => `<button class="sw ${cur === c ? 'on' : ''}" style="background:${c}" data-act="wzCol" data-id="${i}|${c}" aria-pressed="${cur === c}" aria-label="${BCOL_NAMES[c] || c}"></button>`).join('')}
+    <label class="sw b-sw-own ${mine ? 'on' : ''}" style="background:${mine ? cur : 'conic-gradient(#ff5a5f, #ffb547, #2fbf71, #22b8cf, #4c8dff, #a463f2, #e84393, #ff5a5f)'}" title="Pick any color"><input type="color" data-wz="xCol" data-i="${i}" value="${cur}" aria-label="Any color for ${esc(nm)}"></label></div>`;
+}
 function wizStart(add, chain) {
   add = add === true && !!G;
   UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : false, contracts: add ? CON() : false, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, mode: add ? G.settings.bigMode : 'weeks', months: Array(12).fill(''), extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft', titles: wizTitles() };
@@ -12457,9 +12464,11 @@ function viewWizard() {
       <div class="chips" style="margin:-4px 0 12px">${['Thunder Valley Wrestling', 'Rustbelt Pro', 'Pacific Rumble', 'Midnight Mat Club'].map(n => `<button class="chip" data-act="wzSet" data-f="name" data-id="${esc(n)}">${esc(n)}</button>`).join('')}</div>
       <label class="f"><span>Weekly TV show</span><input type="text" data-wz="show" value="${esc(z.show)}" maxlength="40" placeholder="e.g. Monday Mayhem"></label>
       <label class="f"><span>Show night</span><div class="seg-ctl">${DAYS.map((d, i) => `<button class="${z.day === i ? 'on' : ''}" data-act="wzSet" data-f="day" data-id="${i}">${d.slice(0, 3)}</button>`).join('')}</div></label>
+      ${(z.extra || []).length ? `<label class="f"><span>Show color</span>${wzColRow(z, -1)}</label>` : ''}
       ${(z.extra || []).map((x, i) => `<div class="card" style="margin:0 0 10px;padding:10px 12px"><div class="row" style="margin-bottom:6px"><b class="sp small">Weekly show ${i + 2}</b><button class="btn sm" data-act="wzDelShow" data-id="${i}" aria-label="Remove this show">✕</button></div>
         <input type="text" data-wz="xName" data-i="${i}" value="${esc(x.name)}" maxlength="40" aria-label="Show name" placeholder="e.g. Friday Fallout" style="margin-bottom:8px">
-        <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === x.day ? 'on' : ''}" data-act="wzXDay" data-id="${i}:${k}">${d.slice(0, 3)}</button>`).join('')}</div></div>`).join('')}
+        <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === x.day ? 'on' : ''}" data-act="wzXDay" data-id="${i}:${k}">${d.slice(0, 3)}</button>`).join('')}</div>
+        <div class="tiny muted" style="margin:8px 0 4px">Show color</div>${wzColRow(z, i)}</div>`).join('')}
       ${(z.extra || []).length < MAX_SHOWS - 1 ? `<button class="btn block" style="margin:-2px 0 12px" data-act="wzAddShow">＋ Add another weekly show</button>` : ''}
       ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} ${z.split ? 'Every brand gets a full A show: its own crowd, TV deal and costs.' : 'Extra shows are B shows: smaller crowds, half a TV deal and their own costs.'} Each one adds 8 picks to your roster.</div>` : ''}
       <label class="f"><span>Company color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
@@ -12649,6 +12658,7 @@ const WIZ_ACTIONS = {
   wzCancel() { UI.wiz = null; render(); pageTop(); },
   wzGo(step) { UI.wiz.step = step; render(); pageTop(); },
   wzRule(k) { const z = UI.wiz; if ((k === 'money' || k === 'contracts') && !z.deep) return; z[k] = !z[k]; if (k === 'deep') { z.money = z.contracts = !!z.deep; } render(); },
+  wzCol(v) { const [i, c] = String(v).split('|'), z = UI.wiz, n = +i; if (!z || !safeColor(c)) return; if (n < 0) z.showCol = c; else if (z.extra?.[n]) z.extra[n].col = c; render(); },
   wzXDay(v) { const [i, k] = String(v).split(':').map(Number), x = UI.wiz.extra?.[i]; if (x) { x.day = clamp(k || 0, 0, 6); render(); } },
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
@@ -12808,6 +12818,7 @@ document.addEventListener('change', e => {
     else if (k === 'sort') { z.sort = el.value; render(); }
     else if (k === 'champ') { const t = z.titles[+el.dataset.k]; if (!t) return; const arr = t.holder.slice(); arr[+el.dataset.i] = el.value || undefined; t.holder = arr.filter(Boolean); const ti = wzTopIx(z); if (z.story && +el.dataset.k === ti && t.holder[0]) z.story.b = t.holder[0]; render(); }
     else if (k === 'storyOn') z.story.on = el.checked;
+    else if (k === 'xCol') { const c = safeColor(el.value.toLowerCase()), n = +el.dataset.i; if (c) { if (n < 0) z.showCol = c; else if (z.extra?.[n]) z.extra[n].col = c; render(); } }
     else if (k === 'xDay') { const x = z.extra?.[+el.dataset.i]; if (x) x.day = clamp(+el.value || 0, 0, 6); }
     else if (k === 'xSplit') { z.split = el.checked; render(); }
     else if (k === 'ppv') render();
