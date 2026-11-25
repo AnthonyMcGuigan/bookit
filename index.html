@@ -2460,7 +2460,7 @@ const coNews = (c, text, cat) => { c.news ||= []; c.news.unshift({ wk: G.week, t
 // duplicate checks: names are compared without case or extra spaces
 const nameKey = n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
 function wNameTaken(name, selfId) { const k = nameKey(name); if (!k || !G) return null;
-  for (const w of G.wrestlers) if (w.id !== selfId && nameKey(w.name) === k) return w.retired ? 'retired' : w.contract ? 'on your roster' : 'a free agent';
+  for (const w of G.wrestlers) if (w.id !== selfId && nameKey(w.name) === k) return w.retired ? 'retired' : w.contract ? 'on your roster' : 'an indie star';
   for (const c of G.cos || []) for (const w of c.roster || []) if (w.id !== selfId && nameKey(w.name) === k) return 'with ' + (c.promo?.name || 'your other company');
   for (const r of G.rivalPromos || []) for (const w of r.roster || []) if (w.id !== selfId && nameKey(w.name) === k) return 'with ' + r.name;
   for (const w of G.school?.trainees || []) if (w.id !== selfId && nameKey(w.name) === k) return 'at your school';
@@ -3033,7 +3033,7 @@ function modalCos() {
   const raids = multi() ? `<div class="sec">Lure talent from your other companies</div>
     <p class="small muted" style="margin-top:0">${CON() ? 'Wrestlers whose deals end within 12 weeks will listen. Unhappy ones are easier to get.' : 'Contracts are off, so anyone can move.'}</p>
     ${others.length ? `<div class="list">${others.map(({ c, w }) => `<div class="item">${av(w, 36)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">${esc(c.promo.name)}${CON() && w.contract ? ` · ${w.contract.weeks} wk left` : ''} · pop ${Math.round(w.pop)}</div></div><button class="btn sm" data-act="raid" data-id="${esc(w.id)}" data-co="${esc(c.coId)}" ${w.raidWk === G.week ? 'disabled' : ''}>${w.raidWk === G.week ? 'Said no' : CON() ? 'Offer ' + money(raidAsk(w)) : 'Bring over'}</button></div>`).join('')}</div>` : '<div class="empty small">Nobody is ready to move right now.</div>'}` : '';
-  const body = `<p class="small muted" style="margin-top:0">${multi() ? 'Your companies share one world: the same free agents, rival promotions and calendar. Every show runs in night order, Monday to Sunday, and you take turns: when one show is done, the game moves you to the next. Shows on the same night fight for viewers. Set a show to auto-book in Weekly shows if you only want to run some yourself.' : 'Run more than one company in this same world. They share free agents and rival promotions, can steal each other\'s stars, and shows on the same night fight for viewers.'}</p>
+  const body = `<p class="small muted" style="margin-top:0">${multi() ? 'Your companies share one world: the same indie stars, rival promotions and calendar. Every show runs in night order, Monday to Sunday, and you take turns: when one show is done, the game moves you to the next. Shows on the same night fight for viewers. Set a show to auto-book in Weekly shows if you only want to run some yourself.' : 'Run more than one company in this same world. They share indie stars and rival promotions, can steal each other\'s stars, and shows on the same night fight for viewers.'}</p>
     <div class="list">${all.map(row).join('')}</div>
     ${doneThisWeek() && waitingCos().length ? '<button class="btn block" style="margin-top:10px" data-act="coAuto">Auto-book and run the rest of this week</button>' : ''}
     ${all.length < MAX_COS ? '<button class="btn block pri" style="margin-top:10px" data-act="coAdd">＋ Start another company in this world</button>' : `<div class="tiny muted" style="margin-top:8px">A world can have up to ${MAX_COS} companies.</div>`}
@@ -3947,7 +3947,7 @@ function endOfWeek(card, world = true) {
         const r = w.courted; leaveCompany(w, 'contract expired');
         const to = goRival(w, r); news(`✍️ ${w.name} signed with ${to} the moment their deal ended.`, 'contract');
       }
-      else { leaveCompany(w, 'contract expired'); news(`📇 ${w.name} is a free agent. You can still make an offer, but rivals can too.`, 'contract'); }
+      else { leaveCompany(w, 'contract expired'); news(`📇 ${w.name} is an indie star. You can still make an offer, but rivals can too.`, 'contract'); }
     }
     else if (w.morale < 15 && Math.random() < 0.15) { news(`😠 ${w.name} is miserable and demanded their release. You let them walk.`, 'contract'); leaveCompany(w, 'demanded release'); }
   }
@@ -3955,7 +3955,7 @@ function endOfWeek(card, world = true) {
   rivalWeek(world);
   for (const T of G.tourneys || []) if (!T.done) tWalkovers(T);
   if (G.week % 52 === 0) yearEnd(world);
-  if (world && (Math.random() < 0.25 || freeAgents().length < 6)) { const w = makeWrestler(randomName(), '', null, null, rnd(0.05, 0.75)); w.joined = G.week; G.wrestlers.push(w); news(`🆕 ${w.name} (${w.style}, ${w.align}) is now a free agent.`, 'contract'); }
+  if (world && (Math.random() < 0.25 || freeAgents().length < 6)) { const w = makeWrestler(randomName(), '', null, null, rnd(0.05, 0.75)); w.joined = G.week; G.wrestlers.push(w); news(`🆕 ${w.name} (${w.style}, ${w.align}) is now an indie star.`, 'contract'); }
   // TV deal renewals
   G.tvWeeks--;
   if (G.tvWeeks <= 0) {
@@ -4454,7 +4454,7 @@ function rivalMoves(r) {
     if (w && wantR(r, w, needs) > 35) {
       G.wrestlers = G.wrestlers.filter(x => x !== w); r.roster.push(rivWrestler(w, r)); rivTitles(r); setRivalChamp(r);
       const n = needs.find(n => n.f(w));
-      wnews(`🖊️ ${r.name} signed free agent ${w.name}${n ? `. They needed ${n.l}` : ''}.`, r, w.pop >= 55);
+      wnews(`🖊️ ${r.name} signed indie star ${w.name}${n ? `. They needed ${n.l}` : ''}.`, r, w.pop >= 55);
     }
   }
   // a rich company that needs a star goes shopping at a smaller rival
@@ -4474,7 +4474,7 @@ function rivalMoves(r) {
   if ((over || broke) && r.roster.length > 6 && Math.random() < 0.4) {
     const keep = new Set([...r.titles.flatMap(t => t.holder), ...r.push.map(p => p.id)]);
     const w = r.roster.filter(w => !keep.has(w.id)).sort((a, b) => (worth(r, a) - (broke ? a.rSal / 300 : 0)) - (worth(r, b) - (broke ? b.rSal / 300 : 0)))[0];
-    if (w) { outOfRival(w, r); w.morale = 55; w.contract = null; w.cutBy = r.id; w.cutWk = G.week; G.wrestlers.push(w); wnews(`✂️ ${r.name} released ${w.name}${broke ? ' to save money' : ''}. They're a free agent.`, r, w.pop >= 50); }
+    if (w) { outOfRival(w, r); w.morale = 55; w.contract = null; w.cutBy = r.id; w.cutWk = G.week; G.wrestlers.push(w); wnews(`✂️ ${r.name} released ${w.name}${broke ? ' to save money' : ''}. They're an indie star.`, r, w.pop >= 50); }
   }
 }
 // money, fans and tier: companies grow when their shows are good, shrink when they're not
@@ -4495,11 +4495,11 @@ function closeRival(r, why) {
     const keep = ros.sort((a, b) => worth(buyer, b) - worth(buyer, a)).slice(0, 6);
     for (const w of ros) { delete w.rival; delete w.rWeeks; delete w.rSal; if (keep.includes(w)) buyer.roster.push(rivWrestler(w, buyer)); else { w.contract = null; G.wrestlers.push(w); } }
     buyer.money -= payrollR(r) * 4; buyer.fans += Math.round(r.fans * 0.4); rivTitles(buyer); setRivalChamp(buyer);
-    wnews(`🤝 ${buyer.name} bought ${r.name}${why ? ' (' + why + ')' : ''}. ${keep.map(w => w.name).slice(0, 3).join(', ')}${keep.length > 3 ? ' and more' : ''} moved over. Everyone else is a free agent.`, buyer, true);
+    wnews(`🤝 ${buyer.name} bought ${r.name}${why ? ' (' + why + ')' : ''}. ${keep.map(w => w.name).slice(0, 3).join(', ')}${keep.length > 3 ? ' and more' : ''} moved over. Everyone else is an indie star.`, buyer, true);
   } else {
     for (const w of ros) { delete w.rival; delete w.rWeeks; delete w.rSal; w.contract = null; G.wrestlers.push(w); }
     const best = ros.sort((a, b) => b.pop - a.pop).slice(0, 3).map(w => w.name);
-    wnews(`🏚️ ${r.name} closed its doors${why ? ' (' + why + ')' : ''}. ${ros.length} wrestlers are free agents${best.length ? ', including ' + best.join(', ') : ''}.`, null, true);
+    wnews(`🏚️ ${r.name} closed its doors${why ? ' (' + why + ')' : ''}. ${ros.length} wrestlers are indie stars${best.length ? ', including ' + best.join(', ') : ''}.`, null, true);
   }
   syncRivals();
 }
@@ -4539,7 +4539,7 @@ function rivalWeek(world = true) {
           outOfRival(w, r); w.morale = 60; w.contract = null;
           const to = G.rivalPromos.filter(x => x !== r && !x.manual && canSignR(x, w) && wantR(x, w) > 50).sort((a, b) => wantR(b, w) - wantR(a, w))[0];
           if (to && Math.random() < 0.5) { to.roster.push(rivWrestler(w, to)); setRivalChamp(to); wnews(`✍️ ${w.name}'s deal with ${r.name} ended, and they signed with ${to.name}.`, to, w.pop >= 50); r.log.unshift({ wk: G.week, t: `${w.name} left for ${to.name}.` }); }
-          else { G.wrestlers.push(w); wnews(`📇 ${w.name}'s deal with ${r.name} ended. They're a free agent.`, r, w.pop >= 45); }
+          else { G.wrestlers.push(w); wnews(`📇 ${w.name}'s deal with ${r.name} ended. They're an indie star.`, r, w.pop >= 45); }
         }
       }
     }
@@ -5114,7 +5114,7 @@ const EVENTS = {
   },
   walkin: {
     when() { const w = freeAgents().filter(w => w.pop >= 45).sort((a, b) => b.pop - a.pop)[0]; if (!w || (MON() && G.money < askFor(w, 52) * 8)) return null; return { a: w.id }; },
-    title: '🚪 Unexpected visitor', text: d => vary(d, `Free agent ${nameOf(d.a)} showed up and wants to sign tonight${CON() ? ' for 1 year, no long negotiation' : ''}.`, `${nameOf(d.a)} is sitting in your office right now. No agent, no games: they want to sign tonight${CON() ? ' on a 1-year deal' : ''}.`, `Free agent ${nameOf(d.a)} just walked in the back door asking for you. They want a deal tonight${CON() ? ': 1 year, no haggling' : ''}.`),
+    title: '🚪 Unexpected visitor', text: d => vary(d, `Indie star ${nameOf(d.a)} showed up and wants to sign tonight${CON() ? ' for 1 year, no long negotiation' : ''}.`, `${nameOf(d.a)} is sitting in your office right now. No agent, no games: they want to sign tonight${CON() ? ' on a 1-year deal' : ''}.`, `Indie star ${nameOf(d.a)} just walked in the back door asking for you. They want a deal tonight${CON() ? ': 1 year, no haggling' : ''}.`),
     choices: d => [[`Sign them tonight`, CON() ? `${money(Math.round(askFor(W(d.a), 52) * 1.05 / 100) * 100)}/wk for 1 year` : 'They join the roster now'], ['Not interested', 'They walk back out']],
     pick(i, d) { const w = W(d.a); if (!w || w.contract) return 'They already signed elsewhere.';
       if (i === 0) { w.contract = { salary: Math.round(askFor(w, 52) * 1.05 / 100) * 100, weeks: 52 }; w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(w.morale + 10, 0, 100); news(`✍️ ${w.name} signed on the spot.`, 'contract'); return `${w.name} is all yours. Debut them this week!`; }
@@ -6967,7 +6967,7 @@ function rivalsView() {
   <div class="list">${rs.map(r => { const c = rivalW(r.champId), ph = philOf(r); return `<button class="item" data-act="openRival" data-id="${r.id}">${rivAv(r)}<div class="main"><div class="t">${esc(r.name)} <span class="tag">${tierOf(r)}</span></div><div class="d">${ph.ic} ${ph.n} · ${r.roster.length} wrestlers · ${kfmt(r.fans)} fans${c ? ' · champ ' + esc(c.name) : ''}</div></div></button>`; }).join('') || '<div class="empty">No rival promotions right now.</div>'}</div>
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newRival">+ Create a rival</button><button class="btn" data-act="community">From Community</button></div>
   <button class="btn block" style="margin-top:8px" data-act="shareWorld">🌍 Share this world</button>
-  <div class="tiny muted" style="margin-top:8px">Rival companies book their own shows, build stars, sign free agents, raid each other and can grow, shrink or close. New companies open over time. To add one from Community or a share code, pick "Make it a rival promotion" when you import.</div>`;
+  <div class="tiny muted" style="margin-top:8px">Rival companies book their own shows, build stars, sign indie stars, raid each other and can grow, shrink or close. New companies open over time. To add one from Community or a share code, pick "Make it a rival promotion" when you import.</div>`;
 }
 const moneyMood = r => r.money < 0 ? ['bad', 'In trouble'] : r.money < payrollR(r) * 6 ? ['warn', 'Tight'] : r.money < payrollR(r) * 20 ? ['', 'Steady'] : ['good', 'Rich'];
 function modalRival(m) {
@@ -7018,7 +7018,7 @@ function modalEditRival(m) {
     <div class="sec">Roster</div><button class="btn block" data-act="rivRoster" data-id="${r.id}" style="margin-bottom:12px">👥 Manage roster (${r.roster.length})</button>` : ''}
     <label class="todo"><input type="checkbox" data-et="auto" ${d.auto ? 'checked' : ''}><span>AI handles signings and releases<br><span class="tiny muted">Off: their roster only changes when you change it. Contracts roll over and other companies leave them alone.</span></span></label>
     <label class="todo"><input type="checkbox" data-et="canClose" ${d.canClose ? 'checked' : ''}><span>Can close down<br><span class="tiny muted">If it runs out of money, it closes or gets bought. Off: it always stays open.</span></span></label>
-    ${m.isNew ? `<label class="f"><span>Starting roster</span><div class="seg-ctl">${[['0', 'Empty'], ['8', '8'], ['14', '14'], ['20', '20']].map(([k, l]) => `<button class="${String(d.size) === k ? 'on' : ''}" data-act="bSet" data-f="size" data-id="${k}">${l}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">New wrestlers are made up for them. Add free agents or import a real roster after.</div></label>` : ''}`;
+    ${m.isNew ? `<label class="f"><span>Starting roster</span><div class="seg-ctl">${[['0', 'Empty'], ['8', '8'], ['14', '14'], ['20', '20']].map(([k, l]) => `<button class="${String(d.size) === k ? 'on' : ''}" data-act="bSet" data-f="size" data-id="${k}">${l}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">New wrestlers are made up for them. Add indie stars or import a real roster after.</div></label>` : ''}`;
   return modal(m.isNew ? 'New rival promotion' : 'Edit rival', body, `${m.isNew ? '' : '<button class="btn bad" data-act="delRival">Close it down</button>'}<button class="btn pri" data-act="saveRival">Save</button>`);
 }
 // hand-pick who works for an AI company: free agents in, anyone out, or a few new faces
@@ -7031,9 +7031,9 @@ function modalRivalRoster(m) {
   const body = `<div class="sec" style="margin-top:0">${esc(r.name)} (${r.roster.length})</div>
     <div class="list">${r.roster.slice().sort((a, b) => b.pop - a.pop).map(w => row(w, 'rrOut', 'Release')).join('') || '<div class="empty">Nobody yet.</div>'}</div>
     <div class="grid2" style="margin:10px 0"><button class="btn" data-act="rrGen" data-id="3">＋ 3 new wrestlers</button>${sb ? '<button class="btn" data-act="rrBuild">🛠️ Build a wrestler</button>' : '<button class="btn" data-act="rrGen" data-id="1">＋ 1 new wrestler</button>'}</div>
-    <div class="sec">Free agents</div>
-    <input type="search" data-in="rrQ" aria-label="Search free agents" value="${esc(m.q || '')}" placeholder="Search free agents" style="margin-bottom:8px">
-    <div class="list">${fa.map(w => row(w, 'rrIn', 'Add')).join('') || '<div class="empty">No free agents match.</div>'}</div>
+    <div class="sec">Indie stars</div>
+    <input type="search" data-in="rrQ" aria-label="Search indie stars" value="${esc(m.q || '')}" placeholder="Search indie stars" style="margin-bottom:8px">
+    <div class="list">${fa.map(w => row(w, 'rrIn', 'Add')).join('') || '<div class="empty">No indie stars match.</div>'}</div>
     <div class="tiny muted" style="margin-top:8px">To bring in your own creations, build them in Roster, release them to free agency, then add them here. Or import a roster and pick "Make it a rival promotion".</div>`;
   return modal('👥 Roster', body, `<button class="btn pri" data-act="editRival" data-id="${r.id}">Done</button>`);
 }
@@ -7215,7 +7215,7 @@ function renderModal() {
     case 'needGame': {
       const i = COMM.items.find(x => x.author + '|' + x.id === m.key), slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) })).filter(x => x.info);
       return modal('Start a company first', `<p style="margin-top:0">Wrestlers from Community join a company you run. Start one, or open a save you already have, and <b>${esc(i?.title || 'this creation')}</b> will be ready to add.</p>
-        <p class="small muted">You'll pick how they join: signed to your roster, as free agents, or as a rival promotion.</p>
+        <p class="small muted">You'll pick how they join: signed to your roster, as indie stars, or as a rival promotion.</p>
         <p class="small muted">Not ready yet? Tap <b>📚 Library</b> to keep them on this device and add them to any save later.</p>
         ${slots.length ? `<div class="sec">Your saves</div><div class="list">${slots.map(x => `<button class="item" data-act="needLoad" data-id="${x.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${x.n}</div><div class="main"><div class="t">${esc(x.info.name)}</div><div class="d">Week ${x.info.week}</div></div><span class="muted">›</span></button>`).join('')}</div>` : ''}`,
         `<button class="btn" data-act="cOpen" data-id="${esc(m.key)}">Back</button>${i ? libBtn(m.key) : ''}<button class="btn pri" data-act="needNew">🏟️ New company</button>`);
@@ -7462,7 +7462,7 @@ function helpHTML() {
   <h3>Storylines</h3>
   <p>Start one yourself, or let them grow from your booking: rematches after a title change, revenge for a broken streak, betrayals, great matches and repeat clashes. Put both sides together to build heat. A classic feud runs about 3 months across big events. It only ends when you blow it off, and your producer tells you when to extend it or end it early.</p>
   <h3>Rival promotions</h3>
-  <p>Office → <b>Rivals</b>. Rivals run weekly shows, sign free agents and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away.</p>
+  <p>Office → <b>Rivals</b>. Rivals run weekly shows, sign indie stars and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away.</p>
   <h3>Teams and tournaments</h3>
   <p>Office → <b>Teams</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
@@ -7739,8 +7739,8 @@ function modalWrestler(m) {
      ${isNW(w) ? `<label class="f" style="margin-bottom:4px"><span>Role</span><select data-in="wRole" data-id="${w.id}">${Object.entries(ROLES).filter(([k]) => k !== 'wrestler').map(([k, x]) => `<option value="${k}" ${roleOf(w) === k ? 'selected' : ''}>${x.n}</option>`).join('')}</select></label><div class="tiny muted" style="margin-bottom:8px">${esc(ROLES[roleOf(w)].d)} ${offTV(w) ? '' : 'Never booked in a match, auto-filled, ranked or given a title.'}</div>` : ''}`}
      ${(() => { const mg = mgrOf(w), mine = managing(w.id); return `${isNW(w) ? '' : `<div class="row small"><span class="muted sp">Manager</span>${w.retired ? `<b>${mg ? esc(mg.name) : 'None'}</b>` : `<button class="link" data-act="setMgr">${mg ? esc(mg.name) : 'Choose'}</button>`}</div>`}${mine.length ? `<div class="row small"><span class="muted sp">Manages</span><b class="clip">${mine.map(x => esc(x.name)).join(', ')}</b></div>` : ''}`; })()}
      <div class="row small"><span class="muted sp">Momentum</span><b style="color:${w.momentum > 5 ? 'var(--good)' : w.momentum < -5 ? 'var(--bad)' : 'inherit'}">${w.momentum > 5 ? '🔥 Hot' : w.momentum < -5 ? '❄️ Cold' : 'Neutral'} (${Math.round(w.momentum)})</b></div>
-     ${CON() ? `<div class="row small"><span class="muted sp">Contract</span><b>${w.contract ? `${money(w.contract.salary)}/wk · ${lenLabel(w.contract.weeks)} left` : 'Free agent'}</b></div>
-     <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Free agent'}</b></div>`}
+     ${CON() ? `<div class="row small"><span class="muted sp">Contract</span><b>${w.contract ? `${money(w.contract.salary)}/wk · ${lenLabel(w.contract.weeks)} left` : 'Indie star'}</b></div>
+     <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Indie star'}</b></div>`}
    </div>
    ${w.retired ? '' : skillsBlock(w)}
    ${w.contract ? personaBlock(w) : ''}
@@ -7772,25 +7772,25 @@ function modalNegotiate(m) {
   const ask = team ? Math.max(...ws.map(x => asking(x))) : asking(w);
   const buyout = w.contract ? Math.round(w.contract.salary * w.contract.weeks * 0.25) : 0;
   const tp = !team && teamPay(w);
-  const teamBox = ps.length ? `<div class="card" style="margin-top:10px"><div class="row small" style="margin-bottom:8px"><span class="sp"><b>👥 ${esc(tm?.name || 'Tag team')}</b><div class="tiny muted">${w.contract ? 'Their deals end within 6 months of each other. Re-sign them together and the deals end the same week.' : `${esc(ps.map(p => p.name).join(' & '))} ${ps.length === 1 ? 'is' : 'are'} a free agent too. They'd rather sign together.`}</div></span></div>
+  const teamBox = ps.length ? `<div class="card" style="margin-top:10px"><div class="row small" style="margin-bottom:8px"><span class="sp"><b>👥 ${esc(tm?.name || 'Tag team')}</b><div class="tiny muted">${w.contract ? 'Their deals end within 6 months of each other. Re-sign them together and the deals end the same week.' : `${esc(ps.map(p => p.name).join(' & '))} ${ps.length === 1 ? 'is' : 'are'} an indie star too. They'd rather sign together.`}</div></span></div>
      <div class="seg-ctl"><button class="${team ? 'on' : ''}" data-act="negTeam" data-id="1">Team deal</button><button class="${team ? '' : 'on'}" data-act="negTeam" data-id="0">Just ${esc(lastName(w))}</button></div>
      ${team ? `<div class="team-talk" id="negTalk">${teamTalkHTML(ws, m)}</div>` : `<div class="tiny muted" style="margin-top:6px">Signing one partner alone is harder. They want to stay a team.</div>`}</div>` : '';
   const body = `${!w.contract ? paSwitch(w, false) : ''}<div class="row" style="margin-bottom:12px">${team ? ws.map(x => av(x, 44)).join('') : av(w, 48)}<div class="sp"><b>${team ? esc(tm?.name || ws.map(x => x.name).join(' & ')) : esc(w.name)}</b><div class="small muted">${team ? ws.map(x => `${esc(lastName(x))}: pop ${Math.round(x.pop)}, asks ${money(askFor(x, m.weeks))}`).join(' · ') : `Pop ${Math.round(w.pop)} · Morale ${Math.round(w.morale)} · Age ${w.age}`}</div></div></div>
-   <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' : 'None (free agent)'}</b></div>
+   <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' : 'None (indie star)'}</b></div>
    ${team && w.contract ? ps.map(p => `<div class="row small"><span class="sp muted">${esc(lastName(p))}'s deal</span><b>${money(p.contract.salary)}/wk · ${lenLabel(p.contract.weeks)} left</b></div>`).join('') : ''}
    ${w.contract ? `<div class="row small"><span class="sp muted">Signed through</span><b>Week ${G.week + w.contract.weeks} · ${showDate(G.week + w.contract.weeks).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</b></div>` : ''}
    <div class="row small"><span class="sp muted">Wants</span><b>${lenLabel(prefLen(w))} deal</b></div>
    <div class="tiny muted" style="margin-top:4px">${STAGE[careerStage(w)].why}${w.contract && w.contract.weeks > TALKS_OPEN ? ` Talks normally open in ${w.contract.weeks - TALKS_OPEN} weeks. To re-sign now, offer at least 10% over their price.` : ''}${w.courted ? ` <b style="color:var(--bad)">${esc(w.courted)} is also bidding.</b>` : ''}</div>
    <div class="row small"><span class="sp muted">${team ? 'Team asks, each' : 'Asking for this length'}</span><b id="negAsk">${money(team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, m.weeks))) / 100) * 100 : askFor(w, m.weeks))}/wk</b></div>
    ${tp ? `<div class="tiny muted" style="margin-top:4px">👥 Partner ${esc(tp.w.name)} earns ${money(tp.sal)}/wk. ${esc(lastName(w))} will compare.</div>` : ''}
-   ${!w.contract && blastOn() ? `<div class="tiny" style="color:var(--bad);margin-top:4px">📢 Free agents saw ${esc(nameOf(G.blast.wid))}'s posts about you. They're a little warier until week ${G.blast.until}.</div>` : ''}
+   ${!w.contract && blastOn() ? `<div class="tiny" style="color:var(--bad);margin-top:4px">📢 Indie stars saw ${esc(nameOf(G.blast.wid))}'s posts about you. They're a little warier until week ${G.blast.until}.</div>` : ''}
    ${ws.some(x => x.refusedWk === G.week) ? '<div class="small" style="color:var(--bad);margin-top:6px">They said no. Try again next week.</div>' : ''}</div>
    ${teamBox}
    <label class="f"><span id="negSalLbl">Weekly salary${team ? ', each' : ''}: ${money(m.salary)}</span><input type="range" min="${Math.max(300, Math.round(ask * 0.4 / 100) * 100)}" max="${Math.round(ask * 2 / 100) * 100}" step="100" value="${m.salary}" data-in="negSal" style="width:100%"></label>
    <label class="f"><span>Length</span><div class="seg-ctl">${DEAL_LENS.map(([n, l]) => `<button class="${m.weeks === n ? 'on' : ''}" data-act="negLen" data-id="${n}">${l}${n === prefLen(w) ? ' ★' : ''}</button>`).join('')}</div></label>
    <div id="negChance">${negChanceHTML(w, m)}</div>
-   ${w.contract ? `<div class="sec">Release</div><div class="small muted" style="margin-bottom:8px">Releasing ${esc(w.name)} costs a buyout of ${money(buyout)} (25% of what's left) and they become a free agent.</div><button class="btn bad block" data-act="release" data-id="${w.id}">Release ${esc(w.name)}</button>` : ''}`;
-  return modal(team ? 'Team contract talks' : w.contract ? 'Contract talks' : 'Sign free agent', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="offer">Make ${team ? 'team ' : ''}offer</button>`);
+   ${w.contract ? `<div class="sec">Release</div><div class="small muted" style="margin-bottom:8px">Releasing ${esc(w.name)} costs a buyout of ${money(buyout)} (25% of what's left) and they become an indie star.</div><button class="btn bad block" data-act="release" data-id="${w.id}">Release ${esc(w.name)}</button>` : ''}`;
+  return modal(team ? 'Team contract talks' : w.contract ? 'Contract talks' : 'Sign indie star', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="offer">Make ${team ? 'team ' : ''}offer</button>`);
 }
 function paSwitch(w, on) {
   return w.retired ? '' : `<div class="seg-ctl" style="margin-bottom:12px"><button class="${on ? '' : 'on'}" ${on ? `data-act="negotiate" data-id="${w.id}"` : ''} aria-pressed="${!on}">📝 Full contract</button><button class="${on ? 'on' : ''}" ${on ? '' : `data-act="guestDeal" data-id="${w.id}"`} aria-pressed="${on}">💰 Per appearance</button></div>`;
@@ -8224,10 +8224,10 @@ const A = {
   },
   delRival() {
     const r = RV(UI.modal.draft.id); if (!r) return;
-    confirmBox('Close ' + r.name + '?', 'Their wrestlers become free agents.', 'Close it', () => {
+    confirmBox('Close ' + r.name + '?', 'Their wrestlers become indie stars.', 'Close it', () => {
       for (const w of r.roster) { delete w.rival; delete w.rWeeks; delete w.rSal; w.contract = null; G.wrestlers.push(w); }
       G.rivalPromos = G.rivalPromos.filter(x => x !== r); syncRivals();
-      news(`🏚️ ${r.name} closed. ${r.roster.length} wrestlers are free agents.`, 'office'); commit();
+      news(`🏚️ ${r.name} closed. ${r.roster.length} wrestlers are indie stars.`, 'office'); commit();
     }, true);
   },
   poach(id) {
@@ -8552,7 +8552,7 @@ const A = {
   brandBothPick() { openModal({ type: 'bothPick', q: '' }); },
   brandRoster(id) { UI.modal = null; UI.tab = 'roster'; UI.rosterF = 'b:' + id; render(); pageTop(); },
   coSwitch(id) { if (!G.cos?.some(c => c.coId === id)) return; switchCo(id); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop(); toast(`Now booking ${G.promo.name}.`); },
-  coAdd() { if ((G.cos || []).length + 1 >= MAX_COS) return toast(`A world can have up to ${MAX_COS} companies.`); confirmBox('Start another company?', `It joins this world and shares free agents, rival promotions and the calendar with ${G.promo.name}. Every company you run puts on a show each week.`, 'Start it', () => { UI.modal = null; wizStart(true); }); },
+  coAdd() { if ((G.cos || []).length + 1 >= MAX_COS) return toast(`A world can have up to ${MAX_COS} companies.`); confirmBox('Start another company?', `It joins this world and shares indie stars, rival promotions and the calendar with ${G.promo.name}. Every company you run puts on a show each week.`, 'Start it', () => { UI.modal = null; wizStart(true); }); },
   coAuto() { if (!showRanNow() && !doneThisWeek()) return toast(`Run ${G.promo.show} first.`); autoBookRest(); },
   raid(id, el) {
     const c = (G.cos || []).find(x => x.coId === el?.dataset.co), w = c && (c.roster || []).find(x => x.id === id); if (!w) return;
@@ -8643,7 +8643,7 @@ const A = {
     if (UI.modal.isNew) {
       const { signNow, ...w } = d; w.joined = G.week;
       if (signNow) w.contract = { salary: cSal ?? askFor(w, prefLen(w)), weeks: cWks ?? prefLen(w) };
-      G.wrestlers.push(w); news(`🆕 ${w.name} was created${signNow ? ' and signed' : ' as a free agent'}.`, 'contract');
+      G.wrestlers.push(w); news(`🆕 ${w.name} was created${signNow ? ' and signed' : ' as an indie star'}.`, 'contract');
       UI.modal = { type: 'wrestler', id: w.id };
       delete w._ageSet;
     } else if (UI.modal.rid) { const r = RV(UI.modal.rid), i = r ? r.roster.findIndex(x => x.id === d.id) : -1; if (i >= 0) { r.roster[i] = d; setRivalChamp(r); } UI.modal = { type: 'rivalRoster', id: UI.modal.rid }; }
@@ -8669,7 +8669,7 @@ const A = {
     if (!w.contract && CON()) { const ex = exclElsewhere(id); if (ex) return toast(`${w.name} is on an exclusive deal with ${ex}.`); }
     if (CON()) { const ps = partnersFor(w), wk = prefLen(w), team = ps.length > 0, ws = [w, ...ps]; return openModal({ type: 'negotiate', id, salary: team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, wk))) / 100) * 100 : askFor(w, wk), weeks: wk, team }); }
     if (!CON()) {
-      if (w.contract) return confirmBox('Release ' + w.name + '?', 'They become a free agent.', 'Release', () => { leaveCompany(w, 'released'); UI.modal = null; commit(w.name + ' released.'); }, true);
+      if (w.contract) return confirmBox('Release ' + w.name + '?', 'They become an indie star.', 'Release', () => { leaveCompany(w, 'released'); UI.modal = null; commit(w.name + ' released.'); }, true);
       w.contract = { salary: asking(w), weeks: prefLen(w) }; w.joined = G.week; w.lastBooked = G.week; w.morale = clamp(w.morale + 8, 0, 100);
       news(`✍️ ${w.name} joined the roster.`, 'contract'); if (UI.modal?.type === 'negotiate') UI.modal = null; return commit(`${w.name} signed!`);
     }
@@ -8699,7 +8699,7 @@ const A = {
     }
   },
   gEnd(id) { const w = W(id), d = guestDeal(id); if (!w || !d) return;
-    confirmBox(`End ${w.name}'s deal?`, 'They go back to being a free agent. Any shows already booked with them lose them.', 'End deal', () => {
+    confirmBox(`End ${w.name}'s deal?`, 'They go back to being an indie star. Any shows already booked with them lose them.', 'End deal', () => {
       G.guests = G.guests.filter(x => x.id !== id); [G.card, ...Object.values(G.future || {})].forEach(c => c.forEach(seg => removeFromSeg(seg, id)));
       news(`💰 You ended ${w.name}'s per-appearance deal.`, 'contract'); UI.modal = null; commit('Deal ended.'); }, true); },
   localTalent() {
@@ -8748,7 +8748,7 @@ const A = {
   },
   release(id) {
     const w = W(id); const buyout = Math.round(w.contract.salary * w.contract.weeks * 0.25);
-    confirmBox('Release ' + w.name + '?', `${MON() ? `Pay a ${money(buyout)} buyout. ` : ''}They become a free agent.`, 'Release', () => {
+    confirmBox('Release ' + w.name + '?', `${MON() ? `Pay a ${money(buyout)} buyout. ` : ''}They become an indie star.`, 'Release', () => {
       if (G.settings.finances) G.money -= buyout; leaveCompany(w, 'released'); commit(w.name + ' released.');
     }, true);
   },
@@ -8837,7 +8837,7 @@ const A = {
   },
   delTourney(id) { const T = TN(id); if (!T) return; confirmBox((T.done ? 'Delete ' : 'Cancel ') + T.name + '?', 'Its matches come off the card. Results already shown stay in your history.', T.done ? 'Delete' : 'Cancel it', () => { G.tourneys = G.tourneys.filter(x => x !== T); [G.card, ...Object.values(G.future || {})].forEach(c => c.forEach(s => { if (s.tid === T.id) { delete s.tid; delete s.tr; delete s.ti; } })); commit(); }, true); },
   retireW(id) { const w = W(id); if (!w) return; confirmBox(`Retire ${w.name}?`, 'They leave the roster and join your legends. You can bring them back any time.', 'Retire', () => { retire(w); UI.modal = { type: 'wrestler', id: w.id }; commit(); }); },
-  unretireW(id) { const w = W(id); if (!w) return; delete w.retired; w.morale = 70; news(`📣 ${w.name} is coming out of retirement!`, 'contract'); commit(`${w.name} is a free agent again. Sign them in the Office.`); },
+  unretireW(id) { const w = W(id); if (!w) return; delete w.retired; w.morale = 70; news(`📣 ${w.name} is coming out of retirement!`, 'contract'); commit(`${w.name} is an indie star again. Sign them in the Office.`); },
   copyCard() {
     const card = BK().filter(s => segPeople(s).length); if (!card.length) return toast('Nothing booked yet.');
     const wk = UI.selWeek;
@@ -9134,7 +9134,7 @@ function importPack(pack, mode) {
   }
   const teams = packTeams(pack);
   if (mode === 'replace') news(`📦 New roster loaded: "${pack.title}" (${added} wrestlers). Set your champions in Office → Titles.`, 'office');
-  else news(`📦 Imported "${pack.title}": ${added} new${updated ? ', ' + updated + ' updated' : ''}${mode === 'free' ? ' (as free agents)' : ''}.`, 'contract');
+  else news(`📦 Imported "${pack.title}": ${added} new${updated ? ', ' + updated + ' updated' : ''}${mode === 'free' ? ' (as indie stars)' : ''}.`, 'contract');
   if (teams) news(`👥 ${teams} team${teams > 1 ? 's and factions' : ' or faction'} came with "${pack.title}". See Office → Teams.`, 'story');
   return { added, updated, teams };
 }
@@ -9433,7 +9433,7 @@ function modalRoster(m) {
   } else if (m.parsed) {
     // step 2: confirm. The choice comes first and the Import button is pinned to the bottom.
     const parsed = m.parsed, n = parsed.wrestlers.length;
-    const modes = [['sign', 'Sign them to my roster', 'Added to your roster on fresh contracts.'], ['free', 'Add as free agents', 'You negotiate with each one in the Office.'], ['replace', 'Replace my whole roster', 'Swap everyone out. Stories and the card are cleared.'], ['rival', 'Make it a rival promotion', 'They become a rival company with their own shows.']];
+    const modes = [['sign', 'Sign them to my roster', 'Added to your roster on fresh contracts.'], ['free', 'Add as indie stars', 'You negotiate with each one in the Office.'], ['replace', 'Replace my whole roster', 'Swap everyone out. Stories and the card are cleared.'], ['rival', 'Make it a rival promotion', 'They become a rival company with their own shows.']];
     const nT = (parsed.teams || []).length + (parsed.factions || []).length, nP = (parsed.titles || []).filter(t => t.photo).length;
     body = `<div class="rt-found"><div class="sp"><b>${n} wrestler${n > 1 ? 's' : ''}${parsed.titles?.length ? ' and ' + parsed.titles.length + ' titles' : ''}</b><div class="tiny muted">${esc(parsed.title || 'Ready to import')}</div></div><button class="link" data-act="rtBack">Change</button></div>
       ${parsed.titles?.length ? `<div class="belt-row" style="display:flex;gap:6px;overflow-x:auto;margin-top:8px">${parsed.titles.map(t => titleArt(t, 'belt-sm')).join('')}</div>` : ''}
@@ -9988,7 +9988,7 @@ async function worldPhotos(i, raw) {
 // a world from outside is untrusted: run it through the same deep clean as a save, then rebuild the AI companies
 function cleanWorld(raw) {
   if (!raw || raw.wv !== WORLD_V || !Array.isArray(raw.cos)) throw 0;
-  const fa = { id: 'fa', name: 'Free agents', roster: Array.isArray(raw.fa) ? raw.fa.slice(0, 80) : [] };
+  const fa = { id: 'fa', name: 'Indie stars', roster: Array.isArray(raw.fa) ? raw.fa.slice(0, 80) : [] };
   const g = scrubGame({ v: 1, promo: { name: 'World', show: 'Show' }, wrestlers: [], rivalPromos: [...raw.cos.slice(0, 10), fa] });
   const out = g.rivalPromos.filter(r => r.id !== 'fa').slice(0, 10), free = g.rivalPromos.find(r => r.id === 'fa')?.roster || [];
   const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156);
@@ -10549,8 +10549,8 @@ function applyWorld(z) {
   G.rivalPromos = cos.map(c => { liven(c); setRivalChamp(c); return c; });
   G.settings.bigEvery = wd.every || G.settings.bigEvery; if (wd.mode) G.settings.bigMode = wd.mode === 'month' ? 'month' : 'weeks'; syncRivals();
   startBeforeBigOne();
-  G.wlog = [{ wk: G.week, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} free agents.` }];
-  news(take ? `🌍 You took over ${take.name} in the world "${wd.title || 'Shared world'}". Its roster and titles are yours.` : `🌍 ${G.promo.name} opened in the world "${wd.title || 'Shared world'}". Sign free agents in the Office.`, 'office');
+  G.wlog = [{ wk: G.week, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} indie stars.` }];
+  news(take ? `🌍 You took over ${take.name} in the world "${wd.title || 'Shared world'}". Its roster and titles are yours.` : `🌍 ${G.promo.name} opened in the world "${wd.title || 'Shared world'}". Sign indie stars in the Office.`, 'office');
 }
 function saveSummary(g) {
   const sg = (g.wrestlers || []).filter(w => w.contract);
@@ -10834,7 +10834,7 @@ function modalCommunity(m) {
       const cos = [...(mineCo ? [G, ...(G.cos || [])].map(c => ({ name: c.promo.name, n: (c === G ? signed() : (c.roster || []).filter(w => w.contract)).length, you: 1 })) : []), ...G.rivalPromos.map(r => ({ name: r.name, n: r.roster.length, tier: tierOf(r) }))];
       body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:6px">A world is the setting, not your game. Others start a new game in it, with every company run by the AI. They can open their own company or take one over, and they start the month before that company's big one.</div>
         ${cos.map(c => `<div class="row small"><span class="sp">${esc(c.name)}${c.you ? ' <span class="tag gold">yours</span>' : c.tier ? ` <span class="tag">${c.tier}</span>` : ''}</span><b>${c.n} wrestlers</b></div>`).join('')}
-        <div class="row small"><span class="sp muted">Free agents</span><b>${Math.min(60, freeAgents().length)}</b></div>
+        <div class="row small"><span class="sp muted">Indie stars</span><b>${Math.min(60, freeAgents().length)}</b></div>
         <div class="tiny muted" style="margin-top:6px">Rosters, championships and past champions go in. Shows, stories in progress, money and notes don't.</div></div>
         <label class="todo"><input type="checkbox" data-in="cMine" ${mineCo ? 'checked' : ''}><span>Include ${multi() ? 'my companies' : 'my company'} as ${multi() ? 'AI companies' : 'an AI company'}</span></label>
         <label class="f"><span>Title</span><input type="text" data-in="cTitle" value="${esc(m.title || '')}" maxlength="60" placeholder="${esc(G.promo.name + ' universe')}"></label>
@@ -11026,10 +11026,10 @@ function modalCView(m) {
     const body = `${cvHead(i, m.key, '🌍 World')}
       ${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
       <div class="card">${cos.map(c => `<div class="row small"><span class="sp">${esc(String(c[0]))} <span class="tag">${esc(String(c[1]))}</span></span><b>${+c[2] || 0} wrestlers</b></div>${c[3] ? `<div class="tiny muted" style="margin:-2px 0 4px">🏆 ${esc(String(c[3]))}</div>` : ''}`).join('')}
-        <div class="row small"><span class="sp muted">Free agents</span><b>${+u.fa || 0}</b></div></div>
+        <div class="row small"><span class="sp muted">Indie stars</span><b>${+u.fa || 0}</b></div></div>
       <label class="f" style="margin-top:12px"><span>Save to</span><select id="cw-slot">${slots.map(s => `<option value="${s.n}" ${s.n === free ? 'selected' : ''}>Slot ${s.n}${s.info ? ' (replaces ' + esc(s.info.name) + ')' : ' (empty)'}</option>`).join('')}</select></label>
       <div class="sec">How do you want to play?</div>
-      <div class="list"><button class="item" data-act="cWorldGo" data-id="${esc(m.key)}" data-f=""><div class="av" style="background:var(--card2);color:var(--accent-t)">🏟️</div><div class="main"><div class="t">Start my own company</div><div class="d">A new promotion joins this world. Sign its free agents or use the starter roster.</div></div></button>
+      <div class="list"><button class="item" data-act="cWorldGo" data-id="${esc(m.key)}" data-f=""><div class="av" style="background:var(--card2);color:var(--accent-t)">🏟️</div><div class="main"><div class="t">Start my own company</div><div class="d">A new promotion joins this world. Sign its indie stars or use the starter roster.</div></div></button>
         ${cos.map((c, k) => `<button class="item" data-act="cWorldGo" data-id="${esc(m.key)}" data-f="${k + 1}"><div class="av" style="background:var(--card2);color:var(--accent-t)">🔑</div><div class="main"><div class="t">Take over ${esc(String(c[0]))}</div><div class="d">Its ${+c[2] || 0} wrestlers and titles become yours.</div></div></button>`).join('')}</div>`;
     return modal(esc(i.title), body, `${COMM.owner && i.author !== COMM.me ? '<button class="btn bad" data-act="cDel" data-id="' + esc(m.key) + '">Remove</button>' : ''}${COMM.me && i.author !== COMM.me && i.author !== 'featured' ? `<button class="btn" data-act="cReport" data-id="${esc(m.key)}" aria-label="Report this">🚩</button>` : ''}`);
   }
@@ -12562,7 +12562,7 @@ function viewWizard() {
       ${tk ? `<div class="card"><div class="row small"><span class="sp muted">📺 ${esc(DAYS[z.day])}</span><b>${esc(z.show)}</b></div>${(z.extra || []).map(x => `<div class="row small"><span class="sp muted">📺 ${esc(DAYS[x.day])}</span><b>${esc(x.name)}</b></div>`).join('')}${wzNames(z).length ? `<div class="small" style="margin-top:4px"><span class="muted">🎟️ Big events</span><div><b>${wzNames(z).map(esc).join(' · ')}</b></div></div>` : ''}<div class="tiny muted" style="margin-top:6px">Their shows and big events keep their names. Rename them any time in Office → Setup.</div></div>
       <div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${tk.roster.length} wrestlers</b></div>${tk.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(t.holder.map(id => tk.roster.find(w => w.id === id)?.name).filter(Boolean).join(' & ') || 'Vacant')}</b></div>`).join('')}<div class="tiny muted" style="margin-top:6px">Their contracts carry over. The other ${z.world.cos.length - 1} companies keep running on their own.</div></div>
       <div class="tip small" style="margin-top:10px">📅 You start at the beginning of the month leading to ${tk.bigOne ? `<b>${esc(tk.bigOne)}</b>, their big one` : 'their big one, the biggest show of their year'}.</div>`
-      : `<div class="tip small" style="margin-bottom:10px">📅 You start at the beginning of the month leading to your big one: ${ppvList(z.ppv).length ? `<b>${esc(ppvList(z.ppv).at(-1))}</b>, the last big event you named` : 'your last big event of the year'}. Pick a different big one later in Office → Setup.</div><div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} free agents are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
+      : `<div class="tip small" style="margin-bottom:10px">📅 You start at the beginning of the month leading to your big one: ${ppvList(z.ppv).length ? `<b>${esc(ppvList(z.ppv).at(-1))}</b>, the last big event you named` : 'your last big event of the year'}. Pick a different big one later in Office → Setup.</div><div class="list">${[['world', '🌍 Sign from this world', `Start with nobody signed. ${z.world.fa.length} indie stars are waiting, and the other companies will let people go.`], ['starter', '⚡ Use the starter roster', '24 new wrestlers, champions and stories, alongside everyone in the world.']].map(([k, l, d]) => `<button class="pick wz-opt ${z.source === k ? 'sel' : ''}" data-act="wzSet" data-f="source" data-id="${k}"><span class="ck">${z.source === k ? '✓' : ''}</span><div><b>${l}</b><div class="small muted">${d}</div></div></button>`).join('')}</div>`}
       <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="budget">Back</button>${tk ? '<button class="btn pri" data-act="wzFinish">Open for business</button>' : '<button class="btn pri" data-act="wzGo" data-id="titles">Next</button>'}</div></div>`;
   }
   if (z.step === 'roster') {
@@ -13140,7 +13140,7 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9.57';
 const WHATS_NEW = [
-  ['⭐ Indie Stars', 'The Free agents tab in the Office is now called Indie Stars, so it no longer clashes with the Free agent tag for wrestlers who work every brand.'],
+  ['⭐ Indie Stars', 'Unsigned wrestlers are now called indie stars, so they no longer get mixed up with the Free agent tag for wrestlers who work every brand. The Free agents tab in the Office is now Indie Stars, and the news, contract talks, imports and help say indie star too.'],
   ['🔎 Search the draft war room', 'The brand draft roster now has a search box and more ways to sort: best for the brand, popularity, overall, momentum, in-ring, mic, charisma, youngest, salary and name, with the reverse button. Filter by men or women, faces or heels, and stack filters for stars, champions, teams and factions, wrestlers in a story or ones that fill a need. Show all lifts the 40-wrestler limit.'],
   ['📷 Imported photos are shared', 'Photos you add with the mass photo import (Roster tools → Photos) now travel with everything you share: worlds, rosters, single wrestlers, share codes and shared saves. Before, they stayed on your device. Share again to include them.'],
   ['🌍 Big worlds share cleanly', 'Shared worlds now handle full-size companies. Each company brings up to 20 championships with their card level, defense deadline, DQ rule and belt photo, up to 80 tag teams and 40 factions, and its brand rosters, so taking over a company with three shows keeps who works which show. Photos pack tighter into your photo slots, and when they still don\'t fit, the biggest ones are saved smaller instead of being dropped. AI companies from a world keep their roster size and a payroll they can afford.'],
