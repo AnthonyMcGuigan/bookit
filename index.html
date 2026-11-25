@@ -4352,7 +4352,7 @@ function rivalMoves(r) {
     }
   }
   // cuts when the money runs out or the roster is bloated
-  const over = r.roster.length > TIERS[tierIx(r)][2] + 8, broke = r.money < 0 && payrollR(r) > incomeR(r);
+  const over = r.roster.length > Math.max(TIERS[tierIx(r)][2] + 8, +r.base || 0), broke = r.money < 0 && payrollR(r) > incomeR(r);
   if ((over || broke) && r.roster.length > 6 && Math.random() < 0.4) {
     const keep = new Set([...r.titles.flatMap(t => t.holder), ...r.push.map(p => p.id)]);
     const w = r.roster.filter(w => !keep.has(w.id)).sort((a, b) => (worth(r, a) - (broke ? a.rSal / 300 : 0)) - (worth(r, b) - (broke ? b.rSal / 300 : 0)))[0];
@@ -6896,7 +6896,7 @@ function modalEditRival(m) {
     ${r ? `<div class="sec">Championships</div>
     ${(d.titles || []).map((t, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px"><div class="row" style="gap:8px;margin-bottom:6px"><input type="text" data-tt="name" data-i="${i}" value="${esc(t.name)}" maxlength="50" aria-label="Title name" style="flex:1"><button class="btn sm" data-act="rtDel" data-id="${i}" aria-label="Remove this title">✕</button></div>
       <div class="grid2">${t.n > 1 ? `<div class="small" style="align-self:center">${t.hn ? esc(t.hn) : '<span class="muted">Vacant</span>'}<div class="tiny muted">They pick the team</div></div>` : `<select data-tt="holder" data-i="${i}" aria-label="Champion">${opts(t.holder)}</select>`}<select data-tt="kind" data-i="${i}" aria-label="Kind of title"><option value="main" ${!t.mid && !t.div && !(t.n > 1) ? 'selected' : ''}>Top title</option><option value="mid" ${t.mid && !(t.n > 1) ? 'selected' : ''}>Secondary</option><option value="women" ${t.div && !(t.n > 1) ? 'selected' : ''}>Women's</option><option value="tag" ${t.n === 2 ? 'selected' : ''}>Tag team</option><option value="trios" ${t.n === 3 ? 'selected' : ''}>Trios</option></select></div></div>`).join('')}
-    ${(d.titles || []).length < 6 ? '<button class="btn block" data-act="rtAdd" style="margin-bottom:12px">＋ Add a championship</button>' : ''}
+    ${(d.titles || []).length < WORLD_TITLES ? '<button class="btn block" data-act="rtAdd" style="margin-bottom:12px">＋ Add a championship</button>' : ''}
     <div class="sec">Roster</div><button class="btn block" data-act="rivRoster" data-id="${r.id}" style="margin-bottom:12px">👥 Manage roster (${r.roster.length})</button>` : ''}
     <label class="todo"><input type="checkbox" data-et="auto" ${d.auto ? 'checked' : ''}><span>AI handles signings and releases<br><span class="tiny muted">Off: their roster only changes when you change it. Contracts roll over and other companies leave them alone.</span></span></label>
     <label class="todo"><input type="checkbox" data-et="canClose" ${d.canClose ? 'checked' : ''}><span>Can close down<br><span class="tiny muted">If it runs out of money, it closes or gets bought. Off: it always stays open.</span></span></label>
@@ -8058,7 +8058,7 @@ const A = {
   openRival(id) { openModal({ type: 'rival', id }); },
   newRival() { openModal({ type: 'editRival', isNew: true, draft: { name: '', short: '', show: '', color: pick(RIV_COLORS), prestige: 45, size: '14', phil: pick(Object.keys(RPHIL)), canClose: false, auto: true, fans: 15000, money: 300000, ppvs: shuffle(RIV_PPVS).slice(0, 4).join('\n') } }); },
   editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), bigOne: r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '', titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: rN(t) > 1 ? '' : t.holder[0] || '', ...(rN(t) > 1 ? { n: rN(t), hn: rHolders(r, t).map(w => w.name).join(' & ') } : {}), mid: !!t.mid, div: t.div || '' })) } }); } },
-  rtAdd() { const d = UI.modal.draft; d.titles ||= []; if (d.titles.length >= 6) return; d.titles.push({ id: uid(), name: `${(d.short || abbr(d.name)).trim()} ${d.titles.some(t => !t.mid && !t.div) ? 'Television' : 'World'} Championship`, holder: '', mid: d.titles.some(t => !t.mid && !t.div), div: '', isNew: true }); render(); },
+  rtAdd() { const d = UI.modal.draft; d.titles ||= []; if (d.titles.length >= WORLD_TITLES) return; d.titles.push({ id: uid(), name: `${(d.short || abbr(d.name)).trim()} ${d.titles.some(t => !t.mid && !t.div) ? 'Television' : 'World'} Championship`, holder: '', mid: d.titles.some(t => !t.mid && !t.div), div: '', isNew: true }); render(); },
   rtDel(i) { UI.modal.draft.titles.splice(+i, 1); render(); },
   rivRoster(id) { openModal({ type: 'rivalRoster', id }); },
   rrOut(id) { const r = RV(UI.modal.id), w = r?.roster.find(x => x.id === id); if (!w) return; outOfRival(w, r); w.contract = null; w.morale = 60; G.wrestlers.push(w); wnews(`✂️ ${r.name} released ${w.name}.`, r); commit(); },
@@ -8087,7 +8087,7 @@ const A = {
     if (Array.isArray(d.titles) && d.id) {
       // titles as the player set them: kept reigns for existing belts, quiet crowning for changed champions
       r.tset = 1;
-      r.titles = d.titles.slice(0, 6).map(x => {
+      r.titles = d.titles.slice(0, WORLD_TITLES).map(x => {
         const t = r.titles.find(y => y.id === x.id) || { id: x.id, holder: [], since: G.week, d: 0, reigns: [] };
         t.name = String(x.name || '').replace(/[<>`"]/g, '').trim().slice(0, 50) || 'Championship';
         const n = +x.n === 3 ? 3 : +x.n === 2 ? 2 : 1;
@@ -8892,7 +8892,7 @@ function cleanPack(p) {
   const ws = p.wrestlers.slice(0, ROSTER_MAX).map(cleanW).filter(Boolean);
   for (const w of ws) for (const k of ['name', 'nick', 'bio', 'finisher', 'signature', 'theme', 'hometown']) if (w[k]) w[k] = maskRude(w[k]);
   if (!ws.length) return null;
-  const titles = Array.isArray(p.titles) ? p.titles.slice(0, 12).map(t => t && typeof t.name === 'string' ? { name: cmText(t.name, 50), short: cmText(t.short || t.name, 16), tag: !!t.tag, ...(t.tag && +t.size === 3 ? { size: 3 } : {}), prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 3).map(h => String(h).slice(0, 40)) : [],
+  const titles = Array.isArray(p.titles) ? p.titles.slice(0, WORLD_TITLES).map(t => t && typeof t.name === 'string' ? { name: cmText(t.name, 50), short: cmText(t.short || t.name, 16), tag: !!t.tag, ...(t.tag && +t.size === 3 ? { size: 3 } : {}), prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 3).map(h => String(h).slice(0, 40)) : [],
     ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...(TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier, cl: 1 } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...(DIVISIONS.includes(t.division) ? { division: t.division } : {}) } : null).filter(Boolean) : null;
   // teams and factions only keep members who are in the pack
   const inPack = new Set(ws.map(w => w.name.toLowerCase())), mem = a => [...new Set((Array.isArray(a) ? a : []).map(x => String(x).slice(0, 40)).filter(x => inPack.has(x.toLowerCase())))];
@@ -9672,20 +9672,52 @@ function pixGrow(x) {
   for (let k = 0; k < w * h; k++) { const c = pal[x.d.charCodeAt(k) - 0x100] || 0; img.data[k * 4] = c >>> 24; img.data[k * 4 + 1] = (c >>> 16) & 255; img.data[k * 4 + 2] = (c >>> 8) & 255; img.data[k * 4 + 3] = c & 255; }
   cx.putImageData(img, 0, 0); return safePhoto(cv.toDataURL('image/png'));
 }
-// moves a pack's photos into a free photo slot when they are too big to sit in the player's space
-async function pixSplit(pack, itemId) {
-  const photos = [...pack.wrestlers, ...(pack.titles || [])].map(w => w.photo || '');
+// a real photo re-saved smaller (WebP, at most 112 px across) for sharing, only when the photos would not fit otherwise;
+// pixel art and photos that are already small stay exactly as they are
+async function photoSmall(src) {
+  if (typeof src !== 'string' || src.length <= 7000 || isPixPng(src, 160)) return src;
+  const im = await pixImg(src), w = im?.naturalWidth, h = im?.naturalHeight; if (!w || !h) return src;
+  const k = Math.min(1, 112 / Math.max(w, h)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, c.width, c.height);
+  const out = safePhoto(photoData(c, .74, 7000, 72));
+  return out && out.length < src.length ? out : src;
+}
+// photo parts that each fit one slot, filled in order
+async function pixParts(shr, cap) {
+  const parts = [], len = x => typeof x === 'string' ? x.length + 3 : 40 + (x.d?.length || 0) * 1.2 + (x.p?.length || 0) * 11;
+  // packed photos come out a little smaller than their text, so fill to about the cap and step back if a part overflows
+  for (let a = 0, b = 0, n = 0; a < shr.length; a = b, n = 0) {
+    while (b < shr.length && (b === a || n + len(shr[b]) <= cap)) n += len(shr[b++]);
+    let z = await gz(JSON.stringify(shr.slice(a, b)));
+    while (z.length > cap && b - a > 1) { b = a + Math.max(1, Math.floor((b - a) * .93)); z = await gz(JSON.stringify(shr.slice(a, b))); }
+    if (z.length > cap) throw { code: 'pix_big' };
+    parts.push({ start: a, n: b - a, z });
+  }
+  return parts;
+}
+// moves a pack's photos into free photo slots when they are too big to sit in the player's space.
+// fit: when they still don't fit after shrinking, fill the free slots and leave the rest out (pack.pixLeft says how many)
+async function pixSplit(pack, itemId, fit) {
+  const list = [...pack.wrestlers, ...(pack.titles || [])], photos = list.map(w => w.photo || '');
   if (sum(photos.map(x => x.length)) <= PIX_INLINE || typeof CompressionStream === 'undefined') return 0;
-  const shr = await Promise.all(photos.map(pixShrink));
-  // split into parts that each fit one slot (halving until they do)
-  const cut = async (a, b) => { const z = await gz(JSON.stringify(shr.slice(a, b))); if (z.length <= pixMax()) return [{ start: a, n: b - a, z }]; if (b - a < 2) throw { code: 'pix_big' }; const m = (a + b) >> 1; return [...await cut(a, m), ...await cut(m, b)]; };
-  const parts = await cut(0, shr.length);
-  const used = new Set(COMM.mine.flatMap(pxList)), free = Array.from({ length: pixSlots() }, (_, k) => k + 1).filter(k => !used.has(k));
-  if (free.length < parts.length) throw { code: 'pix_slots', need: parts.length, free: free.length };
+  const used = new Set(COMM.mine.flatMap(pxList)), free = Array.from({ length: pixSlots() }, (_, k) => k + 1).filter(k => !used.has(k)), cap = pixMax() - 2000;
+  let shr = await Promise.all(photos.map(pixShrink)), parts = await pixParts(shr, cap);
+  if (parts.length > free.length) { shr = await Promise.all(shr.map(photoSmall)); parts = await pixParts(shr, cap); }
+  pack.pixLeft = 0;
+  if (parts.length > free.length) {
+    if (!fit || !free.length) throw { code: 'pix_slots', need: parts.length, free: free.length };
+    // keep the belts and as many wrestlers' photos as fit, from the top of the list (your own company comes first)
+    const nW = pack.wrestlers.length, cut = n => shr.map((x, k) => k >= n && k < nW ? '' : x);
+    let lo = 0, hi = nW, best = null;
+    while (lo <= hi) { const m = (lo + hi) >> 1, p = await pixParts(cut(m), cap); if (p.length <= free.length) { best = [m, p]; lo = m + 1; } else hi = m - 1; }
+    if (!best) throw { code: 'pix_slots', need: parts.length, free: free.length };
+    parts = best[1]; pack.pixLeft = shr.slice(best[0], nW).filter(Boolean).length;
+    for (const w of pack.wrestlers.slice(best[0])) w.photo = '';
+  }
   const px = free.slice(0, parts.length), done = [];
   try { for (let k = 0; k < parts.length; k++) { await cdb.doc('pix' + px[k] + '/' + COMM.me).set({ item: itemId, z: parts[k].z, n: parts[k].n, start: parts[k].start, updated: Date.now() }); done.push(px[k]); } }
   catch (e) { await pixDrop(COMM.me, done); throw e; }
-  for (const w of [...pack.wrestlers, ...(pack.titles || [])]) delete w.photo;
+  for (const w of list) delete w.photo;
   return px.length === 1 ? px[0] : px;
 }
 const pixDrop = (author, px) => Promise.all(pxList({ px }).map(k => cdb.doc('pix' + k + '/' + author).delete().catch(() => {})));
@@ -9744,9 +9776,13 @@ function shareableSave(g, keepNotes) {
 // the calendar starts at week 1, and the new player either opens their own company or takes one over.
 const WORLD_V = 1;
 const CO_ROSTER_MAX = 400; // the most wrestlers one company can bring through a shared world or a save
+const WORLD_TITLES = 20, WORLD_TEAMS = 80, WORLD_FACS = 40; // the most belts, teams and factions one company brings into a world
+// a belt's card level, defense deadline and DQ rule, so whoever takes the company over keeps them (bi: its brand, by show position)
+const titleRules = t => ({ ...(t.cl && t.tier ? { tier: titleTier(t) } : TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...(Number.isInteger(t.bi) ? { bi: t.bi } : {}) });
 function worldW(w) {
   const x = JSON.parse(JSON.stringify(w));
-  for (const k of ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', 'both', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem']) delete x[k];
+  for (const k of ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem']) delete x[k];
+  if (x.bi == null || !x.both) delete x.both; // bi: which of the company's weekly shows they work (0 is the main show)
   if (w.photoLocal || !safePhoto(x.photo)) x.photo = ''; // private photos stay home; the rest move to photo slots when the world is shared
   x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
   return x;
@@ -9762,10 +9798,10 @@ function worldCo(r) {
   if (r.sigs?.length) c.sigs = r.sigs.map(x => ({ name: x.name, mt: x.mt || '', gm: x.gm || '' }));
   // tag teams, trios teams and factions travel as member ids from this company's roster
   const ids = new Set(c.roster.map(w => w.id)), grp = (a, n) => (Array.isArray(a) ? a : []).filter(g => g && g.members?.filter(id => ids.has(id)).length >= n);
-  c.teams = grp(r.teams, 2).filter(t => t.members.every(id => ids.has(id))).slice(0, 40).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
-  c.facs = grp(r.facs, 2).slice(0, 20).map(f => ({ id: f.id, name: f.name, members: f.members.filter(id => ids.has(id)), leader: ids.has(f.leader) ? f.leader : null }));
+  c.teams = grp(r.teams, 2).filter(t => t.members.every(id => ids.has(id))).slice(0, WORLD_TEAMS).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
+  c.facs = grp(r.facs, 2).slice(0, WORLD_FACS).map(f => ({ id: f.id, name: f.name, members: f.members.filter(id => ids.has(id)), leader: ids.has(f.leader) ? f.leader : null }));
   if (r.tset) c.tset = 1;
-  c.titles = r.titles.map(t => ({ id: t.id, name: t.name, short: t.short, ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(+t.pres ? { pres: t.pres } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, rN(t)), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
+  c.titles = r.titles.slice(0, WORLD_TITLES).map(t => ({ id: t.id, name: t.name, short: t.short, ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(+t.pres ? { pres: t.pres } : {}), ...titleRules(t), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, rN(t)), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
   return c;
 }
 // a company the player runs, written as an AI company for the world
@@ -9780,10 +9816,12 @@ function coAsRival(g) {
   r.sigs = (g.ppvSig || []).filter(x => x && (x.mt || x.gm)).slice(0, 24).map(x => ({ name: x.name, mt: x.mt || '', gm: x.gm || '' }));
   const a = k => avg(ros.map(w => +w[k] || 0));
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
-  for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; r.roster.push(x); }
-  const sing = (g.titles || []).filter(t => !t.tag), teamT = (g.titles || []).filter(t => tsz(t) > 1).slice(0, 4);
-  const look = t => ({ ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}) });
-  r.titles = sing.slice(0, 10 - teamT.length).map((t, i) => ({ id: t.id, name: t.name, short: t.short, ...look(t), ...(+t.prestige ? { pres: clamp(Math.round(+t.prestige), 1, 100) } : {}), div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
+  // with the brand split on, each wrestler and belt remembers its show by position, since show ids are new in every game
+  const brandAt = id => g.split && shs.length > 1 ? Math.max(0, shs.findIndex(s => s.id === id)) : null;
+  for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; const bi = brandAt(w.brand); if (bi != null) { x.bi = bi; if (w.both) x.both = true; } r.roster.push(x); }
+  const sing = (g.titles || []).filter(t => !t.tag), teamT = (g.titles || []).filter(t => tsz(t) > 1).slice(0, WORLD_TITLES / 2);
+  const look = t => ({ ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...titleRules(t), ...(g.split && shs.length > 1 && shs.some(s => s.id === t.brand) ? { bi: shs.findIndex(s => s.id === t.brand) } : {}) });
+  r.titles = sing.slice(0, WORLD_TITLES - teamT.length).map((t, i) => ({ id: t.id, name: t.name, short: t.short, ...look(t), ...(+t.prestige ? { pres: clamp(Math.round(+t.prestige), 1, 100) } : {}), div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
   if (r.titles.length && r.titles.every(t => t.mid || t.div)) r.titles[0].mid = false;
   if (r.titles.length) r.tset = true; // the company's own belts: don't add generic ones on top
   // its tag and trios belts come along too
@@ -9805,11 +9843,14 @@ function worldSummary(wd) {
 }
 // every wrestler in a world, in a fixed order: company rosters, then free agents (photo slots are stored in this order)
 const worldAllW = wd => [...(wd.cos || []).flatMap(c => Array.isArray(c?.roster) ? c.roster : []), ...(Array.isArray(wd.fa) ? wd.fa : [])].filter(w => w && typeof w === 'object');
-// a shared world's photos sit in the sharer's photo slots: put them back on its wrestlers before it is cleaned
+// and every championship, company by company (their photos come after the wrestlers')
+const worldAllT = wd => (wd.cos || []).flatMap(c => Array.isArray(c?.titles) ? c.titles : []).filter(t => t && typeof t === 'object');
+// a shared world's photos sit in the sharer's photo slots: put them back on its wrestlers and belts before it is cleaned
 async function worldPhotos(i, raw) {
   if (!pxList(i).length) return;
   await pixLoad(i); const a = PIX.get(pixKey(i)); if (!a) return;
-  worldAllW(raw).forEach((w, k) => { if (!w.photo && a[k]) w.photo = a[k]; });
+  const ws = worldAllW(raw), put = (x, k) => { if (!x.photo && a[k]) x.photo = a[k]; };
+  ws.forEach(put); worldAllT(raw).forEach((t, k) => put(t, ws.length + k));
 }
 // a world from outside is untrusted: run it through the same deep clean as a save, then rebuild the AI companies
 function cleanWorld(raw) {
@@ -9817,16 +9858,19 @@ function cleanWorld(raw) {
   const fa = { id: 'fa', name: 'Free agents', roster: Array.isArray(raw.fa) ? raw.fa.slice(0, 80) : [] };
   const g = scrubGame({ v: 1, promo: { name: 'World', show: 'Show' }, wrestlers: [], rivalPromos: [...raw.cos.slice(0, 10), fa] });
   const out = g.rivalPromos.filter(r => r.id !== 'fa').slice(0, 10), free = g.rivalPromos.find(r => r.id === 'fa')?.roster || [];
-  const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156); return w; };
+  const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156);
+    if (w.bi != null) { w.bi = clamp(Math.floor(+w.bi) || 0, 0, MAX_SHOWS - 1); if (w.both !== true) delete w.both; } else delete w.both;
+    return w; };
   const cos = out.map(r => {
     r.name = String(r.name).slice(0, 40); r.short = String(r.short).slice(0, 5); r.show = String(r.show).slice(0, 40); r.color = safeColor(r.color) || pick(RIV_COLORS);
     r.roster = r.roster.slice(0, CO_ROSTER_MAX).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
     const onR = new Set(r.roster.map(w => w.id)), gName = v => maskRude(String(v || '').slice(0, 40).trim());
-    r.teams = (Array.isArray(r.teams) ? r.teams : []).slice(0, 40).map(t => { const ms = [...new Set((Array.isArray(t?.members) ? t.members : []).filter(id => onR.has(id)))], k = t?.kind === 'trios' ? 3 : 2; return ms.length === k && gName(t.name) ? { id: SAFE_ID.test(t.id) ? t.id : uid(), name: gName(t.name), ...(k === 3 ? { kind: 'trios' } : {}), members: ms } : null; }).filter(Boolean);
-    r.facs = (Array.isArray(r.facs) ? r.facs : []).slice(0, 20).map(f => { const ms = [...new Set((Array.isArray(f?.members) ? f.members : []).filter(id => onR.has(id)))].slice(0, 8); return ms.length >= 2 && gName(f.name) ? { id: SAFE_ID.test(f.id) ? f.id : uid(), name: gName(f.name), members: ms, leader: ms.includes(f.leader) ? f.leader : null } : null; }).filter(Boolean);
-    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, 10).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(+t.pres ? { pres: clamp(Math.round(+t.pres), 1, 100) } : {}), ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
+    r.teams = (Array.isArray(r.teams) ? r.teams : []).slice(0, WORLD_TEAMS).map(t => { const ms = [...new Set((Array.isArray(t?.members) ? t.members : []).filter(id => onR.has(id)))], k = t?.kind === 'trios' ? 3 : 2; return ms.length === k && gName(t.name) ? { id: SAFE_ID.test(t.id) ? t.id : uid(), name: gName(t.name), ...(k === 3 ? { kind: 'trios' } : {}), members: ms } : null; }).filter(Boolean);
+    r.facs = (Array.isArray(r.facs) ? r.facs : []).slice(0, WORLD_FACS).map(f => { const ms = [...new Set((Array.isArray(f?.members) ? f.members : []).filter(id => onR.has(id)))].slice(0, 8); return ms.length >= 2 && gName(f.name) ? { id: SAFE_ID.test(f.id) ? f.id : uid(), name: gName(f.name), members: ms, leader: ms.includes(f.leader) ? f.leader : null } : null; }).filter(Boolean);
+    r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, WORLD_TITLES).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(+t.pres ? { pres: clamp(Math.round(+t.pres), 1, 100) } : {}),
+      ...(TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...([4, 8, 12].includes(+t.every) ? { every: +t.every } : {}), ...(t.dq === true ? { dq: true } : {}), ...(t.bi != null ? { bi: clamp(Math.floor(+t.bi) || 0, 0, MAX_SHOWS - 1) } : {}), ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
     for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
-    r.hist = []; r.last = 0; r.born = 1; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
+    r.hist = []; r.last = 0; r.born = 1; r.base = r.roster.length; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
     // show names and big event setup, so whoever takes this company over keeps them
     if (r.day != null) r.day = clamp(Math.floor(+r.day) || 0, 0, 6); else delete r.day;
     if (Array.isArray(r.months) && r.months.some(Boolean)) r.months = cleanMonths(r.months.map(x => maskRude(String(x || '')))); else delete r.months;
@@ -10330,6 +10374,14 @@ function wizTake(z, take) {
   z.sig = Object.fromEntries((take.sigs || []).map(x => [x.name, x.mt ? 'mt:' + x.mt : 'gm:' + x.gm]));
   z.step = 'budget';
 }
+// a company taken over from a shared world keeps its brand rosters and title brands, which travel by show position.
+// Returns true when anyone was placed (so there's no brand draft); always clears the travel fields.
+function worldBrands() {
+  const sh = SHOWS(), on = splitOn(), at = v => on && Number.isInteger(v) && v > 0 && sh[v] ? sh[v].id : null; let n = 0;
+  for (const w of G.wrestlers) { if (w.bi != null) { const id = at(w.bi); if (id) { w.brand = id; n++; } else if (on && w.bi === 0) { w.brand = sh[0].id; n++; } if (!on) delete w.both; delete w.bi; } }
+  for (const t of G.titles) if (t.bi != null) { const id = at(t.bi); if (id) t.brand = id; else if (on && t.bi === 0) t.brand = sh[0].id; delete t.bi; }
+  return n > 0 && sh.slice(1).some(x => G.wrestlers.some(w => w.brand === x.id));
+}
 function applyWorld(z) {
   const wd = z.world, cos = JSON.parse(JSON.stringify(wd.cos)), take = z.take && cos.find(c => c.id === z.take);
   G.wseed = 1;
@@ -10338,7 +10390,8 @@ function applyWorld(z) {
     G.wrestlers = [];
     for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156) }; delete x.rival; delete x.rWeeks; delete x.rSal; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
     const tag = G.titles.find(t => t.tag);
-    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: +t.pres || (rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70), holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}) }));
+    G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: +t.pres || (rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70), holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}),
+      ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...(t.bi != null ? { bi: t.bi } : {}) }));
     G.teams = (take.teams || []).filter(t => t.members.every(id => W(id))).map(t => ({ ...t, w: 0, l: 0, d: 0 }));
     G.factions = (take.facs || []).map(f => ({ ...f, members: f.members.filter(id => W(id)), tms: G.teams.filter(t => t.members.every(id => f.members.includes(id))).map(t => t.id), w: 0, l: 0, d: 0 })).filter(f => f.members.length >= 2);
     if (tag && !G.titles.some(t => t.tag)) G.titles.push({ ...tag, holder: [] });
@@ -10353,6 +10406,12 @@ function applyWorld(z) {
     for (const w of G.wrestlers) if (taken.has(w.name)) { let n; do n = randomName(); while (taken.has(n)); w.name = n; w.nick = ''; taken.add(n); }
   }
   for (const w of wd.fa) G.wrestlers.push({ ...w, contract: null });
+  // brand places only matter to the company taken over (worldBrands puts them on its shows); AI companies book everyone
+  for (const w of [...cos.flatMap(c => c.roster), ...G.wrestlers.filter(w => !w.contract)]) { delete w.bi; delete w.both; }
+  for (const c of cos) for (const t of c.titles) { delete t.bi; delete t.tier; delete t.every; delete t.dq; }
+  // a company built by a player pays its people the player's wages, far more than an AI company earns: bring the payroll
+  // in line with what it takes in, so a huge roster isn't broke from week 1 and cutting people every week
+  for (const c of cos) { const pay = payrollR(c), inc = incomeR(c) * .85; if (pay > inc && pay > 0) for (const w of c.roster) w.rSal = Math.max(100, Math.round((w.rSal || 0) * inc / pay / 100) * 100); }
   G.rivalPromos = cos.map(c => { liven(c); setRivalChamp(c); return c; });
   G.settings.bigEvery = wd.every || G.settings.bigEvery; if (wd.mode) G.settings.bigMode = wd.mode === 'month' ? 'month' : 'weeks'; syncRivals();
   startBeforeBigOne();
@@ -10435,7 +10494,7 @@ function scrubGame(raw) {
     g.card = fixCard(g.card);
     const fut = {}; if (g.future && typeof g.future === 'object') for (const k of Object.keys(g.future)) if (/^\d{1,6}$/.test(k)) fut[k] = fixCard(g.future[k]); g.future = fut;
     g.history = (Array.isArray(g.history) ? g.history : []).filter(h => h && typeof h === 'object').map(h => ({ ...h, results: (Array.isArray(h.results) ? h.results : []).filter(r => r && fixSeg(r.seg)) }));
-    g.titles = (Array.isArray(g.titles) ? g.titles : []).filter(t => t && t.id).map(t => ({ ...t, name: t.name || 'Championship', short: t.short || 'Title', holder: Array.isArray(t.holder) ? t.holder.slice(0, 2) : [] }));
+    g.titles = (Array.isArray(g.titles) ? g.titles : []).filter(t => t && t.id).map(t => ({ ...t, name: t.name || 'Championship', short: t.short || 'Title', holder: Array.isArray(t.holder) ? t.holder.slice(0, 3) : [] }));
     g.stories = (Array.isArray(g.stories) ? g.stories : []).filter(x => x && x.id).map(x => ({ ...x, a: Array.isArray(x.a) ? x.a : [], b: Array.isArray(x.b) ? x.b : [] }));
     for (const k of ['news', 'todos', 'bigEvents']) if (!Array.isArray(g[k])) delete g[k];
     if (typeof g.notebook !== 'string') g.notebook = '';
@@ -11167,10 +11226,11 @@ const CREATOR_ACTIONS = {
       const wd = makeWorld(m.mine !== false);
       for (const c of wd.cos) for (const t of c.titles || []) if (t.photo) { t.photo = await beltShare(t.photo); if (!t.photo) delete t.photo; }
       if (wd.cos.some(c => isRude(c.name) || c.roster.some(w => isRude(w.name)))) return toast('Please rename anything rude in the world first.');
-      const id = uid(), all = worldAllW(wd); let px = 0, left = 0;
-      // photos travel in the player's photo slots, like a shared roster's; with no room, only small pixel photos come along
-      try { px = await pixSplit({ wrestlers: all, titles: [] }, id); }
-      catch (e) { if (e?.code !== 'pix_slots' && e?.code !== 'pix_big') throw e; for (const w of all) if (String(w.photo || '').length > 6000) { w.photo = ''; left++; } }
+      const id = uid(), all = worldAllW(wd), belts = worldAllT(wd); let px = 0, left = 0;
+      // photos (belt photos too) travel in the player's photo slots, like a shared roster's. When they don't all fit, the
+      // free slots are filled in order (your own company first); with no free slot at all, only small pixel photos come along
+      try { const pk = { wrestlers: all, titles: belts }; px = await pixSplit(pk, id, true); left = pk.pixLeft || 0; }
+      catch (e) { if (e?.code !== 'pix_slots' && e?.code !== 'pix_big') throw e; for (const w of [...all, ...belts]) if (String(w.photo || '').length > 6000) { w.photo = ''; left++; } }
       const data = await gz(JSON.stringify(wd));
       const item = { id, title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe', desc: (m.desc || '').trim().slice(0, 300), kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: Date.now(), sum: worldSummary(wd), save: data, ...(px ? { px } : {}) };
       try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); } catch (e) { if (px) pixDrop(COMM.me, px); throw e; }
@@ -12261,7 +12321,8 @@ function wizFinish() {
     let n = String(x.name || '').trim().replace(/[<>`"]/g, '').slice(0, 40) || SHOW_WORDS.map(w => `${DAYS[x.day]} Night ${w}`).find(w => !names.has(w)) || `${DAYS[x.day]} Show`;
     names.add(n); G.shows.push({ id: uid(), name: n, day: clamp(+x.day || 0, 0, 6), ran: 0, card: [], future: {}, wk: G.week });
   }
-  if (manyShows()) { G.split = !!z.split; if (G.split) brandDraft(); news(`📺 ${G.promo.name} runs ${SHOWS().length} weekly shows: ${SHOWS().map(x => x.name).join(', ')}.`, 'office'); }
+  if (manyShows()) { G.split = !!z.split; if (!worldBrands() && G.split) brandDraft(); news(`📺 ${G.promo.name} runs ${SHOWS().length} weekly shows: ${SHOWS().map(x => x.name).join(', ')}.`, 'office'); }
+  worldBrands();
   if (host) joinWorld(host);
   // joining partway through a week: any night that has already gone by starts next week
   const held = host ? holdBehind() : [];
@@ -12928,8 +12989,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.51';
+const VERSION = '1.9.52';
 const WHATS_NEW = [
+  ['🌍 Big worlds share cleanly', 'Shared worlds now handle full-size companies. Each company brings up to 20 championships with their card level, defense deadline, DQ rule and belt photo, up to 80 tag teams and 40 factions, and its brand rosters, so taking over a company with three shows keeps who works which show. Photos pack tighter into your photo slots, and when they still don\'t fit, the biggest ones are saved smaller instead of being dropped. AI companies from a world keep their roster size and a payroll they can afford.'],
   ['📸 Photos in shared worlds', 'Shared worlds now carry their wrestlers\' photos in your photo slots, the same way shared rosters do. Private photos stay private.'],
   ['🏆 Every title in shared worlds', 'A company you share in a world now brings all its championships (up to 10), with their holders and prestige, including women\'s and tag titles. Before, only three singles belts and one tag belt came along, and generic belts filled the gaps. Share your world again to update it.'],
   ['🌍 Full rosters in shared worlds', 'Taking over a company in a shared world now brings its whole roster. Worlds used to cut each company down to its first 60 wrestlers. A company can now carry up to 400.'],
