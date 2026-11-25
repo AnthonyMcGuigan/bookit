@@ -1516,7 +1516,11 @@ const IDB = (() => {
 const BIG = n => 'slot' + n, lsFull = {}, bigQ = {};
 const STUB = '{"bookitStub":1';
 const isStub = raw => typeof raw === 'string' && raw.startsWith(STUB);
-const slotSum = g => ({ name: g.promo.name + (Array.isArray(g.cos) && g.cos.length ? ` +${g.cos.length}` : ''), week: g.week, money: g.settings?.finances === false ? null : g.money });
+// a save holds the whole world: every company the player runs, so saves are named after all of them
+const coNames = g => [g?.promo?.name, ...(Array.isArray(g?.cos) ? g.cos.map(c => c?.promo?.name) : [])].map(n => String(n || '').trim()).filter(Boolean);
+const andList = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' & ' + a.at(-1);
+const worldLabel = g => andList(coNames(g)).slice(0, 120) || 'Saved game';
+const slotSum = g => ({ name: worldLabel(g), week: g.week, money: g.settings?.finances === false ? null : g.money });
 // writes are queued per slot and only the newest waiting copy is written
 function bigPut(n, raw, at, stubSum) {
   if (!IDB.ok) return false;
@@ -1592,7 +1596,7 @@ function slotInfo(n) {
   const raw = ls.get(KEY(n));
   if (isStub(raw)) { try { const x = JSON.parse(raw), u = x.sum || {}; return { name: String(u.name || 'Saved game'), week: +u.week || 1, money: u.money ?? null, savedAt: +x.savedAt || 0, big: true }; } catch (e) { return null; } }
   const g = loadSlot(n); if (!g) return null;
-  return { name: g.promo.name + (Array.isArray(g.cos) && g.cos.length ? ` +${g.cos.length}` : ''), week: g.week, money: g.settings?.finances === false ? null : g.money, savedAt: g.savedAt };
+  return { ...slotSum(g), savedAt: g.savedAt };
 }
 function migrate(g) {
   // keep older saves working as features get added
@@ -5964,6 +5968,17 @@ function autoFill(quiet) {
 }
 
 // ---------- needs-attention list (the "keep up" helper) ----------
+// BookIt_WWE+AEW_week-12_2026-11-25.json: every company in the save, the week and the day it was backed up
+function saveFileName() {
+  const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const cos = coNames(G).map(n => n.replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '')).filter(Boolean).join('+').slice(0, 100) || 'save';
+  return `BookIt_${cos}_week-${G.week}_${day}.json`;
+}
+// what a backup holds, in words
+function saveHolds() {
+  const n = coNames(G), ai = (G.rivalPromos || []).length, fa = G.wrestlers.filter(w => !w.contract && !w.retired).length;
+  return `${n.length > 1 ? `${n.length === 2 ? 'Both of your companies' : `All ${n.length} of your companies`} (<b>${esc(andList(n))}</b>)` : `<b>${esc(n[0] || 'Your company')}</b>`}, ${ai} AI compan${ai === 1 ? 'y' : 'ies'}, ${fa} indie stars and the calendar, at week ${G.week}.`;
+}
 function markBackup() { meta.bk = { ...(meta.bk || {}), [meta.slot]: G.week }; ls.set(META, JSON.stringify(meta)); }
 function backupDue() { const last = meta.bk?.[meta.slot] ?? 1, snooze = meta.bkSnooze?.[meta.slot] || 0; return G.week >= 6 && G.week - last >= 8 && G.week >= snooze ? G.week - last : 0; }
 function attention() {
@@ -7230,7 +7245,7 @@ function renderModal() {
     case 'editTourney': return modalEditTourney(m);
     case 'tourney': return modalTourney(m);
     case 'transfer': return modal('Backup & transfer', `
-      ${G && !m.importOnly ? `<div class="sec" style="margin-top:0">Back up this game</div><div class="small muted" style="margin-bottom:8px">Keep a backup or move to another device.</div>
+      ${G && !m.importOnly ? `<div class="sec" style="margin-top:0">Back up this ${multi() ? 'world' : 'game'}</div><div class="small muted" style="margin-bottom:8px">Keep a backup or move to another device. One file holds the whole world: ${saveHolds()}</div><div class="tiny muted" style="margin-bottom:8px">File name: <b>${esc(saveFileName())}</b></div>
       <div class="grid2" style="margin-bottom:8px"><button class="btn" data-act="download">⬇ Download file</button><button class="btn" data-act="copySave">📋 Copy save text</button></div>
       <textarea id="saveText" readonly style="min-height:90px;font-size:11px;font-family:ui-monospace,monospace">${esc(JSON.stringify(G))}</textarea>` : ''}
       <div class="sec">Restore a save</div><div class="small muted" style="margin-bottom:8px">This replaces the game in the current slot${G ? ' (slot ' + meta.slot + ')' : ''}.</div>
@@ -7366,17 +7381,29 @@ async function supResume() {
 }
 const SUP_PERKS = [['☁️', '6 cloud save slots', 'Three more than the free three.'], ['🌐', 'More Community space', 'Up to 10 shared worlds and more room for rosters and photos.'], ['⭐', 'Supporter badge', 'A gold badge next to your name in Community.'], ['🧪', 'Early access', 'Try new features before everyone else.']];
 const CLOUD_SLOTS = [1, 2, 3, 4, 5, 6], CLOUD_FREE = 3;
-const cloudErr = e => e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'This save is too big for the cloud. Use Back up instead.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
+const cloudErr = e => e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'This save is too big for the cloud. Download a backup instead (Menu → Backup & transfer): files have no size limit.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
+// a cloud save can be up to 380 KB once packed. Warn while there's still room, not only when it no longer fits.
+const CLOUD_MAX = 380000, CLOUD_WARN = 0.8;
+const cloudPct = len => Math.round(len / CLOUD_MAX * 100);
+function cloudNear(len) {
+  if (len < CLOUD_MAX * CLOUD_WARN) return;
+  const k = cloudPct(len); if ((meta.cloudWarn || 0) >= k && k < 95) return; // once per few percent, so auto backup doesn't nag every week
+  meta.cloudWarn = k + 4; ls.set(META, JSON.stringify(meta));
+  toast(`This save uses ${k}% of the cloud save limit. Download a backup too (Menu → Backup & transfer) so you keep a copy if it outgrows the cloud.`);
+}
 async function cloudPush(n) {
   await sbGuest(); if (!sbSess?.user?.id) throw { code: 'unavailable' };
   const z = await gz(JSON.stringify({ ...G, savedAt: Date.now() }));
-  if (z.length > 380000) throw { code: 'big' };
+  if (z.length > CLOUD_MAX) throw { code: 'big' };
+  cloudNear(z.length);
   const lz = await libPack(385000 - z.length);
   await sbDb().doc(`cloud${n}/${sbSess.user.id}`).set({ v: 1, save: z, sum: saveSummary(G), at: Date.now(), ...(lz ? { lib: lz, libN: LIB.length } : {}) });
   meta.cloudWk = { ...(meta.cloudWk || {}), [n]: G.week }; ls.set(META, JSON.stringify(meta));
 }
 async function cloudList() {
   const m = UI.modal; if (m?.type !== 'cloud') return;
+  // how much of the cloud limit this game would use, so the page can warn before it stops fitting
+  if (G && m.size == null) try { m.size = (await gz(JSON.stringify({ ...G, savedAt: Date.now() }))).length; if (UI.modal === m) render(); } catch (e) {}
   try {
     await sbGuest(); const id = sbSess?.user?.id; if (!id) throw 0;
     const rows = await sbFetch(`/rest/v1/docs?select=col,data->sum,data->at,data->libN&col=in.(cloud1,cloud2,cloud3,cloud4,cloud5,cloud6)&id=eq.${sbQ(id)}`);
@@ -7400,11 +7427,15 @@ function modalCloud(m) {
   const sup = isSup();
   const rows = CLOUD_SLOTS.map(n => { const x = L?.[n], sm = x?.sum || {};
     if (n > CLOUD_FREE && !sup && !x) return PLAY ? '' : `<div class="item"><div class="av" style="background:var(--card2);color:var(--muted)">${n}</div><div class="main"><div class="t">Supporter slot</div><div class="d">⭐ BookIt Supporters get 3 extra cloud slots.</div></div><button class="btn sm" data-act="support">See Supporter</button></div>`;
-    return `<div class="item"><div class="av" style="background:${n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${n}</div><div class="main"><div class="t">${x ? esc(String(sm.promo || 'Saved game')) : 'Empty'}</div><div class="d">${x ? `Week ${+sm.week || '?'} · ${x.at ? new Date(x.at).toLocaleString() : ''}` : L ? '—' : 'Loading…'}</div></div>
+    return `<div class="item"><div class="av" style="background:${n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${n}</div><div class="main"><div class="t">${x ? esc(Array.isArray(sm.cos) && sm.cos.length > 1 ? andList(sm.cos.map(String)) : String(sm.promo || 'Saved game')) : 'Empty'}</div><div class="d">${x ? `${Array.isArray(sm.cos) && sm.cos.length > 1 ? `${sm.cos.length} companies · booking ${esc(String(sm.promo || ''))} · ` : ''}Week ${+sm.week || '?'} · ${x.at ? new Date(x.at).toLocaleString() : ''}` : L ? '—' : 'Loading…'}</div></div>
       <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${x ? `<button class="btn sm" data-act="cloudGet" data-id="${n}">Load</button>` : ''}${G && (n <= CLOUD_FREE || sup) ? `<button class="btn sm" data-act="cloudUp" data-id="${n}">Upload</button>` : ''}${x ? `<button class="btn sm bad" data-act="cloudDel" data-id="${n}" aria-label="Delete cloud slot ${n}">🗑</button>` : ''}</div></div>`; }).join('');
   const body = `<p class="small muted" style="margin-top:0">Keep your games online, and load them on another phone or computer. Only you can see your cloud saves.</p>
     ${m.err ? `<div class="alert bad"><span class="ic">⚠️</span><div class="small">${esc(m.err)}</div></div>` : ''}
     <div class="list">${rows}</div>
+    ${G && m.size != null ? (m.size > CLOUD_MAX ? `<div class="alert bad" style="margin-top:10px"><span class="ic">⚠️</span><div class="small"><b>This ${multi() ? 'world' : 'game'} is too big for the cloud</b> (${cloudPct(m.size)}% of the limit). Download a backup instead from Menu → Backup & transfer. Files have no size limit.</div></div>`
+      : m.size > CLOUD_MAX * CLOUD_WARN ? `<div class="alert warn" style="margin-top:10px"><span class="ic">⚠️</span><div class="small"><b>This ${multi() ? 'world' : 'game'} uses ${cloudPct(m.size)}% of the cloud save limit.</b> Big rosters, photos and more companies add up. Download a backup too (Menu → Backup & transfer) so you keep a copy if it outgrows the cloud.</div></div>`
+      : `<div class="tiny muted" style="margin-top:8px">This ${multi() ? 'world' : 'game'} uses ${cloudPct(m.size)}% of the cloud save limit.</div>`) : ''}
+    ${G && multi() ? `<div class="tiny muted" style="margin-top:6px">A cloud save holds the whole world: ${esc(andList(coNames(G)))}, plus the AI companies and indie stars.</div>` : ''}
     ${cloudLibCard(m)}
     ${G ? `<label class="todo" style="margin-top:10px"><input type="checkbox" data-act="cloudAuto" ${meta.cloudAuto ? 'checked' : ''}><span>Back up slot ${meta.slot} to cloud slot ${meta.slot} after every week</span></label>` : ''}
     ${u && !u.email ? '<div class="tiny muted" style="margin-top:8px">To load these saves on another device, add your email below and sign in there with it.</div>' : ''}
@@ -8265,7 +8296,7 @@ const A = {
   deleteSlot() { confirmBox('Delete this save?', 'Slot ' + meta.slot + ' (' + G.promo.name + ') will be erased. Export first if you want a backup.', 'Delete', () => { ls.del(KEY(meta.slot)); IDB.del(BIG(meta.slot)).catch(() => {}); G = null; render(); toast('Save deleted.'); }, true); },
   export() { openModal({ type: 'transfer' }); },
   async download() {
-    const name = (G.promo.name.replace(/[^\w]+/g, '-') || 'save') + '-week' + G.week + '.json', data = JSON.stringify(G);
+    const name = saveFileName(), data = JSON.stringify(G);
     // the hosted copy saves through the viewer, which asks the player to confirm
     let dl = null; try { dl = window.claude?.use ? await window.claude.use('downloads') : null; } catch (e) {}
     if (dl) {
@@ -10559,7 +10590,7 @@ function applyWorld(z) {
 function saveSummary(g) {
   const sg = (g.wrestlers || []).filter(w => w.contract);
   return {
-    promo: String(g.promo?.name || '').slice(0, 40), show: String(g.promo?.show || '').slice(0, 40), week: +g.week || 1, fans: +g.fans || 0, roster: sg.length,
+    promo: String(g.promo?.name || '').slice(0, 40), ...(Array.isArray(g.cos) && g.cos.length ? { cos: coNames(g).slice(0, 4).map(n => n.slice(0, 40)) } : {}), show: String(g.promo?.show || '').slice(0, 40), week: +g.week || 1, fans: +g.fans || 0, roster: sg.length,
     champs: (g.titles || []).filter(t => t.holder?.length).slice(0, 6).map(t => [String(t.short || '').slice(0, 16), t.holder.map(id => (g.wrestlers.find(w => w.id === id)?.name || '?')).join(' & ').slice(0, 60)]),
     stars: sg.slice().sort((a, b) => b.pop - a.pop).slice(0, 5).map(w => String(w.name).slice(0, 40)),
     avg: g.history?.length ? Math.round(avg(g.history.slice(-8).map(h => h.rating))) : 0,
@@ -13207,8 +13238,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.59';
+const VERSION = '1.9.60';
 const WHATS_NEW = [
+  ['💾 Clearer saves', 'A save holds your whole world, and now it says so. Backup files are named after every company you run, with the week and date (like BookIt_WWE+AEW_week-12_2026-11-25.json), and Backup & transfer lists what the file holds. Save slots and cloud saves show every company. Cloud saves tell you how much of the cloud limit your game uses and warn you from 80%, before it stops fitting.'],
   ['🔁 Take over a rival', 'With Sandbox on, open any AI company in Office → Companies and tap Take over to run it yourself, as one of up to 4 companies in your world. Its roster, contracts, titles and title history, teams, factions, feuds, photos and big events come with it. It keeps its name and show, and you can add more weekly shows and a brand split as you take it over.'],
   ['🏢 Companies tab', 'The Rivals tab in the Office is now called Companies. It still shows every company in your world, their rosters and fans, and is where you create, edit or share them.'],
   ['⭐ Indie Stars', 'Unsigned wrestlers are now called indie stars, so they no longer get mixed up with the Free agent tag for wrestlers who work every brand. The Free agents tab in the Office is now Indie Stars, and the news, contract talks, imports and help say indie star too.'],
