@@ -1114,6 +1114,25 @@ html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw
 .bd-roster button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
 @media (prefers-reduced-motion: reduce) { .bd-toast.in { animation: none; } .bd-need i b { transition: none; } }
 .brand-t { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 4px; }
+/* brand colours: --bc is the brand's colour, --bci the text colour that reads on it. Text stays in the normal ink
+   on tinted backgrounds, so any colour a player picks keeps its contrast. */
+.b-dot { display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 45%, transparent); }
+.tag.btag { color: var(--ink); border-color: var(--bc); background: color-mix(in srgb, var(--bc) 16%, transparent); }
+.tag.btag .b-dot { margin-right: 0; width: 8px; height: 8px; }
+.brand-col.bcol, .bd-side.bcol { border-top: 4px solid var(--bc); }
+.bd-needs.on { border-color: var(--bc); box-shadow: 0 0 0 1px var(--bc); }
+.b-colbtn { flex: none; display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -4px -6px 0; border: 0; background: none; border-radius: 50%; }
+.b-colbtn .b-dot { width: 16px; height: 16px; margin: 0; }
+.b-sws { align-items: center; }
+.b-sw-own { position: relative; display: inline-block; overflow: hidden; cursor: pointer; }
+.b-sw-own input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.b-sw-own:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.bd-toast[style*="--bc"] { border-color: var(--bc); background: linear-gradient(90deg, color-mix(in srgb, var(--bc) 18%, transparent), transparent); }
+/* the brand making its selection stays pinned to the top of the war room while the list scrolls */
+.bd-on { position: sticky; top: -14px; z-index: 3; display: flex; gap: 10px; align-items: center; margin: 0 -16px 10px; padding: 10px 16px; color: var(--ink);
+  background: color-mix(in srgb, var(--bc) 20%, var(--bg)); border-left: 5px solid var(--bc); border-bottom: 1px solid color-mix(in srgb, var(--bc) 50%, var(--line)); box-shadow: 0 6px 12px -8px rgba(0, 0, 0, .5); }
+.bd-on .tiny { color: var(--ink); opacity: .85; }
+.bd-on-dot { flex: none; display: grid; place-items: center; min-width: 38px; height: 38px; padding: 0 4px; border-radius: 10px; background: var(--bc); color: var(--bci); font-family: var(--f-display); font-size: 15px; letter-spacing: .02em; }
 .seg-ctl.wrap button { font-size: 12px; letter-spacing: .02em; line-height: 1.15; padding: 6px 2px; }
 .seg-ctl.wrap .cnt { display: block; margin: 2px auto 0; width: max-content; }
 .seg-ctl .cnt, .filters .cnt { display: inline-block; min-width: 1.6em; padding: 0 .35em; border-radius: 99px; background: color-mix(in srgb, currentColor 10%, transparent); font-size: .85em; line-height: 1.4; letter-spacing: 0; }
@@ -2497,6 +2516,12 @@ const inBrand = (w, id) => !splitOn() || !!w?.both || brandOf(w) === id;
 const allBrands = (cap = 1) => (SHOWS().length > 2 ? (cap ? 'All' : 'all') : (cap ? 'Both' : 'both')) + ' brands';
 // on rosters a wrestler on every brand shows as a free agent, like a TV free agent who can turn up on any show
 const brandLabel = w => w?.both && splitOn() ? 'Free agent' : brandName(brandOf(w));
+// every brand has its own colour (x.col on the show). No pick yet: a different default for each slot.
+const BRAND_DEF = ['#ff5a5f', '#4c8dff', '#ffb547', '#2fbf71'];
+const BCOL_NAMES = { '#ffb547': 'Gold', '#ff5a5f': 'Red', '#e84393': 'Pink', '#a463f2': 'Purple', '#4c8dff': 'Blue', '#22b8cf': 'Teal', '#2fbf71': 'Green', '#c9d64a': 'Lime', '#d0d0d0': 'Silver' };
+const brandCol = id => { const sh = SHOWS(), i = Math.max(0, sh.findIndex(x => x.id === id)); return safeColor(sh[i]?.col) || BRAND_DEF[i % BRAND_DEF.length]; };
+const bDot = id => `<i class="b-dot" style="background:${brandCol(id)}" aria-hidden="true"></i>`;
+const bVar = id => `--bc:${brandCol(id)};--bci:${inkOn(brandCol(id))}`;
 const showRanNow = () => (curShow()?.ran || 0) >= G.week;
 // with the brand split on, a weekly show books its own brand; a big event can use anyone
 const onBrand = (w, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || inBrand(w, G.showId);
@@ -2661,8 +2686,8 @@ const raidable = c => (c.roster || []).filter(w => !CON() || (w.contract?.weeks 
 function coBar() {
   const us = weekUnits(); if (us.length < 2) return '';
   const nu = us.find(u => !u.ran);
-  const chips = us.map(u => { const col = safeColor(u.c.promo.color) || '#888', st = u.ran ? '✓' : u === nu ? 'Next' : '•';
-    return `<button class="co-chip wk-chip ${u.on ? 'on' : ''} ${u === nu ? 'up' : ''}" ${u.on ? 'aria-current="true"' : `data-act="goUnit" data-id="${esc((u.co || '') + '|' + (u.sid || ''))}"`} aria-label="${esc(DAYS[u.day] + ' ' + unitLabel(u))}${u.ran ? ', done' : u === nu ? ', up next' : ', to come'}"><span class="co-dot" style="background:${esc(col)}">${esc(DAYS[u.day].slice(0, 2))}</span><span class="wk-n">${esc(u.name)}${multi() ? `<small>${esc(abbr(u.c.promo.name))}</small>` : ''}</span><span class="co-st">${st}</span></button>`; }).join('');
+  const chips = us.map(u => { const col = u.c === G && splitOn() && showById(u.sid) ? brandCol(u.sid) : safeColor(u.c.promo.color) || '#888', st = u.ran ? '✓' : u === nu ? 'Next' : '•';
+    return `<button class="co-chip wk-chip ${u.on ? 'on' : ''} ${u === nu ? 'up' : ''}" ${u.on ? 'aria-current="true"' : `data-act="goUnit" data-id="${esc((u.co || '') + '|' + (u.sid || ''))}"`} aria-label="${esc(DAYS[u.day] + ' ' + unitLabel(u))}${u.ran ? ', done' : u === nu ? ', up next' : ', to come'}"><span class="co-dot" style="background:${esc(col)};color:${inkOn(col)}">${esc(DAYS[u.day].slice(0, 2))}</span><span class="wk-n">${esc(u.name)}${multi() ? `<small>${esc(abbr(u.c.promo.name))}</small>` : ''}</span><span class="co-st">${st}</span></button>`; }).join('');
   const me = us.find(u => u.on);
   let msg = '';
   if (me && me.ran && nu) msg = `<div class="alert co-wait"><span class="ic">🔔</span><div class="sp small"><b>${esc(G.promo.show)} is done for week ${G.week}.</b> Up next: ${esc(unitLabel(nu))}.</div>
@@ -2680,6 +2705,7 @@ function modalShows() {
       <div class="row" style="gap:8px;margin-bottom:6px"><b class="sp">${i === 0 ? 'Main show' : 'Show ' + (i + 1)}${on ? ' <span class="tag good">Booking</span>' : ''}${(x.ran || 0) >= G.week ? ' <span class="tag">✓ done this week</span>' : ''}</b>${on ? '' : `<button class="btn sm" data-act="goShow" data-id="${esc(x.id)}">Book it</button>`}${many ? `<button class="btn sm" data-act="delShow" data-id="${esc(x.id)}" aria-label="Remove ${esc(name)}">✕</button>` : ''}</div>
       <input type="text" data-in="shName" data-id="${esc(x.id)}" value="${esc(name)}" maxlength="40" aria-label="Show name" style="margin-bottom:8px">
       <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === +day ? 'on' : ''}" data-act="shDaySet" data-id="${esc(x.id)}|${k}">${d.slice(0, 3)}</button>`).join('')}</div>
+      ${many ? `<div class="tiny muted" style="margin:8px 0 4px">Brand color</div>${bColRow(x.id)}` : ''}
       ${many ? `<div class="row small" style="margin-top:8px;gap:8px">${splitOn() ? `<span class="sp ${cnt(x.id) < 10 ? '' : 'muted'}" ${cnt(x.id) < 10 ? 'style="color:var(--warn)"' : ''}>${cnt(x.id)} wrestlers${cnt(x.id) < 10 ? ' (thin)' : ''}${G.titles.filter(t => t.brand === x.id).length ? ' · ' + G.titles.filter(t => t.brand === x.id).map(t => esc(t.short)).join(', ') : ''}</span><button class="link small" data-act="brandRoster" data-id="${esc(x.id)}">See roster</button>` : '<span class="sp"></span>'}<label class="todo" style="margin:0"><input type="checkbox" data-in="shAuto" data-id="${esc(x.id)}" ${x.auto ? 'checked' : ''}><span>Auto-book</span></label></div>` : ''}
     </div>`; }).join('');
   const titles = splitOn() && G.titles.length ? `<div class="sec">Championships</div><p class="small muted" style="margin-top:0">Pick which show defends each title. Shared titles can be defended on any show.</p>
@@ -2693,6 +2719,18 @@ function modalShows() {
     ${G.split ? '<button class="btn pri block" data-act="goBrands">🎤 Brands: draft, shared wrestlers and titles</button>' : ''}` : '<div class="sec">Brand split</div><p class="small muted" style="margin-top:0">Add a second weekly show, then you can split your roster into brands, each with its own show.</p>'}
     ${titles}`;
   return modal('Weekly shows', body);
+}
+// the colour picker for one brand: the company palette plus any colour you like
+function bColRow(id) {
+  const cur = brandCol(id), mine = !BRAND.includes(cur);
+  return `<div class="swatches b-sws" role="group" aria-label="Brand color for ${esc(brandName(id))}">${BRAND.map(c => `<button class="sw ${cur === c ? 'on' : ''}" style="background:${c}" data-act="bCol" data-id="${esc(id)}|${c}" aria-pressed="${cur === c}" aria-label="${BCOL_NAMES[c] || c}"></button>`).join('')}
+    <label class="sw b-sw-own ${mine ? 'on' : ''}" style="background:${mine ? cur : 'conic-gradient(#ff5a5f, #ffb547, #2fbf71, #22b8cf, #4c8dff, #a463f2, #e84393, #ff5a5f)'}" title="Pick any color"><input type="color" data-in="bColOwn" data-id="${esc(id)}" value="${cur}" aria-label="Any color for ${esc(brandName(id))}"></label></div>`;
+}
+function modalBCol(id) {
+  if (!showById(id)) return modal('Brand color', '<div class="empty">That brand is gone.</div>');
+  const sample = `<div class="row wrap" style="gap:8px;margin:12px 0 4px"><span class="tag btag" style="${bVar(id)}">${bDot(id)}${esc(brandName(id))}</span><span class="co-dot" style="background:${brandCol(id)};color:${inkOn(brandCol(id))}">${esc(showNight(showById(id)).slice(0, 2))}</span></div>
+    <div class="bd-on" style="${bVar(id)};position:static;margin:8px 0 0"><span class="bd-on-dot" aria-hidden="true">${esc(abbr(brandName(id)).slice(0, 3))}</span><div class="sp"><b>${esc(brandName(id))} is making their selection</b><div class="tiny">How it looks in the draft</div></div></div>`;
+  return modal(`🎨 ${esc(brandName(id))} color`, `<p class="small muted" style="margin-top:0">Shown on roster tags, the Brands tab, the draft and the week's show strip.</p>${bColRow(id)}${sample}`, '<button class="btn pri" data-act="closeModal">Done</button>');
 }
 // split the roster across the shows like a draft: best first, snake order, tag teams stay together
 function brandDraft() {
@@ -2745,7 +2783,7 @@ function brandsView() {
     <button class="btn block" style="margin-top:8px" data-act="shows">📺 Shows and nights</button>`;
   const both = signed().filter(w => w.both).sort((a, b) => b.pop - a.pop), grades = bdGrades(trRosters(), bdAll(both.map(w => w.id)));
   const col = x => { const ws = signed().filter(w => !w.both && brandOf(w) === x.id).sort((a, b) => b.pop - a.pop), n = ws.length + both.length, ts = G.titles.filter(t => t.brand === x.id);
-    return `<div class="card brand-col"><div class="row" style="gap:6px;align-items:flex-start"><div class="brand-n sp">${esc(brandName(x.id))}</div><b class="bd-grade" title="Brand grade">${grades[x.id]}</b></div>
+    return `<div class="card brand-col bcol" style="${bVar(x.id)}"><div class="row" style="gap:6px;align-items:flex-start"><div class="brand-n sp">${esc(brandName(x.id))}</div><button class="b-colbtn" data-act="bColOpen" data-id="${esc(x.id)}" aria-label="Change the color of ${esc(brandName(x.id))}" title="Brand color">${bDot(x.id)}</button><b class="bd-grade" title="Brand grade">${grades[x.id]}</b></div>
       <div class="tiny ${n < 10 ? '' : 'muted'}" ${n < 10 ? 'style="color:var(--warn)"' : ''}>${esc(showNight(x))} · ${n} wrestlers${n < 10 ? ' (thin)' : ''}</div>
       ${ts.length ? `<div class="brand-t">${ts.map(t => `<span class="tag gold">🏆 ${esc(t.short)}</span>`).join('')}</div>` : ''}
       ${ws.slice(0, 5).map(w => `<div class="small clip" style="padding:2px 0">${esc(w.name)}</div>`).join('') || '<div class="tiny muted" style="padding:2px 0">Nobody yet</div>'}
@@ -2763,7 +2801,7 @@ function brandsView() {
     ${G.titles.map(t => `<label class="f"><span>${esc(t.name)} <span class="muted">· ${esc(tierName(t))}</span></span><select data-in="tBrand" data-id="${esc(t.id)}"><option value="">Shared</option>${sh.map(x => `<option value="${esc(x.id)}" ${t.brand === x.id ? 'selected' : ''}>${esc(brandName(x.id))}</option>`).join('')}</select></label>`).join('')}` : ''}`
     : `<button class="btn block" data-act="shows">📺 Shows and nights</button>`}
     ${MON() ? `<div class="sec">Money</div><div class="small muted" style="margin:-4px 0 8px">One company account pays for every brand. Payroll, TV deals and ticket money all go through it, so brands never run out on their own.</div>
-    <div class="card" style="padding:4px 12px">${sh.map((x, i) => { const h = last[x.id]; return `<div class="row small" style="padding:7px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><span class="sp">${esc(brandName(x.id))}</span>${h ? `<b style="color:${h.net >= 0 ? 'var(--good)' : 'var(--bad)'}">${h.net >= 0 ? '+' : '−'}${money(Math.abs(h.net))}</b><span class="tiny muted" style="margin-left:6px">wk ${h.wk}</span>` : '<span class="muted">No show yet</span>'}</div>`; }).join('')}
+    <div class="card" style="padding:4px 12px">${sh.map((x, i) => { const h = last[x.id]; return `<div class="row small" style="padding:7px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><span class="sp">${bDot(x.id)}${esc(brandName(x.id))}</span>${h ? `<b style="color:${h.net >= 0 ? 'var(--good)' : 'var(--bad)'}">${h.net >= 0 ? '+' : '−'}${money(Math.abs(h.net))}</b><span class="tiny muted" style="margin-left:6px">wk ${h.wk}</span>` : '<span class="muted">No show yet</span>'}</div>`; }).join('')}
       ${bigLast ? `<div class="row small" style="padding:7px 0;border-top:1px solid var(--line)"><span class="sp">🎆 ${esc(bigLast.name)}</span><b style="color:${bigLast.net >= 0 ? 'var(--good)' : 'var(--bad)'}">${bigLast.net >= 0 ? '+' : '−'}${money(Math.abs(bigLast.net))}</b><span class="tiny muted" style="margin-left:6px">wk ${bigLast.wk}</span></div>` : ''}
       <div class="row small" style="padding:7px 0;border-top:1px solid var(--line)"><b class="sp">Company bank</b><b>${money(G.money)}</b></div></div>` : ''}`;
 }
@@ -2809,8 +2847,8 @@ function bdGrades(rosters, all) {
     return [id, [[92, 'A+'], [85, 'A'], [80, 'A-'], [75, 'B+'], [70, 'B'], [65, 'B-'], [60, 'C+'], [55, 'C'], [50, 'C-'], [40, 'D']].find(([t]) => s >= t)?.[1] || 'F'];
   }));
 }
-function bdNeedsCard(name, grade, ms, on) {
-  return `<div class="card brand-col bd-needs" ${on ? 'style="border-color:var(--accent)"' : ''}><div class="row" style="gap:6px"><b class="small sp clip">${esc(name)}</b><b class="bd-grade">${grade}</b></div>
+function bdNeedsCard(id, grade, ms, on) {
+  return `<div class="card brand-col bcol bd-needs ${on ? 'on' : ''}" style="${bVar(id)}"><div class="row" style="gap:6px"><b class="small sp clip">${esc(brandName(id))}</b><b class="bd-grade">${grade}</b></div>
     ${ms.map(x => `<div class="bd-need"><span>${esc(x.l)}</span><i><b class="${bdLvl(x.v)}" style="width:${x.v ?? 0}%"></b></i><span class="tiny muted">${bdLvlTxt(x.v)}</span></div>`).join('')}</div>`;
 }
 // what the crowd and the commentary team make of a pick
@@ -2853,6 +2891,13 @@ function bdControls(m, s) {
     <div class="filters">${chip(!m.g && !m.al, 'bdG', '', 'All')}${[['men', 'Men'], ['women', 'Women']].map(([k, l]) => chip(m.g === k, 'bdG', k, l)).join('')}${[['face', 'Faces'], ['heel', 'Heels']].map(([k, l]) => chip(m.al === k, 'bdAl', k, l)).join('')}</div>
     <div class="filters" style="flex-wrap:wrap">${BD_ST.map(([k, l]) => chip((m.st || []).includes(k), 'bdF', k, l)).join('')}</div>`;
 }
+// after a pick the list starts over from the top: the brand making its selection sits at the top of the window, the list right under it
+function bdListTop() {
+  const mb = document.querySelector('.bd-wr .mb'), on = mb?.querySelector('.bd-on'); if (!mb || !on) return;
+  mb.scrollTop = 0; const y = on.getBoundingClientRect().top - mb.getBoundingClientRect().top;
+  // a short window (a phone) skips past the brand needs to the list; a tall one shows everything from the top
+  if (y > mb.clientHeight * .4) mb.scrollTop = y;
+}
 function modalBDraft(m) {
   if (m.tr) return modalBTrade(m.tr, m);
   const pool = bdPool(m), on = bdTurn(m), total = signed().length - m.both.length, made = Object.values(m.picks).flat().length;
@@ -2863,18 +2908,18 @@ function modalBDraft(m) {
   const champ = w => titlesOf(w.id).map(t => t.short).join(', ');
   const L = m.last, lw = L && W(L.id), fresh = L?.fresh; if (L) L.fresh = false;
   const reveal = !L ? '' : L.trade ? `<div class="bd-toast ${fresh ? 'in' : ''}"><span class="ic" style="font-size:24px">🔁</span><div class="sp small"><b>Trade!</b> ${esc(L.head)}<div class="tiny muted">🎙 ${esc(L.voice)}: "${esc(L.line)}"</div></div></div>`
-    : lw ? `<div class="bd-toast ${fresh ? 'in' : ''}">${av(lw, 38)}<div class="sp small"><b>Pick ${L.n} · ${esc(brandName(L.on))} takes ${esc(lw.name)}</b><div class="tiny muted">🎙 ${esc(L.voice)}: "${esc(L.line)}" · 🔊 ${esc(L.crowd)}</div></div></div>` : '';
-  const body = pool.length ? `${reveal}
-    <div class="brand-grid" style="margin-bottom:10px">${m.order.map(id => bdNeedsCard(brandName(id), grades[id], meters[id], id === on)).join('')}</div>
-    <div class="alert" style="margin-bottom:10px;border-left-color:var(--accent)"><span class="ic">📺</span><div><b>${esc(brandName(on))} is making their selection</b><div class="tiny muted">Round ${round} · Pick ${m.k % n + 1} · ${made} of ${total} drafted${needs.length ? ` · Needs: ${needs.map(bdNeedTag).join(', ').toLowerCase()}` : ''}</div></div></div>
+    : lw ? `<div class="bd-toast ${fresh ? 'in' : ''}" style="${bVar(L.on)}">${av(lw, 38)}<div class="sp small"><b>Pick ${L.n} · ${esc(brandName(L.on))} takes ${esc(lw.name)}</b><div class="tiny muted">🎙 ${esc(L.voice)}: "${esc(L.line)}" · 🔊 ${esc(L.crowd)}</div></div></div>` : '';
+  const body = pool.length ? `<div class="brand-grid" style="margin-bottom:10px">${m.order.map(id => bdNeedsCard(id, grades[id], meters[id], id === on)).join('')}</div>
+    <div class="bd-on" style="${bVar(on)}" aria-live="polite"><span class="bd-on-dot" aria-hidden="true">${esc(abbr(brandName(on)).slice(0, 3))}</span><div class="sp"><b>${esc(brandName(on))} is making their selection</b><div class="tiny">Round ${round} · Pick ${m.k % n + 1} · ${made} of ${total} drafted${needs.length ? ` · Needs: ${needs.map(bdNeedTag).join(', ').toLowerCase()}` : ''}</div></div></div>
+    ${reveal}
     ${bdControls(m, srt)}
     <div class="tiny muted" style="margin-bottom:4px">${bdNF(m) ? `Showing ${list.length} of ${pool.length} left. <button class="link" data-act="bdClear">Clear filters</button>` : `${pool.length} left to draft.`}</div>
     <div class="list">${list.slice(0, cap).map(w => { const tm = bdGroup(m, w).slice(1), fl = fills(w); return `<div class="item">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">${w.align === 'heel' ? 'Heel' : 'Face'} · OVR ${overall(w)} · Pop ${Math.round(w.pop)}${bdSortStat(srt, w)}${champ(w) ? ` · 🏆 ${esc(champ(w))}` : ''}${tm.length ? ` · with ${tm.map(x => esc(x.name)).join(', ')}` : ''}${fl.map(x => ` <span class="tag good">Fills: ${esc(bdNeedTag(x))}</span>`).join('')}</div></div><button class="btn sm pri" data-act="bdPick" data-id="${w.id}">Draft</button><button class="btn sm" data-act="bdBoth" data-id="${w.id}" aria-label="Put ${esc(w.name)} on ${allBrands(0)}" title="Put on ${allBrands(0)}">${ic('layers')}</button></div>`; }).join('') || `<div class="empty">Nobody left matches.${bdNF(m) ? ' <button class="link" data-act="bdClear">Clear filters</button>' : ''}</div>`}</div>
     ${list.length > cap ? `<button class="btn block" style="margin-top:8px" data-act="bdMore">Show all ${list.length}</button>` : ''}
     <div class="tiny muted" style="margin-top:8px">Tag team partners go together. ${ic('layers')} puts someone on ${allBrands(0)} without using a pick.</div>`
     : `${reveal}<div style="text-align:center;margin:6px 0 12px"><div style="font-family:var(--f-display);font-size:22px;text-transform:uppercase">Draft complete</div><div class="small muted">Here are your brands. You can still trade, then finish to make it official.</div></div>
-    <div class="brand-grid" style="margin-bottom:6px">${m.order.map(id => bdNeedsCard(brandName(id), grades[id], meters[id])).join('')}</div>
-    ${m.order.map(id => { const ps = m.picks[id].map(W).filter(Boolean); return `<div class="sec">${esc(brandName(id))} · ${ps.length}</div><div class="small">${ps.map(w => esc(w.name)).join(', ') || '<span class="muted">Nobody</span>'}</div>`; }).join('')}
+    <div class="brand-grid" style="margin-bottom:6px">${m.order.map(id => bdNeedsCard(id, grades[id], meters[id])).join('')}</div>
+    ${m.order.map(id => { const ps = m.picks[id].map(W).filter(Boolean); return `<div class="sec">${bDot(id)}${esc(brandName(id))} · ${ps.length}</div><div class="small">${ps.map(w => esc(w.name)).join(', ') || '<span class="muted">Nobody</span>'}</div>`; }).join('')}
     ${m.both.length ? `<div class="sec">${ic('layers')} ${allBrands()} · ${m.both.length}</div><div class="small">${m.both.map(W).filter(Boolean).map(w => esc(w.name)).join(', ')}</div>` : ''}
     <div class="tiny muted" style="margin-top:10px">Champions take their titles to their new brand. Shared titles stay shared.</div>`;
   const foot = pool.length ? `<button class="btn bd-undo" data-act="bdUndoPick" ${m.hist.length ? '' : 'disabled'} aria-label="Undo">↶</button><button class="btn" data-act="bdTrade" ${made ? '' : 'disabled'}>🔁 Trade</button><button class="btn" data-act="bdAuto">⏩ Auto-pick</button>`
@@ -2893,7 +2938,7 @@ function trMood(id, from, to, rs) { const w = W(id), rank = (ids, x) => ids.map(
 function modalBTrade(tr, m) {
   const rs = trRosters(m), sh = m ? m.order : SHOWS().map(x => x.id), all = bdAll(m ? m.both : signed().filter(w => w.both).map(w => w.id)), n = sh.length;
   const side = (k, id, give) => { const ws = rs[id].map(W).filter(Boolean).sort((x, y) => y.pop - x.pop);
-    return `<div class="card bd-side"><div class="tiny muted">${esc(brandName(id))} gives</div>
+    return `<div class="card bd-side bcol" style="${bVar(id)}"><div class="tiny muted">${esc(brandName(id))} gives</div>
       <div class="bd-pickd">${give.map(W).filter(Boolean).map(w => `<div>${av(w, 44)}<div class="small"><b>${esc(w.name)}</b></div><div class="tiny muted">Pop ${Math.round(w.pop)}</div></div>`).join('') || '<div class="tiny muted" style="padding:14px 0">Nobody yet</div>'}</div>
       <div class="bd-roster">${ws.map(w => `<button class="${give.includes(w.id) ? 'on' : ''}" data-act="trTog" data-id="${k}|${w.id}" aria-pressed="${give.includes(w.id)}">${esc(w.name)} <span class="tiny muted">${Math.round(w.pop)}</span></button>`).join('') || '<div class="tiny muted">Nobody on this brand yet.</div>'}</div></div>`; };
   const pickBrand = k => n > 2 ? `<div class="filters" style="margin-bottom:6px"><span class="tiny muted" style="align-self:center;white-space:nowrap">${k === 'a' ? 'From' : 'With'}</span>${sh.filter(id => id !== tr[k === 'a' ? 'b' : 'a']).map(id => `<button class="${tr[k] === id ? 'on' : ''}" data-act="trSide" data-id="${k}|${id}">${esc(brandName(id))}</button>`).join('')}</div>` : '';
@@ -6376,7 +6421,7 @@ function av(w, size, lazy) {
 function wTags(w) {
   const t = [`<span class="tag ${w.align}">${w.align === 'face' ? 'Face' : 'Heel'}</span>`];
   if (isNW(w)) t.push(roleTag(w));
-  if (splitOn() && w.contract) t.push(`<span class="tag">${ic(w.both ? 'layers' : 'tv')} ${esc(brandLabel(w))}</span>`);
+  if (splitOn() && w.contract) t.push(w.both ? `<span class="tag">${ic('layers')} ${esc(brandLabel(w))}</span>` : `<span class="tag btag" style="${bVar(brandOf(w))}">${bDot(brandOf(w))}${esc(brandLabel(w))}</span>`);
   for (const ti of titlesOf(w.id)) t.push(belt(ti.short));
   if (G.leader === w.id && w.contract) t.push('<span class="tag">👑 Leader</span>');
   if (w.creative >= G.week && w.contract) t.push('<span class="tag">💼 Creative control</span>');
@@ -6827,7 +6872,7 @@ function viewRoster() {
   const rd = revDir('roster');
   list.sort((a, b) => rd * (s === 'wins' ? b.record.w - a.record.w : s === 'winpct' ? winPct(b) - winPct(a) : s === 'streak' ? (b.streak || 0) - (a.streak || 0) : s === 'name' ? a.name.localeCompare(b.name) : s === 'contract' ? a.contract.weeks - b.contract.weeks : s === 'morale' ? a.morale - b.morale : s === 'fatigue' ? b.fatigue - a.fatigue : b[s] - a[s]));
   const divs = DIVISIONS.filter(d => signed().some(w => (w.division || 'Open') === d));
-  const filt = `<div class="filters">${[['all', 'All'], ['teams', 'Teams & factions'], ['face', 'Faces'], ['heel', 'Heels'], ['champs', 'Champions'], ['injured', 'Injured'], ['unhappy', 'Unhappy'], ...(splitOn() ? SHOWS().map(x => ['b:' + x.id, brandName(x.id)]) : []), ...(divs.length > 1 ? divs.map(d => [d, d]) : [])].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="rosterF" data-id="${k}">${l}</button>`).join('')}</div>`;
+  const filt = `<div class="filters">${[['all', 'All'], ['teams', 'Teams & factions'], ['face', 'Faces'], ['heel', 'Heels'], ['champs', 'Champions'], ['injured', 'Injured'], ['unhappy', 'Unhappy'], ...(splitOn() ? SHOWS().map(x => ['b:' + x.id, bDot(x.id) + esc(brandName(x.id))]) : []), ...(divs.length > 1 ? divs.map(d => [d, d]) : [])].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="rosterF" data-id="${k}">${l}</button>`).join('')}</div>`;
   return `
   ${tools}${tabs}
   <div class="row" style="margin-bottom:10px"><input type="search" placeholder="Search roster" aria-label="Search roster" value="${esc(UI.rosterQ)}" data-in="rosterQ" style="flex:1">
@@ -7071,6 +7116,7 @@ function renderModal() {
     case 'bdraft': return modalBDraft(m);
     case 'bothPick': return modalBothPick(m);
     case 'btrade': return modalBTrade(m.tr);
+    case 'bcol': return modalBCol(m.id);
     case 'live': return liveScreen(m);
     case 'trophies': return modalTrophies();
     case 'phone': return modalPhone();
@@ -8420,8 +8466,10 @@ const A = {
   bdMore() { UI.modal.more = true; render(); },
   bdPick(id, el, quiet) { const m = UI.modal, w = W(id); if (!w || bdTaken(m).has(id)) return; const on = bdTurn(m), all = bdAll(m.both), rank = bdPool(m).indexOf(w), grp = bdGroup(m, w);
     m.last = bdCall(m, on, w, grp, rank, all); m.picks[on].push(...grp.map(x => x.id)); m.hist.push({ t: 'pick', on, ids: grp.map(x => x.id) }); m.k++;
-    if (quiet) return; if (m.last.crowd === 'Big pop' || m.last.crowd === 'Huge heat') SFX.crowd(m.last.crowd === 'Big pop' ? 'cheer' : 'applause', .5, .2); render(); },
-  bdBoth(id) { const m = UI.modal; if (!W(id) || bdTaken(m).has(id)) return; m.both.push(id); m.hist.push({ t: 'both', ids: [id] }); m.last = null; render(); },
+    if (quiet) return; if (m.last.crowd === 'Big pop' || m.last.crowd === 'Huge heat') SFX.crowd(m.last.crowd === 'Big pop' ? 'cheer' : 'applause', .5, .2); render(); bdListTop(); },
+  bColOpen(id) { if (showById(id)) openModal({ type: 'bcol', id }); },
+  bCol(v) { const [id, c] = String(v).split('|'), x = showById(id); if (!x || !safeColor(c)) return; x.col = c; commit(); },
+  bdBoth(id) { const m = UI.modal; if (!W(id) || bdTaken(m).has(id)) return; m.both.push(id); m.hist.push({ t: 'both', ids: [id] }); m.last = null; render(); bdListTop(); },
   bdUndoPick() { const m = UI.modal, h = m.hist.pop(); if (!h) return;
     if (h.t === 'pick') { m.picks[h.on] = m.picks[h.on].filter(x => !h.ids.includes(x)); m.k--; }
     else if (h.t === 'trade') { const { a, b, ga, gb } = h.tr; m.picks[a] = m.picks[a].filter(x => !gb.includes(x)).concat(ga); m.picks[b] = m.picks[b].filter(x => !ga.includes(x)).concat(gb); }
@@ -9820,7 +9868,7 @@ function worldCo(r) {
   // a player's company keeps its show night, other weekly shows, by-month big events and signature matches
   if (r.day != null) c.day = clamp(+r.day || 0, 0, 6);
   if (r.months?.some(Boolean)) c.months = cleanMonths(r.months);
-  if (r.wkShows?.length) { c.wkShows = r.wkShows.map(x => ({ name: x.name, day: x.day })); c.split = !!r.split; }
+  if (r.wkShows?.length) { c.wkShows = r.wkShows.map(x => ({ name: x.name, day: x.day, ...(safeColor(x.col) ? { col: x.col } : {}) })); c.split = !!r.split; if (safeColor(r.scol)) c.scol = r.scol; }
   if (r.sigs?.length) c.sigs = r.sigs.map(x => ({ name: x.name, mt: x.mt || '', gm: x.gm || '' }));
   // tag teams, trios teams and factions travel as member ids from this company's roster
   const ids = new Set(c.roster.map(w => w.id)), grp = (a, n) => (Array.isArray(a) ? a : []).filter(g => g && g.members?.filter(id => ids.has(id)).length >= n);
@@ -9838,7 +9886,8 @@ function coAsRival(g) {
   const r = { id: uid(), name: g.promo.name, short: abbr(g.promo.name), color: g.promo.color, prestige: clamp(+g.promo.prestige || 40, 1, 100), fans: +g.fans || 20000, show: shs[0].name || g.promo.show, day: clamp(+shs[0].day || 0, 0, 6), roster: [], champId: null, last: 0, hist: [], custom: true, born: 1, money: MON() ? +g.money || 0 : (+g.fans || 20000) * 5, ppvs: (g.bigEvents || []).slice(0, 12) };
   if (r.ppvs.length) r.bigOne = g === G ? bigOne() : r.ppvs.includes(g.bigOne) ? g.bigOne : r.ppvs[r.ppvs.length - 1];
   if (monthMode(g.bigMonths, g.settings || G.settings)) r.months = cleanMonths(g.bigMonths);
-  r.wkShows = shs.slice(1, MAX_SHOWS).map(x => ({ name: x.name || 'Weekly Show', day: clamp(+x.day || 0, 0, 6) })); r.split = !!g.split;
+  r.wkShows = shs.slice(1, MAX_SHOWS).map(x => ({ name: x.name || 'Weekly Show', day: clamp(+x.day || 0, 0, 6), ...(safeColor(x.col) ? { col: x.col } : {}) })); r.split = !!g.split;
+  if (safeColor(shs[0].col)) r.scol = shs[0].col; // brand colours come along with the brands
   r.sigs = (g.ppvSig || []).filter(x => x && (x.mt || x.gm)).slice(0, 24).map(x => ({ name: x.name, mt: x.mt || '', gm: x.gm || '' }));
   const a = k => avg(ros.map(w => +w[k] || 0));
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
@@ -9900,7 +9949,8 @@ function cleanWorld(raw) {
     // show names and big event setup, so whoever takes this company over keeps them
     if (r.day != null) r.day = clamp(Math.floor(+r.day) || 0, 0, 6); else delete r.day;
     if (Array.isArray(r.months) && r.months.some(Boolean)) r.months = cleanMonths(r.months.map(x => maskRude(String(x || '')))); else delete r.months;
-    r.wkShows = (Array.isArray(r.wkShows) ? r.wkShows : []).slice(0, MAX_SHOWS - 1).map(x => ({ name: maskRude(ppvList(x?.name)[0] || ''), day: clamp(Math.floor(+x?.day) || 0, 0, 6) })).filter(x => x.name);
+    r.wkShows = (Array.isArray(r.wkShows) ? r.wkShows : []).slice(0, MAX_SHOWS - 1).map(x => ({ name: maskRude(ppvList(x?.name)[0] || ''), day: clamp(Math.floor(+x?.day) || 0, 0, 6), ...(safeColor(x?.col) ? { col: x.col } : {}) })).filter(x => x.name);
+    if (!safeColor(r.scol)) delete r.scol;
     if (!r.wkShows.length) { delete r.wkShows; delete r.split; } else r.split = !!r.split;
     r.sigs = (Array.isArray(r.sigs) ? r.sigs : []).slice(0, 24).map(x => ({ name: ppvList(x?.name)[0] || '', mt: cmName(x?.mt), gm: cmName(x?.gm) })).filter(x => x.name && (x.mt || x.gm));
     if (!r.sigs.length) delete r.sigs;
@@ -10396,7 +10446,7 @@ function wizTake(z, take) {
   if (take.day != null) z.day = clamp(+take.day || 0, 0, 6);
   const mo = !!take.months?.some(Boolean);
   z.mode = mo ? 'month' : 'weeks'; z.months = mo ? cleanMonths(take.months) : Array(12).fill(''); z.ppv = mo ? '' : (take.ppvs || []).join('\n');
-  z.extra = (take.wkShows || []).slice(0, MAX_SHOWS - 1).map(x => ({ name: x.name, day: clamp(+x.day || 0, 0, 6) })); z.split = !!take.split && z.extra.length > 0;
+  z.extra = (take.wkShows || []).slice(0, MAX_SHOWS - 1).map(x => ({ name: x.name, day: clamp(+x.day || 0, 0, 6), ...(safeColor(x.col) ? { col: x.col } : {}) })); z.split = !!take.split && z.extra.length > 0; z.showCol = safeColor(take.scol);
   z.sig = Object.fromEntries((take.sigs || []).map(x => [x.name, x.mt ? 'mt:' + x.mt : 'gm:' + x.gm]));
   z.step = 'budget';
 }
@@ -10530,7 +10580,7 @@ function scrubGame(raw) {
     if (!g.promo || typeof g.promo !== 'object' || Array.isArray(g.promo)) g.promo = { name: 'Promotion', show: 'Weekly Show', prestige: 40 };
     const fixFut = f => { const o = {}; if (f && typeof f === 'object') for (const k of Object.keys(f)) if (/^\d{1,6}$/.test(k)) o[k] = fixCard(f[k]); return o; };
     g.shows = (Array.isArray(g.shows) ? g.shows : []).filter(x => x && typeof x === 'object' && !Array.isArray(x) && x.id).slice(0, MAX_SHOWS)
-      .map(x => ({ id: x.id, name: String(x.name || 'Weekly Show').slice(0, 40), day: clamp(Math.floor(+x.day) || 0, 0, 6), ...(x.nextDay != null && Number.isFinite(+x.nextDay) ? { nextDay: clamp(Math.floor(+x.nextDay), 0, 6) } : {}), ran: +x.ran || 0, auto: !!x.auto, ...(x.card ? { card: fixCard(x.card) } : {}), ...(x.future ? { future: fixFut(x.future) } : {}), ...(x.wk != null ? { wk: +x.wk || 0 } : {}) }));
+      .map(x => ({ id: x.id, name: String(x.name || 'Weekly Show').slice(0, 40), day: clamp(Math.floor(+x.day) || 0, 0, 6), ...(x.nextDay != null && Number.isFinite(+x.nextDay) ? { nextDay: clamp(Math.floor(+x.nextDay), 0, 6) } : {}), ran: +x.ran || 0, auto: !!x.auto, ...(safeColor(x.col) ? { col: x.col } : {}), ...(x.card ? { card: fixCard(x.card) } : {}), ...(x.future ? { future: fixFut(x.future) } : {}), ...(x.wk != null ? { wk: +x.wk || 0 } : {}) }));
     if (!g.shows.length) delete g.shows;
     if (g.bigShow && typeof g.bigShow === 'object') { const b = g.bigShow; g.bigShow = { ran: +b.ran || 0, ...(b.card ? { card: fixCard(b.card) } : {}), ...(b.future ? { future: fixFut(b.future) } : {}), ...(b.wk != null ? { wk: +b.wk || 0 } : {}), name: String(b.name || 'Big Event').slice(0, 40), day: bigDayOf({ bigDay: b.day }) }; } else delete g.bigShow;
     g.split = !!g.split; if (g.ord != null) g.ord = +g.ord || 0;
@@ -12202,6 +12252,13 @@ function applyBrand(color) {
 }
 const abbr = name => (name || '').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w) && !/^(of|the|and|&)$/i.test(w)).map(w => w[0].toUpperCase()).join('').slice(0, 4) || 'PRO';
 
+// setup: a colour for each weekly show (i = -1 is the main show), the same picker as Office → Brands
+const wzCol = (z, i) => safeColor(i < 0 ? z.showCol : z.extra?.[i]?.col) || BRAND_DEF[(i + 1) % BRAND_DEF.length];
+function wzColRow(z, i) {
+  const cur = wzCol(z, i), mine = !BRAND.includes(cur), nm = i < 0 ? (z.show || 'your main show') : (z.extra[i].name || `weekly show ${i + 2}`);
+  return `<div class="swatches b-sws" role="group" aria-label="Color for ${esc(nm)}">${BRAND.map(c => `<button class="sw ${cur === c ? 'on' : ''}" style="background:${c}" data-act="wzCol" data-id="${i}|${c}" aria-pressed="${cur === c}" aria-label="${BCOL_NAMES[c] || c}"></button>`).join('')}
+    <label class="sw b-sw-own ${mine ? 'on' : ''}" style="background:${mine ? cur : 'conic-gradient(#ff5a5f, #ffb547, #2fbf71, #22b8cf, #4c8dff, #a463f2, #e84393, #ff5a5f)'}" title="Pick any color"><input type="color" data-wz="xCol" data-i="${i}" value="${cur}" aria-label="Any color for ${esc(nm)}"></label></div>`;
+}
 function wizStart(add, chain) {
   add = add === true && !!G;
   UI.wiz = { step: add ? 'company' : 'welcome', add, count: chain?.of || 1, nth: chain?.n || 1, name: '', show: '', day: add ? ((G.promo.day ?? 0) + 3) % 7 : 0, color: BRAND[add ? 3 : 0], budget: 'normal', money: add ? MON() : false, contracts: add ? CON() : false, persona: add ? PER() : true, challenge: add ? G.settings.difficulty : undefined, ppv: '', every: add ? G.settings.bigEvery : 4, mode: add ? G.settings.bigMode : 'weeks', months: Array(12).fill(''), extra: [], split: false, slot: [1, 2, 3].find(n => !slotInfo(n)) || meta.slot || 1, source: 'draft', titles: wizTitles() };
@@ -12345,8 +12402,9 @@ function wizFinish() {
   const names = new Set([G.promo.show]);
   for (const x of (z.extra || []).slice(0, MAX_SHOWS - 1)) {
     let n = String(x.name || '').trim().replace(/[<>`"]/g, '').slice(0, 40) || SHOW_WORDS.map(w => `${DAYS[x.day]} Night ${w}`).find(w => !names.has(w)) || `${DAYS[x.day]} Show`;
-    names.add(n); G.shows.push({ id: uid(), name: n, day: clamp(+x.day || 0, 0, 6), ran: 0, card: [], future: {}, wk: G.week });
+    names.add(n); G.shows.push({ id: uid(), name: n, day: clamp(+x.day || 0, 0, 6), ran: 0, card: [], future: {}, wk: G.week, ...(safeColor(x.col) ? { col: x.col } : {}) });
   }
+  if (safeColor(z.showCol)) SHOWS()[0].col = z.showCol;
   if (manyShows()) { G.split = !!z.split; if (!worldBrands() && G.split) brandDraft(); news(`📺 ${G.promo.name} runs ${SHOWS().length} weekly shows: ${SHOWS().map(x => x.name).join(', ')}.`, 'office'); }
   worldBrands();
   if (host) joinWorld(host);
@@ -12406,9 +12464,11 @@ function viewWizard() {
       <div class="chips" style="margin:-4px 0 12px">${['Thunder Valley Wrestling', 'Rustbelt Pro', 'Pacific Rumble', 'Midnight Mat Club'].map(n => `<button class="chip" data-act="wzSet" data-f="name" data-id="${esc(n)}">${esc(n)}</button>`).join('')}</div>
       <label class="f"><span>Weekly TV show</span><input type="text" data-wz="show" value="${esc(z.show)}" maxlength="40" placeholder="e.g. Monday Mayhem"></label>
       <label class="f"><span>Show night</span><div class="seg-ctl">${DAYS.map((d, i) => `<button class="${z.day === i ? 'on' : ''}" data-act="wzSet" data-f="day" data-id="${i}">${d.slice(0, 3)}</button>`).join('')}</div></label>
+      ${(z.extra || []).length ? `<label class="f"><span>Show color</span>${wzColRow(z, -1)}</label>` : ''}
       ${(z.extra || []).map((x, i) => `<div class="card" style="margin:0 0 10px;padding:10px 12px"><div class="row" style="margin-bottom:6px"><b class="sp small">Weekly show ${i + 2}</b><button class="btn sm" data-act="wzDelShow" data-id="${i}" aria-label="Remove this show">✕</button></div>
         <input type="text" data-wz="xName" data-i="${i}" value="${esc(x.name)}" maxlength="40" aria-label="Show name" placeholder="e.g. Friday Fallout" style="margin-bottom:8px">
-        <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === x.day ? 'on' : ''}" data-act="wzXDay" data-id="${i}:${k}">${d.slice(0, 3)}</button>`).join('')}</div></div>`).join('')}
+        <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === x.day ? 'on' : ''}" data-act="wzXDay" data-id="${i}:${k}">${d.slice(0, 3)}</button>`).join('')}</div>
+        <div class="tiny muted" style="margin:8px 0 4px">Show color</div>${wzColRow(z, i)}</div>`).join('')}
       ${(z.extra || []).length < MAX_SHOWS - 1 ? `<button class="btn block" style="margin:-2px 0 12px" data-act="wzAddShow">＋ Add another weekly show</button>` : ''}
       ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} ${z.split ? 'Every brand gets a full A show: its own crowd, TV deal and costs.' : 'Extra shows are B shows: smaller crowds, half a TV deal and their own costs.'} Each one adds 8 picks to your roster.</div>` : ''}
       <label class="f"><span>Company color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
@@ -12598,6 +12658,7 @@ const WIZ_ACTIONS = {
   wzCancel() { UI.wiz = null; render(); pageTop(); },
   wzGo(step) { UI.wiz.step = step; render(); pageTop(); },
   wzRule(k) { const z = UI.wiz; if ((k === 'money' || k === 'contracts') && !z.deep) return; z[k] = !z[k]; if (k === 'deep') { z.money = z.contracts = !!z.deep; } render(); },
+  wzCol(v) { const [i, c] = String(v).split('|'), z = UI.wiz, n = +i; if (!z || !safeColor(c)) return; if (n < 0) z.showCol = c; else if (z.extra?.[n]) z.extra[n].col = c; render(); },
   wzXDay(v) { const [i, k] = String(v).split(':').map(Number), x = UI.wiz.extra?.[i]; if (x) { x.day = clamp(k || 0, 0, 6); render(); } },
   wzAddShow() { const z = UI.wiz; z.extra ||= []; if (z.extra.length >= MAX_SHOWS - 1) return; const used = new Set([z.day, ...z.extra.map(x => x.day)]); const day = [4, 3, 2, 5, 1, 6].map(k => (z.day + k) % 7).find(d => !used.has(d)) ?? (z.day + 4) % 7; z.extra.push({ name: '', day }); render(); },
   wzDelShow(i) { const z = UI.wiz; z.extra = (z.extra || []).filter((_, k) => k !== +i); if (!z.extra.length) z.split = false; render(); },
@@ -12757,6 +12818,7 @@ document.addEventListener('change', e => {
     else if (k === 'sort') { z.sort = el.value; render(); }
     else if (k === 'champ') { const t = z.titles[+el.dataset.k]; if (!t) return; const arr = t.holder.slice(); arr[+el.dataset.i] = el.value || undefined; t.holder = arr.filter(Boolean); const ti = wzTopIx(z); if (z.story && +el.dataset.k === ti && t.holder[0]) z.story.b = t.holder[0]; render(); }
     else if (k === 'storyOn') z.story.on = el.checked;
+    else if (k === 'xCol') { const c = safeColor(el.value.toLowerCase()), n = +el.dataset.i; if (c) { if (n < 0) z.showCol = c; else if (z.extra?.[n]) z.extra[n].col = c; render(); } }
     else if (k === 'xDay') { const x = z.extra?.[+el.dataset.i]; if (x) x.day = clamp(+el.value || 0, 0, 6); }
     else if (k === 'xSplit') { z.split = el.checked; render(); }
     else if (k === 'ppv') render();
@@ -12792,6 +12854,7 @@ document.addEventListener('change', e => {
     else if (k === 'pickSort') { UI.pickSort = el.value; try { localStorage.setItem('bookit-pickSort', el.value); } catch (e) { } render(); }
     else if (k === 'faSort') { UI.faSort = el.value; try { localStorage.setItem('bookit-faSort', el.value); } catch (e) { } render(); }
     else if (k === 'shDay') { const x = showById(el.dataset.id); if (x) { const nm = x.id === G.showId ? G.promo.show : x.name; commit(setNight(x, el.value) === 'later' ? `${nm} moves to ${DAYS[x.nextDay]}s from next week. That night has already gone by this week.` : undefined); } }
+    else if (k === 'bColOwn') { const x = showById(el.dataset.id), c = safeColor(el.value.toLowerCase()); if (x && c) { x.col = c; commit(); } }
     else if (k === 'shAuto') { const x = showById(el.dataset.id); if (x) { if (el.checked && weekUnits().filter(u => !u.auto).length <= 1) { el.checked = false; return toast('Keep at least one show to book yourself.'); } x.auto = el.checked; commit(el.checked ? `${x.id === G.showId ? G.promo.show : x.name} will book itself.` : ''); } }
     else if (k === 'split') { G.split = el.checked; if (G.split && !signed().some(w => showById(w.brand) && w.brand !== mainShowId())) brandDraft(); commit(G.split ? 'Brand split on. Each show has its own roster.' : 'Brand split off. Everyone works every show.'); }
     else if (k === 'tBrand') { const t = G.titles.find(x => x.id === el.dataset.id); if (t) { t.brand = showById(el.value) ? el.value : ''; commit(); } }
@@ -13017,7 +13080,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.54';
+const VERSION = '1.9.55';
 const WHATS_NEW = [
   ['🔎 Search the draft war room', 'The brand draft roster now has a search box and more ways to sort: best for the brand, popularity, overall, momentum, in-ring, mic, charisma, youngest, salary and name, with the reverse button. Filter by men or women, faces or heels, and stack filters for stars, champions, teams and factions, wrestlers in a story or ones that fill a need. Show all lifts the 40-wrestler limit.'],
   ['📷 Imported photos are shared', 'Photos you add with the mass photo import (Roster tools → Photos) now travel with everything you share: worlds, rosters, single wrestlers, share codes and shared saves. Before, they stayed on your device. Share again to include them.'],
