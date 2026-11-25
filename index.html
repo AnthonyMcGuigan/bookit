@@ -6636,7 +6636,7 @@ function viewStart() {
   const st = COMM.status, saves = COMM.items.filter(i => i.kind === 'world' && !isHidden(i)).sort((a, b) => popScore(b) - popScore(a) || b.created - a.created).slice(0, 8);
   const shelf = st === 'off' || st === 'error'
     ? `<div class="hs-off"><div class="small"><b>${hosted() ? 'Community worlds are loading or offline.' : 'Community worlds aren\'t in this version.'}</b> Got a save someone shared with you? Paste it in.</div><button class="btn sm" data-act="import">Paste a save</button></div>`
-    : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared worlds yet. Be the first: build your world, then share it from Office → Rivals.</div></div>`
+    : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared worlds yet. Be the first: build your world, then share it from Office → Companies.</div></div>`
     : `<div class="hs-shelf">${saves.length ? saves.map(i => { const u = i.sum || {}, key = esc(i.author + '|' + i.id), champs = Array.isArray(u.champs) ? u.champs.length : 0;
         return `<button class="hs-card ${i.author === 'featured' ? 'feat' : ''}" data-act="cOpen" data-id="${key}">
           <span class="hs-by">${i.author === 'featured' ? '⭐ Featured' : 'by ' + esc(authorName(i.author))}</span>
@@ -7056,7 +7056,7 @@ function viewOffice() {
   const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop);
   return `
-  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Indie Stars${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Indie Stars${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Companies</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
   ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'brands' ? brandsView() : ''}
   ${t === 'teams' ? teamsView() : ''}
@@ -7300,7 +7300,7 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>💰 Money: payroll, tickets and TV deals${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
     <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>📝 Contracts: deals run out and wrestlers can leave${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
     <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>💬 Personalities: texts, demands and memory</span></label>
-    <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Rivals.</span></span></label>
+    <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Companies.</span></span></label>
     ${MON() && SANDBOX() ? `<div class="card" style="margin:4px 0 10px;padding:10px 12px"><label class="f" style="margin:0"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label><div class="tiny" style="color:var(--warn);margin-top:6px">⚠️ Changing your bank balance can throw off the game's balance. Money stops being a challenge.</div></div>` : ''}
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
@@ -7462,7 +7462,7 @@ function helpHTML() {
   <h3>Storylines</h3>
   <p>Start one yourself, or let them grow from your booking: rematches after a title change, revenge for a broken streak, betrayals, great matches and repeat clashes. Put both sides together to build heat. A classic feud runs about 3 months across big events. It only ends when you blow it off, and your producer tells you when to extend it or end it early.</p>
   <h3>Rival promotions</h3>
-  <p>Office → <b>Rivals</b>. Rivals run weekly shows, sign indie stars and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away.</p>
+  <p>Office → <b>Companies</b>. Rival companies run weekly shows, sign indie stars and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away.</p>
   <h3>Teams and tournaments</h3>
   <p>Office → <b>Teams</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
@@ -12546,7 +12546,7 @@ function viewWizard() {
       ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="list" style="margin-bottom:14px">${[['deep', '🧠 Deep sim', 'See every skill (psychology, selling, consistency, safety and more) and each wrestler\'s potential. Also turns on money and contracts, which you can then switch off. Off: the simple six stats, with no money or contracts.'], ['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.'], ['sandbox', '🛠️ Sandbox', 'Build the whole world: edit every company, title and roster, and move anyone anywhere. Share it when it\'s ready. Switch it on or off any time.']].map(([k, l, d]) => { const lock = (k === 'money' || k === 'contracts') && !z.deep; return `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}" ${lock ? 'disabled aria-disabled="true" style="opacity:.5"' : ''}><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}${lock ? ' Turn on Deep sim to use this.' : ''}</div></div></button>`; }).join('')}</div>
       ${z.world ? '' : `<div class="sec">Rival companies</div>
       <div class="seg-ctl" style="margin-bottom:6px">${[2, 3, 4, 5, 6].map(n => `<button class="${(z.rivN || 4) === n ? 'on' : ''}" data-act="wzSet" data-f="rivN" data-id="${n}">${n}</button>`).join('')}</div>
-      <p class="muted tiny" style="margin:0 0 14px">How many AI companies share your world at the start. More open and close over time. Edit any of them in Office → Rivals.</p>`}
+      <p class="muted tiny" style="margin:0 0 14px">How many AI companies share your world at the start. More open and close over time. Edit any of them in Office → Companies.</p>`}
       <div class="sec">Challenge</div>
       <div class="seg-ctl" style="margin-bottom:6px">${CHALLENGES.map(([k, l]) => `<button class="${(z.challenge || 'normal') === k ? 'on' : ''}" data-act="wzSet" data-f="challenge" data-id="${k}">${l}</button>`).join('')}</div>
       <p class="muted tiny" style="margin:0 0 14px">${CHALLENGES.find(c => c[0] === (z.challenge || 'normal'))[2]} You can change it later in Menu → Settings.</p>`}
@@ -12937,7 +12937,7 @@ document.addEventListener('change', e => {
     else if (k === 'finances') { if (!G.settings.deep) return render(); G.settings.finances = el.checked; commit(); }
     else if (k === 'cNotes') { UI.modal.notes = el.checked; }
     else if (k === 'cMine') { UI.modal.mine = el.checked; render(); }
-    else if (k === 'sandbox') { G.settings.sandbox = el.checked; commit(el.checked ? 'Sandbox on. Build your world in Office → Rivals.' : 'Sandbox off.'); }
+    else if (k === 'sandbox') { G.settings.sandbox = el.checked; commit(el.checked ? 'Sandbox on. Build your world in Office → Companies.' : 'Sandbox off.'); }
     else if (k === 'contracts') {
       if (!G.settings.deep) return render();
       G.settings.contracts = el.checked;
@@ -13138,8 +13138,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.57';
+const VERSION = '1.9.58';
 const WHATS_NEW = [
+  ['🏢 Companies tab', 'The Rivals tab in the Office is now called Companies. It still shows every company in your world, their rosters and fans, and is where you create, edit or share them.'],
   ['⭐ Indie Stars', 'Unsigned wrestlers are now called indie stars, so they no longer get mixed up with the Free agent tag for wrestlers who work every brand. The Free agents tab in the Office is now Indie Stars, and the news, contract talks, imports and help say indie star too.'],
   ['🔎 Search the draft war room', 'The brand draft roster now has a search box and more ways to sort: best for the brand, popularity, overall, momentum, in-ring, mic, charisma, youngest, salary and name, with the reverse button. Filter by men or women, faces or heels, and stack filters for stars, champions, teams and factions, wrestlers in a story or ones that fill a need. Show all lifts the 40-wrestler limit.'],
   ['📷 Imported photos are shared', 'Photos you add with the mass photo import (Roster tools → Photos) now travel with everything you share: worlds, rosters, single wrestlers, share codes and shared saves. Before, they stayed on your device. Share again to include them.'],
@@ -13165,7 +13166,7 @@ const WHATS_NEW = [
   ['🏆 Better belts and belt photos', 'Every belt is redrawn in raised relief, with a bevelled rim, rivets, a curved top line and a ribbon nameplate, and text that always fits. Make any belt Ornate, try the new Oval plate, or upload a photo of a belt (pixel art or the real photo, like wrestler photos). Belts now show on title matches during the live show and on each champion\'s card.'],
   ['📚 Wrestler library', 'Keep Community wrestlers in your own library, no save needed. Tap 📚 on any wrestler or roster in Community, then add them to any save, now or later, from Community → Library or Roster tools.'],
   ['🏆 Design your championships', 'New companies get a Championships step: name your titles, crown champions and design every belt. The belt designer lets you pick the plate shape, metal and trim, strap colour and style, side plates, gems, the centre piece, engraving and lettering, or start from a template. Each title also has a level, a division and rules, like a defense deadline or the belt changing hands on a DQ. Edit any title in Office → Titles.'],
-  ['🌍 A living world', 'Rival companies book their own shows, sign free agents, grow, shrink and can close, and new ones open. Edit any of them in Office → Rivals, build a whole world with Sandbox, and share worlds in Community.'],
+  ['🌍 A living world', 'Rival companies book their own shows, sign free agents, grow, shrink and can close, and new ones open. Edit any of them in Office → Companies, build a whole world with Sandbox, and share worlds in Community.'],
   ['📈 Smarter ratings and rankings', 'Matches rate on more than raw stats, rankings follow wins and form, and Auto-fill builds better cards.'],
   ['🏅 Booker and company levels', 'Your booker level follows you into every save and unlocks Community symbols and flairs. Each company levels up too, for cash bonuses, sponsors, perks and bigger event cards.'],
   ['📱 Personalities', 'Wrestlers can text you, make demands and remember how you treat them. Switch it on or off in Menu → Settings.'],
@@ -13174,7 +13175,7 @@ const WHATS_NEW = [
   ['🧠 Deep sim', 'Menu → Settings → Deep sim shows every wrestler\'s psychology, selling, consistency, safety, technical, brawling and aerial skills, plus their potential.'],
   ['✏️ Short names', 'Give anyone a short name (Moxley instead of Jon) in their Edit screen. It is used wherever only one name fits.'],
   ['📣 Media appearances', 'Office → Media: send wrestlers on talk shows, podcasts and fan signings for a popularity boost (with a small chance of a slip-up), or away on movies, media tours and indie runs to come back much bigger. Big offers come as backstage events, and some wrestlers will ask.'],
-  ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Rivals), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
+  ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Companies), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
   ['🎤 Plan your promos', 'Pick what a promo is about and its tone: fiery, calm, funny, cheap heat or from the heart. The speaker\'s mic skill decides if it lands or falls flat.'],
   ['💼 Backstage politics', 'New backstage moments: stars who refuse to lose, creative control, a locker room leader, cliques and no-shows.'],
   ['🌐 Cloud saves', 'Menu → Cloud saves keeps up to 3 games online (6 for BookIt Supporters). Add your email to load them on another device, and turn on auto backup.'],
