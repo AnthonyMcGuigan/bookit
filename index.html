@@ -2707,7 +2707,7 @@ function coBar() {
     <div class="row wrap" style="gap:6px"><button class="btn sm pri" data-act="goNextUp">Go to ${esc(nu.name)}</button><button class="btn sm" data-act="coAuto">Auto-book the rest</button></div></div>`;
   else if (me && nu && nu !== me && UI.selWeek === G.week) msg = `<div class="alert co-wait"><span class="ic">🔔</span><div class="sp small"><b>${esc(unitLabel(nu))} goes on first.</b> Shows run in night order so every calendar stays in step. You can book this one now and run it after.</div>
     <div class="row wrap" style="gap:6px"><button class="btn sm pri" data-act="goNextUp">Go to ${esc(nu.name)}</button></div></div>`;
-  return `<div class="wk-strip"><div class="wk-h"><span class="sp">Week ${G.week} · shows run in night order</span><button class="link small" data-act="shows">Shows</button>${multi() ? '<button class="link small" data-act="cos">Companies</button>' : ''}</div><div class="co-chips">${chips}</div></div>${msg}`;
+  return `<div class="wk-strip"><div class="wk-h"><span class="sp">Week ${G.week} · shows run in night order</span><button class="link small" data-act="shows">Shows</button>${multi() ? '<button class="link small" data-act="cos">Your companies</button>' : ''}</div><div class="co-chips">${chips}</div></div>${msg}`;
 }
 // ---------- weekly shows and brands ----------
 const SHOW_WORDS = ['Clash', 'Rumble', 'Riot', 'Showdown', 'Uprising', 'Collision', 'Rampage', 'Fury'];
@@ -3036,7 +3036,7 @@ function modalCos() {
   const body = `<p class="small muted" style="margin-top:0">${multi() ? 'Your companies share one world: the same indie stars, rival promotions and calendar. Every show runs in night order, Monday to Sunday, and you take turns: when one show is done, the game moves you to the next. Shows on the same night fight for viewers. Set a show to auto-book in Weekly shows if you only want to run some yourself.' : 'Run more than one company in this same world. They share indie stars and rival promotions, can steal each other\'s stars, and shows on the same night fight for viewers.'}</p>
     <div class="list">${all.map(row).join('')}</div>
     ${doneThisWeek() && waitingCos().length ? '<button class="btn block" style="margin-top:10px" data-act="coAuto">Auto-book and run the rest of this week</button>' : ''}
-    ${all.length < MAX_COS ? '<button class="btn block pri" style="margin-top:10px" data-act="coAdd">＋ Start another company in this world</button>' : `<div class="tiny muted" style="margin-top:8px">A world can have up to ${MAX_COS} companies.</div>`}
+    ${all.length < MAX_COS ? `<button class="btn block pri" style="margin-top:10px" data-act="coAdd">＋ Start another company in this world</button>${SANDBOX() && (G.rivalPromos || []).length ? '<button class="btn block" style="margin-top:8px" data-act="takePick">🔁 Take over a rival company</button>' : ''}` : `<div class="tiny muted" style="margin-top:8px">A world can have up to ${MAX_COS} companies.</div>`}
     ${raids}`;
   return modal('Your companies', body);
 }
@@ -4326,8 +4326,9 @@ function fromRival(w, r, contract) {
 // invaders go home when their 8 weeks are up
 function endLoans() {
   for (const w of signed().filter(w => w.loan && G.week >= (w.loanUntil || 0))) {
-    const r = RV(w.loan); leaveCompany(w, 'the invasion is over'); delete w.loan; delete w.loanUntil;
+    const r = RV(w.loan), lid = w.loan; leaveCompany(w, 'the invasion is over'); delete w.loan; delete w.loanUntil;
     if (r) { G.wrestlers = G.wrestlers.filter(x => x !== w); r.roster.push(rivWrestler(w, r)); setRivalChamp(r); news(`🚪 ${w.name} went back to ${r.name}.`, 'contract'); }
+    else { const c = (G.cos || []).find(x => x.fromRival === lid); if (c) { G.wrestlers = G.wrestlers.filter(x => x !== w); w.contract = { salary: CON() ? Math.max(500, asking(w)) : 0, weeks: 52 }; w.joined = G.week; (c.roster ||= []).push(w); news(`🚪 ${w.name} went back to ${c.promo.name}.`, 'contract'); } }
   }
 }
 // one match on an AI company's card. Pushed stars and champions are protected, hot feuds draw better.
@@ -6636,7 +6637,7 @@ function viewStart() {
   const st = COMM.status, saves = COMM.items.filter(i => i.kind === 'world' && !isHidden(i)).sort((a, b) => popScore(b) - popScore(a) || b.created - a.created).slice(0, 8);
   const shelf = st === 'off' || st === 'error'
     ? `<div class="hs-off"><div class="small"><b>${hosted() ? 'Community worlds are loading or offline.' : 'Community worlds aren\'t in this version.'}</b> Got a save someone shared with you? Paste it in.</div><button class="btn sm" data-act="import">Paste a save</button></div>`
-    : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared worlds yet. Be the first: build your world, then share it from Office → Rivals.</div></div>`
+    : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared worlds yet. Be the first: build your world, then share it from Office → Companies.</div></div>`
     : `<div class="hs-shelf">${saves.length ? saves.map(i => { const u = i.sum || {}, key = esc(i.author + '|' + i.id), champs = Array.isArray(u.champs) ? u.champs.length : 0;
         return `<button class="hs-card ${i.author === 'featured' ? 'feat' : ''}" data-act="cOpen" data-id="${key}">
           <span class="hs-by">${i.author === 'featured' ? '⭐ Featured' : 'by ' + esc(authorName(i.author))}</span>
@@ -6960,7 +6961,7 @@ function rivalsView() {
   const me = { name: G.promo.name, fans: G.fans, r: last?.rating || 0, tier: tierOf({ fans: G.fans }), me: 1 };
   const all = [me, ...rs.map(r => ({ name: r.name, fans: r.fans, r: r.last, tier: tierOf(r), id: r.id }))].sort((a, b) => b.fans - a.fans);
   const wl = (G.wlog || []).slice(0, 5);
-  return `${SANDBOX() ? `<div class="alert good" style="margin-bottom:10px"><span class="ic">🛠️</span><div class="small"><b>Sandbox is on.</b> Edit any company, its titles and roster, build wrestlers and move anyone anywhere. Then share the world: players who start in it play normally. Switch it off in Menu → Settings.</div></div>` : ''}<div class="card" style="margin-bottom:10px"><div class="sec" style="margin-top:0">🌍 The wrestling world</div>
+  return `${SANDBOX() ? `<div class="alert good" style="margin-bottom:10px"><span class="ic">🛠️</span><div class="small"><b>Sandbox is on.</b> Edit any company, its titles and roster, build wrestlers and move anyone anywhere. Open a company and tap <b>Take over</b> to run it yourself. Then share the world: players who start in it play normally. Switch it off in Menu → Settings.</div></div>` : ''}<div class="card" style="margin-bottom:10px"><div class="sec" style="margin-top:0">🌍 The wrestling world</div>
     <div class="row tiny muted" style="padding-bottom:4px"><span class="sp">Company</span><span style="width:64px;text-align:right">Fans</span><span style="width:44px;text-align:right">Show</span></div>
     ${all.map((x, i) => `<div class="row small" style="padding:3px 0"><span class="sp clip">${i + 1}. ${x.me ? `<b>${esc(x.name)} (you)</b>` : esc(x.name)} <span class="tag">${x.tier}</span></span><span style="width:64px;text-align:right">${kfmt(x.fans)}</span><b style="width:44px;text-align:right">${x.r || '–'}</b></div>`).join('')}
     ${wl.length ? `<div class="sec">Around the world</div>${wl.map(x => `<div class="small" style="padding:3px 0">${esc(x.t)} <span class="tiny muted">wk ${x.wk}</span></div>`).join('')}<div class="grid2" style="margin-top:8px"><button class="btn sm" data-act="worldNews">All world news</button><button class="btn sm" data-act="notesTab" data-id="dirt">🗞️ Dirt sheet</button></div>` : ''}</div>
@@ -6981,6 +6982,7 @@ function modalRival(m) {
       ${MON() ? `<div class="row small"><span class="sp muted">Payroll</span><b>${money(payrollR(r))}/wk</b></div>` : ''}
       <div class="row small"><span class="sp muted">Next big show</span><b>${esc(ppvName(r, nb))} · week ${nb}</b></div>
       ${needs.length ? `<div class="row small"><span class="sp muted">Looking for</span><b style="text-align:right">${needs.slice(0, 3).map(n => esc(n.l)).join(', ')}</b></div>` : ''}</div>
+    ${SANDBOX() ? `<div class="card" style="margin-bottom:10px"><div class="row" style="gap:10px"><div class="sp small"><b>🔁 Run ${esc(r.name)} yourself</b><div class="tiny muted">${(G.cos || []).length + 1 < MAX_COS ? 'It becomes one of your companies, with its roster, titles, teams and history.' : `You already run ${MAX_COS} companies, the most a world can have.`}</div></div><button class="btn sm pri" data-act="takeRival" data-id="${r.id}" ${(G.cos || []).length + 1 < MAX_COS ? '' : 'disabled'}>Take over</button></div></div>` : ''}
     ${r.hist?.length ? `<div class="small" style="margin-bottom:6px">Recent shows: ${r.hist.slice(-6).map(x => `<b>${x}</b>`).join(' · ')}</div>` : ''}
     ${r.counter && r.counter >= G.week ? `<div class="alert warn"><span class="ic">📺</span><div class="small">Loaded show against <b>${esc(bigName(r.counter))}</b> in week ${r.counter}. Beat them that night or lose twice the fans.</div></div>` : ''}
     <div class="sec">Championships</div><div class="card" style="padding:4px 12px">${r.titles.map((t, i) => { const hs = rHolders(r, t), h = hs.length ? { name: hs.map(x => x.name).join(' & ') } : null, past = [...(t.past || []), ...t.reigns.slice(0, h ? -1 : undefined).map(x => x.nm)].slice(-3).reverse().map(esc); return `<div class="small" style="padding:6px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><div class="row"><span class="sp">🏆 ${esc(t.name)}</span><b>${h ? esc(h.name) : 'Vacant'}</b></div>${h ? `<div class="tiny muted">${lenLabel(Math.max(1, G.week - (t.since || G.week)))} · ${t.d || 0} defense${t.d === 1 ? '' : 's'}${past.length ? ' · before: ' + past.join(', ') : ''}</div>` : ''}</div>`; }).join('')}</div>
@@ -7056,7 +7058,7 @@ function viewOffice() {
   const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop);
   return `
-  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Indie Stars${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Rivals</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Indie Stars${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Companies</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
   ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'brands' ? brandsView() : ''}
   ${t === 'teams' ? teamsView() : ''}
@@ -7300,7 +7302,7 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>💰 Money: payroll, tickets and TV deals${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
     <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>📝 Contracts: deals run out and wrestlers can leave${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
     <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>💬 Personalities: texts, demands and memory</span></label>
-    <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Rivals.</span></span></label>
+    <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Companies.</span></span></label>
     ${MON() && SANDBOX() ? `<div class="card" style="margin:4px 0 10px;padding:10px 12px"><label class="f" style="margin:0"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label><div class="tiny" style="color:var(--warn);margin-top:6px">⚠️ Changing your bank balance can throw off the game's balance. Money stops being a challenge.</div></div>` : ''}
     <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
@@ -7462,7 +7464,7 @@ function helpHTML() {
   <h3>Storylines</h3>
   <p>Start one yourself, or let them grow from your booking: rematches after a title change, revenge for a broken streak, betrayals, great matches and repeat clashes. Put both sides together to build heat. A classic feud runs about 3 months across big events. It only ends when you blow it off, and your producer tells you when to extend it or end it early.</p>
   <h3>Rival promotions</h3>
-  <p>Office → <b>Rivals</b>. Rivals run weekly shows, sign indie stars and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away.</p>
+  <p>Office → <b>Companies</b>. Rival companies run weekly shows, sign indie stars and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away. With Sandbox on, open a company and tap <b>Take over</b> to run it yourself as one of your companies.</p>
   <h3>Teams and tournaments</h3>
   <p>Office → <b>Teams</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
@@ -7749,7 +7751,7 @@ function modalWrestler(m) {
      ${ranks.length ? `<div class="small" style="margin-top:6px">${ranks.map(([t, i]) => `🏆 <b>#${i + 1}</b> contender for the ${esc(t.short)} title`).join('<br>')}</div>` : ''}${shotsOf(w.id).length ? `<div class="small" style="margin-top:6px">${shotsOf(w.id).map(x => esc(shotLine(x))).join('<br>')}</div>` : ''}`; })()}
    ${(() => { const fcs = factionsOfW(w.id); return fcs.length ? `<div class="sec">Faction</div><div class="list">${fcs.map(f => `<button class="item" data-act="editFaction" data-id="${f.id}"><div class="main"><div class="t">👑 ${esc(f.name)}${f.leader === w.id ? ' <span class="tag gold">Leader</span>' : ''}</div><div class="d">${f.members.length} members · ${teamRec(f)}</div></div></button>`).join('')}</div>` : ''; })()}
    ${(() => { const rs = reignsOfW(w.id), tms = (G.teams || []).filter(t => t.members.includes(w.id));
-     return (rs.length ? `<div class="sec">Title reigns (${rs.length})</div><div class="card" style="padding:4px 12px">${rs.map(({ t, r }) => `<div class="news"><span class="sp">🏆 <b>${esc(t.name)}</b>${r.to ? '' : ' <span class="tag gold">Now</span>'}<br><span class="tiny muted">Week ${r.from}${r.to ? '–' + r.to : ' to now'} · ${reignLen(r)} wk · ${reignDef(t, r)} defenses</span></span></div>`).join('')}</div>` : '')
+     return (rs.length ? `<div class="sec">Title reigns (${rs.length})</div><div class="card" style="padding:4px 12px">${rs.map(({ t, r }) => `<div class="news"><span class="sp">🏆 <b>${esc(t.name)}</b>${r.to ? '' : ' <span class="tag gold">Now</span>'}<br><span class="tiny muted">${r.old ? 'Before the takeover' : `Week ${r.from}${r.to ? '–' + r.to : ' to now'} · ${reignLen(r)} wk · ${reignDef(t, r)} defenses`}</span></span></div>`).join('')}</div>` : '')
        + (tms.length ? `<div class="sec">Teams</div><div class="list">${tms.map(t => `<button class="item" data-act="editTeam" data-id="${t.id}"><div class="main"><div class="t">👥 ${esc(t.name)}</div><div class="d">${t.members.filter(x => x !== w.id).map(x => esc(nameOf(x))).join(' & ')} · ${teamRec(t)}</div></div></button>`).join('')}</div>` : ''); })()}
    ${sts.length ? `<div class="sec">Storylines</div><div class="list">${sts.map(s => `<button class="item" data-act="openStory" data-id="${s.id}"><div class="main"><div class="t">${esc(s.title)}</div>${heatBar(s.heat)}</div></button>`).join('')}</div>` : ''}
    ${recent.length ? `<div class="sec">Recent appearances</div><div class="card" style="padding:4px 14px">${recent.map(x => `<div class="news"><span class="wk">WK ${x.wk}</span><span class="sp">${esc(x.r.text)}</span><span class="stars tiny">${starStr(x.r.rating)}</span></div>`).join('')}</div>` : ''}
@@ -7896,12 +7898,12 @@ function modalRecap(m) {
 }
 function lineage(t) {
   const rs = ensureReigns(t); if (!rs.length) return '<div class="sec">Title history</div><div class="tiny muted">Nobody has held this title yet.</div>';
-  const long = rs.reduce((a, r) => reignLen(r) > reignLen(a) ? r : a, rs[0]);
+  const real = rs.filter(r => !r.old), long = real.reduce((a, r) => reignLen(r) > reignLen(a) ? r : a, real[0]);
   const cnt = {}; rs.forEach(r => { const k = r.nm; cnt[k] = (cnt[k] || 0) + 1; });
   const most = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
   return `<div class="sec">Title history (${rs.length} reign${rs.length > 1 ? 's' : ''})</div>
-    <div class="tiny muted" style="margin-bottom:6px">Longest: <b>${esc(long.nm)}</b>, ${reignLen(long)} wk${most[1] > 1 ? ` · Most reigns: <b>${esc(most[0])}</b> (${most[1]})` : ''}</div>
-    <div class="card lineage" style="padding:4px 12px">${rs.map((r, i) => [r, i]).reverse().map(([r, i]) => `<div class="news"><span class="wk">#${i + 1}</span><span class="sp"><b>${esc(r.nm)}</b>${r.to ? '' : ' <span class="tag gold">Champion</span>'}<br><span class="tiny muted">Week ${r.from}${r.to ? '–' + r.to : ' to now'} · ${reignLen(r)} wk · ${reignDef(t, r)} defense${reignDef(t, r) === 1 ? '' : 's'}</span></span></div>`).join('')}</div>`;
+    ${long || most[1] > 1 ? `<div class="tiny muted" style="margin-bottom:6px">${long ? `Longest: <b>${esc(long.nm)}</b>, ${reignLen(long)} wk` : ''}${most[1] > 1 ? `${long ? ' · ' : ''}Most reigns: <b>${esc(most[0])}</b> (${most[1]})` : ''}</div>` : ''}
+    <div class="card lineage" style="padding:4px 12px">${rs.map((r, i) => [r, i]).reverse().map(([r, i]) => `<div class="news"><span class="wk">#${i + 1}</span><span class="sp"><b>${esc(r.nm)}</b>${r.to ? '' : ' <span class="tag gold">Champion</span>'}<br><span class="tiny muted">${r.old ? 'Before the takeover' : `Week ${r.from}${r.to ? '–' + r.to : ' to now'} · ${reignLen(r)} wk · ${reignDef(t, r)} defense${reignDef(t, r) === 1 ? '' : 's'}`}</span></span></div>`).join('')}</div>`;
 }
 
 // ----- rankings, history, teams, tournaments -----
@@ -8175,6 +8177,8 @@ const A = {
   help() { openModal({ type: 'help' }); },
   closeModal,
   openRival(id) { openModal({ type: 'rival', id }); },
+  takeRival(id) { takeRivalStart(id); },
+  takePick() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'rivals'; render(); pageTop(); },
   newRival() { openModal({ type: 'editRival', isNew: true, draft: { name: '', short: '', show: '', color: pick(RIV_COLORS), prestige: 45, size: '14', phil: pick(Object.keys(RPHIL)), canClose: false, auto: true, fans: 15000, money: 300000, ppvs: shuffle(RIV_PPVS).slice(0, 4).join('\n') } }); },
   editRival(id) { const r = RV(id); if (r) { liven(r); openModal({ type: 'editRival', draft: { id: r.id, name: r.name, short: r.short, show: r.show, color: r.color, prestige: Math.round(r.prestige), phil: r.phil, canClose: !r.safe, auto: !r.manual, fans: Math.round(r.fans), money: Math.round(r.money), ppvs: r.ppvs.join('\n'), bigOne: r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '', titles: r.titles.map(t => ({ id: t.id, name: t.name, holder: rN(t) > 1 ? '' : t.holder[0] || '', ...(rN(t) > 1 ? { n: rN(t), hn: rHolders(r, t).map(w => w.name).join(' & ') } : {}), mid: !!t.mid, div: t.div || '' })) } }); } },
   rtAdd() { const d = UI.modal.draft; d.titles ||= []; if (d.titles.length >= WORLD_TITLES) return; d.titles.push({ id: uid(), name: `${(d.short || abbr(d.name)).trim()} ${d.titles.some(t => !t.mid && !t.div) ? 'Television' : 'World'} Championship`, holder: '', mid: d.titles.some(t => !t.mid && !t.div), div: '', isNew: true }); render(); },
@@ -12412,11 +12416,13 @@ function starterChamps(old, nt) {
 }
 function wizFinish() {
   const z = UI.wiz, host = z.add && G ? G : null;
+  const tr = z.rtake && host ? (host.rivalPromos || []).find(r => r.id === z.rtake) : null;
+  if (z.rtake && !tr) { UI.wiz = null; render(); return toast('That company is gone.'); }
   if (!host) meta.slot = z.slot;
   newGame({ name: z.name.trim() || 'My Wrestling Promotion', show: z.show.trim() || 'Weekly Warfare', difficulty: z.budget, challenge: z.challenge, roster: z.source === 'starter' ? 'starter' : 'empty', finances: z.money !== false, contracts: z.contracts !== false, persona: z.persona !== false, deep: !!z.deep });
   if (host) { G.week = host.week; G.settings = host.settings; G.titles.forEach(t => { t.since = t.lastDefense = host.week; }); G.stories.forEach(s => s.start = host.week); }
   // the championships made in the setup's Titles step
-  if (z.titles?.length && !(z.world && z.take)) {
+  if (z.titles?.length && !(z.world && z.take) && !tr) {
     const old = G.titles;
     G.titles = z.titles.slice(0, MAX_TITLES).map(x => ({ id: uid(), name: String(x.name || 'Championship').slice(0, 50), short: String(x.short || 'Title').slice(0, 16), tag: !!x.tag, ...(x.tag && +x.size === 3 ? { size: 3 } : {}), tier: titleTier(x), cl: 1, ...(x.division && x.division !== 'Open' ? { division: x.division } : {}),
       prestige: clamp(+x.prestige || 40, 1, 100), every: titleEvery(x), dq: !!x.dq, belt: beltClean(x.belt, x), ...(safePhoto(x.photo) ? { photo: x.photo } : {}), holder: [], since: G.week, defenses: 0, lastDefense: G.week }));
@@ -12445,7 +12451,8 @@ function wizFinish() {
   if (!host) { G.settings.sandbox = !!z.sandbox; G.wseedN = +z.rivN || 4; }
   if (z.world) applyWorld(z);
   if (z.world && z.suMode) storyBegin(z.suMode);
-  news(`🎉 ${G.promo.name} is open for business. ${G.promo.show} airs ${DAYS[G.promo.day]}s.`, 'office');
+  if (tr) takeRivalInto(tr, host);
+  news(tr ? `🔁 You took over ${G.promo.name}. ${G.promo.show} airs ${DAYS[G.promo.day]}s.` : `🎉 ${G.promo.name} is open for business. ${G.promo.show} airs ${DAYS[G.promo.day]}s.`, 'office');
   G.todos = [
     { t: `Book and run your first ${G.promo.show}. Tap + Match, or Auto-fill and tweak it`, done: false, auto: 'firstShow' },
     { t: `Build heat for your storylines, then pay them off at ${bigName(nextBig())} (week ${nextBig()})`, done: false, auto: 'bigEvent' },
@@ -12465,7 +12472,7 @@ function wizFinish() {
   if (safeColor(z.showCol)) SHOWS()[0].col = z.showCol;
   if (manyShows()) { G.split = !!z.split; if (!worldBrands() && G.split) brandDraft(); news(`📺 ${G.promo.name} runs ${SHOWS().length} weekly shows: ${SHOWS().map(x => x.name).join(', ')}.`, 'office'); }
   worldBrands();
-  if (host) joinWorld(host);
+  if (host) joinWorld(host, tr);
   // joining partway through a week: any night that has already gone by starts next week
   const held = host ? holdBehind() : [];
   if (held.length) news(`📅 ${held.map(u => u.name).join(' and ')} start${held.length > 1 ? '' : 's'} next week. ${held.length > 1 ? 'Those nights have' : 'That night has'} already gone by this week.`, 'office');
@@ -12480,10 +12487,60 @@ function wizFinish() {
   else if ((z.count || 1) > 1) { const u = nextUp(); if (u && !u.on) { goUnit(u); save(); render(); } }
 }
 
+// ---------- Sandbox: take over an AI company and run it as one of yours ----------
+// The setup opens on the company step with its name, show, night, colour and big events filled in. An AI company
+// runs one weekly show, so this is where more shows and a brand split get added. Nothing changes until the last step.
+function takeRivalStart(id) {
+  const r = RV(id); if (!r || !SANDBOX()) return;
+  if ((G.cos || []).length + 1 >= MAX_COS) return toast(`A world can have up to ${MAX_COS} companies.`);
+  liven(r);
+  confirmBox(`Take over ${r.name}?`, `It becomes one of your companies: its roster, contracts, titles, teams, feuds and big events come with it, and you book its shows from now on. It stops running on its own, and it can't go back to the AI.`, 'Take over', () => {
+    UI.modal = null; wizStart(true); const z = UI.wiz;
+    wizTake(z, r); z.rtake = r.id; z.source = 'take'; z.step = 'company';
+    // an AI company has no set night: go by its show's name (Tuesday Turmoil airs Tuesdays) when it has one
+    if (r.day == null) { const d = DAYS.findIndex(x => new RegExp('\\b' + x, 'i').test(r.show)); if (d >= 0) z.day = d; }
+    // the world's big event schedule wins: spread its big events over the year in a world that runs by month
+    if (G.settings.bigMode === 'month') {
+      if (z.mode !== 'month') { const ps = [...r.ppvs.filter(x => x !== r.bigOne), ...(r.ppvs.includes(r.bigOne) ? [r.bigOne] : [])].slice(0, 12), m = Array(12).fill('');
+        ps.forEach((x, i) => { m[Math.round((i + 1) * 12 / ps.length) - 1] = x; }); z.months = m; z.mode = 'month'; z.ppv = ''; }
+    } else if (z.mode === 'month') { z.ppv = monthNames(z.months).join('\n'); z.mode = 'weeks'; }
+    render(); pageTop();
+  });
+}
+// runs inside wizFinish, on the new company (G) before it joins the world (host)
+function takeRivalInto(r, host) {
+  host.rivalPromos = (host.rivalPromos || []).filter(x => x !== r); host.rivals = host.rivalPromos.map(x => x.name);
+  G.fromRival = r.id;
+  G.wrestlers = JSON.parse(JSON.stringify(r.roster)).map(w => {
+    w.contract = { salary: CON() ? Math.max(500, Math.round((w.rSal || asking(w)) / 100) * 100) : 0, weeks: clamp(Math.round(+w.rWeeks) || 52, 4, 156) };
+    for (const k of ['rival', 'rWeeks', 'rSal', 'bi', 'both', 'courted', 'cutBy', 'cutWk']) delete w[k];
+    w.joined = host.week; w.lastBooked = host.week - 1; return w; });
+  const byName = nm => String(nm || '').split(' & ').map(n => G.wrestlers.find(w => w.name === n)?.id).filter(Boolean);
+  G.titles = r.titles.map(t => {
+    const n = rN(t), holder = (t.holder || []).filter(id => W(id)).slice(0, n);
+    // earlier champions known only by name come first, then the reigns this company ran itself
+    const reigns = [...(t.past || []).map(nm => ({ rh: byName(nm), nm: String(nm), from: 1, to: 1, d: 0, old: true })), ...(t.reigns || []).map(x => ({ rh: byName(x.nm), nm: String(x.nm || ''), from: +x.from || 1, to: +x.to || 0, d: +x.d || 0 }))];
+    for (const x of reigns) if (!x.to && x !== reigns.at(-1)) x.to = Math.max(x.from, host.week);
+    const cur = reigns.at(-1);
+    if (cur && !cur.to && (!holder.length || !sameSet(cur.rh, holder))) { if (holder.length && !cur.rh.length) cur.rh = holder.slice(); else cur.to = Math.max(cur.from, host.week); }
+    if (holder.length && (!reigns.length || reigns.at(-1).to)) reigns.push({ rh: holder.slice(), nm: holder.map(nameOf).join(' & '), from: +t.since || host.week, to: 0, d: +t.d || 0 });
+    return { id: t.id, name: t.name, short: t.short, tag: n > 1, ...(n === 3 ? { size: 3 } : {}), prestige: +t.pres || (n > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70), holder, since: +t.since || host.week, defenses: +t.d || 0, lastDefense: host.week,
+      ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), reigns: reigns.slice(-80) };
+  });
+  G.teams = (r.teams || []).filter(t => t.members.every(id => W(id))).map(t => ({ ...t, members: t.members.slice(), w: 0, l: 0, d: 0 }));
+  G.factions = (r.facs || []).map(f => ({ ...f, members: f.members.filter(id => W(id)), tms: G.teams.filter(t => t.members.every(id => f.members.includes(id))).map(t => t.id), w: 0, l: 0, d: 0 })).filter(f => f.members.length >= 2);
+  // its feuds carry on as storylines
+  G.stories = (r.feuds || []).filter(f => W(f.a) && W(f.b)).slice(0, 8).map(f => ({ id: uid(), title: `${nameOf(f.a)} vs ${nameOf(f.b)}`, type: f.tid && G.titles.some(t => t.id === f.tid) ? 'Title Chase' : 'Feud', a: [f.a], b: [f.b], titleId: G.titles.some(t => t.id === f.tid) ? f.tid : null, heat: clamp(Math.round(+f.heat || 20), 0, 100), start: host.week, status: 'active', notes: `A feud ${r.name} was already building.`, log: [] }));
+  G.fans = Math.max(5000, Math.round(+r.fans || 0)); G.promo.prestige = clamp(Math.round(+r.prestige || 40), 1, 100);
+  if (MON()) G.money = Math.round(+r.money || 0);
+  if (G.bigEvents.includes(r.bigOne)) G.bigOne = r.bigOne;
+  // its recent moves stay in the company's news
+  G.news = (r.log || []).filter(x => x && x.t).map(x => ({ wk: +x.wk || host.week, text: String(x.t), cat: 'office' }));
+}
 // fold a freshly made company into the world it was started from, then switch to it
-function joinWorld(host) {
+function joinWorld(host, took) {
   const fresh = G; G = host;
-  const taken = worldNames();
+  const taken = took ? new Set() : worldNames(); // a company taken over keeps everyone's names
   for (const w of fresh.wrestlers) if (taken.has(w.name)) { let n; do n = randomName(); while (taken.has(n)); w.name = n; w.nick = ''; taken.add(n); }
   const co = {}; for (const k of Object.keys(fresh)) if (!SHARED_KEYS.has(k)) co[k] = fresh[k];
   co.roster = fresh.wrestlers.filter(w => w.contract); co.coId = uid(); co.curWk = host.week; co.ranWk = host.week - 1;
@@ -12492,11 +12549,12 @@ function joinWorld(host) {
   fresh.wrestlers.filter(w => !w.contract && !w.retired).sort((a, b) => b.pop - a.pop).slice(0, 8).forEach(w => G.wrestlers.push(w));
   const was = G.promo.name;
   G.cos.push(co); switchCo(co.coId);
-  news(`🏟️ ${G.promo.name} opened in the same world as ${was}.`, 'office');
+  if (took) { wnews(`🔁 ${G.promo.name} has a new owner: you. It now runs alongside ${was}.`, null, false); news(`🔁 You took over ${G.promo.name}. It runs in the same world as ${was}.`, 'office'); }
+  else news(`🏟️ ${G.promo.name} opened in the same world as ${was}.`, 'office');
 }
 function wizSteps(cur) {
   const z = UI.wiz;
-  const steps = z.source === 'draft' ? ['company', 'budget', 'roster', 'draft', 'titles'] : z.world && z.take ? ['budget', 'roster'] : ['company', 'budget', 'roster', 'titles'];
+  const steps = z.rtake ? ['company', 'roster'] : z.source === 'draft' ? ['company', 'budget', 'roster', 'draft', 'titles'] : z.world && z.take ? ['budget', 'roster'] : ['company', 'budget', 'roster', 'titles'];
   const i = steps.indexOf(cur);
   return `<div class="wz-steps">${steps.map((s, j) => `<span class="${j < i ? 'done' : j === i ? 'on' : ''}"></span>`).join('')}</div>${(z.count || 1) > 1 ? `<div class="tiny muted" style="margin:-6px 0 8px;font-weight:700;letter-spacing:.04em">COMPANY ${z.nth || 1} OF ${z.count}</div>` : ''}`;
 }
@@ -12516,10 +12574,10 @@ function viewWizard() {
   }
   if (z.step === 'company') {
     return `<div class="app wz">${wizSteps('company')}
-      <div class="wz-k">Step 1 · Your company</div><h2 class="wz-h">Name your promotion</h2>
+      <div class="wz-k">Step 1 · ${z.rtake ? 'Its shows' : 'Your company'}</div><h2 class="wz-h">${z.rtake ? `Taking over ${esc(z.name)}` : 'Name your promotion'}</h2>
       <div class="wz-preview">${logo}<div><b>${esc(z.name || 'My Promotion')}</b><div class="small muted">${esc(z.show || 'Weekly show')} · ${DAYS[z.day]} nights</div></div></div>
-      <label class="f"><span>Promotion name</span><input type="text" data-wz="name" value="${esc(z.name)}" maxlength="40" placeholder="e.g. Thunder Valley Wrestling"></label>
-      <div class="chips" style="margin:-4px 0 12px">${['Thunder Valley Wrestling', 'Rustbelt Pro', 'Pacific Rumble', 'Midnight Mat Club'].map(n => `<button class="chip" data-act="wzSet" data-f="name" data-id="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+      ${z.rtake ? `<p class="small muted" style="margin-top:0">It keeps its name, its show and its big events. As an AI company it ran one weekly show, so add more shows and a brand split here if you want them. Change anything later in Office → Setup.</p>` : `<label class="f"><span>Promotion name</span><input type="text" data-wz="name" value="${esc(z.name)}" maxlength="40" placeholder="e.g. Thunder Valley Wrestling"></label>
+      <div class="chips" style="margin:-4px 0 12px">${['Thunder Valley Wrestling', 'Rustbelt Pro', 'Pacific Rumble', 'Midnight Mat Club'].map(n => `<button class="chip" data-act="wzSet" data-f="name" data-id="${esc(n)}">${esc(n)}</button>`).join('')}</div>`}
       <label class="f"><span>Weekly TV show</span><input type="text" data-wz="show" value="${esc(z.show)}" maxlength="40" placeholder="e.g. Monday Mayhem"></label>
       <label class="f"><span>Show night</span><div class="seg-ctl">${DAYS.map((d, i) => `<button class="${z.day === i ? 'on' : ''}" data-act="wzSet" data-f="day" data-id="${i}">${d.slice(0, 3)}</button>`).join('')}</div></label>
       ${(z.extra || []).length ? `<label class="f"><span>Show color</span>${wzColRow(z, -1)}</label>` : ''}
@@ -12528,7 +12586,7 @@ function viewWizard() {
         <div class="seg-ctl" role="group" aria-label="Night">${DAYS.map((d, k) => `<button class="${k === x.day ? 'on' : ''}" data-act="wzXDay" data-id="${i}:${k}">${d.slice(0, 3)}</button>`).join('')}</div>
         <div class="tiny muted" style="margin:8px 0 4px">Show color</div>${wzColRow(z, i)}</div>`).join('')}
       ${(z.extra || []).length < MAX_SHOWS - 1 ? `<button class="btn block" style="margin:-2px 0 12px" data-act="wzAddShow">＋ Add another weekly show</button>` : ''}
-      ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} ${z.split ? 'Every brand gets a full A show: its own crowd, TV deal and costs.' : 'Extra shows are B shows: smaller crowds, half a TV deal and their own costs.'} Each one adds 8 picks to your roster.</div>` : ''}
+      ${(z.extra || []).length ? `<label class="todo" style="margin-bottom:4px"><input type="checkbox" data-wz="xSplit" ${z.split ? 'checked' : ''}><span>Brand split: each show has its own roster</span></label><div class="tiny muted" style="margin-bottom:12px">${z.split ? 'Your roster is drafted between the shows, best first. Big events still use everyone.' : 'Off: everyone can work every show.'} ${z.split ? 'Every brand gets a full A show: its own crowd, TV deal and costs.' : 'Extra shows are B shows: smaller crowds, half a TV deal and their own costs.'}${z.rtake ? '' : ' Each one adds 8 picks to your roster.'}</div>` : ''}
       <label class="f"><span>Company color</span><div class="swatches">${BRAND.map(c => `<button class="sw ${z.color === c ? 'on' : ''}" style="background:${c}" data-act="wzSet" data-f="color" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div></label>
       <div class="sec">Big events</div>
       ${z.add ? `<p class="small muted" style="margin-top:0">${z.mode === 'month' ? 'This world runs its big events by month.' : `This world has a big event every ${G.settings.bigEvery} weeks.`}</p>` : `<label class="f"><span>Schedule</span><div class="seg-ctl"><button class="${z.mode === 'month' ? 'on' : ''}" data-act="wzSet" data-f="mode" data-id="month">By month</button><button class="${z.mode !== 'month' ? 'on' : ''}" data-act="wzSet" data-f="mode" data-id="weeks">Every few weeks</button></div></label>
@@ -12538,7 +12596,7 @@ function viewWizard() {
       : `<label class="f"><span>Name your big events, one per line</span><textarea data-wz="ppv" style="min-height:110px" maxlength="1000" placeholder="e.g. Summer Siege">${esc(z.ppv || '')}</textarea></label>
       <div class="row" style="margin:-4px 0 12px;gap:8px"><span class="tiny muted sp">They run in this order, then start again from the top. Leave it empty for Big Event 1, 2, 3. You can change them later in Office → Setup.</span><button class="chip" data-act="wzPpvIdeas">Suggest names</button></div>`}
       <div id="wzSig">${wzSigHtml(z)}</div>
-      <div class="wz-nav">${z.add ? `<button class="btn" data-act="wzCancel">${(z.nth || 1) > 1 ? 'Skip the rest' : 'Cancel'}</button>` : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="budget" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
+      <div class="wz-nav">${z.add ? `<button class="btn" data-act="wzCancel">${(z.nth || 1) > 1 ? 'Skip the rest' : 'Cancel'}</button>` : '<button class="btn" data-act="wzGo" data-id="welcome">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="${z.rtake ? 'roster' : 'budget'}" ${z.name.trim() ? '' : 'disabled'}>Next</button></div></div>`;
   }
   if (z.step === 'budget') {
     return `<div class="app wz">${wizSteps('budget')}
@@ -12546,7 +12604,7 @@ function viewWizard() {
       ${z.add ? `<p class="muted small" style="margin-top:0">This company joins ${esc(G.promo.name)}'s world and uses its rules and challenge level.</p>` : `<div class="list" style="margin-bottom:14px">${[['deep', '🧠 Deep sim', 'See every skill (psychology, selling, consistency, safety and more) and each wrestler\'s potential. Also turns on money and contracts, which you can then switch off. Off: the simple six stats, with no money or contracts.'], ['money', '💰 Money', 'Payroll, tickets and TV deals. Off: unlimited budget.'], ['contracts', '📝 Contracts', 'Deals run out and wrestlers can leave. Off: everyone stays.'], ['persona', '💬 Personalities', 'Wrestlers text you, make demands and remember how you treat them. Off: they just do their job.'], ['sandbox', '🛠️ Sandbox', 'Build the whole world: edit every company, title and roster, and move anyone anywhere. Share it when it\'s ready. Switch it on or off any time.']].map(([k, l, d]) => { const lock = (k === 'money' || k === 'contracts') && !z.deep; return `<button class="pick wz-opt ${z[k] ? 'sel' : ''}" data-act="wzRule" data-id="${k}" role="switch" aria-checked="${!!z[k]}" ${lock ? 'disabled aria-disabled="true" style="opacity:.5"' : ''}><span class="ck">${z[k] ? '✓' : ''}</span><div class="sp"><b>${l}</b> <span class="muted small">· ${z[k] ? 'On' : 'Off'}</span><div class="small muted">${d}${lock ? ' Turn on Deep sim to use this.' : ''}</div></div></button>`; }).join('')}</div>
       ${z.world ? '' : `<div class="sec">Rival companies</div>
       <div class="seg-ctl" style="margin-bottom:6px">${[2, 3, 4, 5, 6].map(n => `<button class="${(z.rivN || 4) === n ? 'on' : ''}" data-act="wzSet" data-f="rivN" data-id="${n}">${n}</button>`).join('')}</div>
-      <p class="muted tiny" style="margin:0 0 14px">How many AI companies share your world at the start. More open and close over time. Edit any of them in Office → Rivals.</p>`}
+      <p class="muted tiny" style="margin:0 0 14px">How many AI companies share your world at the start. More open and close over time. Edit any of them in Office → Companies.</p>`}
       <div class="sec">Challenge</div>
       <div class="seg-ctl" style="margin-bottom:6px">${CHALLENGES.map(([k, l]) => `<button class="${(z.challenge || 'normal') === k ? 'on' : ''}" data-act="wzSet" data-f="challenge" data-id="${k}">${l}</button>`).join('')}</div>
       <p class="muted tiny" style="margin:0 0 14px">${CHALLENGES.find(c => c[0] === (z.challenge || 'normal'))[2]} You can change it later in Menu → Settings.</p>`}
@@ -12554,6 +12612,17 @@ function viewWizard() {
       <p class="muted small" style="margin-top:0">This sets your bank balance${z.contracts ? ' and the weekly payroll you can spend in the draft' : ''}.</p>
       <div class="list">${Object.entries(BUDGETS).sort((a, b) => a[1].money - b[1].money).map(([k, b]) => `<button class="pick wz-opt ${z.budget === k ? 'sel' : ''}" data-act="wzSet" data-f="budget" data-id="${k}"><span class="ck">${z.budget === k ? '✓' : ''}</span><div><b>${b.label}</b> <span class="muted small">· ${money(b.money)} bank · ${money(b.cap)}/wk payroll</span><div class="small muted">${b.desc}</div></div></button>`).join('')}</div>` : `<div class="tip">Money is off: no budget to manage. ${z.contracts ? 'Contracts still matter, but you can pay whatever it takes.' : 'Just book the shows you want.'}</div>`}
       <div class="wz-nav">${z.take ? '<button class="btn" data-act="wzCancel">Cancel</button>' : '<button class="btn" data-act="wzGo" data-id="company">Back</button>'}<button class="btn pri" data-act="wzGo" data-id="roster">Next</button></div></div>`;
+  }
+  if (z.step === 'roster' && z.rtake) {
+    const r = RV(z.rtake); if (!r) return `<div class="app wz"><div class="empty">That company is gone.</div><div class="wz-nav"><button class="btn" data-act="wzCancel">Close</button></div></div>`;
+    const hs = t => rHolders(r, t).map(w => w.name).join(' & ');
+    return `<div class="app wz">${wizSteps('roster')}
+      <div class="wz-k">Step 2 · Take over</div><h2 class="wz-h">Taking over ${esc(r.name)}</h2>
+      <div class="card"><div class="row small"><span class="sp muted">📺 ${esc(DAYS[z.day])}</span><b>${esc(z.show)}</b></div>${(z.extra || []).map(x => `<div class="row small"><span class="sp muted">📺 ${esc(DAYS[x.day])}</span><b>${esc(x.name || 'New weekly show')}</b></div>`).join('')}${(z.extra || []).length ? `<div class="tiny muted">${z.split ? 'Brand split on: the roster is drafted between the shows.' : 'No brand split: everyone works every show.'}</div>` : ''}${wzNames(z).length ? `<div class="small" style="margin-top:4px"><span class="muted">🎟️ Big events</span><div><b>${wzNames(z).map(esc).join(' · ')}</b></div></div>` : ''}</div>
+      <div class="card"><div class="row small"><span class="sp muted">Roster</span><b>${r.roster.length} wrestlers</b></div><div class="row small"><span class="sp muted">Fans</span><b>${kfmt(r.fans)}</b></div>${MON() ? `<div class="row small"><span class="sp muted">Bank</span><b>${money(Math.round(r.money / 1000) * 1000)}</b></div>` : ''}${(r.teams || []).length || (r.facs || []).length ? `<div class="row small"><span class="sp muted">Teams and factions</span><b>${(r.teams || []).length + (r.facs || []).length}</b></div>` : ''}${r.feuds?.length ? `<div class="row small"><span class="sp muted">Feuds</span><b>${r.feuds.length}, as storylines</b></div>` : ''}
+        ${r.titles.map(t => `<div class="row small"><span class="sp muted">🏆 ${esc(t.name)}</span><b>${esc(hs(t) || 'Vacant')}</b></div>`).join('')}
+        <div class="tiny muted" style="margin-top:6px">Contracts, records, title history and photos carry over. ${esc(r.name)} stops running on its own and becomes one of your companies. This can't be undone.</div></div>
+      <div class="wz-nav"><button class="btn" data-act="wzGo" data-id="company">Back</button><button class="btn pri" data-act="wzFinish">Take over ${esc(r.name)}</button></div></div>`;
   }
   if (z.step === 'roster' && z.world) {
     const tk = z.take && z.world.cos.find(c => c.id === z.take);
@@ -12937,7 +13006,7 @@ document.addEventListener('change', e => {
     else if (k === 'finances') { if (!G.settings.deep) return render(); G.settings.finances = el.checked; commit(); }
     else if (k === 'cNotes') { UI.modal.notes = el.checked; }
     else if (k === 'cMine') { UI.modal.mine = el.checked; render(); }
-    else if (k === 'sandbox') { G.settings.sandbox = el.checked; commit(el.checked ? 'Sandbox on. Build your world in Office → Rivals.' : 'Sandbox off.'); }
+    else if (k === 'sandbox') { G.settings.sandbox = el.checked; commit(el.checked ? 'Sandbox on. Build your world in Office → Companies.' : 'Sandbox off.'); }
     else if (k === 'contracts') {
       if (!G.settings.deep) return render();
       G.settings.contracts = el.checked;
@@ -13138,8 +13207,10 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.57';
+const VERSION = '1.9.59';
 const WHATS_NEW = [
+  ['🔁 Take over a rival', 'With Sandbox on, open any AI company in Office → Companies and tap Take over to run it yourself, as one of up to 4 companies in your world. Its roster, contracts, titles and title history, teams, factions, feuds, photos and big events come with it. It keeps its name and show, and you can add more weekly shows and a brand split as you take it over.'],
+  ['🏢 Companies tab', 'The Rivals tab in the Office is now called Companies. It still shows every company in your world, their rosters and fans, and is where you create, edit or share them.'],
   ['⭐ Indie Stars', 'Unsigned wrestlers are now called indie stars, so they no longer get mixed up with the Free agent tag for wrestlers who work every brand. The Free agents tab in the Office is now Indie Stars, and the news, contract talks, imports and help say indie star too.'],
   ['🔎 Search the draft war room', 'The brand draft roster now has a search box and more ways to sort: best for the brand, popularity, overall, momentum, in-ring, mic, charisma, youngest, salary and name, with the reverse button. Filter by men or women, faces or heels, and stack filters for stars, champions, teams and factions, wrestlers in a story or ones that fill a need. Show all lifts the 40-wrestler limit.'],
   ['📷 Imported photos are shared', 'Photos you add with the mass photo import (Roster tools → Photos) now travel with everything you share: worlds, rosters, single wrestlers, share codes and shared saves. Before, they stayed on your device. Share again to include them.'],
@@ -13165,7 +13236,7 @@ const WHATS_NEW = [
   ['🏆 Better belts and belt photos', 'Every belt is redrawn in raised relief, with a bevelled rim, rivets, a curved top line and a ribbon nameplate, and text that always fits. Make any belt Ornate, try the new Oval plate, or upload a photo of a belt (pixel art or the real photo, like wrestler photos). Belts now show on title matches during the live show and on each champion\'s card.'],
   ['📚 Wrestler library', 'Keep Community wrestlers in your own library, no save needed. Tap 📚 on any wrestler or roster in Community, then add them to any save, now or later, from Community → Library or Roster tools.'],
   ['🏆 Design your championships', 'New companies get a Championships step: name your titles, crown champions and design every belt. The belt designer lets you pick the plate shape, metal and trim, strap colour and style, side plates, gems, the centre piece, engraving and lettering, or start from a template. Each title also has a level, a division and rules, like a defense deadline or the belt changing hands on a DQ. Edit any title in Office → Titles.'],
-  ['🌍 A living world', 'Rival companies book their own shows, sign free agents, grow, shrink and can close, and new ones open. Edit any of them in Office → Rivals, build a whole world with Sandbox, and share worlds in Community.'],
+  ['🌍 A living world', 'Rival companies book their own shows, sign free agents, grow, shrink and can close, and new ones open. Edit any of them in Office → Companies, build a whole world with Sandbox, and share worlds in Community.'],
   ['📈 Smarter ratings and rankings', 'Matches rate on more than raw stats, rankings follow wins and form, and Auto-fill builds better cards.'],
   ['🏅 Booker and company levels', 'Your booker level follows you into every save and unlocks Community symbols and flairs. Each company levels up too, for cash bonuses, sponsors, perks and bigger event cards.'],
   ['📱 Personalities', 'Wrestlers can text you, make demands and remember how you treat them. Switch it on or off in Menu → Settings.'],
@@ -13174,7 +13245,7 @@ const WHATS_NEW = [
   ['🧠 Deep sim', 'Menu → Settings → Deep sim shows every wrestler\'s psychology, selling, consistency, safety, technical, brawling and aerial skills, plus their potential.'],
   ['✏️ Short names', 'Give anyone a short name (Moxley instead of Jon) in their Edit screen. It is used wherever only one name fits.'],
   ['📣 Media appearances', 'Office → Media: send wrestlers on talk shows, podcasts and fan signings for a popularity boost (with a small chance of a slip-up), or away on movies, media tours and indie runs to come back much bigger. Big offers come as backstage events, and some wrestlers will ask.'],
-  ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Rivals), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
+  ['📺 Rivals fight back', 'Rival companies book real weekly cards (see them in Office → Companies), load up their show against your big events, try to lure your stars mid-contract, offer trades, and can invade your show for 8 weeks.'],
   ['🎤 Plan your promos', 'Pick what a promo is about and its tone: fiery, calm, funny, cheap heat or from the heart. The speaker\'s mic skill decides if it lands or falls flat.'],
   ['💼 Backstage politics', 'New backstage moments: stars who refuse to lose, creative control, a locker room leader, cliques and no-shows.'],
   ['🌐 Cloud saves', 'Menu → Cloud saves keeps up to 3 games online (6 for BookIt Supporters). Add your email to load them on another device, and turn on auto backup.'],
