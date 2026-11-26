@@ -6610,7 +6610,7 @@ function lvTalk(r, main) {
       ${tg.length ? `<div class="tgt">${r.ans ? '🙋 Answered by' : '📣 ' + esc(segVerb(s).replace(/^./, c => c.toUpperCase()))} ${tg.slice(0, 3).map(w => av(w, 24, true)).join('')} ${names(tg)}</div>` : ''}${intr}`;
   }
   const headline = `${names(sp) || 'Someone'}${tg.length ? ` ${esc(segVerb(s))} ${names(tg)}` : ''}`;
-  if (s.atype === 'Tale of the Tape' && sp.length && tg.length && facesOn()) {
+  if (s.atype === 'Tale of the Tape' && sp.length && tg.length && bodiesOn()) {
     const col = w => `<div class="tt-side"><img class="px tt-body" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"><b class="n-${w.align}">${esc(w.name)}</b>${[w.height, w.weight, w.hometown].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}<span>${w.record ? `${w.record.w}-${w.record.l}` : ''}</span></div>`;
     return `<div class="tt-wrap">${col(sp[0])}<div class="tt-mid">TALE OF THE TAPE</div>${col(tg[0])}</div>
     <div class="l3"><span>${esc(s.atype)}${r.stTag ? ' · ' + esc(r.stTag) : ''}</span>${headline}</div>${intr}`;
@@ -7885,6 +7885,8 @@ function bodyURL(w) {
   return u;
 }
 const facesOn = () => meta.faces !== 'initials';
+// full pixel bodies (wrestler page, body maker, Tale of the Tape): a player can keep just the headshots
+const bodiesOn = () => facesOn() && meta.bodies !== false;
 function av(w, size, lazy) {
   const s = size || 38, h = avImg(w, s, lazy), b = avBadges(w, s);
   return b ? `<span class="avw" style="width:${s}px;height:${s}px">${h}${b}</span>` : h;
@@ -8946,10 +8948,11 @@ const ST_SECS = [
   { id: 'sandbox', save: 1, ic: 'pen', t: 'Sandbox', sum: () => SANDBOX() ? 'On: edit and move anyone' : 'Off', keys: ['sandbox'], items: () => [
     ['sandbox edit move anyone world build', `<label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Companies.</span></span></label>`],
     ...(MON() && SANDBOX() ? [['bank balance money set', `<label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label><div class="tiny" style="color:var(--warn);margin:-4px 0 12px">Changing your bank balance can throw off the game's balance. Money stops being a challenge.</div>`]] : [])] },
-  { id: 'look', ic: 'grid', t: 'Look', sum: () => `${{ dark: 'Dark', light: 'Light', auto: 'Match my device' }[meta.theme === 'light' || meta.theme === 'auto' ? meta.theme : 'dark']} · ${{ s: 'Small', m: 'Normal', l: 'Large', xl: 'Huge' }[meta.text] || 'Normal'} text · ${facesOn() ? 'Pixel faces' : 'Initials'}`, items: () => [
+  { id: 'look', ic: 'grid', t: 'Look', sum: () => `${{ dark: 'Dark', light: 'Light', auto: 'Match my device' }[meta.theme === 'light' || meta.theme === 'auto' ? meta.theme : 'dark']} · ${{ s: 'Small', m: 'Normal', l: 'Large', xl: 'Huge' }[meta.text] || 'Normal'} text · ${facesOn() ? 'Pixel faces' + (bodiesOn() ? ' + bodies' : '') : 'Initials'}`, items: () => [
     ['theme dark light', `<label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>`],
     ['text size font zoom', `<label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}" aria-pressed="${(meta.text || 'm') === k}">${l}</button>`).join('')}</div></label>`],
     ['wrestlers without a photo pixel faces initials', `<label class="f"><span>Wrestlers without a photo</span><select data-in="faces"><option value="pixel">Pixel faces</option><option value="initials" ${meta.faces === 'initials' ? 'selected' : ''}>Initials</option></select></label>`],
+    ['full body pixel wrestlers headshots tale of the tape', `<label class="todo"><input type="checkbox" data-in="bodies" ${meta.bodies === false ? '' : 'checked'} ${facesOn() ? '' : 'disabled'}><span>Full body wrestlers<br><span class="tiny muted">${facesOn() ? 'On the wrestler page and in Tale of the Tape. Turn off to keep just the headshots.' : 'Needs pixel faces turned on.'}</span></span></label>`],
     ['champions belt photo trophy holders', `<label class="todo"><input type="checkbox" data-in="avBelts" ${meta.avBelts === false ? '' : 'checked'}><span>Champions wear their belt on their photo<br><span class="tiny muted">Trophy holders show their trophy too.</span></span></label>`]] },
   { id: 'sound', ic: 'sound', t: 'Sound & music', sum: () => meta.sound === false ? 'Off' : `On · Music ${meta.music === false ? 'off' : Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100) + '%'}`, items: () => [
     ['sound bell crowd', `<label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound (bell, crowd and music)</span></label>`],
@@ -8990,7 +8993,7 @@ function modalSettings(m) {
     <div class="st-hd">Look, sound &amp; calendar ${stPill(0)}</div><div class="st-sub">The same for every save on this ${/Mobi|Android|iPhone/.test(navigator.userAgent) ? 'phone' : 'device'}.</div>
     <div class="st-grp">${dev.map(stRow).join('')}</div>`);
 }
-const ST_DEV_DEF = { look: () => { meta.theme = 'dark'; meta.text = 'm'; meta.faces = 'pixel'; meta.avBelts = true; applyTheme(); }, sound: () => { meta.sound = true; meta.music = true; meta.musicVol = .35; MUSIC.sync?.(); }, motion: () => { meta.motion = ''; meta.fx = 1; applyTheme(); }, calview: () => { meta.cal = {}; UI.calWkv = null; } };
+const ST_DEV_DEF = { look: () => { meta.theme = 'dark'; meta.text = 'm'; meta.faces = 'pixel'; meta.bodies = true; meta.avBelts = true; applyTheme(); }, sound: () => { meta.sound = true; meta.music = true; meta.musicVol = .35; MUSIC.sync?.(); }, motion: () => { meta.motion = ''; meta.fx = 1; applyTheme(); }, calview: () => { meta.cal = {}; UI.calWkv = null; } };
 function modalMenu() {
   if (!G) return modalStartMenu();
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
@@ -9499,7 +9502,7 @@ function modalWrestler(m) {
   const recent = G.history.slice(-8).reverse().flatMap(h => h.results.filter(r => segPeople(r.seg).includes(w.id)).map(r => ({ wk: h.wk, r })));
   const nameTags = `<div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag">Age ${w.age}</span><span class="tag gold">OVR ${overall(w)}</span></div>`;
   // the hero card: their full pixel body beside the name and the facts people check first
-  const hero = facesOn() && w.name;
+  const hero = bodiesOn() && w.name;
   const fact = (l, v) => v ? `<div class="hc-f"><span>${l}</span><b>${esc(String(v))}</b></div>` : '';
   const top = hero ? `<div class="hero-w"><button class="hero-body" data-act="editBody" data-id="${w.id}" aria-label="Edit ${esc(w.name)}'s full body"><img class="bm-hero px" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"></button><div class="sp" style="min-width:0">${safePhoto(w.photo) ? `<div style="margin-bottom:6px">${av(w, 48)}</div>` : ''}${nameTags}
       <div class="hc-facts">${fact('Height', w.height)}${fact('Weight', w.weight)}${fact('From', w.hometown)}${fact('Popularity', Math.round(w.pop))}${fact('In-ring', Math.round(w.ring))}${fact('Mic', Math.round(w.mic))}</div>
@@ -11693,7 +11696,7 @@ function modalBuilder(m) {
    ${d.photo ? `<div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPhotoDel">Remove photo${facesOn() ? ' and use a pixel face' : ''}</button></div>` : ''}
    ${pxPanel(d)}
    ${!d.photo && facesOn() ? faceMaker(d) : ''}
-   ${facesOn() ? bodyMaker(d) : ''}
+   ${bodiesOn() ? bodyMaker(d) : ''}
    <div class="swatches">${SWATCHES.map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bColor" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div>
 
    <div class="sec">Character</div>
@@ -16402,6 +16405,7 @@ document.addEventListener('change', e => {
       commit();
     }
     else if (k === 'avBelts') { meta.avBelts = !!el.checked; ls.set(META, JSON.stringify(meta)); render(); }
+    else if (k === 'bodies') { meta.bodies = el.checked; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'faces') { meta.faces = el.value === 'initials' ? 'initials' : 'pixel'; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'theme') { meta.theme = ['light', 'auto'].includes(el.value) ? el.value : 'dark'; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'fx') { meta.fx = clamp(+el.value || 0, 0, 2); ls.set(META, JSON.stringify(meta)); if (!meta.fx) FX.stop(); }
@@ -16597,7 +16601,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.88';
+const VERSION = '1.9.89';
 const WHATS_NEW = [
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
