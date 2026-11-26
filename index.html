@@ -7748,7 +7748,8 @@ function faceURL(w, tight) {
 }
 // ---- pixel bodies: the full wrestler on the wrestler page, 48x96, with the pixel face's head on top ----
 // w.body code (one base-36 character each): build, stance, bottoms, bottoms colour (0 = their colour), boots, boots colour (0 = black),
-// pads, hands, title belt (0 = shown when they hold a title, 1 = never). The top half of their gear comes from the face's gear.
+// pads, hands, title belt (0 = shown when they hold a title, 1 = never), shape, chest. The top half of their gear comes from the face's gear.
+// Every option is open to every wrestler: "Usual" only picks a starting look from their division, the player can always change it.
 const BODY = {
   build: ['Lean', 'Athletic', 'Muscular', 'Heavy', 'Giant'],
   stance: ['Ready', 'Relaxed', 'Flex', 'Arms crossed', 'Hands on hips', 'Point', 'Victory'],
@@ -7757,12 +7758,14 @@ const BODY = {
   pads: ['None', 'Knee pads', 'Elbow pads', 'Both'],
   hands: ['Bare', 'Wrist tape', 'Gloves', 'Wristbands'],
   belt: ['When champion', 'Never'],
+  shape: ['Usual', 'Straight', 'Curvy'],
+  chest: ['Usual', 'Bare', 'Sports top'],
 };
-const BODY_LEN = 9;
-const BODY_MAX = [BODY.build, BODY.stance, BODY.bottoms, FACE.col, BODY.boots, FACE.col, BODY.pads, BODY.hands, BODY.belt].map(a => a.length);
+const BODY_LEN = 11;
+const BODY_MAX = [BODY.build, BODY.stance, BODY.bottoms, FACE.col, BODY.boots, FACE.col, BODY.pads, BODY.hands, BODY.belt, BODY.shape, BODY.chest].map(a => a.length);
 // [shoulder half-width, waist half-width, arm thickness, leg half-width, belly]
 const BODY_BUILD = [[9, 6, 3, 3, 0], [11, 7, 4, 4, 0], [13, 7, 5, 4, 0], [12, 10, 5, 5, 3], [15, 11, 6, 5, 1]];
-const bodyOK = c => typeof c === 'string' && c.length === BODY_LEN && /^[0-9a-z]+$/.test(c) && [...c].every((d, i) => parseInt(d, 36) < BODY_MAX[i]);
+const bodyOK = c => typeof c === 'string' && c.length >= 9 && c.length <= BODY_LEN && /^[0-9a-z]+$/.test(c) && [...c].every((d, i) => parseInt(d, 36) < BODY_MAX[i]);
 // no body made yet: a steady one from their id, sized from their weight and style
 function bodyRandom(w, seed) {
   let h = 2166136261; for (const ch of String(seed ?? (w.id || w.name || '?'))) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
@@ -7775,9 +7778,9 @@ function bodyRandom(w, seed) {
   const bottoms = women ? p([0, 0, 1, 1, 2, 3]) : w.style === 'Brawler' ? p([1, 2, 3, 3]) : p([0, 0, 0, 1, 1, 2, 3]);
   return [build, stance, bottoms, p([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]), p([0, 0, 0, 1, 1, 2, 3, 4]), p([0, 0, 0, 3, 3, 7, 1, 2, 4]), p([0, 0, 1, 1, 2, 3]), p([0, 0, 1, 1, 2, 3]), 0].map(n => n.toString(36)).join('');
 }
-const bodyCode = w => bodyOK(w.body) ? w.body : bodyRandom(w);
+const bodyCode = w => (bodyOK(w.body) ? w.body : bodyRandom(w)).padEnd(BODY_LEN, '0');
 function bodySVG(w, holds) {
-  const [BU, ST, BO, BC, BT, BTC, PD, HA, BE] = [...bodyCode(w)].map(d => parseInt(d, 36));
+  const [BU, ST, BO, BC, BT, BTC, PD, HA, BE, SH, CH] = [...bodyCode(w)].map(d => parseInt(d, 36));
   const fc = faceCode(w), women = looksWomen(w), Wd = 48, H = 96;
   const head = faceGrid(fc, w.align, w.color, women), { sk, sd, hc, hd, gc } = head.pal;
   const GR = parseInt(fc[5], 36);
@@ -7789,8 +7792,10 @@ function bodySVG(w, holds) {
   const bt = BTC ? FACE.col[BTC] : '#1b1b20', btd = faceShade(bt, -.3), btl = faceShade(bt, .45);
   const gd = faceShade(gc, -.3);
   let [sw, ww, at, lt, belly] = BODY_BUILD[BU];
-  if (women) sw = Math.max(8, sw - 1);
-  const hipW = ww + (women ? 2 : 1);
+  const curvy = SH ? SH === 2 : women;
+  if (curvy) sw = Math.max(8, sw - 1);
+  const hipW = ww + (curvy ? 2 : 1);
+  const top = CH ? CH === 2 : women;
   const spread = [2, 0, 2, 1, 2, 1, 2][ST] ?? 1;
   // the torso's half-width at each row
   const tw = y => y < 30 ? 0 : y === 30 ? sw - 3 : y === 31 ? sw - 1 : y < 52 ? Math.round(sw + (ww - sw) * Math.min(1, (y - 32) / 18) + (belly && y > 40 ? belly * Math.sin(Math.PI * (y - 40) / 13) : 0)) : hipW;
@@ -7814,7 +7819,7 @@ function bodySVG(w, holds) {
   // torso
   for (let y = 30; y < 52; y++) span(y, tw(y), sk);
   for (let y = 32; y < 52; y++) set(23 + tw(y), y, sd);
-  const bareChest = !women && [0, 3, 6].includes(GR);
+  const bareChest = [0, 3, 6].includes(GR) && !top;
   if (bareChest) {
     for (let x = 24 - sw + 3; x < 22; x++) set(x, 40, sd); for (let x = 26; x < 24 + sw - 3; x++) set(x, 40, sd); set(23, 39, sd); set(24, 39, sd);
     if (BU === 2 || BU === 4) for (const y of [43, 46, 49]) { set(21, y, sd); set(22, y, sd); set(25, y, sd); set(26, y, sd); }
@@ -7827,7 +7832,7 @@ function bodySVG(w, holds) {
   // upper gear on the torso
   const fullTop = c => { for (let y = 30; y < 53; y++) span(y, tw(y), c); for (let y = 32; y < 53; y++) set(23 + tw(y), y, faceShade(c, -.3)); };
   let sleeve = 0;
-  if (GR === 0 && women) { for (let y = 36; y < 44; y++) span(y, tw(y), gc); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); span(43, tw(43), gd); }
+  if (GR === 0 && top) { for (let y = 36; y < 44; y++) span(y, tw(y), gc); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); span(43, tw(43), gd); }
   if (GR === 1) { for (let y = 38; y < 61; y++) span(y, y > 51 ? hipW : tw(y), gc); rect(24 - sw + 3, 30, 3, 8, gc); rect(21 + sw - 3, 30, 3, 8, gc); for (const s of [-1, 1]) rect(s < 0 ? 24 - hipW : 24 + hipW - 2, 38, 2, 22, gd); }
   if (GR === 2) { fullTop(gc); rect(21, 30, 6, 2, sk); rect(22, 32, 4, 1, sk); sleeve = .35; }
   if (GR === 3) { for (let y = 30; y < 53; y++) { const hw = tw(y); rect(24 - hw, y, hw - 3, 1, gc); rect(27, y, hw - 3, 1, gc); set(20, y, gd); set(27, y, gd); } rect(18, 30, 3, 4, gd); rect(27, 30, 3, 4, gd); sleeve = 1; }
@@ -11640,7 +11645,7 @@ function faceMaker(d) {
   const panes = {
     face: () => row('Skin', `<div class="swatches">${FACE_SKIN_ORDER.map(j => `<button class="sw ${at(0) === j ? 'on' : ''}" style="background:${FACE.skin[j][0]}" data-act="bFace" data-f="0" data-id="${j}" aria-label="Skin tone ${FACE_SKIN_ORDER.indexOf(j) + 1}" aria-pressed="${at(0) === j}"></button>`).join('')}</div>`)
       + row('Eyes', chips(10, FACE.eyes)) + row('Brows', chips(11, FACE.brows)) + row('Mouth', chips(12, FACE.mouth))
-      + (women || at(15) ? row('Make-up', chips(15, FACE.makeup)) : ''),
+      + row('Make-up', chips(15, FACE.makeup)),
     hair: () => hood ? `<p class="small muted fm-row">The ${esc(FACE.face[F].toLowerCase())} covers the hair. Pick another face on Paint &amp; masks to show it.</p>`
       : row('Hair', chips(1, FACE.hair)) + row('Hair colour', sws(2, FACE.hairC, 0, 'Hair')) + row('Facial hair', chips(3, FACE.beard)),
     paint: () => row('Face', chips(4, FACE.face)) + (FACE_MASKS.has(F) ? row('Mask colour', sws(8, FACE.col, 1, 'Mask')) + row('Mask trim', sws(9, FACE.col, 1, 'Trim')) : '')
@@ -11663,10 +11668,11 @@ function bodyMaker(d) {
   const sws = (i, label, none) => `<div class="swatches">${FACE.col.map((col, j) => `<button class="sw ${at(i) === j ? 'on' : ''}${col || none ? '' : ' mine'}" style="background:${col || none || safeColor(d.color) || '#c8102e'}" data-act="bBody" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : none ? 'black' : 'their colour'}" aria-pressed="${at(i) === j}"></button>`).join('')}</div>`;
   const row = (l, h) => `<div class="fm-row"><span>${l}</span>${h}</div>`;
   const panes = {
-    pose: () => row('Build', chips(0, BODY.build)) + row('Stance', chips(1, BODY.stance)),
+    pose: () => row('Build', chips(0, BODY.build)) + row('Shape', chips(9, BODY.shape)) + row('Stance', chips(1, BODY.stance)),
     gear: () => row('Bottoms', chips(2, BODY.bottoms)) + row('Bottoms colour', sws(3, 'Bottoms'))
       + row('Boots', chips(4, BODY.boots)) + (at(4) === 4 ? '' : row('Boots colour', sws(5, 'Boots', '#1b1b20')))
       + row('Pads', chips(6, BODY.pads)) + row('Hands', chips(7, BODY.hands))
+      + ([0, 3, 6].includes(parseInt(faceCode(d)[5], 36)) ? row('Chest', chips(10, BODY.chest)) : '')
       + row('Title belt', `<div class="seg-ctl">${BODY.belt.map((l, j) => `<button class="${at(8) === j ? 'on' : ''}" data-act="bBody" data-f="8" data-id="${j}" aria-pressed="${at(8) === j}">${l}</button>`).join('')}</div>`)
       + '<p class="tiny muted fm-row">The top half wears the gear from the pixel face.</p>',
   };
