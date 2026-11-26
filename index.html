@@ -2177,7 +2177,9 @@ function organicStories(results, before) {
   if (G.settings.organic === false) return;
   if (G.stories.filter(s => s.status === 'active').length >= 6) return;
   const ok = ids => ids.length && ids.every(id => { const w = W(id); return w && (w.contract || !CON()) && !w.injury && storiesTouching([id]).length < 2; });
-  const free = (a, b) => ok(a) && ok(b) && !storyBetween(a, b) && !a.some(x => b.includes(x));
+  // a feud that was just blown off stays over: no new story between the same people for 12 weeks
+  const ended = (a, b) => G.stories.some(s => s.status !== 'active' && (s.ended ?? s.start) >= G.week - 12 && ((a.some(x => s.a.includes(x)) && b.some(x => s.b.includes(x))) || (a.some(x => s.b.includes(x)) && b.some(x => s.a.includes(x)))));
+  const free = (a, b) => ok(a) && ok(b) && !storyBetween(a, b) && !a.some(x => b.includes(x)) && !ended(a, b);
   const ln = ids => ids.map(id => lastName(W(id))).join(' & ');
   const ideas = [];
   for (const r of results) {
@@ -4078,6 +4080,9 @@ function applySegment(seg, res, ctx) {
     let gain = (seg.kind === 'match' ? 6 : (seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) + (res.xHeat || 0)) * (res.heatMul || 1) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
     gain = Math.round(gain * (1 + staffQ('writer') * 0.04));
+    // one side winning every time kills the drama: the third straight win for the same side barely adds heat
+    if (seg.kind === 'match' && res.winners?.length) { const side = st.a.some(x => res.winners.includes(x)) ? 'a' : st.b.some(x => res.winners.includes(x)) ? 'b' : null;
+      if (side) { st.wins = [...(st.wins || []), side].slice(-3); if (st.wins.length === 3 && st.wins.every(x => x === side)) { gain = Math.round(gain * 0.3); notes.push(`🧊 ${st.title}: the same side keeps winning, the crowd stops caring`); } } }
     st.heat = clamp(st.heat + gain, 0, 100); st._touched = G.week;
     st.log.unshift({ wk: G.week, text: `${res.text} (${starStr(res.rating)}, heat +${gain})` });
     notes.push(`🔥 ${st.title} heat +${gain}`);
@@ -4370,10 +4375,10 @@ function runShow(opts = {}) {
   const special = isSpecial(G.week) && !big; // a bonus TV special: bigger building, bigger TV money, more new fans
   const attendance = Math.round(Math.min((big ? 22000 : bShow ? 4000 : 9000) * (special ? 1.5 : 1), G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype * (special ? 1.4 : 1) * (perk('crowd') ? 1.1 : 1)) * rnd(.93, 1.07) * (G.buzzShow?.wk === G.week ? G.buzzShow.x : 1));
   const fin = {
-    gate: attendance * (big ? 50 : 25), tv: big ? 0 : Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
+    gate: attendance * (big ? 35 : 20), // ticket prices: tuned so money stays tight on Normal (it piled up to millions by week 20) tv: big ? 0 : Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
     // a big event is an extra night: pay, merch and TV money come in with the weekly shows
     merch: big ? 0 : Math.round(sum(crew.map(w => w.pop * w.pop * wsh(w))) / 9 * share * (perk('merch') ? 1.15 : 1)),
-    payroll: CON() && !big ? -Math.round(sum(crew.map(w => w.contract.salary * wsh(w))) * share) : 0, production: -Math.round((big ? 60000 : bShow ? 25000 : 12000) + G.fans * (big ? 0.8 : bShow ? 0.2 : 0.15)),
+    payroll: CON() && !big ? -Math.round(sum(crew.map(w => w.contract.salary * wsh(w))) * share) : 0, production: -Math.round((big ? 75000 : bShow ? 25000 : 14000) + G.fans * (big ? 1.1 : bShow ? 0.2 : 0.2)),
     staff: MON() && !big ? -Math.round(staffCost() / nS) : 0,
     guests: -guestFees(card)
   };
@@ -5575,14 +5580,17 @@ function CAR() {
 }
 function saveCareer() { if (CAREER) ls.set(CAREER_KEY, JSON.stringify(CAREER)); }
 // shows, goals and backstage moments also count toward the company level (cxp); achievements and milestones only the booker's
-function addXP(n) { if (!G) return; G.booker.xp += n; G.booker.cxp = (G.booker.cxp || 0) + n; CAR().xp += n; }
+// levels came too fast (booker level 17 and company level 10 by week 20): XP now counts at 60%.
+// Levels already earned stay; only new XP is scaled.
+const XP_RATE = 0.6, xpScaled = n => Math.max(1, Math.round(n * XP_RATE));
+function addXP(n) { if (!G) return; n = xpScaled(n); G.booker.xp += n; G.booker.cxp = (G.booker.cxp || 0) + n; CAR().xp += n; }
 function carBump(k, n = 1) { const c = CAR(); c.st[k] = (c.st[k] || 0) + n; }
 function award(id, list) {
   const a = ACH.find(x => x[0] === id); if (!a) return;
   G.booker.trophies[id] ||= G.week;
   const c = CAR(); if (c.ach[id]) return;
-  c.ach[id] = { wk: G.week, co: String(G.promo?.name || '').slice(0, 40), at: Date.now() }; c.xp += a[4]; G.booker.xp += a[4];
-  news(`🏅 Achievement: ${a[2]} (${a[3]}) · +${a[4]} XP`, 'office'); list && list.push(a);
+  c.ach[id] = { wk: G.week, co: String(G.promo?.name || '').slice(0, 40), at: Date.now() }; c.xp += xpScaled(a[4]); G.booker.xp += xpScaled(a[4]);
+  news(`🏅 Achievement: ${a[2]} (${a[3]}) · +${xpScaled(a[4])} XP`, 'office'); list && list.push(a);
   saveCareer();
 }
 // a milestone step reached: returns [{icon, name, tier, xp}]
@@ -5590,7 +5598,7 @@ function checkMiles() {
   const c = CAR(), out = [];
   for (const [id, ic, name, steps] of MILES) {
     const v = c.st[id] || 0; let t = c.tier[id] || 0;
-    while (t < 3 && v >= steps[t]) { c.xp += TIER_XP[t]; G.booker.xp += TIER_XP[t]; out.push({ ic, name, tier: TIER[t], n: steps[t], xp: TIER_XP[t] }); news(`🏅 ${TIER[t]} milestone: ${name} (${steps[t].toLocaleString()}) · +${TIER_XP[t]} XP`, 'office'); t++; }
+    while (t < 3 && v >= steps[t]) { c.xp += xpScaled(TIER_XP[t]); G.booker.xp += xpScaled(TIER_XP[t]); out.push({ ic, name, tier: TIER[t], n: steps[t], xp: xpScaled(TIER_XP[t]) }); news(`🏅 ${TIER[t]} milestone: ${name} (${steps[t].toLocaleString()}) · +${TIER_XP[t]} XP`, 'office'); t++; }
     c.tier[id] = t;
   }
   return out;
@@ -5635,7 +5643,7 @@ function coLevelUps() {
   while ((b.coPaid || 1) < L) {
     b.coPaid = (b.coPaid || 1) + 1; const n = b.coPaid, big = n % 5 === 0;
     let r;
-    if (MON()) { const m = Math.round((15000 + 5000 * n) * (big ? 3 : 1) / 1000) * 1000; G.money += m; r = `+${money(m)} bonus`; }
+    if (MON()) { const m = Math.round((8000 + 2500 * n) * (big ? 2 : 1) / 1000) * 1000; G.money += m; r = `+${money(m)} bonus`; }
     else { const f = Math.round(G.fans * (big ? 0.03 : 0.01)); G.fans += f; r = `+${kfmt(f)} fans`; }
     const un = CO_UNLOCKS.filter(u => u[0] === n).map(u => u[2]);
     news(`🏟️ ${G.promo.name} reached company level ${n}: ${r}${un.length ? ' · Unlocked: ' + un.join(', ') : ''}`, 'office');
@@ -5655,7 +5663,7 @@ function scoreShow(rec) {
     let reward = '';
     if (ok) {
       addXP(g.xp); b.done = (b.done || 0) + 1; goalsOk++; carBump('goals');
-      const f = Math.round(G.fans * g.fans * Math.max(0.1, 1 - G.fans / fanCap())); G.fans += f; reward = `+${g.xp} XP · +${kfmt(f)} fans`;
+      const f = Math.round(G.fans * g.fans * Math.max(0.1, 1 - G.fans / fanCap())); G.fans += f; reward = `+${xpScaled(g.xp)} XP · +${kfmt(f)} fans`;
       if (g.key === 'exec') { G.tv = Math.round(G.tv * 1.08); reward += ' · TV deal +8%'; }
     } else if (g.key === 'exec') { G.promo.prestige = clamp(G.promo.prestige - 2, 1, 100); reward = 'The exec left unimpressed. Prestige −2'; }
     got.push({ text: g.text, ok, reward });
@@ -5708,7 +5716,7 @@ function scoreShow(rec) {
   if (after > before) news(`${RANKS[after][2]} You're now a ${RANKS[after][1]}!`, 'office');
   if (lv > lvBefore) news(`⭐ Booker level ${lv}!`, 'office');
   saveCareer();
-  return { showXp, goals: got, trophies, miles, extra, coUps, rankUp: after > before ? after : null, lvUp: lv > lvBefore ? lv : null };
+  return { showXp: xpScaled(showXp), goals: got, trophies, miles, extra, coUps, rankUp: after > before ? after : null, lvUp: lv > lvBefore ? lv : null };
 }
 
 // ---- crowd reactions ----
@@ -6293,7 +6301,7 @@ function goalCard() {
   const xp = c.xp, cur = RANKS[rankIx(xp)], L = lvlOf(xp), pct = L >= MAX_LVL ? 100 : (xp - xpAt(L)) / (xpAt(L + 1) - xpAt(L)) * 100;
   return `<div class="goals"><button class="g-rank" data-act="trophies" aria-label="Booker level ${L}, ${cur[1]}. Achievements and milestones"><span class="lvl">Lv ${L}</span><b>${cur[1]}</b><span class="bar"><i style="width:${pct}%"></i></span><span class="tiny muted">🏅 ${Object.keys(c.ach).length}/${ACH.length}</span></button>
     ${perksDue() ? `<button class="btn sm block" style="margin-top:6px" data-act="coPerk">⭐ Company level ${coLvl()}: pick a promotion perk</button>` : ''}${specialPending() && !isBig(G.special) ? `<div class="goal"><span>📺</span><span class="sp">${G.special === G.week ? 'TV special this week' : `TV special booked for week ${G.special}`}: ${esc(specialName())}. Network target ${specialTarget()}+</span></div>` : ''}${G.sponsor ? `<div class="goal"><span>💼</span><span class="sp">${esc(G.sponsor.n)}: rate ${G.sponsor.T}+ to get paid</span><b>${money(G.sponsor.pay)}</b></div>` : ''}
-    ${g.length ? `<div class="goal-l">${g.map(x => `<div class="goal"><span>🎯</span><span class="sp">${esc(x.text)}</span><b>+${x.xp} XP</b></div>`).join('')}</div>` : ''}</div>`;
+    ${g.length ? `<div class="goal-l">${g.map(x => `<div class="goal"><span>🎯</span><span class="sp">${esc(x.text)}</span><b>+${xpScaled(x.xp)} XP</b></div>`).join('')}</div>` : ''}</div>`;
 }
 function modalTrophies() {
   const c = CAR(), t = UI.carTab || 'ach', got = Object.keys(c.ach).length;
@@ -6305,7 +6313,7 @@ function modalTrophies() {
   } else if (t === 'miles') {
     body = `<div class="list">${MILES.map(([id, ic, name, steps]) => { const v = c.st[id] || 0, tr = c.tier[id] || 0, nx = steps[tr], prev = tr ? steps[tr - 1] : 0; const pct = nx ? clamp((v - prev) / (nx - prev) * 100, 0, 100) : 100;
       return `<div class="mile"><span class="mile-i">${ic}</span><div class="sp"><div class="row"><b class="sp">${name}</b><span class="tiers">${TIER.map((T, k) => `<i class="t${k}${k < tr ? ' on' : ''}" title="${T}" aria-label="${T} ${k < tr ? 'reached' : 'not yet'}"></i>`).join('')}</span></div>
-        <div class="bar"><i style="width:${pct}%"></i></div><div class="tiny muted">${v.toLocaleString()}${nx ? ` / ${nx.toLocaleString()} for ${TIER[tr]} · +${TIER_XP[tr]} XP` : ' · all three reached'}</div></div></div>`; }).join('')}</div>
+        <div class="bar"><i style="width:${pct}%"></i></div><div class="tiny muted">${v.toLocaleString()}${nx ? ` / ${nx.toLocaleString()} for ${TIER[tr]} · +${xpScaled(TIER_XP[tr])} XP` : ' · all three reached'}</div></div></div>`; }).join('')}</div>
       <div class="tiny muted" style="margin-top:8px">Lifetime totals from every company you run on this device.</div>`;
   } else if (t === 'co') {
     const L = coLvl(), xp = G.booker.cxp || 0, lo = coXpAt(L), hi = coXpAt(L + 1), pct = L >= CO_MAX ? 100 : (xp - lo) / (hi - lo) * 100, due = perksDue();
@@ -6369,7 +6377,7 @@ function liveScreen(m) {
     ${(p.extra || []).map(x => `<div class="small" style="margin-top:6px">${esc(x)}</div>`).join('')}
     ${(p.coUps || []).map(u => `<div class="lv-co">🏟️ COMPANY LEVEL ${u.n}<span>${esc(u.r)}${u.un.length ? ' · Unlocked: ' + esc(u.un.join(', ')) : ''}</span></div>`).join('')}
     ${p.lvUp ? `<div class="lv-rank">⭐ LEVEL ${p.lvUp}!<span>${rk ? `Rank up: you're now a ${rk[1]}` : 'Your booker career moves up'}</span></div>` : rk ? `<div class="lv-rank">${rk[2]} RANK UP!<span>You're now a ${rk[1]}</span></div>` : ''}
-    ${p.trophies.length || p.miles?.length ? `<div class="lv-tro">${p.trophies.map(x => `<div>${x[1]} <b>${esc(x[2])}</b> <span class="muted small">${esc(x[3])}${x[4] ? ` · +${x[4]} XP` : ''}</span></div>`).join('')}${(p.miles || []).map(m => `<div>${m.ic} <b>${m.tier}: ${esc(m.name)}</b> <span class="muted small">${m.n.toLocaleString()} · +${m.xp} XP</span></div>`).join('')}</div>` : ''}
+    ${p.trophies.length || p.miles?.length ? `<div class="lv-tro">${p.trophies.map(x => `<div>${x[1]} <b>${esc(x[2])}</b> <span class="muted small">${esc(x[3])}${x[4] ? ` · +${xpScaled(x[4])} XP` : ''}</span></div>`).join('')}${(p.miles || []).map(m => `<div>${m.ic} <b>${m.tier}: ${esc(m.name)}</b> <span class="muted small">${m.n.toLocaleString()} · +${m.xp} XP</span></div>`).join('')}</div>` : ''}
     ${G.event && G.event.wk === G.week ? `<div class="lv-tease">📱 Your assistant texted you: something is happening backstage</div>` : ''}
     ${G.awards?.length && G.awards[G.awards.length - 1].wk === h.wk ? `<button class="btn block lv-aw" data-act="records" data-id="awards">🏅 See the Year ${G.awards[G.awards.length - 1].yr} awards</button>` : ''}
     ${tutWin(h)}
@@ -15608,13 +15616,13 @@ function tutShowDone(rec) {
   G.tut = TUT_WIN; G.tutRes = { wk: rec.wk, rating: rec.rating };
   if (G.tutReplay) return;
   PLAYLOG.ev('tutorial', 'first_show');
-  G.fans += TUT_BONUS.fans; G.booker.xp += TUT_BONUS.xp; if (MON()) G.money += TUT_BONUS.money;
+  G.fans += TUT_BONUS.fans; G.booker.xp += xpScaled(TUT_BONUS.xp); if (MON()) G.money += TUT_BONUS.money;
   G.tutRes.bonus = 1;
-  news(`🎉 Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? `, +${money(TUT_BONUS.money)}` : ''} and +${TUT_BONUS.xp} XP.`, 'office');
+  news(`🎉 Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? `, +${money(TUT_BONUS.money)}` : ''} and +${xpScaled(TUT_BONUS.xp)} XP.`, 'office');
 }
 function tutWin(h) {
   const r = G.tutRes; if (!tutOn() || G.tut !== TUT_WIN || !r || r.wk !== h.wk) return '';
-  return `<div class="lv-tut"><b>🎉 First show in the books!</b>${r.bonus ? `<div class="small">Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? ` · +${money(TUT_BONUS.money)}` : ''} · +${TUT_BONUS.xp} XP</div>` : ''}</div>`;
+  return `<div class="lv-tut"><b>🎉 First show in the books!</b>${r.bonus ? `<div class="small">Opening night bonus: +${kfmt(TUT_BONUS.fans)} fans${MON() ? ` · +${money(TUT_BONUS.money)}` : ''} · +${xpScaled(TUT_BONUS.xp)} XP</div>` : ''}</div>`;
 }
 const TUT_ACTIONS = {
   tutNext() { if (!tutOn()) return; if (G.tut >= TUT_WIN) { if (!G.tutReplay) PLAYLOG.ev('tutorial', 'done'); delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; commit('Tutorial done. Have a great run!'); return; } G.tut++; commit(); },
