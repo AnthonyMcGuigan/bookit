@@ -395,6 +395,11 @@ button.mrow:active { background: var(--card2); }
 .fm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 8px; }
 .fm-tile { display: grid; justify-items: center; gap: 4px; padding: 6px 4px 5px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); color: var(--dim); font-family: var(--f-cond); font-weight: 700; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; line-height: 1.1; }
 .fm-tile img { width: 52px; height: 52px; border-radius: 8px; display: block; }
+.hero-w { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
+.hero-body { padding: 0; border: 0; background: none; border-radius: 14px; flex: none; box-shadow: 0 0 0 2px var(--line); }
+.hero-w .bm-hero { width: 132px; height: 264px; }
+.hc-facts { margin: 10px 0; display: grid; gap: 4px; }
+.hc-f { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; } .hc-f span { color: var(--dim); } .hc-f b { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fm-tabs { margin-top: 10px; }
 .bm-big { width: 36px; height: 72px; border-radius: 8px; flex: none; box-shadow: 0 0 0 2px var(--line); }
 .bm-tiles .fm-tile img { width: 40px; height: 80px; }
@@ -9464,10 +9469,18 @@ function modalWrestler(m) {
   const w = W(m.id); if (!w) return '';
   const sts = storiesOf(w.id);
   const recent = G.history.slice(-8).reverse().flatMap(h => h.results.filter(r => segPeople(r.seg).includes(w.id)).map(r => ({ wk: h.wk, r })));
-  const body = `<div class="row" style="margin-bottom:10px">${av(w, 56)}<div class="sp"><div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag">Age ${w.age}</span><span class="tag gold">OVR ${overall(w)}</span></div></div></div>
+  const nameTags = `<div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag">Age ${w.age}</span><span class="tag gold">OVR ${overall(w)}</span></div>`;
+  // the hero card: their full pixel body beside the name and the facts people check first
+  const hero = facesOn() && w.name;
+  const fact = (l, v) => v ? `<div class="hc-f"><span>${l}</span><b>${esc(String(v))}</b></div>` : '';
+  const top = hero ? `<div class="hero-w"><button class="hero-body" data-act="editBody" data-id="${w.id}" aria-label="Edit ${esc(w.name)}'s full body"><img class="bm-hero px" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"></button><div class="sp" style="min-width:0">${safePhoto(w.photo) ? `<div style="margin-bottom:6px">${av(w, 48)}</div>` : ''}${nameTags}
+      <div class="hc-facts">${fact('Height', w.height)}${fact('Weight', w.weight)}${fact('From', w.hometown)}${fact('Popularity', Math.round(w.pop))}${fact('In-ring', Math.round(w.ring))}${fact('Mic', Math.round(w.mic))}</div>
+      <button class="btn sm" data-act="editBody" data-id="${w.id}">${ic('user')} Edit look</button></div></div>`
+    : `<div class="row" style="margin-bottom:10px">${av(w, 56)}<div class="sp">${nameTags}</div></div>`;
+  const body = `${top}
    ${titlesOf(w.id).map(t => `<button class="champ-card" data-act="editTitle" data-id="${t.id}" aria-label="${esc(t.name)}">${titleArt(t, 'champ-belt')}<div class="cc-t"><span class="cc-k">🏆 ${t.holder.length > 1 ? 'Co-champion' : 'Champion'}</span><b>${esc(t.name)}</b><span class="tiny muted">Since week ${t.since || 1} · ${t.defenses || 0} defense${t.defenses === 1 ? '' : 's'}${t.holder.length > 1 ? ' · with ' + esc(t.holder.filter(id => id !== w.id).map(nameOf).join(' & ')) : ''}</span></div></button>`).join('')}
    ${wPrizes(w)}
-   ${[w.hometown && '📍 ' + esc(w.hometown), (w.height || w.weight) && '📏 ' + esc([w.height, w.weight].filter(Boolean).join(' · ')), w.finisher && '💥 Finisher: <b>' + esc(w.finisher) + '</b>', w.signature && '✨ Signature: ' + esc(w.signature), w.theme && '🎵 ' + esc(w.theme)].filter(Boolean).map(x => `<div class="small" style="margin:2px 0">${x}</div>`).join('')}
+   ${[!hero && w.hometown && '📍 ' + esc(w.hometown), !hero && (w.height || w.weight) && '📏 ' + esc([w.height, w.weight].filter(Boolean).join(' · ')), w.finisher && '💥 Finisher: <b>' + esc(w.finisher) + '</b>', w.signature && '✨ Signature: ' + esc(w.signature), w.theme && '🎵 ' + esc(w.theme)].filter(Boolean).map(x => `<div class="small" style="margin:2px 0">${x}</div>`).join('')}
    ${w.bio ? `<p class="small muted" style="margin:6px 0 10px">${esc(w.bio)}</p>` : ''}
    <div class="card">
      ${statLine('Popularity', w.pop)}${statLine('In-ring', w.ring)}${statLine('Mic', w.mic)}${statLine('Charisma', w.cha)}${statLine('Stamina', w.stam)}
@@ -10771,6 +10784,7 @@ const A = {
   bAskAuto() { const d = UI.modal?.draft; if (!d) return; delete d.askSet; render(); },
   shareOneComm() { const id = UI.modal.draftBack.draft.id; UI.modal = { type: 'community', tab: 'share', what: 'pick', sel: [id], title: W(id)?.name || '' }; render(); },
   editW(id) { const w = W(id); openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); },
+  editBody(id) { const w = W(id); if (!w) return; UI.bmOpen = true; UI.fmOpen = false; openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); setTimeout(() => document.querySelector('.fm-body')?.scrollIntoView({ block: 'start' }), 60); },
   // closing the editor with changes asks first, instead of quietly throwing them away
   ewClose() { const m = UI.modal; if (!ewDirty(m)) { dropDraft(); return closeModal(); } UI.modal = { type: 'ewLeave', back: m }; render(); },
   ewKeep() { UI.modal = UI.modal?.back || null; render(); },
@@ -11625,7 +11639,7 @@ function bodyMaker(d) {
       + row('Title belt', `<div class="seg-ctl">${BODY.belt.map((l, j) => `<button class="${at(8) === j ? 'on' : ''}" data-act="bBody" data-f="8" data-id="${j}" aria-pressed="${at(8) === j}">${l}</button>`).join('')}</div>`)
       + '<p class="tiny muted fm-row">The top half wears the gear from the pixel face.</p>',
   };
-  return `<details class="fm" ${UI.bmOpen ? 'open' : ''}><summary data-act="bmTog"><img class="bm-big px av-${d.align === 'heel' ? 'heel' : 'face'}" alt="Full body preview" src="${bodyURL(d)}"><span>Full body<span class="tiny muted" style="display:block;font-weight:500">Shown on their wrestler page</span></span></summary>
+  return `<details class="fm fm-body" ${UI.bmOpen ? 'open' : ''}><summary data-act="bmTog"><img class="bm-big px av-${d.align === 'heel' ? 'heel' : 'face'}" alt="Full body preview" src="${bodyURL(d)}"><span>Full body<span class="tiny muted" style="display:block;font-weight:500">Shown on their wrestler page</span></span></summary>
     <div class="fm-row"><button class="btn" data-act="bBodyRand">${ic('dice')} Random body</button></div>
     <div class="seg-ctl fm-tabs" role="tablist" aria-label="Body maker">${BM_TABS.map(([k, l]) => `<button role="tab" class="${tab === k ? 'on' : ''}" data-act="bmTab" data-id="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
     <div role="tabpanel">${panes[tab]()}</div>
@@ -16555,7 +16569,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.86';
+const VERSION = '1.9.87';
 const WHATS_NEW = [
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
