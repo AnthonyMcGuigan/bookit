@@ -2087,6 +2087,14 @@ function storyBtn(h, i) {
   const r = h?.results?.[i], pr = r && freshPair(segPair(r.seg)); if (!pr) return '';
   return `<button class="btn sm block st-go" data-act="storyFrom" data-id="${h.wk}:${i}">🔥 Start a storyline: ${esc(lnOf(pr[0]))} vs ${esc(lnOf(pr[1]))}</button>`;
 }
+// a story can start while the live show is on screen (a surprise moment, a pick): drop buttons for pairs that now have one
+function stBtnSweep() {
+  for (const b of document.querySelectorAll('.st-go')) {
+    const [wk, i] = String(b.dataset.id || '').split(':').map(Number), h = histFor(wk);
+    const gone = b.dataset.act === 'storyFrom' ? !storyBtn(h, i) : b.dataset.act === 'storyFromMom' ? !momStoryBtn(h, i) : false;
+    if (gone) b.remove();
+  }
+}
 // a surprise moment between two people
 function momPair(m) {
   const M = MOMENTS[m?.k], d = m?.d; if (!M || !d || !W(d.a)) return null;
@@ -9012,7 +9020,7 @@ const A = {
   sound() { meta.sound = meta.sound === false; ls.set(META, JSON.stringify(meta)); if (meta.sound) SFX.tap(); MUSIC.sync(); const b = document.querySelector('[data-act=sound]'); if (b) { b.innerHTML = iconize(meta.sound ? '🔊' : '🔇'); b.setAttribute('aria-label', meta.sound ? 'Mute sound' : 'Turn sound on'); } else render(); },
   momPick(v) {
     const [j, i] = String(v).split(':').map(Number), h = histFor(UI.modal?.wk), m = h?.moments?.[j];
-    if (!m || m.done) return; momDo(m, i); save(); momRefresh(j);
+    if (!m || m.done) return; momDo(m, i); save(); momRefresh(j); stBtnSweep();
     const cs = document.querySelector('.live .cs'); if (cs) { cs.querySelector('.cs-c').outerHTML = `<div class="cs-c" style="animation-delay:0s">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`; cs.querySelector('.cs-skip').textContent = 'Continue ›'; cs.querySelector('.cs-q')?.remove(); cs.querySelector('.cs-c .btn')?.focus({ preventScroll: true }); LV.auto = setTimeout(() => cutClose(), 6000); }
   },
   cutGo() { cutClose(); },
@@ -12462,7 +12470,7 @@ const trustWord = v => v >= 80 ? 'Loyal to you' : v >= 60 ? 'Friendly' : v >= 40
 function msgStoryBtn(m) {
   const e = m.evd; if (m.ans == null || !e || !W(e.a) || m.wk < G.week - 1) return '';
   if (e.b) { const pr = freshPair([[e.a], [e.b]]); return pr ? `<button class="btn sm block st-go" data-act="storyFromMsg" data-id="${m.id}">🔥 Start a storyline: ${esc(lnOf(pr[0]))} vs ${esc(lnOf(pr[1]))}</button>` : ''; }
-  return `<button class="btn sm block st-go" data-act="storyFromMsg" data-id="${m.id}">🔥 Start a storyline with ${esc(shortOf(e.a))}</button>`;
+  return storiesTouching([e.a]).length ? '' : `<button class="btn sm block st-go" data-act="storyFromMsg" data-id="${m.id}">🔥 Start a storyline with ${esc(shortOf(e.a))}</button>`;
 }
 function phoneMsg(m) {
   const del = `<button class="ph-del" data-act="phoneDel" data-id="${m.id}" aria-label="Delete this message${m.ask && msgOpen(m) ? ' (counts as ignoring it)' : ''}">🗑</button>`;
@@ -14709,7 +14717,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.74';
+const VERSION = '1.9.75';
 const WHATS_NEW = [
   ['🎨 One colour per icon', 'Icons no longer mix two colours. The menu lines, speaker waves, arrows and other line parts now match the rest of the icon, and the last few colour emoji (sit-downs, perks, producer notes, holidays and more) are now plain icons too.'],
   ['🎯 Training goals and a Training tab', 'Office has a new Training tab with goals, the school and who is training what. Give a wrestler an Easy, Stretch or Dream goal from their profile. Hit it for a morale and popularity boost. Your Head Trainer texts you when someone hits a wall, and stats that reach 80 through training earn badges.'],
