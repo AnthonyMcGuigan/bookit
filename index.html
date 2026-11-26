@@ -1718,6 +1718,9 @@ function slotInfo(n) {
 function migrate(g) {
   // keep older saves working as features get added
   g.todos ||= []; g.notebook ??= ''; g.future ||= {}; g.card ||= []; g.news ||= []; g.history ||= []; g.settings ||= {};
+  // see less of an event type used to be one list for the whole device: a save from before then starts with that list
+  if (g.settings.less === undefined) g.settings.less = meta.less && typeof meta.less === 'object' && !Array.isArray(meta.less) ? { ...meta.less } : {};
+  else if (!g.settings.less || typeof g.settings.less !== 'object' || Array.isArray(g.settings.less)) g.settings.less = {};
   g.settings.injuries ??= true; g.settings.finances ??= true; g.settings.contracts ??= true; g.settings.organic ??= true; g.settings.bigEvery = [3, 4, 5, 6, 8].includes(+g.settings.bigEvery) ? +g.settings.bigEvery : 4;
   g.settings.bigMode = g.settings.bigMode === 'month' ? 'month' : 'weeks'; g.settings.bigWkd = bigWkdOf(g.settings); g.settings.goHome = g.settings.goHome !== false; g.settings.ahead = [8, 16, 26].includes(+g.settings.ahead) ? +g.settings.ahead : 16; if (g.settings.bigDay != null && +g.settings.bigDay !== 5) g.settings.bigDay = 6; g.bigMonths = cleanMonths(g.bigMonths);
   // an empty list is allowed: a company whose booker named no big events gets plain numbered ones
@@ -1794,7 +1797,7 @@ function newGame(opts) {
     money: { easy: 1500000, normal: 400000, hard: 120000 }[diff], difficulty: diff,
     fans: 22000, tv: 46000, tvWeeks: 26,
     wrestlers: [], titles: [], stories: [], card: [], future: {}, news: [], history: [], todos: [], notebook: '',
-    settings: { injuries: true, finances: opts.finances !== false, contracts: opts.contracts !== false, persona: opts.persona !== false, deep: !!opts.deep, bigEvery: 4, difficulty: Object.hasOwn(DIFF, String(opts.challenge)) ? opts.challenge : 'normal' }, bigEvents: BIG_EVENTS.slice(),
+    settings: { injuries: true, finances: opts.finances !== false, contracts: opts.contracts !== false, persona: opts.persona !== false, deep: !!opts.deep, bigEvery: 4, less: {}, difficulty: Object.hasOwn(DIFF, String(opts.challenge)) ? opts.challenge : 'normal' }, bigEvents: BIG_EVENTS.slice(),
     booker: { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0, cxp: 0, coPaid: 1, perks: [] }, event: null,
     teams: [], factions: [], tourneys: [], awards: [], prizes: [], popAt: {}, rankPrev: {}
   };
@@ -5981,10 +5984,11 @@ function rollEvent() {
   for (const k of shuffle(Object.keys(EVENTS))) { if (lessSkip('ev', k)) continue; const d = EVENTS[k].when(); if (d) return setEvent(k, d); }
 }
 // "see less of this": tap the ! on a backstage event or a surprise moment and that kind comes up about a quarter as often.
-// It's the player's taste, so it lives on this device for every save (meta.less, keys 'ev:<event>' / 'mom:<moment>'),
-// and Menu → Settings lists each one with a button to undo it.
+// It changes what the sim rolls, so it's a sim setting kept in the save (G.settings.less, keys 'ev:<event>' / 'mom:<moment>'),
+// and it rides along with backups and cloud saves. Saves from before this pick up what this device had (meta.less) once.
+// Menu → Settings lists each one with a button to undo it.
 const LESS = .25;
-const lessMap = () => meta.less && typeof meta.less === 'object' && !Array.isArray(meta.less) ? meta.less : {};
+const lessMap = () => { const m = G?.settings?.less; return m && typeof m === 'object' && !Array.isArray(m) ? m : {}; };
 const lessOk = id => { const [kind, k] = String(id).split(':'); return kind === 'ev' ? Object.hasOwn(EVENTS, k) : kind === 'mom' ? Object.hasOwn(MOMENTS, k) : false; };
 const lessOn = (kind, k) => !!lessMap()[kind + ':' + k];
 const lessSkip = (kind, k) => lessOn(kind, k) && Math.random() > LESS;
@@ -6006,7 +6010,7 @@ function lessOpen(id, from) {
   clearTimeout(LV.auto);
   el.innerHTML = `<div class="less"><div class="less-h">${ic('bang')}<b id="less-t">${on ? 'You see less of this' : 'See less of this?'}</b></div>
     <p><b>${esc(nm)}</b> ${on ? `comes up about a quarter as often as other ${id.startsWith('ev') ? 'backstage events' : 'surprise moments'}.` : `will come up about a quarter as often. It still happens now and then.`}</p>
-    <p class="tiny muted">${on ? 'This is on for every save on this device.' : 'This is for every save on this device. Undo it any time in Menu → Settings.'}</p>
+    <p class="tiny muted">${on ? 'This is on for this save.' : 'This is for this save. Undo it any time in Menu → Settings.'}</p>
     <div class="less-c">${on ? `<button class="btn pri" data-act="lessSet" data-id="${id}:0">Show it as often as before</button>` : `<button class="btn pri" data-act="lessSet" data-id="${id}:1">See less of this type</button>`}<button class="btn" data-act="lessShut">${on ? 'Close' : 'Cancel'}</button></div></div>`;
   el.addEventListener('click', e => { if (e.target === el) lessClose(); });
   el.addEventListener('keydown', e => {
@@ -6031,7 +6035,7 @@ function lessClose(quiet) {
 function lessSet(v) {
   const [kind, k, x] = String(v).split(':'), id = kind + ':' + k; if (!lessOk(id)) return;
   const m = { ...lessMap() }; if (x === '1') m[id] = 1; else delete m[id];
-  meta.less = m; ls.set(META, JSON.stringify(meta));
+  G.settings.less = m; save();
   const on = x === '1';
   document.querySelectorAll(`.less-btn[data-id="${id}"]`).forEach(b => { b.classList.toggle('on', on); b.title = on ? 'Seeing less of this' : 'See less of this'; b.setAttribute('aria-label', on ? 'You see less of this kind. Change it' : 'See less of this kind of event'); });
   lessClose();
@@ -8250,8 +8254,9 @@ async function cloudPush(n) {
   cloudNear(z.length);
   // pick up the career from the other cloud saves first, so this upload never drops another device's progress
   await carPull(true); const car = carPack(), cl = JSON.stringify(car).length;
-  const lz = await libPack(385000 - z.length - cl);
-  await sbDb().doc(`cloud${n}/${sbSess.user.id}`).set({ v: 1, save: z, sum: saveSummary(G), at: Date.now(), car, ...(lz ? { lib: lz, libN: LIB.length } : {}) });
+  let tz = await tplPack(); if (z.length + cl + tz.length > 385000) tz = '';
+  const lz = await libPack(385000 - z.length - cl - tz.length);
+  await sbDb().doc(`cloud${n}/${sbSess.user.id}`).set({ v: 1, save: z, sum: saveSummary(G), at: Date.now(), car, ...(tz ? { tpl: tz } : {}), ...(lz ? { lib: lz, libN: LIB.length } : {}) });
   meta.cloudWk = { ...(meta.cloudWk || {}), [n]: G.week }; ls.set(META, JSON.stringify(meta));
 }
 async function cloudList() {
@@ -9231,6 +9236,20 @@ function modalTitle(m) {
 // ---------- your own templates: any belt or trophy design kept on this device, for every save ----------
 const myTpls = k => { const l = meta[k === 'p' ? 'myCups' : 'myBelts']; return Array.isArray(l) ? l : []; };
 function myTplSave(k, name, look) { const key = k === 'p' ? 'myCups' : 'myBelts', l = myTpls(k).slice(); l.unshift({ n: String(name || 'My design').replace(/[<>`"]/g, '').slice(0, 30), b: look }); meta[key] = l.slice(0, 24); ls.set(META, JSON.stringify(meta)); }
+// your saved belt and trophy designs ride along with every cloud upload (data.tpl, gzipped), and loading adds the missing ones
+async function tplPack() { const b = myTpls('b'), c = myTpls('p'); return b.length || c.length ? gz(JSON.stringify({ b, c })) : ''; }
+async function tplMerge(z) {
+  if (typeof z !== 'string' || !z) return 0; let x; try { x = JSON.parse(await ungz(z)); } catch (e) { return 0; }
+  let n = 0;
+  for (const [k, key, fix] of [['b', 'myBelts', l => beltClean(l)], ['c', 'myCups', l => trophyClean(l)]]) {
+    const have = myTpls(k === 'c' ? 'p' : 'b').slice(), seen = new Set(have.map(t => t.n + '|' + JSON.stringify(t.b)));
+    for (const t of (Array.isArray(x?.[k]) ? x[k] : []).slice(0, 24)) { if (!t || typeof t !== 'object' || !t.b || typeof t.b !== 'object') continue;
+      const e = { n: String(t.n || 'My design').replace(/[<>`"]/g, '').slice(0, 30), b: fix(t.b) }, id = e.n + '|' + JSON.stringify(e.b);
+      if (!seen.has(id) && have.length < 24) { have.push(e); seen.add(id); n++; } }
+    meta[key] = have;
+  }
+  if (n) ls.set(META, JSON.stringify(meta)); return n;
+}
 function myTplDel(k, i) { const key = k === 'p' ? 'myCups' : 'myBelts', l = myTpls(k).slice(); l.splice(i, 1); meta[key] = l; ls.set(META, JSON.stringify(meta)); }
 // the belt designer's Templates panel: the game's templates, yours, and the look of your other titles
 function bdTplPanel(m) {
@@ -9375,7 +9394,7 @@ const A = {
     const x = UI.modal?.list?.[n]; if (!x) return;
     confirmBox('Load this cloud save?', `${x.sum?.promo || 'This game'}, week ${x.sum?.week || '?'}, goes into slot ${meta.slot}, replacing the game there.`, 'Load it', async () => {
       try { const d = (await sbDb().doc(`cloud${+n}/${sbSess.user.id}`).get()).data(); if (!d?.save) throw { code: 'gone' };
-        carMerge(d.car); const g = sanitizeGame(JSON.parse(await ungz(d.save))); G = g; save(); const nl = await libMerge(d.lib); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Cloud save loaded into slot ' + meta.slot + '.' + (nl ? ` ${nl} wrestler${nl > 1 ? 's' : ''} added to your library.` : '')); }
+        carMerge(d.car); const g = sanitizeGame(JSON.parse(await ungz(d.save))); G = g; save(); const nl = await libMerge(d.lib); await tplMerge(d.tpl); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Cloud save loaded into slot ' + meta.slot + '.' + (nl ? ` ${nl} wrestler${nl > 1 ? 's' : ''} added to your library.` : '')); }
       catch (e) { toast(e?.code === 'gone' ? 'That cloud save is gone.' : 'Could not load it. Try again.'); }
     });
   },
@@ -9659,7 +9678,7 @@ const A = {
   lessOpen(v, el) { lessOpen(v, el); },
   lessSet(v) { lessSet(v); },
   lessShut() { lessClose(); },
-  lessAll() { meta.less = {}; ls.set(META, JSON.stringify(meta)); document.querySelectorAll('.less-btn.on').forEach(b => b.classList.remove('on')); toast('Every random event is back to normal'); render(); },
+  lessAll() { G.settings.less = {}; save(); document.querySelectorAll('.less-btn.on').forEach(b => b.classList.remove('on')); toast('Every random event is back to normal'); render(); },
   liveSkip() { FX.stop(); document.querySelector('.live .cs')?.remove(); clearTimeout(LV.auto); LV.at = 0; document.querySelector('.live')?.classList.remove('hold'); liveTimers.forEach(clearTimeout); const l = document.querySelector('.live'); if (l) { l.classList.add('skip'); l.querySelector('.lv-fin')?.scrollIntoView({ block: 'start' }); } },
   liveRecap() { liveTimers.forEach(clearTimeout); clearTimeout(LV.auto); momSettle(); openModal({ type: 'recap', wk: UI.modal.wk }); },
   trophies() { openModal({ type: 'trophies' }); },
@@ -11261,13 +11280,22 @@ const CO_ROSTER_MAX = 400; // the most wrestlers one company can bring through a
 const WORLD_TITLES = 20, WORLD_TEAMS = 80, WORLD_FACS = 40; // the most belts, teams and factions one company brings into a world
 // a belt's card level, defense deadline and DQ rule, so whoever takes the company over keeps them (bi: its brand, by show position)
 const titleRules = t => ({ ...(t.cl && t.tier ? { tier: titleTier(t) } : TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(Number.isInteger(t.bi) ? { bi: t.bi } : {}) });
+// things in progress, or stamped with a week of the sharer's calendar (a world starts at week 1): sit-downs, training goals
+// and pushes, staff moves, indie title reigns, relationship drift, leaks and the like. Skills, badges, personality and records stay.
+const WORLD_DROP = ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem',
+  'sitWk', 'refusedWk', 'raidWk', 'mediaWk', 'tripWk', 'blastWk', 'turnWk', 'payGap', 'praisedWk', 'dinWk', 'lawTill', 'leak', 'relWas', 'relWarn', 'trainBy', 'trTry', 'restBy', 'restWas', 'goal', 'wall', 'tb', 'gt', 'lastLoss', 'gigClash', 'xt'];
 function worldW(w) {
   const x = JSON.parse(JSON.stringify(w));
-  for (const k of ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem']) delete x[k];
+  for (const k of WORLD_DROP) delete x[k];
   if (x.bi == null || !x.both) delete x.both; // bi: which of the company's weekly shows they work (0 is the main show)
   if (!safePhoto(x.photo)) x.photo = ''; // photos move to photo slots when the world is shared
   x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
   return x;
+}
+// a company's Awards & Prizes in a world: the trophies themselves, who holds them now, and past winners by name (all at week 1)
+function worldPrizes(list, ids) {
+  return (Array.isArray(list) ? list : []).map(pzCleanOne).filter(Boolean).slice(0, 40).map(P => { const holder = P.holder.filter(id => ids.has(id));
+    return { ...P, holder, wins: P.wins.slice(-20).map(x => ({ wk: 1, ids: x.ids.filter(id => ids.has(id)), nm: x.nm, how: x.how })) }; });
 }
 // one company as it will start in the world: its people, belts and the names of past champions, nothing in progress
 function worldCo(r) {
@@ -11283,6 +11311,7 @@ function worldCo(r) {
   c.teams = grp(r.teams, 2).filter(t => t.members.every(id => ids.has(id))).slice(0, WORLD_TEAMS).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
   c.facs = grp(r.facs, 2).slice(0, WORLD_FACS).map(f => ({ id: f.id, name: f.name, members: f.members.filter(id => ids.has(id)), leader: ids.has(f.leader) ? f.leader : null }));
   if (r.tset) c.tset = 1;
+  if (r.prizes?.length) c.prizes = worldPrizes(r.prizes, ids);
   c.titles = r.titles.slice(0, WORLD_TITLES).map(t => ({ id: t.id, name: t.name, short: t.short, ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(+t.pres ? { pres: t.pres } : {}), ...titleRules(t), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div || '', mid: !!t.mid, holder: t.holder.slice(0, rN(t)), since: 1, d: 0, past: [...(t.past || []), ...t.reigns.filter(x => !t.holder.length || x !== t.reigns.at(-1)).map(x => x.nm)].slice(-10), reigns: t.holder.length && t.reigns.at(-1) ? [{ nm: t.reigns.at(-1).nm, from: 1, to: 0, d: 0 }] : [] }));
   return c;
 }
@@ -11301,7 +11330,7 @@ function coAsRival(g) {
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
   // with the brand split on, each wrestler and belt remembers its show by position, since show ids are new in every game
   const brandAt = id => g.split && shs.length > 1 ? Math.max(0, shs.findIndex(s => s.id === id)) : null;
-  for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; delete x.contract; const bi = brandAt(w.brand); if (bi != null) { x.bi = bi; if (w.both) x.both = true; } r.roster.push(x); }
+  for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; if (w.contract?.indie) x.rIndie = true; delete x.contract; const bi = brandAt(w.brand); if (bi != null) { x.bi = bi; if (w.both) x.both = true; } r.roster.push(x); }
   const sing = (g.titles || []).filter(t => !t.tag), teamT = (g.titles || []).filter(t => tsz(t) > 1).slice(0, WORLD_TITLES / 2);
   const look = t => ({ ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...titleRules(t), ...(g.split && shs.length > 1 && shs.some(s => s.id === t.brand) ? { bi: shs.findIndex(s => s.id === t.brand) } : {}) });
   r.titles = sing.slice(0, WORLD_TITLES - teamT.length).map((t, i) => ({ id: t.id, name: t.name, short: t.short, ...look(t), ...(+t.prestige ? { pres: clamp(Math.round(+t.prestige), 1, 100) } : {}), div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
@@ -11313,13 +11342,16 @@ function coAsRival(g) {
   const onR = new Set(r.roster.map(w => w.id));
   r.teams = (g.teams || []).filter(t => t.members.every(id => onR.has(id))).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
   r.facs = (g.factions || []).map(f => ({ id: f.id, name: f.name, members: f.members.filter(id => onR.has(id)), leader: onR.has(f.leader) ? f.leader : null })).filter(f => f.members.length >= 2);
+  // its Awards & Prizes come along like its belts, so whoever takes it over keeps them
+  const pz = (g.prizes || []).map(pzCleanOne).filter(Boolean).slice(0, 40); if (pz.length) r.prizes = pz.map(P => ({ ...P, holder: P.holder.filter(id => onR.has(id)) }));
   return liven(r);
 }
 function makeWorld(withMine) {
   ensureRivals();
   const cos = [...(withMine ? [G, ...(G.cos || [])].map(coAsRival) : []), ...G.rivalPromos].map(worldCo);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop).slice(0, 60).map(worldW);
-  return { wv: WORLD_V, cos, fa, every: G.settings.bigEvery, mode: G.settings.bigMode };
+  const st = G.settings;
+  return { wv: WORLD_V, cos, fa, every: st.bigEvery, mode: st.bigMode, cal: { day: bigDayOf(st), wkd: bigWkdOf(st), home: goHomeOn(st) } };
 }
 function worldSummary(wd) {
   return { cos: wd.cos.slice(0, 10).map(c => [String(c.name).slice(0, 40), tierOf(c), c.roster.length, String(c.roster.find(w => w.id === c.titles?.find(t => !t.mid && !t.div)?.holder[0])?.name || '').slice(0, 40)]), fa: wd.fa.length, n: sum(wd.cos.map(c => c.roster.length)) + wd.fa.length };
@@ -11343,6 +11375,7 @@ function cleanWorld(raw) {
   const out = g.rivalPromos.filter(r => r.id !== 'fa').slice(0, 10), free = g.rivalPromos.find(r => r.id === 'fa')?.roster || [];
   const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156);
     if (w.bi != null) { w.bi = clamp(Math.floor(+w.bi) || 0, 0, MAX_SHOWS - 1); if (w.both !== true) delete w.both; } else delete w.both;
+    if (w.rIndie !== true) delete w.rIndie; for (const k of WORLD_DROP) if (k !== 'brand' && k !== 'photoLocal') delete w[k];
     return w; };
   const cos = out.map(r => {
     r.name = String(r.name).slice(0, 40); r.short = String(r.short).slice(0, 5); r.show = String(r.show).slice(0, 40); r.color = safeColor(r.color) || pick(RIV_COLORS);
@@ -11362,10 +11395,12 @@ function cleanWorld(raw) {
     if (!r.wkShows.length) { delete r.wkShows; delete r.split; } else r.split = !!r.split;
     r.sigs = (Array.isArray(r.sigs) ? r.sigs : []).slice(0, 24).map(x => ({ name: ppvList(x?.name)[0] || '', mt: cmName(x?.mt), gm: cmName(x?.gm) })).filter(x => x.name && (x.mt || x.gm));
     if (!r.sigs.length) delete r.sigs;
+    if (Array.isArray(r.prizes) && r.prizes.length) r.prizes = worldPrizes(r.prizes, onR); else delete r.prizes;
     return r;
   });
   if (!cos.length) throw 0;
-  return { cos, fa: free.slice(0, 80).map(fixW), every: [3, 4, 5, 6, 8].includes(+raw.every) ? +raw.every : 4 };
+  const cal = raw.cal && typeof raw.cal === 'object' ? { day: bigDayOf({ bigDay: raw.cal.day }), wkd: bigWkdOf({ bigWkd: raw.cal.wkd }), home: raw.cal.home !== false } : null;
+  return { cos, fa: free.slice(0, 80).map(fixW), every: [3, 4, 5, 6, 8].includes(+raw.every) ? +raw.every : 4, ...(cal ? { cal } : {}) };
 }
 // ---------- Story Mode: the BookIt Universe ----------
 // Six companies in one hand-made world. Every wrestler, belt and past champion is original.
@@ -11872,7 +11907,7 @@ function applyWorld(z) {
   const taken = new Set([...cos.flatMap(c => c.roster), ...wd.fa].map(w => w.name));
   if (take) {
     G.wrestlers = [];
-    for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156) }; delete x.rival; delete x.rWeeks; delete x.rSal; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
+    for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156), ...(x.rIndie ? { indie: true } : {}) }; delete x.rival; delete x.rWeeks; delete x.rSal; delete x.rIndie; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
     const tag = G.titles.find(t => t.tag);
     G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: +t.pres || (rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70), holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}),
       ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(t.bi != null ? { bi: t.bi } : {}) }));
@@ -11880,6 +11915,7 @@ function applyWorld(z) {
     G.factions = (take.facs || []).map(f => ({ ...f, members: f.members.filter(id => W(id)), tms: G.teams.filter(t => t.members.every(id => f.members.includes(id))).map(t => t.id), w: 0, l: 0, d: 0 })).filter(f => f.members.length >= 2);
     if (tag && !G.titles.some(t => t.tag)) G.titles.push({ ...tag, holder: [] });
     G.titles.forEach(t => ensureReigns(t));
+    if (take.prizes?.length) G.prizes = take.prizes.map(P => ({ ...P, holder: P.holder.filter(id => W(id)) }));
     G.promo.prestige = take.prestige; G.fans = Math.max(5000, take.fans);
     if (byMonth()) G.bigEvents = monthNames(G.bigMonths); else if (Array.isArray(take.ppvs) && take.ppvs.length) G.bigEvents = ppvList(take.ppvs.join('\n'));
     if (G.bigEvents.includes(take.bigOne)) G.bigOne = take.bigOne;
@@ -11897,7 +11933,9 @@ function applyWorld(z) {
   // in line with what it takes in, so a huge roster isn't broke from week 1 and cutting people every week
   for (const c of cos) { const pay = payrollR(c), inc = incomeR(c) * .85; if (pay > inc && pay > 0) for (const w of c.roster) w.rSal = Math.max(100, Math.round((w.rSal || 0) * inc / pay / 100) * 100); }
   G.rivalPromos = cos.map(c => { liven(c); setRivalChamp(c); return c; });
-  G.settings.bigEvery = wd.every || G.settings.bigEvery; if (wd.mode) G.settings.bigMode = wd.mode === 'month' ? 'month' : 'weeks'; syncRivals();
+  G.settings.bigEvery = wd.every || G.settings.bigEvery; if (wd.mode) G.settings.bigMode = wd.mode === 'month' ? 'month' : 'weeks';
+  if (wd.cal) { G.settings.bigDay = wd.cal.day; G.settings.bigWkd = wd.cal.wkd; G.settings.goHome = wd.cal.home; } // the world's big event night and weekend
+  syncRivals();
   startBeforeBigOne();
   G.wlog = [{ wk: G.week, t: `🌍 Welcome to ${wd.title || 'a shared world'}: ${cos.length} other compan${cos.length === 1 ? 'y' : 'ies'} and ${wd.fa.length} indie stars.` }];
   news(take ? `🌍 You took over ${take.name} in the world "${wd.title || 'Shared world'}". Its roster and titles are yours.` : `🌍 ${G.promo.name} opened in the world "${wd.title || 'Shared world'}". Sign indie stars in the Office.`, 'office');
@@ -11934,12 +11972,17 @@ function scrubGame(raw) {
   const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle', 'trios'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES), topic: Object.keys(PROMO_TOPICS), tone: Object.keys(PROMO_TONES), loc: Object.keys(SEG_PLACES), span: Object.keys(SEG_LENS), outro: Object.keys(SEG_ENDS) };
   const idMap = new Map(), fixId = v => { v = String(v); if (SAFE_ID.test(v)) return v; if (!idMap.has(v)) idMap.set(v, uid()); return idMap.get(v); };
   const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|corner|coId|brand|bid|showId|loan|cutBy|inter|ans)$/;
-  let budget = 400000;
-  const clean = (v, k, depth, inId) => {
+  let budget = 4000000; // values, not characters: a 2,000-wrestler save with years of history needs well over a million
+  // a few short keys are ids or numbers almost everywhere but text inside these objects (by the key that holds them):
+  // a storyline's own promo lines {a, b}, Dirt Sheet reviews and takes {h, b}, a storyline's one-line summary,
+  // who sent a phone text, the crowd cue's mood and a backfire's story. Without this they came back as random ids or 0.
+  const TXT_IN = new Set(['lines', 'revs', 'take']), STR_IN = { sum: new Set(['stories']), from: new Set(['phone']), m: new Set(['cue']), d: new Set(['bfq']) };
+  const clean = (v, k, depth, inId, pk) => {
     if (--budget < 0 || depth > 14) return undefined;
     if (v === null || typeof v === 'boolean') return v;
     // 'n' is a count in most places but a name on staff and sponsors: keep a name a name
-    if (NUM_KEYS.has(k) && !inId && typeof v !== 'object' && !(k === 'n' && typeof v === 'string' && v.trim() && !isFinite(+v))) { const n = +v; return isFinite(n) ? n : 0; }
+    const txt = typeof v === 'string' && v.trim() && !isFinite(+v);
+    if (NUM_KEYS.has(k) && !inId && typeof v !== 'object' && !(txt && (k === 'n' || STR_IN[k]?.has(pk)))) { const n = +v; return isFinite(n) ? n : 0; }
     if (typeof v === 'number') return isFinite(v) ? v : 0;
     if (typeof v === 'string') {
       if (inId) return fixId(v);
@@ -11949,12 +11992,12 @@ function scrubGame(raw) {
       if (ENUMS[k] && !ENUMS[k].includes(t)) return undefined;
       return t;
     }
-    if (Array.isArray(v)) return v.slice(0, 5000).map(x => clean(x, k, depth + 1, inId)).filter(x => x !== undefined);
+    if (Array.isArray(v)) return v.slice(0, 5000).map(x => clean(x, k, depth + 1, inId, pk)).filter(x => x !== undefined);
     if (typeof v === 'object') {
-      const o = {}, seg = typeof v.kind === 'string';
+      const o = {}, seg = typeof v.kind === 'string', txtIn = !inId && TXT_IN.has(k);
       for (const key of Object.keys(v)) {
         if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
-        const c = clean(v[key], key, depth + 1, inId || ID_KEYS.test(key) || (seg && key === 'title'));
+        const c = clean(v[key], key, depth + 1, inId || (!txtIn && ID_KEYS.test(key)) || (seg && key === 'title'), k);
         if (c !== undefined) o[key] = c;
       }
       return o;
@@ -12029,7 +12072,7 @@ function sanitizeGame(g) {
     if (w.xtPast) w.xtPast = (Array.isArray(w.xtPast) ? w.xtPast : []).filter(x => x && typeof x === 'object').slice(0, 5).map(x => ({ n: String(x.n || 'Indie Championship').slice(0, 80), p: String(x.p || '').slice(0, 60), wk: Math.floor(+x.wk) || 0, to: Math.floor(+x.to) || 0, d: clamp(Math.floor(+x.d) || 0, 0, 999) }));
     for (const k of ['gigs', 'gigClash']) if (w[k] != null) { w[k] = Math.floor(+w[k]); if (!isFinite(w[k])) delete w[k]; }
     if (w.role !== undefined && (!Object.hasOwn(ROLES, w.role) || w.role === 'wrestler')) delete w.role;
-    if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && MEDIA[a.k].long ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3) } : undefined; if (!w.away) delete w.away; }
+    if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && (MEDIA[a.k].long || a.k === 'gig') ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3), ...(a.staff ? { staff: 1 } : {}) } : undefined; if (!w.away) delete w.away; }
     if (w.mediaWk != null) w.mediaWk = Math.floor(+w.mediaWk) || 0;
     if (w.askSet != null) { if (+w.askSet > 0) w.askSet = clamp(Math.round(+w.askSet), 100, 10000000); else delete w.askSet; }
     for (const k of ['blastWk', 'payGap']) if (w[k] != null) { w[k] = Math.floor(+w[k]); if (!isFinite(w[k])) delete w[k]; }
@@ -14708,8 +14751,8 @@ function takeRivalInto(r, host) {
   host.rivalPromos = (host.rivalPromos || []).filter(x => x !== r); host.rivals = host.rivalPromos.map(x => x.name);
   G.fromRival = r.id;
   G.wrestlers = JSON.parse(JSON.stringify(r.roster)).map(w => {
-    w.contract = { salary: CON() ? Math.max(500, Math.round((w.rSal || asking(w)) / 100) * 100) : 0, weeks: clamp(Math.round(+w.rWeeks) || 52, 4, 156) };
-    for (const k of ['rival', 'rWeeks', 'rSal', 'bi', 'both', 'courted', 'cutBy', 'cutWk']) delete w[k];
+    w.contract = { salary: CON() ? Math.max(500, Math.round((w.rSal || asking(w)) / 100) * 100) : 0, weeks: clamp(Math.round(+w.rWeeks) || 52, 4, 156), ...(w.rIndie ? { indie: true } : {}) };
+    for (const k of ['rival', 'rWeeks', 'rSal', 'rIndie', 'bi', 'both', 'courted', 'cutBy', 'cutWk']) delete w[k];
     w.joined = host.week; w.lastBooked = host.week - 1; return w; });
   const byName = nm => String(nm || '').split(' & ').map(n => G.wrestlers.find(w => w.name === n)?.id).filter(Boolean);
   G.titles = r.titles.map(t => {
@@ -14724,6 +14767,7 @@ function takeRivalInto(r, host) {
       ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), reigns: reigns.slice(-80) };
   });
   G.teams = (r.teams || []).filter(t => t.members.every(id => W(id))).map(t => ({ ...t, members: t.members.slice(), w: 0, l: 0, d: 0 }));
+  if (r.prizes?.length) G.prizes = r.prizes.map(pzCleanOne).filter(Boolean).map(P => ({ ...P, holder: P.holder.filter(id => W(id)) }));
   G.factions = (r.facs || []).map(f => ({ ...f, members: f.members.filter(id => W(id)), tms: G.teams.filter(t => t.members.every(id => f.members.includes(id))).map(t => t.id), w: 0, l: 0, d: 0 })).filter(f => f.members.length >= 2);
   // its feuds carry on as storylines
   G.stories = (r.feuds || []).filter(f => W(f.a) && W(f.b)).slice(0, 8).map(f => ({ id: uid(), title: `${nameOf(f.a)} vs ${nameOf(f.b)}`, type: f.tid && G.titles.some(t => t.id === f.tid) ? 'Title Chase' : 'Feud', a: [f.a], b: [f.b], titleId: G.titles.some(t => t.id === f.tid) ? f.tid : null, heat: clamp(Math.round(+f.heat || 20), 0, 100), start: host.week, status: 'active', notes: `A feud ${r.name} was already building.`, log: [] }));
@@ -15416,7 +15460,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.78';
+const VERSION = '1.9.79';
 const WHATS_NEW = [
   ['🏆 Awards & Prizes', 'Office → Titles has a new Awards & Prizes shelf for trophies: tournament cups, yearly matches, year-end awards and prizes you hand out. Design each one like a belt (9 shapes, handles, toppers, bases and every metal and centre icon) or use a photo. Champions and trophy holders now wear their belt and trophy on their photo everywhere. The belt designer adds any colour, side plates with icons or the champion\'s own initials, size sliders, your own templates, and new title rules: year established, past champions, big events only, open challenges and unifying two titles.'],
   ['🗞️ Universe headlines and paid stories', 'World news is now Universe headlines: a lead story, colour-coded kinds you can filter, and more news from around the world (big show results, best-ever shows, late paychecks, title reigns, retirements, new feuds and the show of the week). Buy up to two headlines a week to hype a wrestler, sell your show, talk up the company or dig at a rival. Each one has a small chance to backfire.'],
