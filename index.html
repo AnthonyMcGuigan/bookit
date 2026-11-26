@@ -2291,7 +2291,7 @@ function ppvFirst() {
   return `<div class="ppv-first"><div class="ppv-k">Step 1 · Plan the big event first</div>
     <div class="ppv-t">🎆 <b>${esc(name)}</b> is ${left === 1 ? 'next week' : 'in ' + left + ' weeks'}</div>
     <div class="small">Pick its main matches now. Then every weekly show builds hype for them. Matches with more hype score higher and sell more buys.</div>
-    <button class="btn pri block" data-act="selWeek" data-id="${big}" style="margin-top:10px">📋 Book the ${esc(name)} card</button>
+    <button class="btn pri block" data-act="bookBig" data-id="${big}" style="margin-top:10px">📋 Book the ${esc(name)} card</button>
     <div class="tiny muted" style="margin-top:6px">You can change it later if a story heats up.</div></div>`;
 }
 // stories that have got hotter than the matches already announced
@@ -2314,7 +2314,7 @@ function roadCard() {
       ${hotForPPV(big).map(st => `<div class="road-hot"><div class="small sp">🔥 <b>${esc(st.title)}</b> is hotter than your card (heat ${Math.round(st.heat)}).</div><button class="btn sm" data-act="ppvAddStory" data-id="${st.id}">Add it</button></div>`).join('')}
       <div class="tiny muted" style="margin-top:4px">Plans can change. Edit the card any time before the show.</div>`
     : `<div class="small" style="margin:4px 0 6px">Nothing announced yet. Book the ${esc(name)} card first, then build to it here every week.</div>`}
-    <button class="btn sm block" data-act="selWeek" data-id="${big}">${ms.length ? '✏️ Edit the ' : '📋 Book the '}${esc(name)} card</button></div>`;
+    <button class="btn sm block" data-act="bookBig" data-id="${big}">${ms.length ? '✏️ Edit the ' : '📋 Book the '}${esc(name)} card</button></div>`;
 }
 
 // ---------- records: streaks, recent form, career stats, contender rankings ----------
@@ -6089,8 +6089,8 @@ function attention() {
   const active = G.stories.filter(s => s.status === 'active');
   if (active.length < 2) { const idea = storyIdea(); if (idea) a.push({ lv: 'info', ic: '💡', t: `Story idea: ${nameOf(idea[0])} vs ${nameOf(idea[1])}`, d: active.length ? 'Only one story running. Two or three is better.' : 'No stories running. Tap to start this one.', idea: idea.join(',') }); }
   { const nb = nextBig(); if (nb && nb > G.week) { const ms = ppvMatches(nb), left = nb - G.week;
-      if (!ms.length && left <= 3) a.push({ lv: left <= 1 ? 'bad' : 'warn', ic: '🎆', t: `${bigName(nb)} has no matches announced`, d: `It's ${left} week${left > 1 ? 's' : ''} away. Book the card now so the weekly shows can build to it.`, go: 'book' });
-      for (const m of ms) { const hurt = m.sides.flat().map(W).filter(w => w && w.injury >= left); if (hurt.length) a.push({ lv: 'warn', ic: '🩹', t: `${hurt.map(w => w.name).join(', ')} may miss ${bigName(nb)}`, d: 'Hurt past the event. Change the match or wait.', go: 'book' }); }
+      if (!ms.length && left <= 3) a.push({ lv: left <= 1 ? 'bad' : 'warn', ic: '🎆', t: `${bigName(nb)} has no matches announced`, d: `It's ${left} week${left > 1 ? 's' : ''} away. Book the card now so the weekly shows can build to it.`, go: 'book', big: nb });
+      for (const m of ms) { const hurt = m.sides.flat().map(W).filter(w => w && w.injury >= left); if (hurt.length) a.push({ lv: 'warn', ic: '🩹', t: `${hurt.map(w => w.name).join(', ')} may miss ${bigName(nb)}`, d: 'Hurt past the event. Change the match or wait.', go: 'book', big: nb }); }
       const cold = ms.filter(m => (m.hype || 0) < 20 && left <= 2); if (cold.length) a.push({ lv: 'info', ic: '📈', t: `${cold.length} ${bigName(nb)} match${cold.length > 1 ? 'es have' : ' has'} low hype`, d: 'Put both sides together on this week\'s show.', go: 'book' }); } }
   { const nb = nextBig(), cr = (G.rivalPromos || []).find(r => r.counter === nb); if (cr && onMain()) a.push({ lv: 'warn', ic: '📺', t: `${cr.name} is going head to head with ${bigName(nb)}`, d: 'They loaded their show. Stack your card: if they win the night, they take twice the fans.', go: 'book' }); }
   for (const w of G.card.filter(s => s.kind === 'match' && s.winner >= 0).flatMap(s => s.sides.filter((_, i) => i !== s.winner).flat()).map(W).filter(w => w && w.creative >= G.week))
@@ -6785,7 +6785,7 @@ function viewHome() {
     <div class="stat"><div class="k">Last show</div><div class="v">${last ? last.rating : '–'}</div><div class="s">${last ? `<span class="stars">${starStr(last.rating)}</span>` : 'none yet'}</div></div>
   </div>
   <div class="sec">Needs your attention <span class="sp"></span>${att.length ? `<span class="tag">${att.length}</span>` : ''}</div>
-  <div class="list">${att.length ? att.map(x => `<button class="alert ${x.lv}" data-act="${x.act ? x.act : x.idea ? 'ideaStory' : x.neg ? 'negotiate' : x.wid ? 'openW' : x.sid ? 'openStory' : x.go === 'book' ? 'calToday' : 'tab'}" data-id="${x.idea || x.wid || x.sid || x.go}"><span class="ic">${x.ic}</span><div><b>${esc(x.t)}</b><div class="small muted">${esc(x.d)}</div></div></button>`).join('') : '<div class="empty">All clear. Nothing urgent this week.</div>'}</div>
+  <div class="list">${att.length ? att.map(x => `<button class="alert ${x.lv}" data-act="${x.act ? x.act : x.idea ? 'ideaStory' : x.neg ? 'negotiate' : x.wid ? 'openW' : x.sid ? 'openStory' : x.big ? 'bookBig' : x.go === 'book' ? 'calToday' : 'tab'}" data-id="${x.idea || x.wid || x.sid || x.big || x.go}"><span class="ic">${x.ic}</span><div><b>${esc(x.t)}</b><div class="small muted">${esc(x.d)}</div></div></button>`).join('') : '<div class="empty">All clear. Nothing urgent this week.</div>'}</div>
   ${hot.length ? `<div class="sec">Hottest stories <span class="sp"></span><button class="btn sm" data-act="tab" data-id="stories">All</button></div><div class="list">${hot.map(s => `<button class="item" data-act="openStory" data-id="${s.id}"><div class="main"><div class="t">${esc(s.title)}</div><div class="d">${nmList(s.a)} <span class="vs">VS</span> ${nmList(s.b)}</div>${heatBar(s.heat)}</div></button>`).join('')}</div>` : ''}
   <div class="sec">Champions</div><div class="list">${champs}</div>
   <div class="sec">Latest news <span class="sp"></span><button class="btn sm" data-act="notesTab" data-id="news">All news</button></div>
@@ -8534,6 +8534,9 @@ const A = {
   calGo(v) { const [sid, w] = String(v).split('|'), wk = +w; if (!wk || wk < 1 || wk > G.week + 16 || (sid === EV && !bigWk(wk))) return;
     const mk = UI.calMonth ?? monthKey(UI.selWeek); if (!setShow(sid)) return; UI.selWeek = wk; UI.calMonth = mk; UI.reorder = false; save(); render(); },
   calNav(d) { const k = (UI.calMonth ?? monthKey(UI.selWeek)) + +d; const ws = weeksInMonth(k); if (!ws.length || ws[ws.length - 1] < 1 || ws[0] > G.week + 16) return; UI.calMonth = k; render(); },
+  // open the big event's own card (it is its own show, so selecting its week on the weekly show opened the go-home show instead)
+  bookBig(w) { const wk = +w || nextBig(); if (!wk || !bigWk(wk) || wk < G.week) return A.calToday();
+    UI.tab = 'book'; UI.modal = null; if (!setShow(EV)) return; UI.selWeek = wk; UI.calMonth = null; UI.reorder = false; save(); render(); },
   calToday() { if (onEv() && !bigWk(G.week)) { const u = nextUp(); if (!u || !goUnit(u)) setShow(mainShowId()); } UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; render(); },
   reorder() { UI.reorder = !UI.reorder; render(); },
   // tapping the drag handle (or Enter on it) turns on the Up / Down buttons
@@ -13598,8 +13601,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.63';
+const VERSION = '1.9.64';
 const WHATS_NEW = [
+  ['🎆 Book the big event', 'The Book the big event card button (and the big event reminders under Needs your attention) now open the big event itself. Before, they opened the last weekly show before it.'],
   ['💾 Clearer saves', 'A save holds your whole world, and now it says so. Backup files are named after every company you run, with the week and date (like BookIt_WWE+AEW_week-12_2026-11-25.json), and Backup & transfer lists what the file holds. Save slots and cloud saves show every company. Cloud saves tell you how much of the cloud limit your game uses and warn you from 80%, before it stops fitting.'],
   ['🔁 Take over a rival', 'With Sandbox on, open any AI company in Office → Companies and tap Take over to run it yourself, as one of up to 4 companies in your world. Its roster, contracts, titles and title history, teams, factions, feuds, photos and big events come with it. It keeps its name and show, and you can add more weekly shows and a brand split as you take it over.'],
   ['🏢 Companies tab', 'The Rivals tab in the Office is now called Companies. It still shows every company in your world, their rosters and fans, and is where you create, edit or share them.'],
