@@ -968,6 +968,13 @@ body { --ic: var(--gold); }
 .mg-h { margin-bottom: 3px; } .mg-h span { text-align: center; font: 700 10px/1 var(--f-cond); letter-spacing: .08em; color: var(--faint); }
 .mg-c { min-height: 46px; border-radius: 8px; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 3px 2px; min-width: 0; }
 .mg-c.mg-o { visibility: hidden; }
+.mg-c { position: relative; }
+.mg-hol { position: absolute; top: 1px; left: 3px; font-size: 10px; line-height: 1; z-index: 1; pointer-events: none; }
+.mg-rv { display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; }
+.mg-rv i { font: 800 8px/1.2 var(--f-cond, sans-serif); font-style: normal; letter-spacing: .02em; text-transform: uppercase; padding: 1px 2px; border-radius: 3px; color: var(--ink); background: color-mix(in srgb, var(--rc, #888) 35%, var(--bg2)); border: 1px solid color-mix(in srgb, var(--rc, #888) 70%, transparent); max-width: 100%; overflow: hidden; }
+.cal-cd { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: linear-gradient(100deg, color-mix(in srgb, var(--gold, #e8b64a) 18%, var(--card)), var(--card) 75%); border: 1px solid color-mix(in srgb, var(--gold, #e8b64a) 45%, var(--line)); border-radius: var(--r); padding: 8px 10px; margin-bottom: 8px; color: var(--ink); font-size: 13px; }
+.cal-cd-n { min-width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; background: var(--gold, #e8b64a); color: var(--gold-ink, #111); font: 400 20px/1 var(--f-display, sans-serif); }
+.cal-cd-go { font: 700 11px/1 var(--f-cond, sans-serif); letter-spacing: .06em; text-transform: uppercase; color: var(--gold, #e8b64a); white-space: nowrap; }
 .mg-n { font-size: 11px; font-weight: 700; color: var(--faint); text-align: center; font-variant-numeric: tabular-nums; }
 .mg-s { padding: 0; } .mg-s .cal-t { flex: 1; padding: 3px 1px; }
 .mg-s .cal-n { font-size: 16px !important; }
@@ -1613,7 +1620,7 @@ function migrate(g) {
   // keep older saves working as features get added
   g.todos ||= []; g.notebook ??= ''; g.future ||= {}; g.card ||= []; g.news ||= []; g.history ||= []; g.settings ||= {};
   g.settings.injuries ??= true; g.settings.finances ??= true; g.settings.contracts ??= true; g.settings.organic ??= true; g.settings.bigEvery = [3, 4, 5, 6, 8].includes(+g.settings.bigEvery) ? +g.settings.bigEvery : 4;
-  g.settings.bigMode = g.settings.bigMode === 'month' ? 'month' : 'weeks'; if (g.settings.bigDay != null && +g.settings.bigDay !== 5) g.settings.bigDay = 6; g.bigMonths = cleanMonths(g.bigMonths);
+  g.settings.bigMode = g.settings.bigMode === 'month' ? 'month' : 'weeks'; g.settings.bigWkd = bigWkdOf(g.settings); g.settings.goHome = g.settings.goHome !== false; g.settings.ahead = [8, 16, 26].includes(+g.settings.ahead) ? +g.settings.ahead : 16; if (g.settings.bigDay != null && +g.settings.bigDay !== 5) g.settings.bigDay = 6; g.bigMonths = cleanMonths(g.bigMonths);
   // an empty list is allowed: a company whose booker named no big events gets plain numbered ones
   if (!Array.isArray(g.bigEvents)) g.bigEvents = BIG_EVENTS.slice();
   g.customMatch = fixCustomMatch(g.customMatch); if (!Array.isArray(g.ppvSig)) g.ppvSig = [];
@@ -1774,7 +1781,14 @@ const bigDay = () => bigDayOf(G?.settings);
 const mkAt = (wk, day) => { const d = new Date(BASE + ((wk - 1) * 7 + day) * 864e5); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
 const monthMode = (months, st) => st?.bigMode === 'month' && (months || []).some(Boolean);
 // by month: the last weekend of a named month; otherwise every few weeks
-const bigWkOf = (months, wk, st = G.settings) => { const bd = bigDayOf(st); if (monthMode(months, st)) { const k = mkAt(wk, bd); return mkAt(wk + 1, bd) !== k && !!months[k % 12]; } return wk % (st?.bigEvery || 4) === 0; };
+// Menu → Settings → Calendar: which weekend of the month (first, middle = the 15th to 21st, or last), go-home shows on big event weeks, and how far ahead you can book
+const bigWkdOf = st => st?.bigWkd === 'first' || st?.bigWkd === 'mid' ? st.bigWkd : 'last';
+const goHomeOn = (st = G?.settings) => st?.goHome !== false;
+const AHEAD = () => [8, 16, 26].includes(+G?.settings?.ahead) ? +G.settings.ahead : 16;
+const bigWkOf = (months, wk, st = G.settings) => { const bd = bigDayOf(st); if (monthMode(months, st)) { const k = mkAt(wk, bd); if (!months[k % 12]) return false; const at = bigWkdOf(st);
+    if (at === 'first') return mkAt(wk - 1, bd) !== k;
+    if (at === 'mid') { const dd = new Date(BASE + ((wk - 1) * 7 + bd) * 864e5).getUTCDate(); return dd >= 15 && dd <= 21; }
+    return mkAt(wk + 1, bd) !== k; } return wk % (st?.bigEvery || 4) === 0; };
 const bigWk = wk => bigWkOf(G.bigMonths, wk);
 const bigNameOf = (c, wk) => { const st = G.settings; if (monthMode(c.bigMonths, st)) return c.bigMonths[mkAt(wk, bigDay()) % 12] || 'Big Event'; const i = Math.max(0, Math.floor(wk / st.bigEvery) - 1), l = c.bigEvents || []; return l.length ? l[i % l.length] : `Big Event ${i + 1}`; };
 // the card being booked is a big event only on the event's own show
@@ -2657,13 +2671,14 @@ function weekUnits() {
   const out = [];
   for (const c of [G, ...(G.cos || [])]) {
     const sh = Array.isArray(c.shows) && c.shows.length ? c.shows : [{ id: null, name: c.promo.show, day: c.promo.day, ran: c.ranWk || 0 }];
-    sh.forEach((s, i) => {
+    const evWk = bigWkOf(c.bigMonths, G.week);
+    if (!evWk || goHomeOn()) sh.forEach((s, i) => {
       const act = !s.id || s.id === c.showId;
       out.push({ c, co: c.coId, sid: s.id, i, ord: c.ord, auto: !!s.auto, day: +(act ? c.promo.day : s.day) || 0, name: (act ? c.promo.show : s.name) || 'Weekly Show',
         ran: (s.ran || 0) >= G.week || (c.ranWk || 0) >= G.week, on: c === G && act });
     });
     // a big event week: the event airs on the weekend after that week's go-home shows
-    if (bigWkOf(c.bigMonths, G.week)) out.push({ c, co: c.coId, sid: EV, i: 99, ord: c.ord, auto: !!sh[0]?.auto, day: bigDay(), name: bigNameOf(c, G.week), big: true,
+    if (evWk) out.push({ c, co: c.coId, sid: EV, i: 99, ord: c.ord, auto: !!sh[0]?.auto, day: bigDay(), name: bigNameOf(c, G.week), big: true,
       ran: (evOf(c).ran || 0) >= G.week || (c.ranWk || 0) >= G.week, on: c === G && c.showId === EV });
   }
   return out.sort((a, b) => a.day - b.day || a.ord - b.ord || a.i - b.i);
@@ -2704,7 +2719,7 @@ function goUnit(u) {
   if (!u) return false;
   if (u.c !== G && u.co && !switchCo(u.co)) return false;
   if (u.sid) setShow(u.sid);
-  UI.selWeek = G.week; UI.calMonth = null;
+  UI.selWeek = G.week; UI.calMonth = UI.calWkv = null;
   return true;
 }
 // after a show: run any shows set to auto-book, then go to the next show in line
@@ -2719,6 +2734,8 @@ function goNext() {
   }
   const u = nextUp(); const moved = u && !u.on;
   if (moved) goUnit(u);
+  // Calendar setting: on a big event week, open the big event first (the go-home shows still air first)
+  if (CAL().auto && G.showId !== EV && bigWk(G.week) && !weekUnits().some(x => x.c === G && x.ran)) { setShow(EV); UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; }
   UNDO = n || moved ? null : UNDO;
   return { n, u: moved ? u : null };
 }
@@ -2735,7 +2752,7 @@ function advanceWeek() {
   guestTick(); shotTick();
   G.card = (G.future[G.week] || []).filter(s => { removeGone(s); return segPeople(s).length; });
   delete G.future[G.week];
-  UI.selWeek = G.week; UI.calMonth = null;
+  UI.selWeek = G.week; UI.calMonth = UI.calWkv = null;
   storyTick(); rollEvent(); ensureGoals();
 }
 function catchUpCo() {
@@ -2763,7 +2780,7 @@ function autoBookRest() {
     n++;
   }
   const r = goNext();
-  UNDO = null; UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null;
+  UNDO = null; UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null;
   save(); render(); toast(`Ran ${n + r.n} show${n + r.n === 1 ? '' : 's'}. Up next: ${G.promo.show}, week ${G.week}.`);
 }
 // lure a wrestler away from another of your companies
@@ -3976,7 +3993,7 @@ function runShow(opts = {}) {
   rec.prog = scoreShow(rec);
   G.card = []; curShow().ran = G.week; if (coLast) G.ranWk = G.week;
   // a card booked ahead becomes this week's card (once every company has run)
-  if (world) advanceWeek(); else { UI.selWeek = G.week; UI.calMonth = null; }
+  if (world) advanceWeek(); else { UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; }
   save();
   if (opts.quiet) return rec;
   UI.modal = { type: 'live', wk: rec.wk };
@@ -6089,7 +6106,7 @@ function attention() {
   const active = G.stories.filter(s => s.status === 'active');
   if (active.length < 2) { const idea = storyIdea(); if (idea) a.push({ lv: 'info', ic: '💡', t: `Story idea: ${nameOf(idea[0])} vs ${nameOf(idea[1])}`, d: active.length ? 'Only one story running. Two or three is better.' : 'No stories running. Tap to start this one.', idea: idea.join(',') }); }
   { const nb = nextBig(); if (nb && nb > G.week) { const ms = ppvMatches(nb), left = nb - G.week;
-      if (!ms.length && left <= 3) a.push({ lv: left <= 1 ? 'bad' : 'warn', ic: '🎆', t: `${bigName(nb)} has no matches announced`, d: `It's ${left} week${left > 1 ? 's' : ''} away. Book the card now so the weekly shows can build to it.`, go: 'book', big: nb });
+      if (!ms.length && left <= CAL().remind) a.push({ lv: left <= 1 ? 'bad' : 'warn', ic: '🎆', t: `${bigName(nb)} has no matches announced`, d: `It's ${left} week${left > 1 ? 's' : ''} away. Book the card now so the weekly shows can build to it.`, go: 'book', big: nb });
       for (const m of ms) { const hurt = m.sides.flat().map(W).filter(w => w && w.injury >= left); if (hurt.length) a.push({ lv: 'warn', ic: '🩹', t: `${hurt.map(w => w.name).join(', ')} may miss ${bigName(nb)}`, d: 'Hurt past the event. Change the match or wait.', go: 'book', big: nb }); }
       const cold = ms.filter(m => (m.hype || 0) < 20 && left <= 2); if (cold.length) a.push({ lv: 'info', ic: '📈', t: `${cold.length} ${bigName(nb)} match${cold.length > 1 ? 'es have' : ' has'} low hype`, d: 'Put both sides together on this week\'s show.', go: 'book' }); } }
   { const nb = nextBig(), cr = (G.rivalPromos || []).find(r => r.counter === nb); if (cr && onMain()) a.push({ lv: 'warn', ic: '📺', t: `${cr.name} is going head to head with ${bigName(nb)}`, d: 'They loaded their show. Stack your card: if they win the night, they take twice the fans.', go: 'book' }); }
@@ -6808,20 +6825,67 @@ function segWho(s) {
 function viewBook() { return coBar() + viewBookCard(); }
 // ---------- the month calendar: every day of the month, Monday to Sunday ----------
 const DAY_MS = 864e5;
-function monthGrid(mk, wk, tile) {
-  const y = Math.floor(mk / 12), m = mk % 12, first = Date.UTC(y, m, 1), n = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-  const lead = (new Date(first).getUTCDay() + 6) % 7;
-  // the weekly show's night (on the big event, the main show's), and the big event on its weekends
+// Menu → Settings → Calendar: how the calendar looks and the planning helpers are kept on this device
+const CAL_DEF = { start: 'mon', size: 'month', dates: 'date', shows: 'mine', remind: 3, auto: false, count: true, rivals: true, hol: false };
+const CAL_OK = { start: ['mon', 'sun'], size: ['month', 'week', 'hidden'], dates: ['date', 'week'], shows: ['this', 'mine', 'all'], remind: [0, 1, 2, 3, 4, 6, 8], auto: [true, false], count: [true, false], rivals: [true, false], hol: [true, false] };
+function CAL() { const m = meta.cal && typeof meta.cal === 'object' ? meta.cal : {}, o = {}; for (const k in CAL_DEF) o[k] = CAL_OK[k].includes(m[k]) ? m[k] : CAL_DEF[k]; return o; }
+// a few dates fans plan around (US Thanksgiving is the fourth Thursday of November)
+function holidayOn(t) {
+  const d = new Date(t), m = d.getUTCMonth() + 1, n = d.getUTCDate();
+  if (m === 1 && n === 1) return ['🎉', "New Year's Day"];
+  if (m === 2 && n === 14) return ['❤️', "Valentine's Day"];
+  if (m === 10 && n === 31) return ['🎃', 'Halloween'];
+  if (m === 11 && d.getUTCDay() === 4 && n >= 22 && n <= 28) return ['🦃', 'Thanksgiving'];
+  if (m === 12 && n === 25) return ['🎄', 'Christmas'];
+  if (m === 12 && n === 31) return ['🥂', "New Year's Eve"];
+  return null;
+}
+// rival companies' big events, on their big event night
+function rivalChips(w) {
+  if (w < 1) return '';
+  const rs = (G.rivalPromos || []).filter(r => (r.roster || []).length && rivBig(r, w));
+  if (!rs.length) return '';
+  const lab = rs.map(r => `${r.name}: ${ppvName(r, w)}`).join(', ');
+  return `<span class="mg-rv" title="${esc(lab)}" aria-label="${esc('Rival big events: ' + lab)}">${rs.slice(0, 2).map(r => `<i style="--rc:${safeColor(r.color) || '#888'}">${esc(String(r.short || r.name).slice(0, 4))}</i>`).join('')}${rs.length > 2 ? `<i>+${rs.length - 2}</i>` : ''}</span>`;
+}
+// one day on the calendar: the show tiles for that night, plus rival big events and holidays when they're switched on
+function dayCell(t, tile, cs) {
+  const off = Math.round((t - BASE) / DAY_MS), w = Math.floor(off / 7) + 1, day = ((off % 7) + 7) % 7, n = new Date(t).getUTCDate();
   const wid = onEv() ? mainShowId() : G.showId, night = onEv() ? +(SHOWS()[0]?.day) || 0 : +G.promo.day || 0;
+  const weekly = !bigWk(w) || goHomeOn();
+  const ts = [];
+  if (w >= 1) {
+    // "This show only" keeps just the show being booked; "All my shows" adds every brand's weekly show
+    if (weekly && day === night && (cs.shows !== 'this' || !onEv())) ts.push(tile(w, wid));
+    if (weekly && cs.shows === 'all') for (const x of SHOWS()) if (x.id !== wid && +(x.id === G.showId ? G.promo.day : x.day) === day) ts.push(tile(w, x.id));
+    if (day === bigDay() && bigWk(w) && (cs.shows !== 'this' || onEv())) ts.push(tile(w, EV));
+  }
+  const hol = cs.hol && holidayOn(t), rv = cs.rivals && day === bigDay() ? rivalChips(w) : '';
+  const hi = hol ? `<span class="mg-hol" title="${esc(hol[1])}" aria-label="${esc(hol[1])}">${hol[0]}</span>` : '';
+  return ts.length ? `<div class="mg-c mg-s">${hi}${ts.join('')}${rv}</div>`
+    : `<div class="mg-c"${hol || rv ? '' : ' aria-hidden="true"'}>${hi}<span class="mg-n" aria-hidden="true">${n}</span>${rv}</div>`;
+}
+const calHead = cs => { const d = cs.start === 'sun' ? [DAYS[6], ...DAYS.slice(0, 6)] : DAYS; return `<div class="mg mg-h" aria-hidden="true">${d.map(x => `<span>${x.slice(0, 1)}</span>`).join('')}</div>`; };
+function monthGrid(mk, wk, tile) {
+  const cs = CAL(), y = Math.floor(mk / 12), m = mk % 12, first = Date.UTC(y, m, 1), n = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const lead = cs.start === 'sun' ? new Date(first).getUTCDay() : (new Date(first).getUTCDay() + 6) % 7;
   const cells = [];
   for (let i = 0; i < lead; i++) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
-  for (let d = 1; d <= n; d++) {
-    const t = Date.UTC(y, m, d), off = Math.round((t - BASE) / DAY_MS), w = Math.floor(off / 7) + 1, day = ((off % 7) + 7) % 7;
-    const ts = w < 1 ? [] : [day === night ? tile(w, wid) : '', day === bigDay() && bigWk(w) ? tile(w, EV) : ''].filter(Boolean);
-    cells.push(ts.length ? `<div class="mg-c mg-s">${ts.join('')}</div>` : `<div class="mg-c" aria-hidden="true"><span class="mg-n">${d}</span></div>`);
-  }
+  for (let d = 1; d <= n; d++) cells.push(dayCell(Date.UTC(y, m, d), tile, cs));
   while (cells.length % 7) cells.push('<div class="mg-c mg-o" aria-hidden="true"></div>');
-  return `<div class="mg mg-h" aria-hidden="true">${DAYS.map(x => `<span>${x.slice(0, 1)}</span>`).join('')}</div><div class="mg">${cells.join('')}</div>`;
+  return `${calHead(cs)}<div class="mg">${cells.join('')}</div>`;
+}
+// "This week" size: one row, Monday (or Sunday) to Sunday (or Saturday)
+function weekGrid(w, tile) {
+  const cs = CAL(), t0 = BASE + ((w - 1) * 7 - (cs.start === 'sun' ? 1 : 0)) * DAY_MS;
+  return `${calHead(cs)}<div class="mg">${Array.from({ length: 7 }, (_, i) => dayCell(t0 + i * DAY_MS, tile, cs)).join('')}</div>`;
+}
+const weekSpan = (w, cs = CAL()) => { const t0 = BASE + ((w - 1) * 7 - (cs.start === 'sun' ? 1 : 0)) * DAY_MS, f = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }); return `${f(t0)} – ${f(t0 + 6 * DAY_MS)}`; };
+// the countdown above the calendar: tap it to open the big event
+function bigCountdown() {
+  const nb = nextBig(); if (!nb || nb < G.week) return '';
+  const left = nb - G.week, ms = ppvMatches(nb).length, d = new Date(BASE + ((nb - 1) * 7 + bigDay()) * DAY_MS).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  return `<button class="cal-cd" data-act="bookBig" data-id="${nb}"><span class="cal-cd-n">${left ? left : '🎆'}</span><span class="sp"><b>${esc(bigName(nb))}</b> ${left ? `in ${left} week${left === 1 ? '' : 's'}` : 'is this week'}<span class="tiny muted"> · ${d} · ${ms ? ms + ' match' + (ms === 1 ? '' : 'es') + ' announced' : 'nothing announced yet'}</span></span><span class="cal-cd-go">${onEv() ? '' : 'Open ›'}</span></button>`;
 }
 // the TV special line on a weekly show's card: book it, see it, or see when the next one is allowed
 function specialStrip(wk, card) {
@@ -6836,7 +6900,7 @@ function specialStrip(wk, card) {
 }
 function viewBookCard() {
   // the big event only has a card on its own weeks
-  if (onEv() && !bigWk(UI.selWeek)) { UI.selWeek = nextBig(); UI.calMonth = null; }
+  if (onEv() && !bigWk(UI.selWeek)) { UI.selWeek = nextBig(); UI.calMonth = UI.calWkv = null; }
   const wk = UI.selWeek, big = isBig(wk);
   const mk = UI.calMonth ?? monthKey(wk);
   const att = attention().filter(a => a.lv === 'bad' || a.lv === 'warn');
@@ -6854,15 +6918,19 @@ function viewBookCard() {
     const say = w < 1 ? '' : h ? 'rated ' + h.rating : w === G.week && me ? 'tonight' : w < G.week ? 'no show' : cnt ? cnt + ' booked' : 'open';
     const d = new Date(BASE + ((w - 1) * 7 + (ev ? bigDay() : me ? +G.promo.day || 0 : +x.day || 0)) * 864e5);
     const lab = `${ev ? bigName(w) : me ? G.promo.show : x.name}, ${d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}${say ? ', ' + say : ''}`;
-    return `<button class="${cls}" ${me ? `data-act="selWeek" data-id="${w}"` : `data-act="calGo" data-id="${esc(sid + '|' + w)}"`} aria-label="${esc(lab)}" aria-pressed="${me && w === wk}" ${w < 1 || w > G.week + 16 ? 'disabled' : ''}>
-      <span class="cal-n">${d.getUTCDate()}</span>
+    return `<button class="${cls}" ${me ? `data-act="selWeek" data-id="${w}"` : `data-act="calGo" data-id="${esc(sid + '|' + w)}"`} aria-label="${esc(lab)}" aria-pressed="${me && w === wk}" ${w < 1 || w > G.week + AHEAD() ? 'disabled' : ''}>
+      <span class="cal-n">${CAL().dates === 'week' ? 'W' + w : d.getUTCDate()}</span>
       ${ev ? '<span class="cal-s">PPV</span>' : ''}${me && !ev && G.special === w && (!G.specialSid || G.specialSid === sid) && !isBig(w) ? '<span class="cal-s sp-tv">SPECIAL</span>' : ''}${status}</button>`;
   };
   const bkBar = bkDue ? `<div class="alert warn bk-bar"><span class="ic">💾</span><div class="sp small"><b>Back up your save.</b> ${bkDue >= G.week - 1 ? 'You haven\'t backed up yet.' : 'Last backup ' + bkDue + ' weeks ago.'} Saves live only in this browser.</div><button class="btn sm pri" data-act="export">Back up</button><button class="btn sm" data-act="bkLater">Later</button></div>` : '';
-  const cal = `<div class="cal">
+  const cs = CAL(), vw = UI.calWkv ?? wk;
+  const cal = (cs.count ? bigCountdown() : '') + (cs.size === 'hidden' ? '' : cs.size === 'week' ? `<div class="cal">
+    <div class="cal-h"><button class="iconbtn sm" data-act="calNav" data-id="-1" aria-label="Previous week">‹</button><b>${cs.dates === 'week' ? 'Week ' + vw : weekSpan(vw, cs)}</b>${wk !== G.week || UI.calWkv != null ? '<button class="btn sm" data-act="calToday">Tonight</button>' : ''}<button class="iconbtn sm" data-act="calNav" data-id="1" aria-label="Next week">›</button></div>
+    ${weekGrid(vw, tile)}
+  </div>` : `<div class="cal">
     <div class="cal-h"><button class="iconbtn sm" data-act="calNav" data-id="-1" aria-label="Previous month">‹</button><b>${monthLabel(mk)}</b>${wk !== G.week || UI.calMonth != null ? '<button class="btn sm" data-act="calToday">Tonight</button>' : ''}<button class="iconbtn sm" data-act="calNav" data-id="1" aria-label="Next month">›</button></div>
     ${monthGrid(mk, wk, tile)}
-  </div>`;
+  </div>`);
   const statusBar = `<div class="kpis"><span>👥 ${kfmt(G.fans)} fans</span><span>⭐ ${Math.round(G.promo.prestige)} prestige</span>${last ? `<span>Last: <b class="stars">${starStr(last.rating)}</b></span>` : ''}${att.length ? `<button class="kpi-alert" data-act="brief">⚠️ ${att.length} to check ›</button>` : '<button class="kpi-ok" data-act="brief">Briefing ›</button>'}</div>`;
 
   // ----- past show: results on the same screen -----
@@ -7386,6 +7454,53 @@ function modalStorage() {
     ${sbOn() ? `<button class="btn block" style="margin-top:8px" data-act="cloud">🌐 Cloud saves</button>` : ''}`,
     `<button class="btn" data-act="menu">Menu</button><button class="btn pri" data-act="stRetry">${saveFailed ? 'Try again' : 'Save now'}</button>`);
 }
+// Menu → Settings → Calendar: how it looks and planning helpers (this device), and when shows run (this save)
+// change when big events (or go-home shows) run. This week can't change once a show has aired,
+// and a big event card already booked ahead moves with its event to the new weekend of the same month.
+function calMove(fn, msg) {
+  const key = () => weekUnits().map(u => (u.co || '') + (u.sid || '') + u.day).join(',');
+  const before = key(), snap = JSON.stringify(G.settings), ranAny = weekUnits().some(u => u.ran);
+  const cos = [G, ...(G.cos || [])], old = cos.map(c => ({ c, months: c.bigMonths, st: JSON.parse(snap) }));
+  fn();
+  if (ranAny && key() !== before) { Object.assign(G.settings, JSON.parse(snap)); render(); return toast('Change it after this week\'s shows. This week has already started.'); }
+  // move booked-ahead big event cards to the new weekend
+  for (const { c, months, st } of old) {
+    const evOn = c.showId === EV, fut = evOn ? (c.future ||= {}) : (evOf(c).future ||= {});
+    const moves = [];
+    for (const k of Object.keys(fut)) { const wk = +k; if (wk <= G.week || !bigWkOf(months, wk, st) || bigWkOf(c.bigMonths, wk)) continue;
+      const mk = mkAt(wk, bigDayOf(st)); for (let w2 = wk - 5; w2 <= wk + 5; w2++) if (w2 > G.week && mkAt(w2, bigDay()) === mk && bigWkOf(c.bigMonths, w2)) { moves.push([wk, w2]); break; } }
+    const keep = {}; for (const [a, b] of moves) { keep[b] = fut[a]; delete fut[a]; }
+    for (const b in keep) if (!(fut[b] || []).length) fut[b] = keep[b];
+  }
+  if (onEv() && !bigWk(UI.selWeek)) { UI.selWeek = nextBig() || G.week; UI.calMonth = UI.calWkv = null; }
+  // the show you're on may not air this week any more: go to the next one in line
+  if (!weekUnits().some(u => u.on) && !onEv()) { const u = nextUp(); if (u) goUnit(u); }
+  commit(msg);
+}
+function calSettings() {
+  const cs = CAL(), st = G.settings;
+  const seg = (k, opts, act = 'calSet', cur = cs[k]) => `<div class="seg-ctl">${opts.map(([v, l]) => `<button class="${cur === v ? 'on' : ''}" data-act="${act}" data-id="${k}|${v}" aria-pressed="${cur === v}">${l}</button>`).join('')}</div>`;
+  const box = (k, t) => `<label class="todo"><input type="checkbox" data-in="calBox" data-id="${k}" ${cs[k] ? 'checked' : ''}><span>${t}</span></label>`;
+  return `<div class="small muted" style="margin:14px 0 8px">📅 Calendar: how it looks</div>
+    <label class="f"><span>Week starts on</span>${seg('start', [['mon', 'Monday'], ['sun', 'Sunday']])}</label>
+    <label class="f"><span>Calendar size</span>${seg('size', [['month', 'Full month'], ['week', 'This week'], ['hidden', 'Hidden']])}</label>
+    <label class="f"><span>Dates</span>${seg('dates', [['date', 'Real dates'], ['week', 'Week numbers']])}</label>
+    <label class="f"><span>Show on my calendar</span><select data-in="calShows">${[['this', 'This show only'], ['mine', 'This show and big events'], ['all', 'All my shows and big events']].map(([v, l]) => `<option value="${v}" ${cs.shows === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <div class="tiny muted" style="margin:-4px 0 12px">Only changes the look on this device. Shows still run on the same nights.</div>
+    <div class="small muted" style="margin:14px 0 8px">📅 Calendar: when shows run</div>
+    <label class="f"><span>Big event night</span>${seg('bigDay', [[5, 'Saturday'], [6, 'Sunday']], 'bigDaySet', bigDay()).replace(/data-id="bigDay\|/g, 'data-id="')}</label>
+    ${st.bigMode === 'month' ? `<label class="f"><span>Big event weekend</span>${seg('bigWkd', [['first', 'First'], ['mid', 'Middle'], ['last', 'Last']], 'calRule', bigWkdOf(st))}</label>` : `<div class="tiny muted" style="margin:-4px 0 12px">Big events run every ${st.bigEvery} weeks. Schedule them by month in Office → Setup to pick the weekend.</div>`}
+    <label class="todo"><input type="checkbox" data-in="goHome" ${goHomeOn() ? 'checked' : ''}><span>📺 Weekly shows still air on big event weeks (go-home shows)<br><span class="tiny muted">Off: the big event is the only show that week, so there's no weekly TV money or go-home hype that week.</span></span></label>
+    <label class="f"><span>Book ahead up to</span>${seg('ahead', [[8, '8 weeks'], [16, '16 weeks'], [26, '26 weeks']], 'calRule', AHEAD())}</label>
+    <div class="tiny muted" style="margin:-4px 0 12px">These change your schedule. They can't change a week that has already started airing.</div>
+    <div class="small muted" style="margin:14px 0 8px">📅 Calendar: planning helpers</div>
+    <label class="f"><span>Remind me to book the big event</span><select data-in="calRemind">${[[0, 'Never'], [1, '1 week before'], [2, '2 weeks before'], [3, '3 weeks before'], [4, '4 weeks before'], [6, '6 weeks before'], [8, '8 weeks before']].map(([v, l]) => `<option value="${v}" ${cs.remind === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    ${box('auto', '🎆 Open the big event first when its week comes')}
+    ${box('count', '⏳ Countdown to the next big event above the calendar')}
+    ${box('rivals', '🆚 Show rival big events on my calendar')}
+    ${box('hol', "🎄 Mark holidays (New Year, Valentine's, Halloween, Thanksgiving, Christmas)")}
+    <div class="tiny muted" style="margin:-4px 0 12px">Planning helpers never move a show.</div>`;
+}
 function modalMenu() {
   if (!G) return modalStartMenu();
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
@@ -7410,6 +7525,7 @@ function modalMenu() {
     <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
     <label class="f"><span>⚡ Surprise moments on the show</span><select data-in="moments">${[[0, 'Off: only what you book happens'], [1, 'Some: now and then'], [2, 'Lots: most shows have one or more']].map(([v, l]) => `<option value="${v}" ${MOM_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
+${calSettings()}
 ${displaySettings()}
     <div class="sec">Help</div>
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button></div>
@@ -8531,13 +8647,22 @@ const A = {
   },
   selWeek(wk) { UI.selWeek = +wk; UI.reorder = false; render(); },
   // another of this company's shows on the calendar (the big event, or the weekly show): open it at that week
-  calGo(v) { const [sid, w] = String(v).split('|'), wk = +w; if (!wk || wk < 1 || wk > G.week + 16 || (sid === EV && !bigWk(wk))) return;
+  calGo(v) { const [sid, w] = String(v).split('|'), wk = +w; if (!wk || wk < 1 || wk > G.week + AHEAD() || (sid === EV && !bigWk(wk))) return;
     const mk = UI.calMonth ?? monthKey(UI.selWeek); if (!setShow(sid)) return; UI.selWeek = wk; UI.calMonth = mk; UI.reorder = false; save(); render(); },
-  calNav(d) { const k = (UI.calMonth ?? monthKey(UI.selWeek)) + +d; const ws = weeksInMonth(k); if (!ws.length || ws[ws.length - 1] < 1 || ws[0] > G.week + 16) return; UI.calMonth = k; render(); },
+  calNav(d) { if (CAL().size === 'week') { const v = (UI.calWkv ?? UI.selWeek) + +d; if (v < 1 || v > G.week + AHEAD()) return; UI.calWkv = v; return render(); }
+    const k = (UI.calMonth ?? monthKey(UI.selWeek)) + +d; const ws = weeksInMonth(k); if (!ws.length || ws[ws.length - 1] < 1 || ws[0] > G.week + AHEAD()) return; UI.calMonth = k; render(); },
   // open the big event's own card (it is its own show, so selecting its week on the weekly show opened the go-home show instead)
   bookBig(w) { const wk = +w || nextBig(); if (!wk || !bigWk(wk) || wk < G.week) return A.calToday();
-    UI.tab = 'book'; UI.modal = null; if (!setShow(EV)) return; UI.selWeek = wk; UI.calMonth = null; UI.reorder = false; save(); render(); },
-  calToday() { if (onEv() && !bigWk(G.week)) { const u = nextUp(); if (!u || !goUnit(u)) setShow(mainShowId()); } UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; render(); },
+    UI.tab = 'book'; UI.modal = null; if (!setShow(EV)) return; UI.selWeek = wk; UI.calMonth = UI.calWkv = null; UI.reorder = false; save(); render(); },
+  // Menu → Settings → Calendar (this device)
+  calSet(v) { const [k, x] = String(v).split('|'); if (!CAL_OK[k]) return; const val = CAL_OK[k].find(o => String(o) === x); if (val === undefined) return;
+    meta.cal = { ...CAL(), [k]: val }; ls.set(META, JSON.stringify(meta)); UI.calWkv = null; render(); },
+  // Menu → Settings → Calendar (this save): a change that would move this week's shows waits until the week is done
+  calRule(v) { const [k, x] = String(v).split('|'), st = G.settings;
+    if (k === 'ahead') { const n = +x; if (![8, 16, 26].includes(n) || n === AHEAD()) return; st.ahead = n; return commit(`You can book up to ${n} weeks ahead.`); }
+    if (k === 'bigWkd') { if (!['first', 'mid', 'last'].includes(x) || x === bigWkdOf(st)) return; calMove(() => { st.bigWkd = x; }, `Big events now air on the ${{ first: 'first', mid: 'middle', last: 'last' }[x]} weekend of their month.`); }
+  },
+  calToday() { if (onEv() && !bigWk(G.week)) { const u = nextUp(); if (!u || !goUnit(u)) setShow(mainShowId()); } UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; UI.tab = 'book'; UI.modal = null; render(); },
   reorder() { UI.reorder = !UI.reorder; render(); },
   // tapping the drag handle (or Enter on it) turns on the Up / Down buttons
   gripTap(id) {
@@ -8618,11 +8743,11 @@ const A = {
   roleSw(r) { const r2 = setRole(W(UI.modal?.id), r); if (r2?.no) return toast(r2.no); if (r2) commit(r2.msg); },
   cos() { openModal({ type: 'cos' }); },
   shows() { openModal({ type: 'shows' }); },
-  afterShow() { liveTimers.forEach(clearTimeout); clearTimeout(LV.auto); momSettle(); UI.modal = null; const r = goNext(); UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop();
+  afterShow() { liveTimers.forEach(clearTimeout); clearTimeout(LV.auto); momSettle(); UI.modal = null; const r = goNext(); UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; save(); render(); pageTop();
     if (r.u || r.n) toast(`${r.n ? `Auto-booked ${r.n} show${r.n > 1 ? 's' : ''}. ` : ''}Now booking ${G.promo.show}${multi() ? ' for ' + G.promo.name : ''}.`); },
   goNextUp() { const u = nextUp(); if (!u) return; goUnit(u); UI.modal = null; UI.tab = 'book'; save(); render(); pageTop(); toast(`Now booking ${G.promo.show}${multi() ? ' for ' + G.promo.name : ''}.`); },
   goUnit(key) { const [co, sid] = String(key || '').split('|'); const u = weekUnits().find(x => (x.co || '') === co && (x.sid || '') === sid); if (!u || u.on) return; goUnit(u); UI.modal = null; UI.tab = 'book'; save(); render(); },
-  goShow(id) { if (!setShow(id)) return; UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop(); toast(`Now booking ${G.promo.show}.`); },
+  goShow(id) { if (!setShow(id)) return; UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; save(); render(); pageTop(); toast(`Now booking ${G.promo.show}.`); },
   addShow() {
     const sh = SHOWS(); if (sh.length >= MAX_SHOWS) return;
     const used = new Set(sh.map(x => x.id === G.showId ? +G.promo.day : +x.day)), base = +G.promo.day || 0;
@@ -8706,7 +8831,7 @@ const A = {
   brandBoth(id) { const w = W(id); if (!w?.contract) return; const pick = UI.modal?.type === 'bothPick'; w.both = !w.both; if (!w.both) delete w.both; if (pick) UI.modal = null; commit(w.both ? `${w.name} now works ${allBrands(0)}.` : `${w.name} now works ${brandName(brandOf(w))} only.`); },
   brandBothPick() { openModal({ type: 'bothPick', q: '' }); },
   brandRoster(id) { UI.modal = null; UI.tab = 'roster'; UI.rosterF = 'b:' + id; render(); pageTop(); },
-  coSwitch(id) { if (!G.cos?.some(c => c.coId === id)) return; switchCo(id); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop(); toast(`Now booking ${G.promo.name}.`); },
+  coSwitch(id) { if (!G.cos?.some(c => c.coId === id)) return; switchCo(id); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; save(); render(); pageTop(); toast(`Now booking ${G.promo.name}.`); },
   coAdd() { if ((G.cos || []).length + 1 >= MAX_COS) return toast(`A world can have up to ${MAX_COS} companies.`); confirmBox('Start another company?', `It joins this world and shares indie stars, rival promotions and the calendar with ${G.promo.name}. Every company you run puts on a show each week.`, 'Start it', () => { UI.modal = null; wizStart(true); }); },
   coAuto() { if (!showRanNow() && !doneThisWeek()) return toast(`Run ${G.promo.show} first.`); autoBookRest(); },
   raid(id, el) {
@@ -9007,7 +9132,7 @@ const A = {
   undoShow() {
     if (!canUndo(UNDO?.wk)) return toast('That show can no longer be undone.');
     confirmBox('Undo this show?', 'Everything goes back to the moment before the bell. Your card stays booked so you can change it and run it again.', 'Undo', () => {
-      liveTimers.forEach(clearTimeout); G = migrate(JSON.parse(UNDO.json)); if (UNDO.car) { CAREER = cleanCareer(JSON.parse(UNDO.car)); saveCareer(); } UNDO = null; UI.selWeek = G.week; UI.calMonth = null; UI.tab = 'book'; UI.modal = null; commit('Show undone.');
+      liveTimers.forEach(clearTimeout); G = migrate(JSON.parse(UNDO.json)); if (UNDO.car) { CAREER = cleanCareer(JSON.parse(UNDO.car)); saveCareer(); } UNDO = null; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; UI.tab = 'book'; UI.modal = null; commit('Show undone.');
     }, true);
   },
 
@@ -11666,7 +11791,7 @@ const CREATOR_ACTIONS = {
       let g; try { g = sanitizeGame(JSON.parse(await ungz(i.save))); } catch (e) { return toast('This save is damaged and can\'t be opened.'); }
       if (G) save();
       g.event = null; G = g; meta.slot = n; save(); markUsed(key); PLAYLOG.ev('new_game', 'community');
-      UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; render();
+      UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; render();
       toast(`Now playing ${G.promo.name} in slot ${n}.`);
     };
     if (info) confirmBox(`Replace slot ${n}?`, `${info.name} (week ${info.week}) in slot ${n} will be replaced by this shared save. Back it up first from Menu if you want to keep it.`, 'Replace and play', go, true);
@@ -12871,7 +12996,7 @@ function wizFinish() {
   if (held.length) news(`📅 ${held.map(u => u.name).join(' and ')} start${held.length > 1 ? '' : 's'} next week. ${held.length > 1 ? 'Those nights have' : 'That night has'} already gone by this week.`, 'office');
   { const u = nextUp(); if (u && u.c === G && !u.on) goUnit(u); }
   if (!z.add) tutStart();
-  UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : z.world && !z.take && z.source === 'world' ? 'office' : 'book'; if (UI.tab === 'office') UI.faTab = 'fa'; UI.selWeek = G.week; UI.calMonth = null;
+  UI.wiz = null; UI.tab = z.source === 'import' ? 'roster' : z.world && !z.take && z.source === 'world' ? 'office' : 'book'; if (UI.tab === 'office') UI.faTab = 'fa'; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null;
   // an empty roster lands on the Roster tab; Build, Import and Community are right there, so nothing pops up
   UI.modal = null;
   applyBrand(G.promo.color); save(); render(); pageTop();
@@ -13170,7 +13295,7 @@ function tutWin(h) {
 const TUT_ACTIONS = {
   tutNext() { if (!tutOn()) return; if (G.tut >= TUT_WIN) { if (!G.tutReplay) PLAYLOG.ev('tutorial', 'done'); delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; commit('Tutorial done. Have a great run!'); return; } G.tut++; commit(); },
   tutSkip() { PLAYLOG.ev('tutorial', 'skip:' + (+G.tut || 0)); delete G.tut; delete G.tutRes; delete G.tutReplay; commit('Tutorial off. Replay it from Menu → How to play.'); },
-  tutReplay() { if (!G) return; tutStart(true); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = null; save(); render(); pageTop(); }
+  tutReplay() { if (!G) return; tutStart(true); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; save(); render(); pageTop(); }
 };
 
 const WIZ_ACTIONS = {
@@ -13391,6 +13516,10 @@ document.addEventListener('change', e => {
     else if (k === 'organic') { G.settings.organic = el.checked; commit(); }
     else if (k === 'moments') { G.settings.moments = clamp(+el.value || 0, 0, 2); commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
+    else if (k === 'calShows') A.calSet('shows|' + el.value);
+    else if (k === 'calRemind') A.calSet('remind|' + el.value);
+    else if (k === 'calBox') A.calSet(el.dataset.id + '|' + el.checked);
+    else if (k === 'goHome') { const on = el.checked; calMove(() => { G.settings.goHome = on; }, on ? 'Weekly shows air on big event weeks again.' : 'On big event weeks, the big event is the only show.'); }
     else if (k === 'deep') { G.settings.deep = el.checked; if (el.checked) { G.settings.finances = true; if (G.settings.contracts === false) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40); G.settings.contracts = true; } else { G.settings.finances = false; G.settings.contracts = false; } commit(el.checked ? 'Deep sim on, with money and contracts. Open any wrestler to see their skills.' : 'Deep sim off. Money and contracts are off too.'); }
     else if (k === 'trainFocus') { const w = W(el.dataset.id) || trainees().find(x => x.id === el.dataset.id); if (w && Object.hasOwn(FOCUS, el.value)) { w.train = el.value; commit(`${w.name}: ${FOCUS[w.train][0].toLowerCase()} training.`); } }
     else if (k === 'prOn') { const s = staffOf('pr'); if (s) { if (el.checked) delete s.off; else s.off = true; commit(); } }
@@ -13603,7 +13732,8 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9.64';
 const WHATS_NEW = [
-  ['🎆 Book the big event', 'The Book the big event card button (and the big event reminders under Needs your attention) now open the big event itself. Before, they opened the last weekly show before it.'],
+  ['📅 Calendar settings', 'Menu → Settings has a new Calendar section. Start weeks on Sunday, shrink the calendar to this week or hide it, show week numbers, and pick which shows appear. Choose which weekend of the month big events air on, turn off weekly shows on big event weeks, and book up to 26 weeks ahead. Planning helpers add a big event countdown, rival big events and holidays on your calendar, and when the "book the big event" reminder comes.'],
+  ['🎆 Book the big event', 'Tapping Book the card on the big event panel, or a big event reminder, now opens the big event. Before, it opened the weekly show that airs the same week.'],
   ['💾 Clearer saves', 'A save holds your whole world, and now it says so. Backup files are named after every company you run, with the week and date (like BookIt_WWE+AEW_week-12_2026-11-25.json), and Backup & transfer lists what the file holds. Save slots and cloud saves show every company. Cloud saves tell you how much of the cloud limit your game uses and warn you from 80%, before it stops fitting.'],
   ['🔁 Take over a rival', 'With Sandbox on, open any AI company in Office → Companies and tap Take over to run it yourself, as one of up to 4 companies in your world. Its roster, contracts, titles and title history, teams, factions, feuds, photos and big events come with it. It keeps its name and show, and you can add more weekly shows and a brand split as you take it over.'],
   ['🏢 Companies tab', 'The Rivals tab in the Office is now called Companies. It still shows every company in your world, their rosters and fans, and is where you create, edit or share them.'],
