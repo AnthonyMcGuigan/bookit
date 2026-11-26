@@ -8030,34 +8030,13 @@ const symName = k => { const n = String(k).replace(/^ic-/, ''); return SYM_NAME[
 const SYM_SRC = new Map();
 const symInner = k => { const n = String(k).replace(/^ic-/, ''); if (!SYM_SRC.has(n)) SYM_SRC.set(n, document.getElementById('i-' + n)?.innerHTML || ''); return SYM_SRC.get(n); };
 // a symbol drawn in metal (or any colour) on a 24 x 24 box centred on (cx, cy) with radius r, with a dark edge below it for relief
-function symDraw(k, cx, cy, r, fill, edge) {
+function symDraw(k, cx, cy, r, fill, edge, ew = 1.4, shd) {
   const s = symInner(k); if (!s) return '';
   const sc = r * 2 / 24, at = (dy = 0) => `translate(${(cx - 12 * sc).toFixed(2)} ${(cy - 12 * sc + dy).toFixed(2)}) scale(${sc.toFixed(3)})`;
-  const sw = (1.4 / sc).toFixed(2);
-  return `<g transform="${at(Math.max(.8, r * .08))}" fill="${edge}" stroke="${edge}" stroke-width="${sw}" stroke-linejoin="round" opacity=".75">${s.replace(/stroke="currentColor"/g, `stroke="${edge}"`)}</g>`
+  const sw = (ew / sc).toFixed(2);
+  return `<g transform="${at(shd ?? Math.max(.8, r * .08))}" fill="${edge}" stroke="${edge}" stroke-width="${sw}" stroke-linejoin="round" opacity=".75">${s.replace(/stroke="currentColor"/g, `stroke="${edge}"`)}</g>`
     + `<g transform="${at()}" fill="${edge}" stroke="${edge}" stroke-width="${sw}" stroke-linejoin="round">${s.replace(/stroke="currentColor"/g, `stroke="${edge}"`)}</g>`
     + `<g transform="${at()}" fill="${fill}">${s.replace(/stroke="currentColor"/g, `stroke="${fill}"`)}</g>`;
-}
-// a symbol as an n x n grid of on/off pixels for the pixel faces and bodies (drawn once on a small canvas, then cached)
-const SYM_PIX = new Map();
-function symPix(k, n) {
-  const key = k + n; if (SYM_PIX.has(key)) return SYM_PIX.get(key);
-  let out = null;
-  try {
-    const el = document.getElementById('i-' + String(k).replace(/^ic-/, '')), S = n * 8, cv = document.createElement('canvas'); cv.width = cv.height = S;
-    const x = cv.getContext('2d'); x.scale(S / 24, S / 24); x.fillStyle = x.strokeStyle = '#000'; x.lineCap = x.lineJoin = 'round';
-    for (const c of el ? el.children : []) {
-      const a = q => c.getAttribute(q);
-      if (c.tagName === 'circle') { x.beginPath(); x.arc(+a('cx'), +a('cy'), +a('r'), 0, Math.PI * 2); x.fill(); continue; }
-      if (c.tagName !== 'path') continue;
-      const p = new Path2D(a('d') || '');
-      if (a('fill') !== 'none') x.fill(p, a('fill-rule') === 'evenodd' ? 'evenodd' : 'nonzero');
-      if (a('stroke') && a('stroke') !== 'none') { x.lineWidth = +a('stroke-width') || 2; x.stroke(p); }
-    }
-    const d = x.getImageData(0, 0, S, S).data; out = [];
-    for (let j = 0; j < n; j++) { const row = []; for (let i = 0; i < n; i++) { let t = 0; for (let y = 0; y < 8; y++) for (let z = 0; z < 8; z++) t += d[((j * 8 + y) * S + i * 8 + z) * 4 + 3]; row.push(t / 64 > 96); } out.push(row); }
-  } catch (e) { out = null; }
-  SYM_PIX.set(key, out); return out;
 }
 
 // finished belts to start from; the designer's Templates row and the quick-add titles use them
@@ -8343,8 +8322,6 @@ function faceGrid(code, align, wcol, women, lx) {
   if (hair === 16) { top(8, 13, 8, 10); top(8, 13, 22, 24); for (let x = 11; x < 21; x += 2) set(x, 6, hd); rect(12, 7, 3, 1, faceShade(sk, .35)); }
   if (hair === 17) { top(2, 9, 13, 19); for (const x of [13, 15, 17]) set(x + 1, 1, hd); top(6, 9, 9, 23); rect(9, 9, 1, 2, hc); rect(22, 9, 1, 2, hd); }
   if (!mask && !H) { rect(12, 7, 2, 1, faceShade(sk, .35)); set(11, 8, faceShade(sk, .35)); }
-  // a symbol on the forehead goes under any headwear
-  if (SY?.at === 'head') symStamp(set, SY, 5, 14, 7);
   // headwear
   const hw = L.f14 || (HWC ? FACE.col[HWC] : safeColor(wcol) || '#c8102e'), hwd = faceShade(hw, -.3), HWX = HWC || L.f14;
   if (HW === 1) { rect(10, 4, 12, 1, hw); rect(9, 5, 14, 5, hw); rect(21, 5, 2, 5, hwd); for (let y = 5; y < 10; y++) for (let x = 9; x < 23; x++) if ((x + y * 2) % 5 === 0) set(x, y, faceShade(hw, .5)); rect(23, 8, 2, 2, hw); set(25, 10, hw); set(24, 11, hwd); }
@@ -8365,7 +8342,12 @@ function faceGrid(code, align, wcol, women, lx) {
   if (X === 7) { for (let x = 11; x < 21; x++) { const y = 24 + (x >= 12 && x <= 19 ? 1 : 0) + (x >= 13 && x <= 18 ? 1 : 0) + (x >= 15 && x <= 16 ? 1 : 0); set(x, y, x % 2 ? gold : goldD); } rect(15, 28, 2, 2, gold); set(16, 29, goldD); }
   if (X === 8) for (const [x, y] of [[10, 11], [11, 12], [12, 13], [12, 16], [13, 17], [13, 18]]) set(x, y, '#9c3b34');
   if (X === 9) { rect(18, 17, 4, 2, '#efe3c8'); set(19, 17, '#d6c7a6'); set(20, 18, '#d6c7a6'); }
-  if (SY?.at === 'chest') symStamp(set, SY, 6, 13, 26);
+  // tattoos on bare skin: the face has its own small designs, the neck and chest use the style's pattern
+  const TT = lx?.tat;
+  if (TT) { const ink = TT.c, sk2 = (x, y) => g[y]?.[x] === sk || g[y]?.[x] === sd, dot = (x, y) => { if (sk2(x, y)) g[y][x] = ink; };
+    if (TT.at.includes('face')) ({ tribal: [[10, 16], [11, 17], [10, 18], [11, 19], [21, 16], [20, 17], [21, 18], [20, 19]], bands: [[11, 8], [12, 8], [13, 8], [14, 8], [17, 8], [18, 8], [19, 8], [20, 8]], script: [[20, 17], [20, 19], [19, 21]],
+      sleeve: Array.from({ length: 6 * 15 }, (_, i) => [17 + i % 6, 7 + Math.floor(i / 6)]).filter(([x, y]) => (x * 3 + y * 2) % 5 < 2 && !(y >= 13 && y <= 16 && x >= 17 && x <= 21)) })[TT.st].forEach(([x, y]) => dot(x, y));
+    for (let y = 23; y < N; y++) for (let x = 0; x < N; x++) { const z = y < 28 ? 'neck' : 'chest'; if (TT.at.includes(z) && sk2(x, y) && tatPat(TT.st, x, y)) g[y][x] = ink; } }
   g.pal = { sk, sd, hc, hd, gc, women };
   return g;
 }
@@ -8383,14 +8365,14 @@ function pixRects(out) {
 function faceSVG(code, align, wcol, women, tight, lx) {
   const out = pixOutline(faceGrid(code, align, wcol, women, lx));
   const bg = align === 'heel' ? '#4a0d14' : '#0d2a5c', bl = faceShade(bg, .25);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}` + pixRects(out) + '</svg>';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}` + pixRects(out) + symOn(lx?.sym, { head: [16, 9.5, 2.4, 4], chest: [16, 28.6, 2.6, 6] }) + '</svg>';
 }
 const FACE_CACHE = new Map();
 // tight: a closer crop for small round avatars, so the face fills the circle
 function faceURL(w, tight) {
   const k = faceCode(w) + (w.align === 'heel' ? 'h' : 'f') + (looksWomen(w) ? 'w' : 'm') + (tight ? 't' : '') + (safeColor(w.color) || '') + lookKey(w);
   let u = FACE_CACHE.get(k);
-  if (!u) { if (FACE_CACHE.size > 1500) FACE_CACHE.clear(); u = 'data:image/svg+xml,' + encodeURIComponent(faceSVG(faceCode(w), w.align, w.color, looksWomen(w), tight, { lc: lcClean(w.lc), sym: symClean(w.sym) })); FACE_CACHE.set(k, u); }
+  if (!u) { if (FACE_CACHE.size > 1500) FACE_CACHE.clear(); u = 'data:image/svg+xml,' + encodeURIComponent(faceSVG(faceCode(w), w.align, w.color, looksWomen(w), tight, { lc: lcClean(w.lc), sym: symClean(w.sym), tat: tatClean(w.tat) })); FACE_CACHE.set(k, u); }
   return u;
 }
 // ---- pixel bodies: the full wrestler on the wrestler page, 48x96, with the pixel face's head on top ----
@@ -8432,22 +8414,38 @@ const LC_KEYS = ['f0', 'f2', 'f6', 'f8', 'f9', 'f14', 'b3', 'b5'];
 const isHex = v => /^#[0-9a-f]{6}$/i.test(String(v));
 function lcClean(o) { if (!o || typeof o !== 'object') return undefined; const x = {}; for (const k of LC_KEYS) if (isHex(o[k])) x[k] = String(o[k]).toLowerCase(); return Object.keys(x).length ? x : undefined; }
 // a symbol from the game's icon pack on the wrestler: w.sym = { k: 'ic-star', at: chest | trunks | head, c: colour }
-const SYM_AT = [['chest', 'Chest'], ['trunks', 'Trunks'], ['head', 'Forehead']];
+const SYM_AT = [['head', 'Forehead'], ['chest', 'Chest'], ['trunks', 'Trunks'], ['boots', 'Boots']];
+const SYM_X = [['l', 'Left'], ['c', 'Centre'], ['r', 'Right']], SYM_S = { s: ['Small', .75], m: ['Medium', 1], l: ['Large', 1.35] };
 const SYM_COLS = ['#f2c94c', '#f4f4f4', '#111111', '#c8102e', '#1f4fbf', '#1f8a3b', '#7b2cbf', '#ff6b00', '#0891b2', '#e23a8a'];
-function symClean(o) { if (!o || typeof o !== 'object' || !symOK(o.k)) return undefined; return { k: o.k, at: SYM_AT.some(([a]) => a === o.at) ? o.at : 'chest', c: isHex(o.c) ? String(o.c).toLowerCase() : '#f2c94c' }; }
+function symClean(o) { if (!o || typeof o !== 'object' || !symOK(o.k)) return undefined; return { k: o.k, at: SYM_AT.some(([a]) => a === o.at) ? o.at : 'chest', c: isHex(o.c) ? String(o.c).toLowerCase() : '#f2c94c', ...(o.x === 'l' || o.x === 'r' ? { x: o.x } : {}), ...(o.s === 's' || o.s === 'l' ? { s: o.s } : {}) }; }
+// tattoos: ink drawn on bare skin, so gear covers them. w.tat = { at: [places], st: style, c: ink }
+const TAT_AT = [['face', 'Face'], ['neck', 'Neck'], ['chest', 'Chest'], ['stomach', 'Stomach'], ['larm', 'Left arm'], ['rarm', 'Right arm'], ['legs', 'Legs']];
+const TAT_ST = [['tribal', 'Tribal'], ['sleeve', 'Full ink'], ['bands', 'Bands'], ['script', 'Script']];
+const TAT_INK = ['#1a1a2a', '#1f3f8f', '#8a1020', '#1f6b3b', '#5a2a7a', '#e8e8e8'];
+function tatClean(o) { if (!o || typeof o !== 'object' || !Array.isArray(o.at)) return undefined; const at = TAT_AT.map(([a]) => a).filter(a => o.at.includes(a)); if (!at.length) return undefined;
+  return { at, st: TAT_ST.some(([a]) => a === o.st) ? o.st : 'tribal', c: isHex(o.c) ? String(o.c).toLowerCase() : '#1a1a2a' }; }
+// is this skin pixel inked, for a style
+const tatPat = (st, x, y) => st === 'sleeve' ? (x * 3 + y * 2) % 5 < 2 : st === 'bands' ? y % 6 < 2 : st === 'script' ? y % 5 === 0 && x % 2 === 0 : (x + y) % 5 === 0 || ((x - y + 60) % 5 === 0 && y % 2 === 0);
 // a whole pixel look (a saved look template): face code, body code, colours and symbol
-function lookClean(o) { o = o && typeof o === 'object' ? o : {}; const x = {}; if (faceOK(o.look)) x.look = o.look; if (bodyOK(o.body)) x.body = o.body; const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) x.lc = lc; if (sy) x.sym = sy; return x; }
-// stamp a symbol's pixels onto a grid at (x0, y0), n wide
-function symStamp(set, sym, n, x0, y0) { const m = sym && symPix(sym.k, n); if (!m) return; for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (m[j][i]) set(x0 + i, y0 + j, sym.c); }
-const lookKey = w => (w.lc ? JSON.stringify(w.lc) : '') + (w.sym ? w.sym.k + w.sym.at + w.sym.c : '');
+function lookClean(o) { o = o && typeof o === 'object' ? o : {}; const x = {}; if (faceOK(o.look)) x.look = o.look; if (bodyOK(o.body)) x.body = o.body; const lc = lcClean(o.lc), sy = symClean(o.sym), tt = tatClean(o.tat); if (lc) x.lc = lc; if (sy) x.sym = sy; if (tt) x.tat = tt; return x; }
+// a symbol drawn as the real icon (crisp, not pixels) on top of a pixel face or body: spots = { place: [x, y, r, side step] }
+function symOn(sym, spots) {
+  const p = sym && spots[sym.at]; if (!p) return '';
+  const [x, y, r0, dx] = p, r = r0 * SYM_S[sym.s || 'm'][1], lum = parseInt(sym.c.slice(1, 3), 16) + parseInt(sym.c.slice(3, 5), 16) + parseInt(sym.c.slice(5, 7), 16);
+  const edge = lum < 120 ? faceShade(sym.c, .45) : '#0b0b0f';
+  const xs = Array.isArray(x) ? (sym.x === 'l' ? [x[0]] : sym.x === 'r' ? [x[1]] : x) : [x + (sym.x === 'l' ? -dx : sym.x === 'r' ? dx : 0)];
+  return `<g shape-rendering="geometricPrecision">${xs.map(cx => symDraw(sym.k, cx, y, r, sym.c, edge, .5, .45)).join('')}</g>`;
+}
+const lookKey = w => (w.lc ? JSON.stringify(w.lc) : '') + (w.sym ? JSON.stringify(w.sym) : '') + (w.tat ? JSON.stringify(w.tat) : '');
 function bodySVG(w, holds) {
   const [BU, ST, BO, BC, BT, BTC, PD, HA, BE, SH, CH] = [...bodyCode(w)].map(d => parseInt(d, 36));
   const fc = faceCode(w), women = looksWomen(w), Wd = 48, H = 96;
-  const LC = lcClean(w.lc) || {}, SY = symClean(w.sym);
-  const head = faceGrid(fc, w.align, w.color, women, { lc: LC, sym: SY?.at === 'head' ? SY : null }), { sk, sd, hc, hd, gc } = head.pal;
+  const LC = lcClean(w.lc) || {}, SY = symClean(w.sym), TT = tatClean(w.tat);
+  const head = faceGrid(fc, w.align, w.color, women, { lc: LC, tat: TT }), { sk, sd, hc, hd, gc } = head.pal;
   const GR = parseInt(fc[5], 36);
   const g = Array.from({ length: H }, () => Array(Wd).fill(null));
-  const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < Wd && y >= 0 && y < H && c) g[y][x] = c; };
+  let armTag = null; const mk = Array.from({ length: H }, () => Array(Wd).fill(null));
+  const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < Wd && y >= 0 && y < H && c) { g[y][x] = c; mk[y][x] = armTag; } };
   const rect = (x, y, w2, h2, c) => { for (let j = y; j < y + h2; j++) for (let i = x; i < x + w2; i++) set(i, j, c); };
   const span = (y, hw, c) => rect(24 - hw, y, hw * 2, 1, c);
   const bc = LC.b3 || (BC ? FACE.col[BC] : safeColor(w.color) || '#c8102e'), bcd = faceShade(bc, -.3);
@@ -8504,9 +8502,6 @@ function bodySVG(w, holds) {
   if (GR === 7) { fullTop(gc); for (let y = 30; y < 44; y++) { const hw = Math.max(0, 5 - Math.floor((y - 30) / 3)); if (hw) span(y, hw, '#f4f4f4'); } rect(23, 31, 2, 12, '#c8102e'); set(23, 43, '#8a0b1f'); set(24, 43, '#8a0b1f'); for (let y = 30; y < 40; y++) { set(23 - Math.max(1, 6 - Math.floor((y - 30) / 2)), y, gd); set(24 + Math.max(1, 6 - Math.floor((y - 30) / 2)), y, gd); } sleeve = 1; }
   if (GR === 8) { for (let y = 36; y < 43; y++) span(y, tw(y), gc); span(42, tw(42), gd); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); }
   if (GR === 9) { const gl = faceShade(gc, .4); for (let y = 30; y < 82; y++) { const hw = y < 52 ? tw(y) + 1 : hipW + 2 + Math.floor((y - 52) / 6); rect(24 - hw, y, hw - 4, 1, (y + 24 - hw) % 5 ? gc : gl); rect(28, y, hw - 4, 1, (y + 28) % 5 ? gc : gl); } for (let y = 28; y < 36; y++) { rect(24 - sw - 1 + (y - 28) / 2, y, 4, 1, '#f4f4f4'); rect(20 + sw - (y - 28) / 2, y, 4, 1, '#f4f4f4'); } sleeve = 1; }
-  // a symbol on the chest or the trunks, under the arms
-  if (SY?.at === 'chest') symStamp(set, SY, 7, 21, 36);
-  if (SY?.at === 'trunks') symStamp(set, SY, 5, 22, 53);
   // arms: shoulder to elbow to hand, with a fist; sleeves recolour the arm up to their length
   const L = [24 - sw + 1, 33], R = [23 + sw - 1, 33];
   const lim = (a, b) => [Math.max(2, Math.min(45, a)), Math.max(1, b)];
@@ -8522,7 +8517,9 @@ function bodySVG(w, holds) {
   const arms = [[L, ...pose(L)], [R, ...pose(R)]].map(([s, e, hnd]) => [s, lim(...e), lim(...hnd)]);
   const drawArm = ([s, e, hnd]) => {
     const r = at / 2, segs = [[s, e, 0], [e, hnd, .5]];
+    armTag = s === L ? 'larm' : 'rarm';
     for (const [a, b, t0] of segs) { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2) || 1; for (let k = 0; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, tt = t0 + t / 2; const c = tt < sleeve ? gc : sk, cd = tt < sleeve ? gd : sd; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r + .5) set(x + i, y + j, j >= r - .5 || i >= r - .5 ? cd : c); } }
+    armTag = null;
     const [hx, hy] = hnd, f = Math.max(2, Math.round(at * .8));
     const hc2 = HA === 2 ? '#1b1b20' : sk;
     rect(Math.round(hx - f / 2), Math.round(hy - f / 2), f + 1, f + 1, hc2); set(hx + f / 2, hy + f / 2, HA === 2 ? '#000' : sd);
@@ -8532,6 +8529,10 @@ function bodySVG(w, holds) {
   };
   // crossed arms: the left arm goes in front
   if (ST === 3) { drawArm(arms[1]); drawArm(arms[0]); } else arms.forEach(drawArm);
+  // tattoos on bare skin (the face's own come with the head)
+  if (TT) for (let y = 26; y < 88; y++) for (let x = 0; x < Wd; x++) { if (g[y][x] !== sk && g[y][x] !== sd) continue;
+    const z = mk[y][x] || (y < 31 ? 'neck' : y < 45 ? 'chest' : y < 53 ? 'stomach' : y >= 58 ? 'legs' : null);
+    if (z && TT.at.includes(z) && tatPat(TT.st, x, y)) g[y][x] = TT.c; }
   // their title: round the waist, or held up high in the Victory stance
   if (holds && !BE) {
     const gold = '#f2c94c', gl = '#fff2a8', gk = '#a87b12';
@@ -8544,7 +8545,7 @@ function bodySVG(w, holds) {
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wd} ${H}" shape-rendering="crispEdges"><rect width="${Wd}" height="${H}" fill="${bg}"/>`;
   s += [38, 50, 62].map(y => `<rect y="${y}" width="${Wd}" height="2" fill="${rope}"/><rect y="${y + 2}" width="${Wd}" height="1" fill="${faceShade(rope, -.45)}"/>`).join('');
   s += `<rect y="90" width="${Wd}" height="6" fill="#c9ccd6"/><rect y="90" width="${Wd}" height="1" fill="#e9ebf1"/><rect x="10" y="90" width="28" height="2" fill="#9ea3b2"/>`;
-  return s + pixRects(out) + '</svg>';
+  return s + pixRects(out) + symOn(SY, { head: [24, 15.5, 2.6, 4], chest: [24, 40, 4.4, 5.5], trunks: [24, 56, 3.2, 4.5], boots: [[legX(-1) + lt, legX(1) + lt], 81, 2.7, 0] }) + '</svg>';
 }
 const BODY_CACHE = new Map();
 function bodyURL(w) {
@@ -11830,7 +11831,7 @@ const A = {
     for (const i of [0, 1, 2, 3, 4, 'p']) delete d['proC' + i];
     d.pro = proClean(d.pro); if (!d.pro) delete d.pro;
     if (!d.photo && !faceOK(d.look)) d.look = faceCode(d); // keep the face they saw, even once a new wrestler gets an id
-    { const lc = lcClean(d.lc), sy = symClean(d.sym); if (lc) d.lc = lc; else delete d.lc; if (sy) d.sym = sy; else delete d.sym; }
+    { const lc = lcClean(d.lc), sy = symClean(d.sym), tt = tatClean(d.tat); if (lc) d.lc = lc; else delete d.lc; if (sy) d.sym = sy; else delete d.sym; if (tt) d.tat = tt; else delete d.tat; }
     if (SANDBOX() && +d.askSet > 0) d.askSet = clamp(Math.round(+d.askSet / 100) * 100, 100, 10000000); else if (SANDBOX() || !(+d.askSet > 0)) delete d.askSet;
     const cSal = SANDBOX() && d.cSal !== '' && d.cSal != null && isFinite(+d.cSal) ? clamp(Math.round(+d.cSal / 100) * 100, 0, 10000000) : null, cWks = SANDBOX() && d.cWks !== '' && d.cWks != null && isFinite(+d.cWks) ? clamp(Math.round(+d.cWks), 1, 520) : null;
     delete d.cSal; delete d.cWks;
@@ -12276,7 +12277,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body', 'pro', 'lc', 'sym', 'merch', 'gimK', 'gims'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body', 'pro', 'lc', 'sym', 'tat', 'merch', 'gimK', 'gims'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 // true when a canvas has see-through pixels (a PNG with its background already cut out)
@@ -12324,7 +12325,7 @@ function cleanW(o) {
   const rl = roleFromText(o.role); if (rl && rl !== 'wrestler') w.role = rl;
   if (faceOK(o.look)) w.look = o.look;
   if (bodyOK(o.body)) w.body = o.body;
-  { const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) w.lc = lc; if (sy) w.sym = sy; }
+  { const lc = lcClean(o.lc), sy = symClean(o.sym), tt = tatClean(o.tat); if (lc) w.lc = lc; if (sy) w.sym = sy; if (tt) w.tat = tt; }
   const pr = proClean(o.pro ?? o.pronouns); if (pr) w.pro = pr;
   if (typeof o.gimK === 'string' && o.gimK && Object.hasOwn(RPK_CHARS, o.gimK)) w.gimK = o.gimK;
   { const gs = gimsClean(o.gims); if (gs.length) w.gims = gs; }
@@ -12657,11 +12658,11 @@ function beltBatch(m) {
 
 // ---------- the wrestler's pixel look: the same workshop as the belts and trophies ----------
 // one editor for the face and the full body: a live preview on top, Templates / Surprise me / Undo, then tabs
-const LK_TABS = [['face', 'Face'], ['hair', 'Hair'], ['paint', 'Paint & masks'], ['gear', 'Gear'], ['sym', 'Symbol'], ['build', 'Build'], ['ring', 'Ring gear']];
+const LK_TABS = [['face', 'Face'], ['hair', 'Hair'], ['paint', 'Paint & masks'], ['gear', 'Gear'], ['sym', 'Symbol'], ['tat', 'Tattoos'], ['build', 'Build'], ['ring', 'Ring gear']];
 const lkTabs = () => LK_TABS.filter(([k]) => bodiesOn() || !['build', 'ring'].includes(k));
-const lkSnap = d => JSON.parse(JSON.stringify({ look: d.look, body: d.body, lc: d.lc, sym: d.sym }));
+const lkSnap = d => JSON.parse(JSON.stringify({ look: d.look, body: d.body, lc: d.lc, sym: d.sym, tat: d.tat }));
 const lkKeep = m => { (m.lkUndo ||= []).push(lkSnap(m.draft)); if (m.lkUndo.length > 40) m.lkUndo.shift(); };
-const lkApply = (d, x) => { for (const k of ['look', 'body', 'lc', 'sym']) { if (x[k] == null) delete d[k]; else d[k] = x[k]; } };
+const lkApply = (d, x) => { for (const k of ['look', 'body', 'lc', 'sym', 'tat']) { if (x[k] == null) delete d[k]; else d[k] = x[k]; } };
 // game templates: a style of gear and paint. They keep the wrestler's skin, eyes, brows, mouth and make-up.
 // f = places in the face code, b = places in the body code
 const LOOK_TPL = [
@@ -12682,15 +12683,15 @@ function lookFromTpl(d, x) {
   const f = [...faceCode(d)], b = [...bodyCode(d)];
   for (const [i, v] of Object.entries(x.f || {})) if (+v < FACE_MAX[+i]) f[+i] = (+v).toString(36);
   for (const [i, v] of Object.entries(x.b || {})) if (+v < BODY_MAX[+i]) b[+i] = (+v).toString(36);
-  return { look: f.join(''), body: b.join(''), lc: lcClean({ f0: d.lc?.f0 }), sym: x.sym ? { ...x.sym } : undefined };
+  return { look: f.join(''), body: b.join(''), lc: lcClean({ f0: d.lc?.f0 }), sym: x.sym ? { ...x.sym } : undefined, tat: tatClean(d.tat) };
 }
 // a saved look or a teammate's look on this wrestler: everything but their skin
 function lookFromMine(d, t) {
   const x = lookClean(t), f = [...(x.look || faceCode(d)).padEnd(FACE_LEN, '0')]; f[0] = faceCode(d)[0];
   const lc = { ...(x.lc || {}) }; delete lc.f0; if (d.lc?.f0) lc.f0 = d.lc.f0;
-  return { look: f.join(''), body: x.body || d.body, lc: lcClean(lc), sym: x.sym };
+  return { look: f.join(''), body: x.body || d.body, lc: lcClean(lc), sym: x.sym, tat: x.tat };
 }
-const lkLook = w => ({ look: faceCode(w), body: bodyCode(w), lc: w.lc, sym: w.sym });
+const lkLook = w => ({ look: faceCode(w), body: bodyCode(w), lc: w.lc, sym: w.sym, tat: w.tat });
 // teammates and faction mates, for "Copy a teammate's look"
 const lkMates = d => { const ids = new Set(); for (const t of [...(G?.teams || []), ...(G?.factions || [])]) if (t.members?.includes(d.id)) t.members.forEach(id => id !== d.id && ids.add(id)); return [...ids].map(W).filter(Boolean).slice(0, 12); };
 function lkTplPanel(d) {
@@ -12720,9 +12721,16 @@ function lookMaker(d) {
     gear: () => lab('Headwear') + tiles('f', 13, FACE.hat) + (fa(13) ? lab('Headwear colour') + sws('f', 14, FACE.col, 0, 'Headwear') : '')
       + lab('Top') + tiles('f', 5, FACE.gear) + lab('Gear colour') + sws('f', 6, FACE.col, 0, 'Gear') + lab('Extra') + tiles('f', 7, FACE.extra),
     sym: () => `<p class="small muted" style="margin-top:8px">Any icon from the game, on their gear or their face, like a belt's centre piece.</p>`
-      + (SY ? lab('Where it goes') + `<div class="seg-ctl">${SYM_AT.filter(([a]) => body || a !== 'trunks').map(([a, l]) => `<button class="${SY.at === a ? 'on' : ''}" data-act="lkSym" data-f="at" data-id="${a}" aria-pressed="${SY.at === a}">${l}</button>`).join('')}</div>`
+      + (SY ? lab('Where it goes') + `<div class="seg-ctl">${SYM_AT.filter(([a]) => body || a === 'head' || a === 'chest').map(([a, l]) => `<button class="${SY.at === a ? 'on' : ''}" data-act="lkSym" data-f="at" data-id="${a}" aria-pressed="${SY.at === a}">${l}</button>`).join('')}</div>`
+        + lab(SY.at === 'boots' ? 'Which boot' : 'Side') + `<div class="seg-ctl">${SYM_X.map(([a, l]) => { const on = (SY.x || 'c') === a; return `<button class="${on ? 'on' : ''}" data-act="lkSym" data-f="x" data-id="${a}" aria-pressed="${on}">${SY.at === 'boots' && a === 'c' ? 'Both' : l}</button>`; }).join('')}</div>`
+        + lab('Size') + `<div class="seg-ctl">${Object.entries(SYM_S).map(([a, [l]]) => { const on = (SY.s || 'm') === a; return `<button class="${on ? 'on' : ''}" data-act="lkSym" data-f="s" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>`
         + lab('Symbol colour') + `<div class="swatches">${SYM_COLS.map(c => `<button class="sw ${SY.c === c ? 'on' : ''}" style="background:${c}" data-act="lkSym" data-f="c" data-id="${c}" aria-label="Symbol colour ${c}" aria-pressed="${SY.c === c}"></button>`).join('')}${anyColour('s', SY.c, 'data-lc', !SYM_COLS.includes(SY.c))}</div>` : '')
       + lab('Symbol') + wsSyms(SY?.k || '', 'lkSym', 'k', 'None'),
+    tat: () => { const T = tatClean(d.tat), at = T?.at || [];
+      return `<p class="small muted" style="margin-top:8px">Ink on bare skin, so gear covers it. Pick as many places as you like.</p>` + lab('Where')
+        + `<div class="chips">${TAT_AT.filter(([a]) => body || ['face', 'neck', 'chest'].includes(a)).map(([a, l]) => `<button class="chip ${at.includes(a) ? 'on' : ''}" data-act="lkTat" data-f="at" data-id="${a}" aria-pressed="${at.includes(a)}">${l}</button>`).join('')}</div>`
+        + lab('Style') + `<div class="seg-ctl">${TAT_ST.map(([a, l]) => { const on = (T?.st || 'tribal') === a; return `<button class="${on ? 'on' : ''}" data-act="lkTat" data-f="st" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>`
+        + lab('Ink') + `<div class="swatches">${TAT_INK.map(c => { const on = (T?.c || '#1a1a2a') === c; return `<button class="sw ${on ? 'on' : ''}" style="background:${c}" data-act="lkTat" data-f="c" data-id="${c}" aria-label="Ink ${c}" aria-pressed="${on}"></button>`; }).join('')}${anyColour('t', T?.c || '#1a1a2a', 'data-lc', !!T && !TAT_INK.includes(T.c))}</div>`; },
     build: () => lab('Build') + tiles('b', 0, BODY.build) + lab('Shape') + tiles('b', 9, BODY.shape) + lab('Stance') + tiles('b', 1, BODY.stance),
     ring: () => lab('Bottoms') + tiles('b', 2, BODY.bottoms) + lab('Bottoms colour') + sws('b', 3, FACE.col, 0, 'Bottoms')
       + lab('Boots') + tiles('b', 4, BODY.boots) + (ba(4) === 4 ? '' : lab('Boots colour') + sws('b', 5, FACE.col, 0, 'Boots', '#1b1b20'))
@@ -14150,6 +14158,7 @@ function sanitizeGame(g) {
     if (w.body != null && !bodyOK(w.body)) delete w.body;
     if (w.lc != null) { const lc = lcClean(w.lc); if (lc) w.lc = lc; else delete w.lc; }
     if (w.sym != null) { const sy = symClean(w.sym); if (sy) w.sym = sy; else delete w.sym; }
+    if (w.tat != null) { const tt = tatClean(w.tat); if (tt) w.tat = tt; else delete w.tat; }
     if (w.pro != null) { const pr = proClean(w.pro); if (pr) w.pro = pr; else delete w.pro; }
     if (w.merch != null) { const mz = merchClean(w.merch); if (mz.length) w.merch = mz; else delete w.merch; }
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
@@ -14751,11 +14760,15 @@ const CREATOR_ACTIONS = {
     if (f === 'k') { if (symOK(v)) d.sym = { at: 'chest', c: '#f2c94c', ...(symClean(d.sym) || {}), k: v }; else delete d.sym; }
     else if (d.sym) d.sym = symClean({ ...d.sym, [f]: v });
     UI.fmOpen = true; render(); },
+  lkTat(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f, T = d.tat && typeof d.tat === 'object' ? { at: [], st: 'tribal', c: '#1a1a2a', ...d.tat } : { at: [], st: 'tribal', c: '#1a1a2a' }; lkKeep(m);
+    if (f === 'at') T.at = T.at.includes(v) ? T.at.filter(a => a !== v) : [...T.at, v]; else T[f] = v;
+    d.tat = { ...T }; if (!tatClean(T)) d.tat = { at: [], st: T.st, c: T.c }; UI.fmOpen = true; render(); },
   lkTpl(v) { const m = UI.modal; if (v === 'open') { m.lkTpl = !m.lkTpl; UI.fmOpen = true; return render(); } const x = LOOK_TPL[+v]; if (!x) return; lkKeep(m); lkApply(m.draft, lookFromTpl(m.draft, x[1])); m.lkTpl = false; render(); },
   lkMine(i) { const m = UI.modal, x = myTpls('w')[+i]; if (!x) return; lkKeep(m); lkApply(m.draft, lookFromMine(m.draft, x.b)); m.lkTpl = false; render(); },
   lkCopy(id) { const m = UI.modal, w = W(id); if (!w) return; lkKeep(m); lkApply(m.draft, lookFromMine(m.draft, lkLook(w))); m.lkTpl = false; render(); },
   lkRand() { const m = UI.modal, d = m.draft; lkKeep(m); d.look = faceRandom(Math.random(), looksWomen(d), true); d.body = bodyRandom(d, Math.random()); delete d.lc;
-    if (Math.random() < .2) d.sym = { k: 'ic-' + pick(symList()), at: pick(bodiesOn() ? ['chest', 'chest', 'trunks', 'head'] : ['chest', 'head']), c: pick(SYM_COLS) }; else delete d.sym; UI.fmOpen = true; render(); },
+    if (Math.random() < .2) d.sym = { k: 'ic-' + pick(symList()), at: pick(bodiesOn() ? ['chest', 'chest', 'trunks', 'head', 'boots'] : ['chest', 'head']), c: pick(SYM_COLS) }; else delete d.sym;
+    if (Math.random() < .25) d.tat = { at: pick([['larm'], ['rarm'], ['larm', 'rarm'], ['chest'], ['neck', 'chest'], ['face'], ['larm', 'rarm', 'chest']]), st: pick(TAT_ST)[0], c: pick(TAT_INK.slice(0, 5)) }; else delete d.tat; UI.fmOpen = true; render(); },
   lkUndo() { const m = UI.modal; if (m.lkUndo?.length) { lkApply(m.draft, m.lkUndo.pop()); UI.fmOpen = true; render(); } },
   fmTog(v, el) { UI.fmOpen = !el.parentElement.open; },
   bPx(v, el) { pxSet(PX, el.dataset.f, v); applyPX(); render(); },
@@ -16112,7 +16125,7 @@ const RPK_BUILD = {
   6: { n: '6 weeks', d: 'The full treatment. Safest, but they are gone for 6 weeks.', hit: 13, flop: -10 }
 };
 const RPK_VIG_COST = 500; // per vignette week, when finances are on
-const RPK_FIELDS = ['name', 'nick', 'short', 'align', 'hometown', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'look', 'body', 'lc', 'sym'];
+const RPK_FIELDS = ['name', 'nick', 'short', 'align', 'hometown', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'look', 'body', 'lc', 'sym', 'tat'];
 const RPK_RES = { hit: 'Hit', ok: 'Mixed', flop: 'Flop' };
 const gimWk = w => Math.max(1, Math.floor(+w.gimWk || +w.joined || 1));
 const gimAge = w => Math.max(0, (G?.week || 1) - gimWk(w));
@@ -16160,7 +16173,7 @@ function rpkTake(d) {
   o.photo = safePhoto(o.photo); o.color = safeColor(o.color); o.align = o.align === 'heel' ? 'heel' : 'face';
   if (!o.photo && !faceOK(o.look)) o.look = faceCode(d);
   if (o.look != null && !faceOK(o.look)) delete o.look; if (o.body != null && !bodyOK(o.body)) delete o.body;
-  { const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) o.lc = lc; else delete o.lc; if (sy) o.sym = sy; else delete o.sym; }
+  { const lc = lcClean(o.lc), sy = symClean(o.sym), tt = tatClean(o.tat); if (lc) o.lc = lc; else delete o.lc; if (sy) o.sym = sy; else delete o.sym; if (tt) o.tat = tt; else delete o.tat; }
   return o;
 }
 const rpkSame = (w, o, k) => RPK_FIELDS.every(f => JSON.stringify(w[f] ?? '') === JSON.stringify(o[f] ?? '')) && (w.gimK || '') === (k || '');
@@ -18257,7 +18270,7 @@ document.addEventListener('input', e => {
   if (el.type === 'color' && !el._kept && UI.modal?.draft && (el.dataset.pt != null || el.dataset.bt != null)) { el._kept = 1; (el.dataset.pt != null ? pdKeep : bdKeep)(UI.modal); }
   if (el.dataset.pt != null && el.type !== 'checkbox' && UI.modal?.draft?.look) { const d = UI.modal.draft; d.look = trophyClean({ ...d.look, [el.dataset.pt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = prizeArt(d, 'tr-big'); }
   if (el.dataset.lc != null && UI.modal?.draft && isHex(el.value)) { const m = UI.modal, d = m.draft, k = el.dataset.lc; if (!el._kept) { lkKeep(m); el._kept = 1; }
-    if (k === 's') { if (d.sym) d.sym = symClean({ ...d.sym, c: el.value }); } else d.lc = { ...(d.lc || {}), [k]: el.value.toLowerCase() };
+    if (k === 's') { if (d.sym) d.sym = symClean({ ...d.sym, c: el.value }); } else if (k === 't') d.tat = { at: [], st: 'tribal', ...(d.tat || {}), c: el.value.toLowerCase() }; else d.lc = { ...(d.lc || {}), [k]: el.value.toLowerCase() };
     const f = document.querySelector('.lk-prev .lk-face'), b = document.querySelector('.lk-prev .lk-body'); if (f) f.src = faceURL(d); if (b) b.src = bodyURL(d); }
   if (el.dataset.bt != null && el.type === 'range') { const o = document.getElementById('bdv-' + el.dataset.bt); if (o) o.textContent = el.value + '%'; }
   if (el.dataset.bt != null && el.type !== 'checkbox' && UI.modal?.draft?.belt) { const d = UI.modal.draft; d.belt = beltClean({ ...d.belt, [el.dataset.bt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = titleArt(d, 'bd-belt'); }
@@ -18552,8 +18565,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.101';
+const VERSION = '1.9.102';
 const WHATS_NEW = [
+  ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
   ['🌍 Update a shared world', 'Share a world again with the same name and you can update the first one instead of listing a second copy. It keeps its listing, likes and player count, and new players get the latest version. Games already started in it carry on as they are. Pick Share as new if you want both.'],
   ['🎭 Repackage a wrestler', 'Is someone stale? Open their profile and tap Repackage to give them a new name, character and look in the same workshop. Pick a character type (Monster, Cult leader, Rock star and more), then debut it overnight or take them off TV for 2 to 6 weeks of vignettes. You see the odds of a hit, a mixed reaction or a flop before you commit: stale characters, good talkers, a good fit and a longer build help, and changing a star the fans already love is a big risk. Past characters show on the profile, and a Debut / Return angle gets a boost for the new character.'],
