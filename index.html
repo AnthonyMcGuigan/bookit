@@ -952,6 +952,32 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .bf-cs .cs-mid { background: radial-gradient(ellipse at 50% 32%, rgba(255,40,55,.55), transparent 70%); }
 .bf-cs .cs-rec { color: #ff5a64; }
 .bf-cs .cs-line { border-left-color: #ff3b48; }
+.pd-strip { display: flex; gap: 4px; margin: 10px 0 6px; }
+.pd-strip > div { flex: 1; min-width: 0; border-radius: 8px; padding: 5px 3px; background: rgba(255,255,255,.07); font-size: 10.5px; text-align: center; line-height: 1.25; color: #ddd; overflow-wrap: anywhere; }
+.pd-strip > div b { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0; color: #aaa; margin-bottom: 2px; font-weight: 800; }
+.pd-strip > div.hot { background: rgba(255,180,70,.22); color: #fff; }
+.pd-strip > div.cold { background: rgba(90,140,255,.18); }
+.pd-strip.ed > div { background: var(--bg2); color: var(--ink); } .pd-strip.ed > div b { color: var(--faint); }
+.pd-strip.ed > div.hot { background: color-mix(in srgb, var(--accent) 22%, var(--bg2)); } .pd-strip.ed > div.cold { background: color-mix(in srgb, #4c8dff 18%, var(--bg2)); }
+.pd-meter { height: 34px; display: flex; align-items: flex-end; gap: 3px; margin: 4px 0 2px; }
+.pd-meter i { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(#ffcf6b, #ff6b70); opacity: 0; animation: lvIn .4s ease-out forwards; animation-delay: var(--d); }
+.cs-meter { height: 46px; margin-top: 12px; } .cs-meter i { opacity: 1; animation: none; }
+.pd-ml { display: flex; justify-content: space-between; font-size: 10.5px; color: #aaa; margin-bottom: 6px; }
+.pd-pbp { font-size: 13px; line-height: 1.45; color: #eee; margin: 6px 0; }
+.pd-l { display: flex; gap: 8px; margin-bottom: 4px; opacity: 0; animation: lvIn .45s ease-out forwards; animation-delay: var(--d); }
+.pd-l span { color: #aaa; min-width: 40px; font-variant-numeric: tabular-nums; }
+.live.skip .pd-l, .live.skip .pd-meter i { animation-delay: 0s !important; animation-duration: .01s !important; }
+.cut.call { background: linear-gradient(135deg, rgba(255,181,71,.2), rgba(20,14,10,.6)); border-color: rgba(255,181,71,.7); box-shadow: 0 10px 30px rgba(255,160,40,.14); }
+.cut.call .cut-b { background: #ffb547; color: #1a1306; --ic: #1a1306; }
+.cut.call .cut-top .tiny { color: #ccc; margin-left: auto; }
+.cs-call .cs-line { border-left-color: #ffb547; } .cs-hs { font-size: 12px; color: #ccc; display: flex; gap: 4px; align-items: center; margin-right: 8px; }
+.pd-tpl { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.pd-tpl button { border: 1px solid var(--line); background: var(--bg2); color: var(--ink); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 650; display: flex; gap: 6px; align-items: center; min-height: 36px; }
+.pd-tpl button.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; --ic: var(--accent-ink); }
+.pd-b { display: grid; grid-template-columns: 1fr; gap: 2px; margin-bottom: 8px; }
+.pd-b > span { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--faint); display: flex; gap: 6px; align-items: center; }
+.pd-fit { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0 12px; padding: 8px 10px; border-radius: 10px; background: var(--bg2); font-size: 13px; }
+.pd-fit b.good { color: var(--good, #3ecf8e); } .pd-fit b.bad { color: var(--bad, #ff5a5f); }
 .bf-stamp-w { text-align: center; margin: 6px 0 26px; }
 .bf-stamp { display: inline-block; font-family: var(--f-display); font-size: 52px; line-height: 1; color: #ff3b48; border: 5px solid #ff3b48; border-radius: 10px; padding: 6px 14px 2px; letter-spacing: .06em; text-shadow: 0 0 24px rgba(255,40,60,.6); box-shadow: 0 0 30px rgba(255,40,60,.35), inset 0 0 18px rgba(255,40,60,.3); transform: rotate(-8deg); animation: bfStamp .5s cubic-bezier(.2,1.5,.4,1) .1s both; }
 @keyframes bfStamp { from { opacity: 0; transform: rotate(-8deg) scale(2.4); } to { opacity: 1; transform: rotate(-8deg) scale(1); } }
@@ -1337,10 +1363,10 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 .st-page .todo:last-child { border-bottom: 0; }
 .st-sub { font-size: 12.5px; color: var(--dim); margin: -2px 2px 12px; }
 .st-pre { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
-.st-pc { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 8px; text-align: center; color: var(--ink); font: inherit; }
+.st-pc { display: block; white-space: normal; min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 8px; text-align: center; color: var(--ink); font: inherit; }
 .st-pc .st-ic { margin: 0 auto 6px; }
 .st-pc b { display: block; font-size: 13px; }
-.st-pc span.x { display: block; font-size: 11px; color: var(--dim); line-height: 1.3; margin-top: 2px; }
+.st-pc .st-pd { display: block; font-size: 11px; color: var(--dim); line-height: 1.3; margin-top: 2px; }
 .st-pc.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .st-hit { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 10px 2px 6px; }
 </style>
@@ -1552,6 +1578,152 @@ const segTaped = s => !!SEG_PLACES[segPlace(s)]?.taped || s.kind === 'angle' && 
 const segLen = s => Object.hasOwn(SEG_LENS, s.span || '') ? s.span || '' : '';
 const segEnd = s => Object.hasOwn(SEG_ENDS, s.outro || '') ? s.outro || '' : '';
 const segSay = s => String(s.line || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 140);
+// ---------- match producer: plan a match beat by beat, then make live calls from the headset ----------
+// seg.prod = { t: template, len, pace, open, hold (who controls the heat), fire, spot, falls, live }. Key names stay clear of the save scrubber's number keys (heat, d, l). No seg.prod means the road agent lays it out (the old behavior).
+// The plan never changes who wins. It changes how good the match is, how tired and banged up they get, and what the live show plays.
+const PROD_LENS = { quick: { n: 'Quick', m: 6, desc: 'About 6 minutes. Short, safe and easy on the body.' }, std: { n: 'Standard', m: 12, desc: 'About 12 minutes.' },
+  long: { n: 'Long', m: 20, desc: 'About 20 minutes. Needs stamina. Great workers shine, tired ones fade.' }, epic: { n: 'Epic', m: 30, desc: 'Half an hour or more. Made for big nights and the very best workers. Very tiring.' } };
+const PROD_PACE = { slow: { n: 'Slow burn', desc: 'Rewards psychology and selling.' }, bal: { n: 'Balanced', desc: 'A bit of everything.' }, sprint: { n: 'Sprint', desc: 'Non-stop action. Suits high flyers with stamina.' } };
+const PROD_OPEN = { feel: ['Feeling out', 'Chain wrestling. Technicians shine.'], hot: ['Hot start', 'A brawl at the bell. Brawlers shine.'], jump: ['Jumped at the bell', 'The heel attacks before the bell. Best with a feud.'] };
+const PROD_HEAT = { heel: ['Heel in control', 'The heel beats down the face. Good sellers make fans care.'], even: ['Back and forth', 'Nobody stays on top for long.'], face: ['Face in control', 'The face stays on top. Fans have less to rally behind.'], win: ['Winner dominates', 'One-sided from start to finish.'] };
+const PROD_FIRE = { fiery: ['Fiery comeback', 'The face fires up. Charisma counts.'], slow: ['Slow fight back', 'Inch by inch. Psychology counts.'], none: ['No comeback', 'Whoever is on top stays there.'] };
+const PROD_SPOT = { '': ['No big spot', 'Keeps everyone safe.'], dive: ['Dive to the floor', 'High flyers wow the crowd. Some risk of injury.'], table: ['Through a table', 'Huge in a no-DQ match. In a normal match, the ref calls for the bell.'], top: ['Superplex off the top', 'A big power move. Some risk of injury.'] };
+const PROD_FALLS = ['None', 'One', 'Two', 'Three'];
+const PROD_TPL = {
+  classic: { n: 'Classic', ic: 'star', desc: 'Feeling out, the heel takes control, a fiery comeback, two near falls, then the finish.', p: { len: 'std', pace: 'bal', open: 'feel', hold: 'heel', fire: 'fiery', spot: '', falls: 2 } },
+  sprint: { n: 'Sprint', ic: 'bolt', desc: 'Hot start, back and forth, a dive to the floor and one near fall. Short and fast.', p: { len: 'quick', pace: 'sprint', open: 'hot', hold: 'even', fire: 'fiery', spot: 'dive', falls: 1 } },
+  epic: { n: 'Epic', ic: 'crown', desc: 'A long slow burn with a superplex and three near falls. For big nights and great workers.', p: { len: 'epic', pace: 'slow', open: 'feel', hold: 'heel', fire: 'slow', spot: 'top', falls: 3 } },
+  squash: { n: 'Squash', ic: 'bang', desc: 'Quick and one-sided. The winner looks unstoppable.', p: { len: 'quick', pace: 'sprint', open: 'hot', hold: 'win', fire: 'none', spot: '', falls: 0 } },
+  custom: { n: 'Custom', ic: 'pen', desc: 'Set every beat yourself.' }
+};
+const PROD_BEATS = [['open', 'Opening', 'bell', PROD_OPEN], ['hold', 'Heat', 'heel', PROD_HEAT], ['fire', 'Comeback', 'flame', PROD_FIRE], ['spot', 'Big spot', 'bolt', PROD_SPOT]];
+// the plan, cleaned: anything unknown falls back to the template's beat (or Classic's)
+function prodOf(s) {
+  const p = s && s.kind === 'match' && s.prod; if (!p || typeof p !== 'object' || isFFA(s)) return null;
+  const t = Object.hasOwn(PROD_TPL, p.t) ? p.t : 'custom', b = PROD_TPL[t].p || PROD_TPL.classic.p;
+  const k = (o, v, d) => Object.hasOwn(o, v ?? '') ? v ?? '' : d;
+  return { t, len: k(PROD_LENS, p.len, b.len), pace: k(PROD_PACE, p.pace, b.pace), open: k(PROD_OPEN, p.open, b.open), hold: k(PROD_HEAT, p.hold, b.hold), fire: k(PROD_FIRE, p.fire, b.fire), spot: k(PROD_SPOT, p.spot, b.spot),
+    falls: [0, 1, 2, 3].includes(p.falls) ? p.falls : b.falls, live: p.live !== false };
+}
+const prodSquash = p => !!p && p.hold === 'win' && p.fire === 'none' && p.falls === 0;
+// how well the plan fits the people in it. Deterministic, so the editor can show it before the show.
+function prodScore(seg, P, sides, wi, ctx, fk, stip, st) {
+  const items = [], add = (v, t) => { if (Math.abs(v) >= 0.5) items.push([v, t]); };
+  const ppl = sides.flat(), A = k => avg(ppl.map(w => k === 'stam' || k === 'ring' || k === 'cha' ? +w[k] || 50 : BR.stat(w, k)));
+  const fi = sides.findIndex(sd => sd[0].align === 'face'), hi = sides.findIndex(sd => sd[0].align === 'heel'), split = fi >= 0 && hi >= 0;
+  const S = A('stam'), R = A('ring'), big = ctx.big || ctx.main, two = sides.length === 2;
+  const ln = n => n.map(w => lastName(w)).join(' & ');
+  // length
+  if (P.len === 'quick') add(big ? -3 : 1, big ? 'Quick match in a big spot' : 'Quick and tight');
+  else if (P.len === 'long') { const v = (S - 62) * 0.12 + (R - 62) * 0.1 + (big ? 1 : 0); add(v, v >= 0 ? 'Long match: they had the gas tank' : 'Long match: they ran out of gas'); }
+  else if (P.len === 'epic') { const v = (S - 68) * 0.18 + (R - 66) * 0.15 + (ctx.big ? 3 : ctx.main ? 0 : -4); add(v, v >= 0 ? 'Epic: they held the crowd the whole way' : ctx.big || ctx.main ? 'Epic: too long for them' : 'Epic length on a regular spot dragged'); }
+  // pace
+  if (P.pace === 'slow') { const v = ((A('psych') + A('sell')) / 2 - 60) * 0.12; add(v, v >= 0 ? 'Slow burn: smart, patient work' : 'Slow burn: the crowd got restless'); }
+  else if (P.pace === 'sprint') { const v = ((Math.max(...ppl.map(w => BR.stat(w, 'air'))) + S) / 2 - 62) * 0.12; add(v, v >= 0 ? 'Sprint: non-stop action' : 'Sprint: sloppy and blown up'); }
+  // opening
+  if (P.open === 'feel') add((A('tech') - 58) * 0.06, 'Feeling out: chain wrestling');
+  else if (P.open === 'hot') add((A('brawl') - 58) * 0.06, 'Hot start: a brawl at the bell');
+  else if (P.open === 'jump') add(split ? (st ? 2 : 1) : -2, split ? 'Jumped at the bell' + (st ? ' to fuel the feud' : '') : 'Jumped at the bell, with no heel to do it');
+  // heat and comeback
+  if (P.hold === 'heel') { if (split && two) { const v = (avg(sides[fi].map(w => BR.stat(w, 'sell'))) - 55) * 0.08 + (avg(sides[hi].map(w => BR.stat(w, 'psych'))) - 55) * 0.05; add(v, v >= 0 ? `Heat: ${ln(sides[hi])} in control, ${ln(sides[fi])} sold it` : `Heat: ${ln(sides[fi])} couldn't make fans care`); } else add(-1, 'No clear heel to take control'); }
+  else if (P.hold === 'face') add(split ? -2 : 0, 'Face on top the whole way: no sympathy');
+  else if (P.hold === 'even') add(R >= 65 ? 1 : 0, 'Back and forth between good workers');
+  else if (P.hold === 'win' && two && wi >= 0) { const gap = avg(sides[wi].map(w => w.pop)) - avg(sides[1 - wi].map(w => w.pop)); add(gap > 15 ? 1 : -3, gap > 15 ? 'Dominant win made sense' : 'One-sided beating between equals felt wrong'); }
+  if (P.fire === 'fiery') { const fc = split ? sides[fi] : ppl; add((avg(fc.map(w => +w.cha || 50)) - 60) * 0.06 + (P.hold === 'heel' ? 1 : 0), P.hold === 'heel' ? 'Heat, then a fiery comeback' : 'Fiery comeback'); }
+  else if (P.fire === 'slow') add((A('psych') - 60) * 0.06, 'Slow fight back');
+  else if (P.hold !== 'win') { const heelWon = wi >= 0 && sides[wi][0].align === 'heel'; add(heelWon ? 1 : -2, heelWon ? 'The heel stayed on top' : 'No comeback: fans had nothing to cheer'); }
+  // big spot
+  if (P.spot === 'dive') { const v = (Math.max(...ppl.map(w => BR.stat(w, 'air'))) - 60) * 0.08 + 1; add(v, v >= 0 ? 'Dive to the floor' : 'The dive looked clumsy'); }
+  else if (P.spot === 'table') add(stip.noDQ ? 3 : fk === 'DQ' ? 2 : -2, stip.noDQ ? 'Through a table!' : fk === 'DQ' ? 'Table spot drew the DQ' : 'Table spot, but no DQ called. Fans noticed');
+  else if (P.spot === 'top') add((R - 62) * 0.06 + 1.5, 'Superplex off the top');
+  // near falls
+  if (P.falls) { add(P.falls * (big ? 1 : 0.6) + (A('cons') - 55) * 0.03 * P.falls, P.falls === 1 ? 'A near fall' : PROD_FALLS[P.falls] + ' near falls');
+    if (P.len === 'quick' && P.falls >= 2) add(-2, 'Too many near falls for a short match');
+    if (P.falls === 3 && !big) add(-1, 'Three near falls before the main event burned the crowd out'); }
+  else if (!prodSquash(P) && big) add(-1, 'No near falls: the finish came out of nowhere');
+  // keep it a nudge, not the whole match
+  let tot = sum(items.map(x => x[0])); const k = tot > 9 ? 9 / tot : tot < -8 ? -8 / tot : 1;
+  return { items: items.map(([v, t]) => [v * k, t]), fat: { quick: 0.7, std: 1, long: 1.25, epic: 1.55 }[P.len] + (P.pace === 'sprint' ? 0.1 : 0), risk: P.spot === 'dive' || P.spot === 'top' ? 0.015 : P.spot === 'table' ? 0.02 : 0 };
+}
+// ---- live calls: the agent asks you on the headset while a produced match is happening ----
+// Made when the show runs (h.calls), answered during the live show. Option 0 is always the plan as booked, and it's what an
+// unanswered call does; with a road agent hired, the agent picks the best option instead. A call changes the match's rating
+// (and the show's), fatigue and injury risk. It never changes the winner.
+function makeCalls(results, big) {
+  const n = results.length, out = [];
+  const order = results.map((r, i) => i).filter(i => { const r = results[i], P = prodOf(r.seg); return P && P.live && r.winners?.length && r.seg.sides.filter(sd => sd.length).length >= 2; })
+    .sort((a, b) => (b === n - 1) - (a === n - 1) || !!results[b].seg.title - !!results[a].seg.title || b - a);
+  for (const i of order) {
+    if (out.length >= 3) break;
+    const r = results[i], P = prodOf(r.seg), main = i === n - 1 && n > 1;
+    const kinds = main && big ? ['mid', 'late'] : [P.fire !== 'none' && P.hold !== 'even' ? 'mid' : 'late'];
+    for (const k of kinds) { const c = callMake(k, r, P, big, main); if (c && out.length < 3) out.push({ ...c, at: i, id: uid() }); }
+  }
+  return out.sort((a, b) => a.at - b.at || (a.k === 'late') - (b.k === 'late'));
+}
+function callMake(k, r, P, big, main) {
+  const sides = r.seg.sides.map(sd => sd.map(W).filter(Boolean)).filter(sd => sd.length); if (sides.length < 2) return null;
+  const ppl = sides.flat(), win = sides.find(sd => sd.some(w => r.winners.includes(w.id))) || sides[0], lose = sides.find(sd => sd !== win) || sides[1];
+  const face = sides.find(sd => sd[0].align === 'face'), heel = sides.find(sd => sd[0].align === 'heel');
+  const nm = sd => sd.map(w => lastName(w)).join(' & '), M = PROD_LENS[P.len].m, S = avg(ppl.map(w => +w.stam || 50));
+  const st = (sd, s) => avg(sd.map(w => s === 'cha' ? +w.cha || 50 : BR.stat(w, s))), j = () => rnd(-2.5, 2.5);
+  const ag = staffQ('agent'), o = [];
+  if (k === 'mid') {
+    const under = P.hold === 'heel' && face ? face : P.hold === 'face' && heel ? heel : lose, over = sides.find(sd => sd !== under) || win;
+    const flyer = ppl.slice().sort((a, b) => BR.stat(b, 'air') - BR.stat(a, 'air'))[0];
+    o.push({ lb: 'Stick to the plan', ds: P.fire === 'none' ? `${nm(over)} keeps control, just as you planned.` : `Let the heat run, then the comeback comes when it should.`, x: 0.5 + j() * .4 });
+    o.push({ lb: 'Start the comeback now', ds: `${nm(under)} fires up early. Good if they sell and connect with fans.`, x: (st(under, 'sell') + st(under, 'cha') - 118) * 0.07 + j() });
+    o.push({ lb: `Big spot: ${lastName(flyer)} flies`, ds: `A dive to wake the crowd up. ${lastName(flyer)} could get hurt.`, x: (BR.stat(flyer, 'air') - 58) * 0.09 + j() * 1.2, who: flyer.id, risk: 0.05, fat: 3 });
+    return { k, mn: Math.round(M * .45), head: 'YOUR CALL', crowd: P.hold === 'even' ? 'Warming up' : 'Cooling off', meter: [24, 32, 40, 32, 24, 24, 16, 16],
+      text: P.hold === 'even' ? `It's been back and forth for ${Math.round(M * .45)} minutes. The crowd wants something big.` : `${nm(over)} has been on top of ${nm(under)} for a while. The crowd is getting restless.`, o, def: ag ? null : 0 };
+  }
+  const mgr = corners(r.seg).find(c => c && sides.findIndex(sd => sd.some(w => r.seg.sides[c.side].includes(w.id))) >= 0 && win.some(w => r.seg.sides[c.side].includes(w.id)));
+  o.push({ lb: 'Go home now', ds: 'Hit the finish while the crowd is hot. Safe.', x: 0.5 + j() * .4 });
+  o.push({ lb: 'One more near fall', ds: `Bigger pop if they have the gas left. Stamina ${Math.round(S)}.`, x: (S - 60) * 0.1 + (st(ppl, 'cons') - 55) * 0.05 + (big ? 1 : 0) + j() * 1.2, fat: 5 });
+  if (mgr) o.push({ lb: `${lastName(mgr.m)} gets involved`, ds: `A distraction from ringside. ${mgr.m.align === 'heel' ? 'Heels get heat for it.' : 'Fans may boo a face cheating.'}`, x: (mgr.m.cha - 55) * 0.05 + (mgr.m.align === 'heel' ? 1 : -1.5) + j(), mgr: mgr.m.id });
+  else if (heel && win === heel) o.push({ lb: `${nm(heel)} goes to the eyes`, ds: 'A cheap shot to win it. The heel looks smart, fans get angry.', x: 1 + j() * .8, ht: 1 });
+  return { k, mn: Math.round(M * .85), head: 'NEAR FALL!', crowd: 'Red hot', meter: [24, 32, 40, 24, 32, 56, 64, 80, 88, 96, 96],
+    text: `${nm(win)} kicked out of ${nm(lose)}'s finisher at 2.9! The crowd is on its feet.`, o, def: ag ? null : 0 };
+}
+// play a call out: i is your pick, or the agent's call when nobody answers
+function callDo(h, j, i) {
+  const c = h?.calls?.[j]; if (!c || c.done) return;
+  if (i == null || !c.o[i]) i = c.def ?? c.o.reduce((b, x, k) => x.x > c.o[b].x ? k : b, 0);
+  const o = c.o[i], r = h.results[c.at]; c.done = 1; c.you = i; c.fx = [];
+  if (!r) return;
+  const old = BR.show(h.results.map(x => x.rating), h.results.map(x => x.seg), h.wk, false).overall;
+  const x = Math.round(o.x), r0 = r.rating; r.rating = clamp(r.rating + x, 5, 100);
+  const dO = BR.show(h.results.map(x => x.rating), h.results.map(x => x.seg), h.wk, false).overall - old;
+  c.d = r.rating - r0;
+  if (dO) { h.rating = clamp(h.rating + dO, 1, 100); h.why = [...(h.why || []), [dO, 'Your live calls']];
+    const fd = Math.round(G.fans * dO / (h.big ? 600 : 1100)); if (fd) { G.fans = Math.max(1000, G.fans + fd); h.fanDelta = (h.fanDelta || 0) + fd; } }
+  r.why = [...(r.why || []), ...(c.d ? [[c.d, (c.you === 0 ? 'Stuck to the plan' : o.lb) + (c.d > 0 ? ': it worked' : ': it fell flat')]] : [])];
+  c.fx.push(c.d > 0 ? `The crowd ate it up: +${c.d}` : c.d < 0 ? `It fell flat: ${c.d}` : 'Solid. No change.');
+  const ppl = segPeople(r.seg).map(W).filter(Boolean);
+  if (o.fat) ppl.forEach(w => w.fatigue = clamp(w.fatigue + o.fat, 0, 100));
+  const hw = o.who && W(o.who);
+  if (hw && o.risk && G.settings.injuries && Math.random() < o.risk * DF().inj) { const wks = rint(1, 4); hw.injury = Math.max(hw.injury || 0, wks); c.fx.push(`${hw.name} got hurt on the dive (${wks} wk)`); news(`🩹 ${hw.name} got hurt on a dive and will be out about ${wks} week${wks > 1 ? 's' : ''}.`, 'injury'); }
+  if (o.mgr && W(o.mgr)) { const st = storyBetween(r.winners, ppl.map(w => w.id).filter(id => !r.winners.includes(id))); if (st) { st.heat = clamp(st.heat + 3, 0, 100); c.fx.push(`${st.title} heat +3`); } }
+  if (o.ht) { const st = storyBetween(r.winners, ppl.map(w => w.id).filter(id => !r.winners.includes(id))); if (st) { st.heat = clamp(st.heat + 2, 0, 100); c.fx.push(`${st.title} heat +2`); } }
+  if (c.d >= 3 && c.k === 'late') ppl.filter(w => !r.winners.includes(w.id)).forEach(w => { w.momentum = clamp((w.momentum || 0) + 2, -50, 50); });
+}
+// the match as the live show tells it: a few timed calls and a crowd line
+function prodBeats(seg, P, sides, wi, rating) {
+  const M = PROD_LENS[P.len].m, fi = sides.findIndex(sd => sd[0].align === 'face'), hi = sides.findIndex(sd => sd[0].align === 'heel');
+  const nm = sd => sd.map(w => lastName(w)).join(' & '), W0 = wi >= 0 ? sides[wi] : sides[0], L0 = sides.find(sd => sd !== W0) || sides[1];
+  const F = fi >= 0 ? sides[fi] : sides[0], H = hi >= 0 ? sides[hi] : sides.find(sd => sd !== F) || sides[1];
+  const tm = f => { const s = Math.round(M * 60 * f); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const top = P.hold === 'win' ? W0 : P.hold === 'face' ? F : H, under = top === F ? H : F;
+  const out = [[tm(0), { feel: `${nm(sides[0])} and ${nm(sides[1])} feel each other out with some slick chain wrestling.`, hot: `The bell rings and they go right at it. Punches everywhere!`, jump: `${nm(H)} attacks ${nm(F)} before the bell even rings!` }[P.open]]];
+  if (P.hold === 'even') out.push([tm(.3), `Back and forth. Every time one gets going, the other cuts them off.`]);
+  else out.push([tm(.3), `${nm(top)} takes over and grinds down ${nm(under)}.${top === H ? ' The crowd boos every stomp.' : ''}`]);
+  if (P.spot) out.push([tm(.5), { dive: `${nm(W0)} flies over the top rope to the floor! The crowd is on its feet.`, table: `Somebody brings out a table... and ${nm(L0)} goes through it!`, top: `${nm(W0)} climbs up and superplexes ${nm(L0)} off the top! The ring shakes.` }[P.spot]]);
+  if (P.fire !== 'none') out.push([tm(.62), P.fire === 'fiery' ? `${nm(under)} fires up! The building comes alive.` : `${nm(under)} fights back, one move at a time.`]);
+  for (let i = 0; i < P.falls; i++) out.push([tm(.74 + i * .07), [`Finisher! 1, 2... KICK OUT!`, `A cradle out of nowhere! 1, 2... no!`, `They trade finishers. Nobody stays down!`][i]]);
+  // the crowd through the match: low in the heat, up for the spot and the comeback, peaking at the finish
+  const lv = clamp(rating / 100, .25, 1), shape = [.45, .55, .5, P.hold === 'even' ? .6 : .4, P.hold === 'even' ? .62 : .35, P.spot ? .8 : .45, P.fire === 'none' ? .5 : .75, P.fire === 'none' ? .55 : .82, ...Array.from({ length: P.falls }, (_, i) => .85 + i * .05), 1];
+  return { pbp: out, meter: shape.map(v => Math.round(clamp(v * lv * 100, 8, 100))) };
+}
 const NAMES = [
   ['Rex Calloway', 'The Prize', 'face', 'Showman'], ['Vanessa Vale', 'The Velvet Hammer', 'heel', 'Technician'],
   ['Brick Mason', '', 'face', 'Powerhouse'], ['Kai Tempest', 'The Storm', 'face', 'High Flyer'],
@@ -2501,7 +2673,7 @@ function momDo(m, i = 0) {
   m.done = 1; m.you = i; m.fx = fx.filter(Boolean);
 }
 // anything left unanswered when the show closes plays out as the producer sees fit
-function momSettle() { for (const h of G.history.slice(-6)) for (const m of h.moments || []) if (!m.done) momDo(m, 0); }
+function momSettle() { for (const h of G.history.slice(-6)) { for (const m of h.moments || []) if (!m.done) momDo(m, 0); (h.calls || []).forEach((c, j) => { if (!c.done) callDo(h, j); }); } }
 function storiesTouching(ids) { return G.stories.filter(s => s.status === 'active' && [...s.a, ...s.b].some(x => ids.includes(x))); }
 function recentlyFaced(ids) {
   // same opponents booked in the last 2 weeks
@@ -2874,7 +3046,7 @@ const bVar = id => `--bc:${brandCol(id)};--bci:${inkOn(brandCol(id))}`;
 const showRanNow = () => (curShow()?.ran || 0) >= G.week;
 // with the brand split on, a weekly show books its own brand; a big event can use anyone
 const onBrand = (w, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || inBrand(w, G.showId);
-const bookable = wk => signed().filter(w => !w.away && !offTV(w) && onBrand(w, wk));
+const bookable = wk => signed().filter(w => !w.away && !offTV(w) && onBrand(w, wk) && !datesOut(w, wk ?? UI.selWeek ?? G.week));
 const titleOn = (t, wk = UI.selWeek ?? G.week) => !splitOn() || isBig(wk) || !showById(t.brand) || t.brand === G.showId;
 const brandName = id => showById(id)?.id === G.showId ? G.promo.show : showById(id)?.name || '';
 // history records carry the show they belong to (old records belong to the main show)
@@ -3600,9 +3772,12 @@ function simSegment(seg, ctx) {
     // squash check
     if (wi >= 0 && sides.length === 2) {
       const gap = avg(sides[wi].map(w => w.pop)) - avg(sides[1 - wi].map(w => w.pop));
-      if (gap > 30) r += ctx.main || ctx.big ? add(-6, 'One-sided squash') : add(-2, 'Quick squash: builds the winner, but no contest');
+      if (gap > 30) r += prodSquash(prodOf(seg)) ? (ctx.main || ctx.big ? add(-4, 'Planned squash in a big spot') : add(2, 'Planned squash: the winner looks unstoppable')) : ctx.main || ctx.big ? add(-6, 'One-sided squash') : add(-2, 'Quick squash: builds the winner, but no contest');
       if (gap < -20) r += add(4 + clamp((avg(sides[1 - wi].map(w => BR.stat(w, 'sell'))) - 50) / 12, -1, 2), 'Upset victory');
     }
+    // the booker's plan for the match, beat by beat
+    { const P = prodOf(seg); if (P && sides.length >= 2) { const ps = prodScore(seg, P, sides, wi, ctx, fk, stip, st); ps.items.forEach(([v, t]) => r += add(v, t));
+      out.prod = { fat: ps.fat, risk: ps.risk }; if (!ctx.proj) Object.assign(out.prod, prodBeats(seg, P, sides, wi, clamp(r, 20, 100))); } }
     out.winners = wi >= 0 ? sides[wi].map(w => w.id) : [];
     out.losers = sides.flat().map(w => w.id).filter(id => !out.winners.includes(id));
     // elimination: everyone on the losing sides goes out one by one, and maybe some of the winners too; one wrestler is left standing
@@ -3781,8 +3956,8 @@ function applySegment(seg, res, ctx) {
   if (seg.kind === 'match') {
     const stip = res.stip || {};
     for (const w of ws) {
-      w.fatigue = clamp(w.fatigue + (16 + (stip.fat || 0)) * (1.4 - w.stam / 100) * (res.ffa ? 0.5 : 1) * (res.elim ? 1.15 : 1), 0, 100);
-      if (G.settings.injuries && Math.random() < (0.012 + w.fatigue / 900 + (stip.inj || 0) + (w.injury > 0 ? 0.15 : 0)) * DF().inj * injMult(w, ws)) {
+      w.fatigue = clamp(w.fatigue + (16 + (stip.fat || 0)) * (1.4 - w.stam / 100) * (res.ffa ? 0.5 : 1) * (res.elim ? 1.15 : 1) * (res.prod?.fat || 1), 0, 100);
+      if (G.settings.injuries && Math.random() < (0.012 + w.fatigue / 900 + (stip.inj || 0) + (res.prod?.risk || 0) + (w.injury > 0 ? 0.15 : 0)) * DF().inj * injMult(w, ws)) {
         const weeks = rint(1, w.injury > 0 ? 8 : 6); w.injury = Math.max(w.injury, weeks);
         notes.push(`🩹 ${w.name} was injured (${weeks} wk).`); news(`🩹 ${w.name} got hurt and will be out about ${weeks} week${weeks > 1 ? 's' : ''}.`, 'injury');
       }
@@ -4075,11 +4250,11 @@ const BR = {
   need(w) { const idle = Math.min(4, G.week - (w.lastBooked || 0)); return idle * 6 + (w.morale < 40 ? 8 : 0) + w.pop * 0.3 - (w.fatigue || 0) * 0.3 + rnd(0, 10); },
   proj(seg, wk, extra = {}) { try { return simSegment(seg, { big: isBig(wk), proj: true, wk, ...extra }).rating; } catch (e) { return 0; } },
   // the opponent the engine itself thinks makes the best match, kept in the same tier
-  opponent(a, pool, wk) {
-    const c = pool.filter(b => b !== a && sameDiv(a, b)).sort((x, y) => Math.abs(x.pop - a.pop) - Math.abs(y.pop - a.pop)).slice(0, 14);
+  opponent(a, pool, wk, n = 14, noise = 5) {
+    const c = pool.filter(b => b !== a && sameDiv(a, b)).sort((x, y) => Math.abs(x.pop - a.pop) - Math.abs(y.pop - a.pop)).slice(0, n);
     let best = null, bs = -1e9;
     for (const b of c) {
-      const s = BR.proj({ kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean' }, wk) - Math.abs(a.pop - b.pop) * 0.08 - ((b.fatigue || 0) > 50 ? 4 : 0) + rnd(0, 5);
+      const s = BR.proj({ kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean' }, wk) - Math.abs(a.pop - b.pop) * 0.08 - ((b.fatigue || 0) > 50 ? 4 : 0) + rnd(0, noise);
       if (s > bs) { bs = s; best = b; }
     }
     return best;
@@ -4165,7 +4340,7 @@ function runShow(opts = {}) {
     if (seg.tid) tResult(seg, res);
     if (seg.prz && seg.kind === 'match' && res.winners?.length) { const P = PZ(seg.prz); if (P && pzOpen(P)) { const msg = prizeWin(P, res.winners, 'match'); if (msg) res.notes = [...(res.notes || []), '🏆 ' + msg]; } }
     if (veto) res.notes = [veto, ...(res.notes || [])];
-    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue, ...(res.quote ? { quote: res.quote } : {}), ...(res.stTag ? { stTag: res.stTag } : {}), ...(res.ans ? { ans: res.ans } : {}), ...(res.inter ? { inter: res.inter } : {}) });
+    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue, ...(res.quote ? { quote: res.quote } : {}), ...(res.stTag ? { stTag: res.stTag } : {}), ...(res.ans ? { ans: res.ans } : {}), ...(res.inter ? { inter: res.inter } : {}), ...(res.prod?.pbp ? { pbp: res.prod.pbp, meter: res.prod.meter } : {}) });
     if (seg.kind === 'match') keys.push(segPeople(seg).slice().sort().join(','));
   });
   // overall show score
@@ -4222,6 +4397,7 @@ function runShow(opts = {}) {
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
   const rec = { wk: G.week, name: showTitle(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true, spT, spMiss, spHit } : {}) };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
+  datesShow(new Set(card.flatMap(segPeople)));
   PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
   if (special) news(spMiss ? `📉 The ${specialName()} missed the network's target of ${spT}. Your reputation took a hit (${spHit} prestige) and the network wants ${SPECIAL_GAP_MISS} weeks before another special.` : `📺 The ${specialName()} beat the network's target of ${spT}. +${spHit} prestige.`, 'show');
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
@@ -4231,6 +4407,7 @@ function runShow(opts = {}) {
   if (best && best.rating >= 80) news(`⭐ ${best.seg.kind === 'match' ? 'Match' : 'Segment'} of the night: ${best.text} (${starStr(best.rating)})`, 'show');
   const mark = G.news[0];
   organicStories(results, holdersBefore);
+  { const cl = makeCalls(results, big); if (cl.length) rec.calls = cl; }
   { const mo = showMoments(results, big); if (mo.length) rec.moments = mo; if (opts.quiet) momSettle(); }
   relShow(results, rec); personaShow(results, rec);
   // the week's upkeep (fatigue, contracts, injuries, rivals) happens once, after the company's last show
@@ -6149,7 +6326,10 @@ function liveScreen(m) {
   // and (on Lots) camera flashes for the one best segment of the night when it's 90+
   const fxTop = h.results.reduce((b, r, i) => i < n - 1 && r.rating >= 90 && (b < 0 || r.rating > h.results[b].rating) ? i : b, -1);
   const segs = h.results.map((r, i) => {
-    const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0), d1 = d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
+    const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0);
+    // a produced match plays out beat by beat, and stops for your live calls
+    const pr = r.seg.kind === 'match' && r.pbp?.length ? lvProd(h, r, i, d0 + 1.1) : null;
+    const d1 = pr ? Math.max(d0 + 1.6, pr.t + .3) : d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
     t = d1 + 1.3;
     const after = mo.map((m, j) => m.at === i ? (() => { const c = momCard(h, j, t); t += MOMENTS[m.k]?.big ? 1.2 : 1.8; return c; })() : '').join('');
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x)), hurt = (r.notes || []).find(x => /injured/i.test(x));
@@ -6157,7 +6337,7 @@ function liveScreen(m) {
     <div class="lv-seg ${main ? 'main' : ''} k-${r.seg.kind}" style="--d:${t0(d0)}" data-lv="${i}"${(k => k ? ` data-fx="${k}" data-fxd="${d1}"` : '')(champ && fxWorld(G.titles.find(x => x.id === r.seg.title)) ? 'champ' : main && h.big && r.rating >= 85 ? 'main' : i === fxTop ? 'big' : '')}>
       ${r.seg.kind === 'angle' ? '<i class="cam tl"></i><i class="cam tr"></i><i class="cam bl"></i><i class="cam br"></i>' : ''}
       <div class="lv-k lv-kh">${kindTag(r.seg)}<span>${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${r.seg.kind === 'match' ? segTitle(r.seg) : esc(r.seg.ptype || r.seg.atype)}</span>${r.seg.kind === 'angle' ? `<span class="rec"><b></b>REC${segPlace(r.seg) ? ' · ' + esc(SEG_PLACES[segPlace(r.seg)].n) : ''}</span>` : ''}</div>
-      ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${(P => P ? `<div class="lv-belt lv-cup">${prizeArt(P, 'lv-cup-art')}</div>` : '')(r.seg.prz && PZ(r.seg.prz))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>` : lvTalk(r, main)}
+      ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${(P => P ? `<div class="lv-belt lv-cup">${prizeArt(P, 'lv-cup-art')}</div>` : '')(r.seg.prz && PZ(r.seg.prz))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>${pr ? pr.html : ''}` : lvTalk(r, main)}
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -6187,6 +6367,55 @@ function liveScreen(m) {
     <div class="lv-body">${segs}${fin}</div></div>`;
 }
 const t0 = x => Math.round(x * 100) / 100 + 's';
+// the produced match on the live show: the plan as a strip, a crowd meter, the calls in order, and the agent's questions
+const prodStrip = (P, cls = '') => `<div class="pd-strip ${cls}">${[['Open', PROD_OPEN[P.open][0]], ['Heat', PROD_HEAT[P.hold][0], P.hold === 'heel' ? 'cold' : ''], ['Comeback', PROD_FIRE[P.fire][0], P.fire !== 'none' ? 'hot' : ''], ['Spot', PROD_SPOT[P.spot][0], P.spot ? 'hot' : ''], ['Falls', PROD_FALLS[P.falls], P.falls >= 2 ? 'hot' : '']].map(([k, v, c]) => `<div class="${c || ''}"><b>${k}</b>${esc(v)}</div>`).join('')}</div>`;
+const meterHtml = (m, d0, step, cls = '') => `<div class="pd-meter ${cls}" aria-hidden="true">${m.map((v, k) => `<i style="height:${clamp(v, 6, 100)}%;--d:${t0(d0 + k * step)}"></i>`).join('')}</div>`;
+function lvProd(h, r, i, d) {
+  const P = prodOf(r.seg); if (!P) return null;
+  const calls = (h.calls || []).map((c, j) => [c, j]).filter(([c]) => c.at === i), start = d, lines = [];
+  r.pbp.forEach(([tm, tx], k) => {
+    lines.push(`<div class="pd-l" style="--d:${t0(d)}"><span>${esc(tm)}</span>${esc(tx)}</div>`); d += .75;
+    const due = calls.filter(([c]) => c.k === 'mid' ? k === 1 : k === r.pbp.length - 1);
+    for (const [, j] of due) { lines.push(callCard(h, j, d)); d += 1.2; }
+  });
+  const m = r.meter || [];
+  return { t: d, html: `${prodStrip(P)}${m.length ? meterHtml(m, start, (d - start) / m.length) + `<div class="pd-ml"><span>Crowd</span><span>${PROD_LENS[P.len].m} min</span></div>` : ''}<div class="pd-pbp">${lines.join('')}</div>` };
+}
+function callCard(h, j, d) {
+  const c = h.calls[j]; if (!c) return '';
+  return `<div class="cut call" style="--d:${t0(d)}" data-call="${j}" data-cs="1"><div class="cut-top"><span class="cut-b">${ic('mic')} ${esc(c.head)}</span><span class="tiny">${c.mn} minutes in</span></div>
+    <div class="cut-d">${esc(c.text)}</div><div class="cut-r">${c.done ? callFx(c) : callBtns(c, j, 'cut-c')}</div></div>`;
+}
+const callBtns = (c, j, cls) => `<div class="${cls}">${c.o.map((o, i) => `<button class="btn ${i ? '' : 'pri'}" data-act="callPick" data-id="${j}:${i}"><b>${esc(o.lb)}</b><span>${esc(o.ds)}</span></button>`).join('')}</div>`;
+const callFx = c => `<div class="cut-x"><span>${ic('mic')} ${esc(c.o[c.you]?.lb || '')}</span>${(c.fx || []).map(x => `<span>${esc(x)}</span>`).join('')}</div>`;
+function callOpen(j) {
+  const live = document.querySelector('.live'), h = histFor(UI.modal?.wk), c = h?.calls?.[j];
+  if (!live || !c || c.done || live.classList.contains('skip') || live.querySelector('.cs')) return;
+  liveHold(true);
+  const el = document.createElement('div');
+  el.className = 'cs cs-call'; el.dataset.call = j; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Your call: ' + c.head);
+  el.innerHTML = `<div class="cs-bar"></div><div class="cs-mid"><div class="cs-top"><span class="cs-rec">● LIVE</span><span class="sp"></span><span class="cs-hs">${ic('mic')} Headset</span><button class="cs-skip" data-act="callGo">Agent's call ›</button></div>
+    <div class="cs-loc">${c.at === h.results.length - 1 && h.results.length > 1 ? 'Main event' : esc(segTitle(h.results[c.at].seg))} · ${c.mn} minutes in</div><div class="cs-t">${esc(c.head)}</div>
+    ${meterHtml(c.meter, 0, 0, 'cs-meter')}<div class="pd-ml"><span>Crowd</span><span>${esc(c.crowd)}</span></div>
+    <div class="cs-line">${esc(c.text)}</div><div class="cs-q">What do you tell the agent?</div>${callBtns(c, j, 'cs-c')}</div><div class="cs-bar"></div>`;
+  live.appendChild(el);
+  el.querySelector('.cs-c .btn')?.focus({ preventScroll: true });
+  SFX.crowd(c.k === 'late' ? 'ooh' : 'applause', .5, .2);
+}
+function callClose() {
+  const cs = document.querySelector('.live .cs-call'); if (!cs) return;
+  clearTimeout(LV.auto); const j = +cs.dataset.call, h = histFor(UI.modal?.wk);
+  if (h?.calls?.[j] && !h.calls[j].done) { callDo(h, j); save(); callRefresh(j); }
+  cs.remove(); liveHold(false);
+}
+// after a call: the card shows what happened, and the match's and the show's ratings move
+function callRefresh(j) {
+  const h = histFor(UI.modal?.wk), c = h?.calls?.[j]; if (!c) return;
+  const box = document.querySelector(`.cut[data-call="${j}"] .cut-r`); if (box) box.innerHTML = callFx(c);
+  const r = h.results[c.at], seg = document.querySelector(`.lv-seg[data-lv="${c.at}"]`);
+  if (seg && r) { const rr = seg.querySelector('.lv-r'), ss = seg.querySelector('.lv-st'); if (rr) rr.textContent = r.rating; if (ss) ss.textContent = starStr(r.rating); }
+  const fin = document.querySelector('.live .lv-fin'); if (fin) { fin.dataset.rating = h.rating; const sc = fin.querySelector('.lv-score'), st = fin.querySelector('.stars'); if (sc) sc.textContent = h.rating; if (st) st.textContent = starStr(h.rating); }
+}
 // a surprise moment in the live feed (and on the recap); a big one also opens as a cutscene when the show reaches it
 const momFace = (w, sz) => `<div class="lv-face">${av(w, sz, true)}<span>${esc(sz > 60 ? w.name : shortOf(w.id))}</span></div>`;
 const momFx = m => m.fx?.length ? `<div class="cut-x">${m.fx.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '';
@@ -6356,7 +6585,7 @@ function startLive() {
   FX.stop(); const live = box.closest('.live');
   box.querySelectorAll('.lv-seg[data-fx]').forEach(el => at(el, parseFloat(el.dataset.fxd) || 0, () => FX.moment(el.dataset.fx, live)));
   // the big surprise moments stop the show for a cutscene
-  box.querySelectorAll('.cut[data-cs]').forEach(el => at(el, dOf(el) + .7, () => cutOpen(+el.dataset.mom)));
+  box.querySelectorAll('.cut[data-cs]').forEach(el => at(el, dOf(el) + .7, () => el.dataset.call != null ? callOpen(+el.dataset.call) : cutOpen(+el.dataset.mom)));
 }
 
 // ---------- contracts ----------
@@ -6413,6 +6642,8 @@ function offerChance(w, salary, weeks, o) {
   if (!w.contract && blastOn()) c -= 0.05;
   // a workhorse wants indie dates in the deal
   if (o?.indie != null && wantsIndie(w)) c += o.indie ? 0.06 : -0.15;
+  // an older wrestler wants a limited number of shows a month
+  c += datesChance(w, o?.dates);
   return clamp(c, 0, 1);
 }
 // ---------- tag teams talk money together ----------
@@ -6441,8 +6672,8 @@ function teamAsk(m, ws, wk) {
   if (m.pers === 'team' || m.pers === 'loyal') return Math.min(avgA, own);
   return (avgA + own) / 2;
 }
-function teamChance(ws, salary, wk, indie) {
-  const each = ws.map(x => offerChance(x, salary, wk, { team: true, ask: teamAsk(x, ws, wk), indie }));
+function teamChance(ws, salary, wk, indie, dates) {
+  const each = ws.map(x => offerChance(x, salary, wk, { team: true, ask: teamAsk(x, ws, wk), indie, dates }));
   return { each, c: clamp(Math.min(...each) + 0.05, 0, 1) };
 }
 // what the partners say to each other about the offer
@@ -6573,8 +6804,29 @@ function autoFill(quiet) {
   const big = isBig(wk);
   const target = Math.max(0, (big ? 8 : 6) - card.length);
   if (!target) return quiet ? undefined : toast(card.length >= maxSegs(wk) ? fullMsg(wk) : 'This show already has a full card. Clear it to auto-fill from scratch.');
+  // the Head Booker (Office → Staff) books it: more stars and a higher company level book better shows
+  const H = hb();
+  let best = null;
+  if (H.tries > 1) {
+    const base = JSON.stringify(card);
+    for (let t = 0; t < H.tries; t++) {
+      const c = JSON.parse(base), notes = [], r = autoFillOnce(wk, c, big, target, H, notes), sc = projectShow(c, wk);
+      if (!best || sc > best.sc) best = { c, r, notes, sc };
+    }
+    card.splice(0, card.length, ...best.c);
+    if (best.r.segs) best.notes.push(`I tried ${H.tries} different cards and kept the best one.`);
+  } else { const notes = []; best = { r: autoFillOnce(wk, card, big, target, H, notes), notes }; }
+  UI.hbNotes = H.s && best.r.segs && best.notes.length ? { wk, sid: G.showId, co: G.promo.name, by: firstName(H.s.n), list: best.notes.slice(0, 6) } : null;
+  const { segs, filled } = best.r;
+  if (quiet) return;
+  save(); render(); toast(segs ? `${H.s ? firstName(H.s.n) + ' added' : 'Added'} ${segs} segments.` : filled ? 'Filled in the signature match.' : 'Nobody is available to add.');
+}
+// one pass at filling the card. H is the Head Booker's playbook (hb()), notes collects their notes on the card
+function autoFillOnce(wk, card, big, target, H, notes) {
+  const note = t => { if (H.s && !notes.includes(t)) notes.push(t); };
+  const nm = id => shortOf(id) || 'them';
   const used = new Set(card.filter(s => !wideSeg(s)).flatMap(segPeople));
-  const avail = () => bookable(wk).filter(w => inRing(w) && w.injury === 0 && !used.has(w.id) && w.fatigue < 70);
+  const avail = () => bookable(wk).filter(w => inRing(w) && w.injury === 0 && !used.has(w.id) && (w.fatigue || 0) < H.tired);
   const take = ids => ids.forEach(id => used.add(id));
   // the big event's signature match: fill in anyone missing
   let filled = 0;
@@ -6598,16 +6850,17 @@ function autoFill(quiet) {
   const nb = !big && nextBig(), pms = nb && nb > wk ? ppvMatches(nb) : [];
   const ppvSaved = ids => pms.some(m => buildsFor({ kind: 'match', sides: [ids] }, m) === 2);
   // stories first: on big events pay them off, otherwise build with promos/matches
-  for (const st of G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat)) {
+  for (const st of G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat).slice(0, H.stories)) {
     const A = st.a.filter(id => avail().some(w => w.id === id)), B = st.b.filter(id => avail().some(w => w.id === id));
-    if (!A.length || !B.length || segs.length >= target - 2) continue;
+    if (!A.length || !B.length || segs.length >= target - (H.sty === 'story' ? 1 : 2)) continue;
     const size = Math.min(A.length, B.length, 3);
-    if (BR.storyMatch(st, big) && (big || !recentlyFaced([...A.slice(0, size), ...B.slice(0, size)])) && !ppvSaved([...A.slice(0, size), ...B.slice(0, size)])) {
+    if ((H.build ? BR.storyMatch(st, big) : big || Math.random() < 0.5) && (big || !recentlyFaced([...A.slice(0, size), ...B.slice(0, size)])) && !ppvSaved([...A.slice(0, size), ...B.slice(0, size)])) {
       const mtype = size === 1 ? 'Singles' : size === 2 ? 'Tag Team' : 'Six-Person Tag';
       const title = st.titleId && G.titles.find(t => t.id === st.titleId);
-      segs.push({ id: uid(), kind: 'match', mtype, stip: big && st.heat > 60 ? pick(['Street Fight', 'Steel Cage', 'No DQ', 'Ladder']) : 'Standard', sides: [A.slice(0, size), B.slice(0, size)], winner: -1, finish: 'Clean', title: title && title.holder.some(h => [...A, ...B].includes(h)) ? title.id : null, sim: true });
-      { const sg = segs[segs.length - 1]; sg.finish = autoFin(big, sg.stip, st.heat); if (feudBlowNow(st, big)) { sg.blow = true; sg.finish = 'Clean'; } }
-    } else segs.push({ id: uid(), kind: 'promo', ptype: pick(['Call-out', 'Face-off']), who: [A[0]], target: [B[0]] });
+      segs.push({ id: uid(), kind: 'match', mtype, stip: H.stips && big && st.heat > 60 ? pick(['Street Fight', 'Steel Cage', 'No DQ', 'Ladder']) : 'Standard', sides: [A.slice(0, size), B.slice(0, size)], winner: -1, finish: 'Clean', title: title && title.holder.some(h => [...A, ...B].includes(h)) ? title.id : null, sim: true });
+      { const sg = segs[segs.length - 1]; if (H.stips) sg.finish = autoFin(big, sg.stip, st.heat); if (feudBlowNow(st, big)) { sg.blow = true; sg.finish = 'Clean'; }
+        note(sg.blow ? `"${st.title}" ends tonight. ${nm(A[0])} and ${nm(B[0])} settle it.` : sg.stip !== 'Standard' ? `${nm(A[0])} and ${nm(B[0])} are too heated for a normal match, so I made it a ${sg.stip}.` : big ? `${nm(A[0])} vs ${nm(B[0])} pays off "${st.title}".` : `${nm(A[0])} and ${nm(B[0])} talked last time, so "${st.title}" gets a match.`); }
+    } else { segs.push({ id: uid(), kind: 'promo', ptype: pick(['Call-out', 'Face-off']), who: [A[0]], target: [B[0]] }); if (notes.filter(x => x.includes('gets a promo')).length < 2) note(`"${st.title}" gets a promo this week. ${nm(A[0])} goes after ${nm(B[0])}.`); }
     take([...A.slice(0, size), ...B.slice(0, size)]);
   }
   // title defenses for idle champions
@@ -6621,20 +6874,22 @@ function autoFill(quiet) {
     if (pool.length < n && !tms.length) continue;
     const ch = tms.length ? tms[Math.random() < 0.6 ? 0 : rint(0, Math.min(2, tms.length - 1))] : n === 1 ? [BR.challenger(t, pool.slice(0, 6)).id] : shuffle(pool).slice(0, n).map(w => w.id);
     segs.push({ id: uid(), kind: 'match', mtype: sizeMT(n), stip: 'Standard', sides: [t.holder.slice(), ch], winner: -1, finish: !big && W(t.holder[0])?.align === 'heel' && Math.random() < 0.25 ? pick(['DQ', 'Count-out', 'Cheating']) : 'Clean', title: t.id });
+    note(`The ${t.short || t.name} goes on the line: ${nm(t.holder[0])} defends against ${nm(ch[0])}.`);
     take([...t.holder, ...ch]);
   }
   // fill the rest with matches and a hype promo
   let guard = 0;
   while (segs.length < target && guard++ < 20) {
     const pool = avail(); if (pool.length < 2) break;
-    if ((segs.length >= Math.floor(target / 2) && ![...card, ...segs].some(s => s.kind !== 'match')) || Math.random() < 0.12) { const w = BR.speaker(pool); segs.push({ id: uid(), kind: 'promo', ptype: 'Hype Promo', who: [w.id], target: [] }); take([w.id]); continue; }
+    if ((segs.length >= Math.floor(target / 2) && ![...card, ...segs].some(s => s.kind !== 'match')) || Math.random() < H.promo) { const w = BR.speaker(pool); segs.push({ id: uid(), kind: 'promo', ptype: 'Hype Promo', who: [w.id], target: [] }); take([w.id]); continue; }
     const tr3 = availTeams(3);
     if (tr3.length >= 2 && Math.random() < 0.25) { const x = tr3[0], y = tr3.find(z => z !== x && !z.some(id => x.includes(id)) && sameDiv(W(x[0]), W(z[0]))); if (y) { segs.push({ id: uid(), kind: 'match', mtype: 'Six-Person Tag', stip: 'Standard', sides: [x, y], winner: -1, finish: 'Clean', title: null }); take([...x, ...y]); continue; } }
     const fa = (G.factions || []).map(f => f.members.filter(id => avail().some(w => w.id === id)).slice(0, 3)).filter(x => x.length === 3);
     if (fa.length && Math.random() < 0.15) { const x = pick(fa), opp = shuffle(fa.filter(y => y !== x && !y.some(id => x.includes(id)) && sameDiv(W(x[0]), W(y[0]))))[0] || shuffle(avail().filter(w => !x.includes(w.id) && sameDiv(W(x[0]), w) && !factionsOfW(w.id).some(f => x.every(id => f.members.includes(id))))).slice(0, 3).map(w => w.id); if (opp.length === 3) { segs.push({ id: uid(), kind: 'match', mtype: 'Six-Person Tag', stip: 'Standard', sides: [x, opp], winner: -1, finish: 'Clean', title: null }); take([...x, ...opp]); continue; } }
     const tt = availTeams();
     if (tt.length >= 2 && Math.random() < 0.3) { const xi = rint(0, Math.min(4, tt.length - 1)), x = tt[xi], y = tt.map((z, i) => [z, Math.abs(i - xi) + rnd(0, 1.5)]).sort((p, q) => p[1] - q[1]).map(p => p[0]).find(z => z !== x && !z.some(id => x.includes(id)) && sameDiv(W(x[0]), W(z[0]))); if (y) { segs.push({ id: uid(), kind: 'match', mtype: 'Tag Team', stip: 'Standard', sides: [x, y], winner: -1, finish: 'Clean', title: null }); take([...x, ...y]); continue; } }
-    const a = pool.slice().sort((x, y) => BR.need(y) - BR.need(x))[0], b = a && BR.opponent(a, pool, wk);
+    const nd = new Map(pool.map(w => [w, H.need(w)])), a = pool.slice().sort((x, y) => nd.get(y) - nd.get(x))[0], b = a && BR.opponent(a, pool, wk, H.opp, H.noise);
+    if (a && H.care && a.morale < 40) note(`${nm(a.id)} is unhappy, so I made sure they're on the card.`);
     if (!a) break; if (!b) { take([a.id]); continue; }
     if (ppvSaved([a.id, b.id])) { segs.push({ id: uid(), kind: 'promo', ptype: 'Face-off', who: [a.id], target: [b.id] }); take([a.id, b.id]); continue; }
     segs.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: !big && Math.random() < 0.25 ? pick(['Roll-up', 'Cheating', 'Submission']) : 'Clean', title: null });
@@ -6642,12 +6897,13 @@ function autoFill(quiet) {
   }
   // main event = the segment with the most star power, last
   const power = x => avg(segPeople(x).map(id => W(id).pop)) + (x.kind === 'match' ? 0 : -15) + (x.title ? 8 : 0);
-  if (!card.length) card.push(...BR.order(segs, wk));
+  if (!card.length && H.s) card.push(...BR.order(segs, wk));
   else { segs.sort((x, y) => power(x) - power(y)); card.push(...segs); }
-  // make sure the best projected segment closes the show
-  for (let k = 0; k < 2 && card.length > 2; k++) { const r = card.map((x, i) => x.kind === 'match' && segPeople(x).length ? projectFull(x, card.length - 1, card, wk).rating : -1), b = r.indexOf(Math.max(...r)); if (b < 0 || r[b] < 0 || b === card.length - 1) break; card.push(...card.splice(b, 1)); }
-  if (quiet) return;
-  save(); render(); toast(segs.length ? `Added ${segs.length} segments.` : filled ? 'Filled in the signature match.' : 'Nobody is available to add.');
+  // make sure the best projected segment closes the show (a Head Booker checks; without one the biggest names just go last)
+  for (let k = 0; k < (H.s ? 2 : 0) && card.length > 2; k++) { const r = card.map((x, i) => x.kind === 'match' && segPeople(x).length ? projectFull(x, card.length - 1, card, wk).rating : -1), b = r.indexOf(Math.max(...r)); if (b < 0 || r[b] < 0 || b === card.length - 1) break; card.push(...card.splice(b, 1)); }
+  if (H.care) { const tired = bookable(wk).filter(w => inRing(w) && !w.injury && (w.fatigue || 0) >= H.tired && !used.has(w.id)).sort((x, y) => y.pop - x.pop)[0]; if (tired) note(`${nm(tired.id)} is worn out (${Math.round(tired.fatigue)}% tired), so I left them off.`); }
+  const me = card[card.length - 1]; if (segs.length && me && segs.includes(me) && me.kind === 'match') note(`${segPeople(me).map(nm).join(' vs ')} closes the show.`);
+  return { segs: segs.length, filled };
 }
 
 // ---------- needs-attention list (the "keep up" helper) ----------
@@ -7593,7 +7849,7 @@ function viewBookCard() {
   let bestIx = -1;
   if (card.length > 2) { const live = prs.map((r, i) => card[i].kind === 'match' ? r.rating : -1), mx = Math.max(...live.slice(0, -1)); if (mx > 0 && (card[card.length - 1].kind !== 'match' || live[live.length - 1] < mx - 5)) bestIx = live.indexOf(mx); }
   const isNow = wk === G.week;
-  return `${statusBar}${isNow ? eventAlert() + gigAlert() + dirtAlert() : ''}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
+  return `${statusBar}${isNow ? eventAlert() + gigAlert() + dirtAlert() : ''}${datesAlert()}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
   <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showTitle(wk))}</h2>
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
@@ -7615,7 +7871,8 @@ function viewBookCard() {
   </div>
   ${card.length
     ? `<div class="tools"><button class="link" data-act="autoFill">✨ Auto-fill</button><button class="link" data-act="dupLast" ${last ? '' : 'disabled'}>⧉ Copy last</button><button class="link" data-act="copyCard">Copy as text</button><button class="link" data-act="clearCard">Clear</button></div>`
-    : `<button class="btn pri block" style="margin-top:10px" data-act="autoFill">✨ Auto-fill the show</button>${last ? '<button class="link center" data-act="dupLast">⧉ Copy last week\'s card</button>' : ''}`}
+    : `<button class="btn pri block" style="margin-top:10px" data-act="autoFill">✨ Auto-fill the show</button>${last ? '<button class="link center" data-act="dupLast">⧉ Copy last week\'s card</button>' : ''}${!staffOf('booker') ? '<div class="tiny muted center" style="margin-top:6px">Auto-fill books a basic show. <button class="link" data-act="goStaff">Hire a Head Booker</button> for smarter cards.</div>' : ''}`}
+  ${hbNotesCard(wk, card)}
   ${card.length || !isNow ? `<div class="runbar">${isNow
     ? `<button class="btn pri block" data-act="runShow">🔔 Run ${esc(showName(wk))} <span class="runproj">· ${starStr(proj)}</span></button>`
     : `<div class="small muted" style="text-align:center;padding:4px 0">Books ahead for week ${wk}. <button class="link" data-act="calToday">Back to tonight</button></div>`}</div>` : ''}
@@ -7644,6 +7901,7 @@ function matchRow(s, i, n, o) {
     if (s.cash && !o.past) chips.push('💼 Cash-in');
     if (!o.past && finOf(s) !== 'Clean') chips.push(esc(finOf(s)));
     if (!o.past && s.turn && W(s.turn)) chips.push('🔄 turn');
+    { const P = !o.past && prodOf(s); if (P) chips.push(`${ic('wrestle')} ${esc(PROD_TPL[P.t].n)} · ${esc(PROD_LENS[P.len].n)}${P.live ? ' · ' + ic('mic') : ''}`); }
     const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat()); if (st) chips.push(`🔥 ${esc(st.title)}`);
     if (!o.past) chips.push(s.winner >= 0 && s.sides[s.winner]?.length ? `👑 ${esc(s.sides[s.winner].map(shortOf).join(' & '))}` : s.winner === -2 ? '🤝 draw' : '🎲 sim decides');
   } else {
@@ -8088,7 +8346,7 @@ function modalStartMenu() {
     <div class="list">${sbOn() ? '<button class="btn block" data-act="cloud">🌐 Cloud saves</button>' : ''}<button class="btn block" data-act="import">⬆ Restore a backup</button></div>
     ${sbOn() ? '<div class="tiny muted" style="margin-top:6px">Played on another phone? Sign in to Cloud saves with the same email to load your game here.</div>' : ''}
     <div class="sec">Settings</div>
-    <button class="st-row st-grp" style="margin-bottom:0" data-act="settings"><span class="st-ic">${ic('grid')}</span><span class="st-m"><span class="st-t">Settings</span><span class="st-d">Look, sound, motion and privacy</span></span><span class="st-chev" aria-hidden="true">›</span></button>
+    <div class="st-grp" style="margin-bottom:0"><button class="st-row" data-act="settings"><span class="st-ic">${ic('grid')}</span><span class="st-m"><span class="st-t">Settings</span><span class="st-d">Look, sound, motion and privacy</span></span><span class="st-chev" aria-hidden="true">›</span></button></div>
     <div class="sec">Help</div>
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button></div>
   `);
@@ -8156,7 +8414,7 @@ const PLAY_STYLES = {
   balanced: { n: 'Balanced', ic: 'target', d: 'The usual game', set: { deep: false, finances: false, contracts: false, persona: true, injuries: true, aging: true, organic: true, moments: 1, difficulty: 'normal' } },
   full: { n: 'Full sim', ic: 'briefcase', d: 'Every skill, payroll and contract', set: { deep: true, finances: true, contracts: true, persona: true, injuries: true, aging: true, organic: true, moments: 1, difficulty: 'hard' } }
 };
-const simNow = () => { const s = G.settings; return { deep: !!s.deep, finances: MON(), contracts: !!s.deep && CON(), persona: PER(), injuries: !!s.injuries, aging: s.aging !== false, organic: s.organic !== false, moments: MOM_LV(), difficulty: Object.hasOwn(DIFF, String(s.difficulty)) ? s.difficulty : 'normal' }; };
+const simNow = () => { const s = G.settings; return { deep: !!s.deep, finances: !!s.deep && MON(), contracts: !!s.deep && CON(), persona: PER(), injuries: !!s.injuries, aging: s.aging !== false, organic: s.organic !== false, moments: MOM_LV(), difficulty: Object.hasOwn(DIFF, String(s.difficulty)) ? s.difficulty : 'normal' }; };
 function playStyle() { const now = simNow(); return Object.keys(PLAY_STYLES).find(k => Object.entries(PLAY_STYLES[k].set).every(([x, v]) => now[x] === v)) || 'custom'; }
 // set game rules (some or all of a play style); contracts coming back on give anyone about to run out a fresh runway
 function simApply(set) {
@@ -8208,7 +8466,7 @@ const stPill = save => `<span class="st-pill${save ? ' sv' : ''}">${save ? 'This
 const stRow = x => `<button class="st-row" data-act="stPage" data-id="${x.id}"><span class="st-ic">${ic(x.ic)}</span><span class="st-m"><span class="st-t">${x.t}</span><span class="st-d">${esc(x.sum())}</span></span><span class="st-chev" aria-hidden="true">›</span></button>`;
 function stStyles() {
   const cur = playStyle();
-  return `<div class="st-pre" role="group" aria-label="Play style">${Object.entries(PLAY_STYLES).map(([k, p]) => `<button class="st-pc${cur === k ? ' on' : ''}" data-act="stStyle" data-id="${k}" aria-pressed="${cur === k}"><span class="st-ic">${ic(p.ic)}</span><b>${p.n}</b><span class="x">${p.d}</span></button>`).join('')}</div>
+  return `<div class="st-pre" role="group" aria-label="Play style">${Object.entries(PLAY_STYLES).map(([k, p]) => `<button class="st-pc${cur === k ? ' on' : ''}" data-act="stStyle" data-id="${k}" aria-pressed="${cur === k}"><span class="st-ic">${ic(p.ic)}</span><b>${p.n}</b><span class="st-pd">${p.d}</span></button>`).join('')}</div>
     <div class="st-sub">${cur === 'custom' ? 'Custom: you have changed some rules by hand. Tap a style to reset them to it.' : 'Tap a style to set the rules below in one go. Change any of them and it becomes Custom.'}</div>`;
 }
 function modalSettings(m) {
@@ -8226,9 +8484,9 @@ function modalSettings(m) {
   }
   const save = secs.filter(x => x.save), dev = secs.filter(x => !x.save);
   return modal('Settings', `${search}
-    ${G ? `<div class="st-hd">This save ${stPill(1)}</div><div class="st-sub">Saved with ${esc(worldLabel(G))}. Goes with backups, cloud saves and shares.</div>
+    ${G ? `<div class="st-hd">Game rules ${stPill(1)}</div><div class="st-sub">Saved with ${esc(worldLabel(G))}. Goes with backups, cloud saves and shares.</div>
     ${stStyles()}<div class="st-grp">${save.map(stRow).join('')}</div>` : ''}
-    <div class="st-hd">This device ${stPill(0)}</div><div class="st-sub">The same for every save on this ${/Mobi|Android|iPhone/.test(navigator.userAgent) ? 'phone' : 'device'}.</div>
+    <div class="st-hd">Look, sound &amp; calendar ${stPill(0)}</div><div class="st-sub">The same for every save on this ${/Mobi|Android|iPhone/.test(navigator.userAgent) ? 'phone' : 'device'}.</div>
     <div class="st-grp">${dev.map(stRow).join('')}</div>`);
 }
 const ST_DEV_DEF = { look: () => { meta.theme = 'dark'; meta.text = 'm'; meta.faces = 'pixel'; meta.avBelts = true; applyTheme(); }, sound: () => { meta.sound = true; meta.music = true; meta.musicVol = .35; MUSIC.sync?.(); }, motion: () => { meta.motion = ''; meta.fx = 1; applyTheme(); }, calview: () => { meta.cal = {}; UI.calWkv = null; } };
@@ -8244,7 +8502,7 @@ function modalMenu() {
     ${sbOn() ? `<button class="btn block" style="margin-top:8px" data-act="cloud">🌐 Cloud saves${meta.cloudAuto ? ' (auto backup on)' : ''}</button>` : ''}
     <div class="tiny muted" style="margin-top:8px">Company setup (names, shows, big events, match types) is in Office → Setup.</div>
     <div class="sec">Settings</div>
-    <button class="st-row st-grp" style="margin-bottom:0" data-act="settings"><span class="st-ic">${ic('layers')}</span><span class="st-m"><span class="st-t">Settings</span><span class="st-d">${esc(PLAY_STYLES[playStyle()]?.n || 'Custom')} rules · Look, sound and calendar</span></span><span class="st-chev" aria-hidden="true">›</span></button>
+    <div class="st-grp" style="margin-bottom:0"><button class="st-row" data-act="settings"><span class="st-ic">${ic('layers')}</span><span class="st-m"><span class="st-t">Settings</span><span class="st-d">${esc(PLAY_STYLES[playStyle()]?.n || 'Custom')} rules · Look, sound and calendar</span></span><span class="st-chev" aria-hidden="true">›</span></button></div>
     <div class="sec">Help</div>
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button></div>
     <div class="sec">Leave</div>
@@ -8543,6 +8801,36 @@ function segPlanEditor(s) {
   if (en === 'inter') h += `<div class="side"><div class="lbl">Who interrupts</div>${chipsFor(s.inter || [], 'inter', 1)}<div class="tiny muted" style="margin-top:4px">They start a feud with ${sp.length ? esc(sp.map(w => shortOf(w.id)).join(' & ')) : 'the speaker'}, or heat up the one they have.</div></div>`;
   return h;
 }
+// the match editor's producer: a plan template (or every beat by hand), the length, and live calls on the headset
+function prodEditor(s) {
+  const P = prodOf(s), cur = P ? P.t : '';
+  let h = `<div class="sec">${ic('wrestle')} Produce the match</div><div class="pd-tpl" role="group" aria-label="Match plan">${[['', 'Agent calls it', 'dice'], ...Object.entries(PROD_TPL).map(([k, v]) => [k, v.n, v.ic])].map(([k, n, i]) => `<button class="${k === cur ? 'on' : ''}" aria-pressed="${k === cur}" data-act="prodTpl" data-id="${k || 'agent'}">${ic(i)} ${esc(n)}</button>`).join('')}</div>`;
+  if (!P) { const q = staffQ('agent');
+    return h + `<div class="tiny muted" style="margin:-2px 0 12px">Your road agent lays the match out. ${q ? `${esc(staffOf('agent').n)} (${q} star${q > 1 ? 's' : ''}) adds to every match.` : 'Hire a road agent in Office → Staff for better matches.'} Pick a plan to produce it yourself, beat by beat.</div>`; }
+  h += `<div class="tiny muted" style="margin:-2px 0 6px">${esc(PROD_TPL[P.t].desc)}${P.t !== 'custom' ? ' Tap Custom to change any beat.' : ''}</div>${prodStrip(P, 'ed')}`;
+  h += `<label class="f" style="margin-top:10px"><span>Length</span><div class="seg-ctl" role="group" aria-label="Length">${Object.entries(PROD_LENS).map(([k, v]) => `<button class="${k === P.len ? 'on' : ''}" aria-pressed="${k === P.len}" data-act="prodSet" data-id="len:${k}">${esc(v.n)}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">${esc(PROD_LENS[P.len].desc)}${P.len === 'long' || P.len === 'epic' ? ` Stamina: ${s.sides.flat().map(W).filter(Boolean).map(w => `${esc(lastName(w))} ${Math.round(w.stam)}`).join(', ')}.` : ''}</div></label>`;
+  if (P.t === 'custom') {
+    h += `<label class="f"><span>Pace</span><div class="seg-ctl" role="group" aria-label="Pace">${Object.entries(PROD_PACE).map(([k, v]) => `<button class="${k === P.pace ? 'on' : ''}" aria-pressed="${k === P.pace}" data-act="prodSet" data-id="pace:${k}">${esc(v.n)}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">${esc(PROD_PACE[P.pace].desc)}</div></label>`;
+    h += `<div class="side"><div class="lbl">${ic('layers')} Beat by beat</div>${PROD_BEATS.map(([k, l, i, o]) => `<label class="pd-b"><span>${ic(i)} ${l}</span><select data-prod="${k}">${Object.entries(o).map(([v, x]) => `<option value="${v}" ${v === P[k] ? 'selected' : ''}>${esc(x[0])}</option>`).join('')}</select><span class="tiny muted" style="text-transform:none;font-weight:500">${esc(o[P[k]][1])}</span></label>`).join('')}
+      <div class="pd-b"><span>${ic('refresh')} Near falls</span><div class="seg-ctl" role="group" aria-label="Near falls">${PROD_FALLS.map((n, k) => `<button class="${k === P.falls ? 'on' : ''}" aria-pressed="${k === P.falls}" data-act="prodSet" data-id="falls:${k}">${n}</button>`).join('')}</div></div>
+      <div class="tiny muted">The finish is the one you picked above: ${esc(finOf(s))}.</div></div>`;
+  }
+  h += `<label class="todo" style="margin-bottom:10px"><input type="checkbox" data-act="prodLive" ${P.live ? 'checked' : ''}><span>${ic('mic')} Make live calls during the show<br><span class="tiny muted">The agent asks you what to do as it happens. Up to 3 calls a show, main events and title matches first. The winner you booked still wins.</span></span></label>`;
+  const fit = prodFit(s);
+  if (fit) h += `<div class="pd-fit">${ic('target')}<div><b class="${fit.tot >= 0 ? 'good' : 'bad'}">Plan fits them ${fit.tot >= 0 ? '+' : ''}${fit.tot}.</b> ${fit.lines.map(esc).join('. ')}${fit.lines.length ? '.' : ''}${staffQ('agent') ? ` <span class="muted">Your road agent adds to it.</span>` : ''}</div></div>`;
+  return h;
+}
+// the plan's effect before the show, with the booked winner (or the favourite when the sim decides)
+function prodFit(s) {
+  const P = prodOf(s); if (!P) return null;
+  const sides = s.sides.map(sd => sd.map(W).filter(Boolean)).filter(sd => sd.length); if (sides.length < 2) return null;
+  const wk = UI.selWeek ?? G.week, card = BK(), at = card.findIndex(x => x.id === s.id), ctx = { big: isBig(wk), main: at >= 0 && at === card.length - 1 && card.length > 1, proj: true };
+  let wi = s.winner >= 0 && s.winner < sides.length ? s.winner : -1;
+  if (wi < 0) { const pw = sides.map(sd => avg(sd.map(w => w.pop + (w.momentum || 0) * 0.3))); wi = pw.indexOf(Math.max(...pw)); }
+  const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat()), ps = prodScore(s, P, sides, wi, ctx, finOf(s), GM(s.stip), st);
+  const it = ps.items.slice().sort((a, b) => Math.abs(b[0]) - Math.abs(a[0]));
+  return { tot: Math.round(sum(it.map(x => x[0]))), lines: it.slice(0, 2).map(([v, t]) => `${t} (${v >= 0 ? '+' : ''}${Math.round(v)})`) };
+}
 function chipsFor(list, field, max) {
   return `<div class="chips">${list.map(id => `<span class="chip">${nm(id)}<button data-act="chipDel" data-f="${field}" data-id="${id}" aria-label="Remove">✕</button></span>`).join('')}${list.length < max ? `<button class="chip add" data-act="pickFor" data-f="${field}">+ ${list.length ? 'Add' : 'Choose'}</button>` : ''}</div>`;
 }
@@ -8608,6 +8896,7 @@ function modalSeg(m) {
     if (F.runin) body += `<div class="side"><div class="lbl">Who runs in</div>${chipsFor(s.runin || [], 'runin', 1)}<div class="tiny muted" style="margin-top:4px">${(s.runin || []).length ? 'They help whoever wins.' : 'Leave empty and the winner\'s manager runs in, or a mystery helper.'}</div></div>`;
     const tops = [...s.sides.flat(), ...(F.runin ? s.runin || [] : [])].map(W).filter(Boolean);
     if (tops.length) body += `<label class="f"><span>Turn during the match</span><select data-seg="turn"><option value="">No turn</option>${tops.map(w => `<option value="${w.id}" ${s.turn === w.id ? 'selected' : ''}>${esc(w.name)} turns ${w.align === 'face' ? 'heel' : 'face'}</option>`).join('')}</select>${s.turn && W(s.turn) && turnedSoon(W(s.turn)) ? '<div class="tiny muted" style="margin-top:4px">They turned recently. Fans may not buy it.</div>' : ''}</label>`;
+    if (!mt.ffa) body += prodEditor(s);
     body += `<label class="f"><span>Championship on the line</span><select data-seg="title"><option value="">None</option>${titleOpts.map(t => `<option value="${t.id}" ${s.title === t.id ? 'selected' : ''}>${esc(t.name)} (${t.holder.length ? esc(t.holder.map(nameOf).join(' & ')) : 'vacant'})</option>`).join('')}</select></label>`;
     if (s.title) { const t = G.titles.find(x => x.id === s.title); if (t && t.holder.length && !t.holder.some(h => s.sides.flat().includes(h))) body += `<div class="tiny muted" style="margin-top:-6px;margin-bottom:10px">The champion isn't in this match. Whoever wins takes the title.</div>`; }
     body += shotEditor(s, mt);
@@ -8640,7 +8929,7 @@ const pickPay = w => w.contract?.salary || guestDeal(w.id, UI.selWeek)?.fee || 0
 function pickPass(p, w, onCard) {
   if (p.align && w.align !== p.align) return false;
   if (p.div && (w.division || 'Open') !== p.div) return false;
-  return (p.st || []).every(k => k === 'avail' ? !(w.injury > 0) && !onCard.has(w.id) && !p.others.has(w.id) : k === 'fresh' ? !(w.fatigue >= 60) : k === 'champ' ? titlesOf(w.id).length > 0
+  return (p.st || []).every(k => k === 'avail' ? !(w.injury > 0) && !onCard.has(w.id) && !p.others.has(w.id) && !(UI.modal?.type === 'seg' && datesOut(w)) : k === 'fresh' ? !(w.fatigue >= 60) : k === 'champ' ? titlesOf(w.id).length > 0
     : k === 'story' ? storiesOf(w.id).length > 0 : k === 'team' ? !!teamFor(w) || factionsOfW(w.id).length > 0 : true);
 }
 function pickSortFn(s, fit, onCard) {
@@ -8694,9 +8983,9 @@ function renderPicker() {
    ${ctlChips}
    ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2 && (!isTrios(t) || p.max >= 3)), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}${isTrios(t) ? ' (trios)' : ''}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
    <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${pickNF(p) ? ` Showing ${list.length} of ${total}. <button class="link" data-act="pickClear">Clear filters</button>` : ''}${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear. Promos and angles cost a tenth, and a remote promo is free once they like you.' : ''}</div>
-   ${list.map(w => { const g = gOn && guestDeal(w.id, UI.selWeek), sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
+   ${list.map(w => { const g = gOn && guestDeal(w.id, UI.selWeek), sel = p.sel.includes(w.id), other = inDraft.has(w.id), dTag = UI.modal?.type === 'seg' ? datesTag(w) : '', dOut = !!dTag && !sel && !onCard.has(w.id) && datesOut(w); const flags = [w.injury > 0 ? '🩹 injured' : '', dTag, w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
      const tmLock = !sel && UI.modal?.type === 'editTeam' && otherTeamOf(w.id, UI.modal.draft.id, UI.modal.draft.kind);
-     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other || tmLock ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${tmLock ? `<span style="color:var(--warn)">👥 In ${esc(tmLock.name)}</span> · ` : ''}${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}${isNW(w) ? `<b>${ROLES[roleOf(w)].ic} ${ROLES[roleOf(w)].n}</b> · ` : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Office → Indie Stars.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
+     return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other || tmLock || dOut ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${tmLock ? `<span style="color:var(--warn)">👥 In ${esc(tmLock.name)}</span> · ` : ''}${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}${isNW(w) ? `<b>${ROLES[roleOf(w)].ic} ${ROLES[roleOf(w)].n}</b> · ` : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Office → Indie Stars.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
    ${gOn ? `<button class="btn block" style="margin-top:10px" data-act="localTalent">+ Book local enhancement talent (${money(100)}–${money(250)})</button><div class="tiny muted" style="margin-top:6px">A local wrestler for one month, non-exclusive. Good for squash matches that make your stars look strong.</div>` : ''}`;
   return modal('Choose wrestlers', body, `<button class="btn pri" data-act="pickDone">Done (${p.sel.length})</button>`, { cls: 'picker-bg', closeAct: 'pickDone', anim });
 }
@@ -8726,7 +9015,7 @@ function modalWrestler(m) {
      <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Indie star'}</b></div>`}
    </div>
    ${w.retired ? '' : skillsBlock(w)}
-   ${w.contract ? relBlock(w) + personaBlock(w) : ''}${indieBlock(w)}
+   ${w.contract ? relBlock(w) + personaBlock(w) : ''}${indieBlock(w)}${datesBlock(w)}
    ${(() => { const st = STATS(w), ranks = G.titles.filter(t => !t.tag).map(t => [t, contenders(t, 10).findIndex(x => x.id === w.id)]).filter(x => x[1] >= 0);
      return `<div class="sec">Career stats</div><div class="grid3 cstats"><div><b>${st.m}</b><span>matches</span></div><div><b>${st.m ? Math.round(st.sum / st.m) : '–'}</b><span>avg rating</span></div><div><b>${st.best || '–'}</b><span>best match</span></div><div><b>${st.tw}</b><span>title wins</span></div><div><b>${st.def}</b><span>defenses</span></div><div><b>${st.motn}</b><span>match of the night</span></div></div>
      ${ranks.length ? `<div class="small" style="margin-top:6px">${ranks.map(([t, i]) => `🏆 <b>#${i + 1}</b> contender for the ${esc(t.short)} title`).join('<br>')}</div>` : ''}${shotsOf(w.id).length ? `<div class="small" style="margin-top:6px">${shotsOf(w.id).map(x => esc(shotLine(x))).join('<br>')}</div>` : ''}`; })()}
@@ -8760,11 +9049,13 @@ function modalNegotiate(m) {
      ${team ? `<div class="team-talk" id="negTalk">${teamTalkHTML(ws, m)}</div>` : `<div class="tiny muted" style="margin-top:6px">Signing one partner alone is harder. They want to stay a team.</div>`}</div>` : '';
   const iw = ws.filter(wantsIndie);
   if (iw.length && m.indie == null) m.indie = true;
+  const dw = ws.filter(wantsDates);
+  if (dw.length && m.dates == null) m.dates = Math.max(...dw.map(datesFor)) || Math.min(...dw.map(wantsDates));
   const indieBox = iw.length ? `<div class="card" style="margin-top:10px"><div class="small" style="margin-bottom:8px"><b>🤼 Indie dates clause</b><div class="tiny muted">${esc(iw.map(x => lastName(x)).join(' & '))} ${iw.length === 1 ? 'is a Workhorse and wants' : 'are Workhorses and want'} to keep wrestling outside shows on nights off. It gives a small boost and they might win titles elsewhere. Now and then a booking lands on your show night, and you'd have to say no.</div></div>
      <div class="seg-ctl"><button class="${m.indie ? 'on' : ''}" data-act="negIndie" data-id="1">Allow indie dates</button><button class="${m.indie ? '' : 'on'}" data-act="negIndie" data-id="0">No outside bookings</button></div>
      <div class="tiny ${m.indie ? 'muted' : ''}" style="margin-top:6px${m.indie ? '' : ';color:var(--bad)'}">${m.indie ? 'They\'re more likely to say yes.' : 'Harder to sign, and they\'ll remember you said no.'}</div></div>` : '';
   const body = `${!w.contract ? paSwitch(w, false) : ''}<div class="row" style="margin-bottom:12px">${team ? ws.map(x => av(x, 44)).join('') : av(w, 48)}<div class="sp"><b>${team ? esc(tm?.name || ws.map(x => x.name).join(' & ')) : esc(w.name)}</b><div class="small muted">${team ? ws.map(x => `${esc(lastName(x))}: pop ${Math.round(x.pop)}, asks ${money(askFor(x, m.weeks))}`).join(' · ') : `Pop ${Math.round(w.pop)} · Morale ${Math.round(w.morale)} · Age ${w.age}`}</div></div></div>
-   <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' + (indieOn(w) ? ' · indie dates' : '') : 'None (indie star)'}</b></div>
+   <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' + (indieOn(w) ? ' · indie dates' : '') + (datesFor(w) ? ` · ${datesFor(w)} dates a month` : '') : 'None (indie star)'}</b></div>
    ${team && w.contract ? ps.map(p => `<div class="row small"><span class="sp muted">${esc(lastName(p))}'s deal</span><b>${money(p.contract.salary)}/wk · ${lenLabel(p.contract.weeks)} left</b></div>`).join('') : ''}
    ${w.contract ? `<div class="row small"><span class="sp muted">Signed through</span><b>Week ${G.week + w.contract.weeks} · ${showDate(G.week + w.contract.weeks).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</b></div>` : ''}
    <div class="row small"><span class="sp muted">Wants</span><b>${lenLabel(prefLen(w))} deal</b></div>
@@ -8773,7 +9064,7 @@ function modalNegotiate(m) {
    ${tp ? `<div class="tiny muted" style="margin-top:4px">👥 Partner ${esc(tp.w.name)} earns ${money(tp.sal)}/wk. ${esc(lastName(w))} will compare.</div>` : ''}
    ${!w.contract && blastOn() ? `<div class="tiny" style="color:var(--bad);margin-top:4px">📢 Indie stars saw ${esc(nameOf(G.blast.wid))}'s posts about you. They're a little warier until week ${G.blast.until}.</div>` : ''}
    ${ws.some(x => x.refusedWk === G.week) ? '<div class="small" style="color:var(--bad);margin-top:6px">They said no. Try again next week.</div>' : ''}</div>
-   ${teamBox}${indieBox}
+   ${teamBox}${indieBox}${datesBox(ws, m)}
    <label class="f"><span id="negSalLbl">Weekly salary${team ? ', each' : ''}: ${money(m.salary)}</span><input type="range" min="${Math.max(300, Math.round(ask * 0.4 / 100) * 100)}" max="${Math.round(ask * 2 / 100) * 100}" step="100" value="${m.salary}" data-in="negSal" style="width:100%"></label>
    <label class="f"><span>Length</span><div class="seg-ctl">${DEAL_LENS.map(([n, l]) => `<button class="${m.weeks === n ? 'on' : ''}" data-act="negLen" data-id="${n}">${l}${n === prefLen(w) ? ' ★' : ''}</button>`).join('')}</div></label>
    <div id="negChance">${negChanceHTML(w, m)}</div>
@@ -8809,7 +9100,7 @@ function teamTalkHTML(ws, m) {
 }
 function negChanceHTML(w, m) {
   const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
-  const c = team ? teamChance(ws, m.salary, m.weeks, m.indie).c : offerChance(w, m.salary, m.weeks, { indie: m.indie });
+  const c = team ? teamChance(ws, m.salary, m.weeks, m.indie, m.dates).c : offerChance(w, m.salary, m.weeks, { indie: m.indie, dates: m.dates });
   const [lbl, cls] = chanceLabel(c), n = ws.length;
   return `<div class="alert ${cls}"><span class="ic">🤝</span><div><b>${lbl}</b> <span class="muted small">(${Math.round(c * 100)}%)</span><div class="small muted">${lenLabel(m.weeks)}, through week ${G.week + m.weeks}. Total cost ${money(m.salary * m.weeks * n)}${team ? ` for ${n}` : ''}.${m.weeks < 52 ? ' Short deals cost more per week.' : m.weeks > 104 ? ' Long deals get a small discount per week.' : ''}${PER() && ws.some(x => m.salary < askFor(x, m.weeks) * 0.8 && BLAST_ODDS[x.pers] >= .3) ? ' <b style="color:var(--bad)">A lowball like this could end up on social media.</b>' : ''}</div></div></div>`;
 }
@@ -8895,6 +9186,7 @@ function modalRecap(m) {
   const body = `<div style="text-align:center;margin-bottom:12px"><div class="muted small">Week ${h.wk}${h.big ? ' · BIG EVENT' : ''}</div><div class="res-score">${h.rating}</div><div class="stars" style="font-size:22px">${starStr(h.rating)}</div><div class="muted">${grade(h.rating)} show</div>${h.why.length ? whyList(h.why) : ''}</div>
    <div class="grid3" style="margin-bottom:12px"><div class="stat"><div class="k">Crowd</div><div class="v" style="font-size:17px">${h.attendance.toLocaleString()}</div></div><div class="stat"><div class="k">Fans</div><div class="v" style="font-size:17px;color:${h.fanDelta >= 0 ? 'var(--good)' : 'var(--bad)'}">${h.fanDelta >= 0 ? '+' : ''}${kfmt(h.fanDelta)}</div></div>${MON() ? `<div class="stat"><div class="k">Profit</div><div class="v" style="font-size:17px;color:${h.net >= 0 ? 'var(--good)' : 'var(--bad)'}">${(h.net < 0 ? '-$' : '$') + kfmt(Math.abs(h.net))}</div></div>` : `<div class="stat"><div class="k">Rating</div><div class="v" style="font-size:17px">${h.rating}</div></div>`}</div>
    ${(h.headlines || []).length ? `<div class="heads"><div class="review-h">Headlines</div>${h.headlines.map(t => `<div>${esc(t)}</div>`).join('')}</div>` : ''}
+   ${(h.calls || []).length ? `<div class="heads"><div class="review-h">Your live calls</div>${h.calls.map(c => { const r = h.results[c.at]; return r ? `<div><b>${ic('mic')} ${esc(segTitle(r.seg))}, ${c.mn} min:</b> ${c.done ? esc(c.o[c.you]?.lb || '') : 'Not called yet'}${c.fx?.length ? `<br><span class="tiny muted">${c.fx.map(esc).join(' · ')}</span>` : ''}</div>` : ''; }).join('')}</div>` : ''}
    ${(h.moments || []).length ? `<div class="heads"><div class="review-h">Surprises on the show</div>${h.moments.map((m, j) => { const M = MOMENTS[m.k]; let t = ''; try { t = M ? M.text(m.d) : ''; } catch (e) { } return t ? `<div><b>⚡ ${esc(M.head)}</b>${lessBtn('mom', m.k, 'in-line')} ${esc(t)}${m.fx?.length ? `<br><span class="tiny muted">${m.fx.map(esc).join(' · ')}</span>` : ''}${momStoryBtn(h, j)}</div>` : ''; }).join('')}</div>` : ''}
    ${h.big ? monthReview(h) : ''}
    ${h.results.map((r, i) => `<details class="seg"><summary><div class="hd"><span class="no">${i === h.results.length - 1 && h.results.length > 1 ? '★ME' : '#' + (i + 1)}</span><span class="ttl">${segTitle(r.seg)}</span><span class="stars">${starStr(r.rating)}</span></div>
@@ -9709,6 +10001,17 @@ const A = {
   segSpan(k) { const d = UI.modal.draft; if (k === 'n' || !Object.hasOwn(SEG_LENS, k)) delete d.span; else d.span = k; render(); },
   shotUseNext(v) { UI.modal.shotUse = v === 'any' ? 'any' : 'event'; render(); },
   shotDel(id) { const s = SHOTS().find(x => x.id === id); if (!s) return; dropShot(s); commit(`${s.ids.map(nameOf).join(' & ')} no longer has a title shot.`); },
+  prodTpl(k) { const d = UI.modal.draft, was = prodOf(d);
+    if (k === 'agent' || !Object.hasOwn(PROD_TPL, k)) delete d.prod;
+    else if (k === 'custom') d.prod = { ...(was || { ...PROD_TPL.classic.p, live: true }), t: 'custom' };
+    else d.prod = { t: k, ...PROD_TPL[k].p, live: was ? was.live : true };
+    render(); },
+  prodSet(v) { const d = UI.modal.draft, P = prodOf(d); if (!P) return; const [k, x] = String(v).split(':');
+    if (k === 'len' && Object.hasOwn(PROD_LENS, x)) d.prod = { ...P, len: x };
+    else if (k === 'pace' && Object.hasOwn(PROD_PACE, x)) d.prod = { ...P, pace: x, t: 'custom' };
+    else if (k === 'falls' && [0, 1, 2, 3].includes(+x)) d.prod = { ...P, falls: +x, t: 'custom' };
+    render(); },
+  prodLive(v, el) { const d = UI.modal.draft, P = prodOf(d); if (P) d.prod = { ...P, live: !P.live }; render(); },
   segShot(v) { const d = UI.modal.draft; if (!+v) { d.shot = null; return render(); }
     const ts = G.titles.filter(t => titleFits(t, MT(d.mtype))), inM = d.sides.flat(), t = ts.find(x => !x.holder.some(h => inM.includes(h)) && x.id !== d.title) || ts[0];
     if (t) d.shot = { titleId: t.id, use: 'event', wk: bigsAfter(UI.selWeek ?? G.week, 1)[0] || 0 }; render(); },
@@ -9769,6 +10072,13 @@ const A = {
     const cs = document.querySelector('.live .cs'); if (cs) { cs.querySelector('.cs-c').outerHTML = `<div class="cs-c" style="animation-delay:0s">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`; cs.querySelector('.cs-skip').textContent = 'Continue ›'; cs.querySelector('.cs-q')?.remove(); cs.querySelector('.cs-c .btn')?.focus({ preventScroll: true }); LV.auto = setTimeout(() => cutClose(), 6000); }
   },
   cutGo() { cutClose(); },
+  callPick(v) {
+    const [j, i] = String(v).split(':').map(Number), h = histFor(UI.modal?.wk), c = h?.calls?.[j];
+    if (!c || c.done) return; callDo(h, j, i); save(); callRefresh(j);
+    const cs = document.querySelector('.live .cs-call'); if (cs) { cs.querySelector('.cs-c').outerHTML = `<div class="cs-c" style="animation-delay:0s">${callFx(c)}<button class="btn pri" data-act="callGo" style="align-items:center">Back to the show</button></div>`; cs.querySelector('.cs-skip').textContent = 'Continue ›'; cs.querySelector('.cs-q')?.remove(); cs.querySelector('.cs-c .btn')?.focus({ preventScroll: true }); LV.auto = setTimeout(() => callClose(), 6000); }
+    if (c.d > 0) SFX.crowd('cheer', .8, .2);
+  },
+  callGo() { callClose(); },
   lessOpen(v, el) { lessOpen(v, el); },
   lessSet(v) { lessSet(v); },
   lessShut() { lessClose(); },
@@ -9816,6 +10126,7 @@ const A = {
   pickTog(id) {
     const p = UI.picker; if (p.others.has(id)) return toast('Already on the other side of this segment.');
     const i = p.sel.indexOf(id);
+    if (i < 0 && UI.modal?.type === 'seg' && datesOut(W(id)) && !BK().some(s => s.id !== UI.modal.draft?.id && segPeople(s).includes(id))) { const w = W(id); return toast(`${w.name}'s deal is ${dPlural(datesFor(w))}, and ${MONTHS[dMonth(UI.selWeek ?? G.week) % 12]} is used up. Book them next month.`); }
     if (i < 0 && UI.modal?.type === 'editTeam') { const t = otherTeamOf(id, UI.modal.draft.id, UI.modal.draft.kind); if (t) return toast(`${nameOf(id)} is already in ${t.name}. A wrestler can only be in one ${isTrios(t) ? 'trios team' : 'tag team'}. Split up ${t.name} or remove them from it first.`); }
     if (i >= 0) p.sel.splice(i, 1);
     else { if (p.sel.length >= p.max) { if (p.max === 1) p.sel = []; else return toast('Maximum ' + p.max + ' here.'); } p.sel.push(id); }
@@ -10082,24 +10393,26 @@ const A = {
   pickTab(t) { UI.picker.tab = t === 'guests' ? 'guests' : 'roster'; render(); },
   negLen(n) { const m = UI.modal, w = W(m.id), old = askFor(w, m.weeks); m.weeks = +n; m.salary = Math.round(m.salary * askFor(w, m.weeks) / old / 100) * 100; render(); },
   negIndie(v) { const m = UI.modal; if (!m) return; m.indie = v === '1'; render(); },
+  negDates(v) { const m = UI.modal; if (!m) return; m.dates = clamp(Math.floor(+v) || 0, 0, DATES_MAX); render(); },
   negTeam(v) { const m = UI.modal, w = W(m.id); if (!w) return; m.team = v === '1' && partnersFor(w).length > 0; const ws = [w, ...partnersFor(w)]; m.salary = m.team ? Math.ceil(Math.max(...ws.map(x => teamAsk(x, ws, m.weeks))) / 100) * 100 : askFor(w, m.weeks); render(); },
   offer() {
     const m = UI.modal, w = W(m.id); if (!w) return;
     const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
-    const c = team ? teamChance(ws, m.salary, m.weeks, m.indie).c : offerChance(w, m.salary, m.weeks, { indie: m.indie });
+    const c = team ? teamChance(ws, m.salary, m.weeks, m.indie, m.dates).c : offerChance(w, m.salary, m.weeks, { indie: m.indie, dates: m.dates });
     const newbies = ws.filter(x => !x.contract);
     if (G.settings.finances && newbies.length && G.money < m.salary * 2 * newbies.length) return toast(`Not enough money to cover their first weeks.`);
     const tn = team ? (teamFor(w)?.name || ws.map(x => lastName(x)).join(' & ')) : '';
     if (Math.random() < c) {
       for (const x of ws) {
         const was = !!x.contract, ask = team ? teamAsk(x, ws, m.weeks) : askFor(x, m.weeks);
-        x.contract = { salary: m.salary, weeks: m.weeks, ...(wantsIndie(x) && m.indie ? { indie: true } : {}) }; x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100); delete x.courted; delete x.payGap;
+        x.contract = { salary: m.salary, weeks: m.weeks, ...(wantsIndie(x) && m.indie ? { indie: true } : {}), ...(wantsDates(x) && m.dates > 0 ? { dates: m.dates } : {}) }; x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100); delete x.courted; delete x.payGap;
         if (G.guests) G.guests = G.guests.filter(d => d.id !== x.id);
         if (!was) { x.joined = G.week; x.lastBooked = G.week; }
-        if (!team) news(`✍️ ${x.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks})${x.contract.indie ? ', with indie dates' : ''}.`, 'contract');
+        if (!team) news(`✍️ ${x.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks})${x.contract.indie ? ', with indie dates' : ''}${x.contract.dates ? `, for ${dPlural(x.contract.dates)}` : ''}.`, 'contract');
       }
       if (team) news(`✍️ ${tn} (${ws.map(x => x.name).join(' & ')}) ${ws.every(x => newbies.includes(x)) ? 'signed' : 're-signed'} together: ${lenLabel(m.weeks)} at ${money(m.salary)}/wk each (through week ${G.week + m.weeks}).`, 'contract');
       for (const x of ws) if (wantsIndie(x) && !m.indie) remember(x, -3, 'You said no to indie dates in my deal');
+      for (const x of ws) if (wantsDates(x) && m.dates === 0) remember(x, -3, 'You wouldn\'t give me a lighter schedule');
       UI.modal = null; commit(team ? `${tn} said yes!` : `${w.name} said yes!`);
     } else {
       let blasted = null;
@@ -10156,6 +10469,9 @@ const A = {
     render(); },
   splitTeam(id) { const t = TM(id); if (!t) return; confirmBox('Split up ' + t.name + '?', 'The team and its record are removed. The wrestlers stay.', 'Split up', () => { G.teams = G.teams.filter(x => x.id !== id); for (const f of G.factions || []) f.tms = f.tms.filter(x => x !== id); news(`👥 ${t.name} split up.`, 'story'); commit(); }, true); },
   disbandFaction(id) { const f = FC(id); if (!f) return; confirmBox('Disband ' + f.name + '?', 'The faction and its record are removed. Its wrestlers and tag teams stay.', 'Disband', () => { G.factions = G.factions.filter(x => x.id !== id); news(`👑 ${f.name} has disbanded.`, 'story'); commit(); }, true); },
+  goStaff() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'staff'; render(); pageTop(); },
+  hbStyle(k) { if (!Object.hasOwn(HB_STYLES, k)) return; G.bstyle = k; commit(`${staffOf('booker') ? firstName(staffOf('booker').n) + ' will book' : 'Auto-fill books'} ${HB_STYLES[k][0].toLowerCase()} from now on.`); },
+  hbNotesHide() { UI.hbNotes = null; render(); },
   goTeams() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'teams'; render(); pageTop(); },
   fLeader(id) { const d = UI.modal.draft; if (!d.members.includes(id)) return; d.leader = d.leader === id ? null : id; render(); },
   saveFaction() {
@@ -10172,8 +10488,8 @@ const A = {
     UI.modal = null; commit('Faction saved.');
   },
   delFaction() { const d = UI.modal.draft; confirmBox('Disband ' + d.name + '?', 'The faction and its record are removed. Its wrestlers and tag teams stay.', 'Disband', () => { G.factions = G.factions.filter(f => f.id !== d.id); news(`👑 ${d.name} has disbanded.`, 'story'); commit(); }, true); },
-  pickFaction(id) { const f = FC(id), p = UI.picker; if (!f || !p) return; const ms = liveMembers(f).sort((a, b) => (b.id === f.leader) - (a.id === f.leader) || b.pop - a.pop).map(w => w.id).filter(x => !p.others.has(x) && (!p.ring || inRing(W(x)))).slice(0, p.max); if (ms.length < 2) return toast('Not enough of them are free for this side.'); p.sel = ms; A.pickDone(); },
-  pickTeam(id) { const t = TM(id), p = UI.picker; if (!t || !p) return; const ms = liveMembers(t).map(w => w.id).filter(x => !p.others.has(x) && (!p.ring || inRing(W(x)))).slice(0, p.max); if (ms.length < 2) return toast('Some of them are already on the other side.'); p.sel = ms; A.pickDone(); },
+  pickFaction(id) { const f = FC(id), p = UI.picker; if (!f || !p) return; const ms = liveMembers(f).sort((a, b) => (b.id === f.leader) - (a.id === f.leader) || b.pop - a.pop).map(w => w.id).filter(x => !p.others.has(x) && (!p.ring || inRing(W(x)))).slice(0, p.max); if (ms.length < 2) return toast('Not enough of them are free for this side.'); { const o = UI.modal?.type === 'seg' && ms.map(W).find(w => datesOut(w) && !p.sel.includes(w.id)); if (o) return toast(`${o.name} has no dates left this month (${dPlural(datesFor(o))}).`); } p.sel = ms; A.pickDone(); },
+  pickTeam(id) { const t = TM(id), p = UI.picker; if (!t || !p) return; const ms = liveMembers(t).map(w => w.id).filter(x => !p.others.has(x) && (!p.ring || inRing(W(x)))).slice(0, p.max); if (ms.length < 2) return toast('Some of them are already on the other side.'); { const o = UI.modal?.type === 'seg' && ms.map(W).find(w => datesOut(w) && !p.sel.includes(w.id)); if (o) return toast(`${o.name} has no dates left this month (${dPlural(datesFor(o))}).`); } p.sel = ms; A.pickDone(); },
   newTourney() {
     const t = G.titles.find(x => !x.tag && !x.holder.length) || null;
     openModal({ type: 'editTourney', draft: { name: t ? t.short + ' Title Tournament' : 'Tournament of Champions', titleId: t?.id || '', prize: t ? 'title' : 'none', size: '8', ents: [] } });
@@ -11424,7 +11740,7 @@ function coAsRival(g) {
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
   // with the brand split on, each wrestler and belt remembers its show by position, since show ids are new in every game
   const brandAt = id => g.split && shs.length > 1 ? Math.max(0, shs.findIndex(s => s.id === id)) : null;
-  for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; if (w.contract?.indie) x.rIndie = true; delete x.contract; const bi = brandAt(w.brand); if (bi != null) { x.bi = bi; if (w.both) x.both = true; } r.roster.push(x); }
+  for (const w of ros) { const x = JSON.parse(JSON.stringify(w)); x.rival = r.id; x.rWeeks = clamp(w.contract?.weeks || 52, 8, 156); x.rSal = w.contract?.salary || 0; if (w.contract?.indie) x.rIndie = true; if (w.contract?.dates) x.rDates = w.contract.dates; delete x.contract; const bi = brandAt(w.brand); if (bi != null) { x.bi = bi; if (w.both) x.both = true; } r.roster.push(x); }
   const sing = (g.titles || []).filter(t => !t.tag), teamT = (g.titles || []).filter(t => tsz(t) > 1).slice(0, WORLD_TITLES / 2);
   const look = t => ({ ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...titleRules(t), ...(g.split && shs.length > 1 && shs.some(s => s.id === t.brand) ? { bi: shs.findIndex(s => s.id === t.brand) } : {}) });
   r.titles = sing.slice(0, WORLD_TITLES - teamT.length).map((t, i) => ({ id: t.id, name: t.name, short: t.short, ...look(t), ...(+t.prestige ? { pres: clamp(Math.round(+t.prestige), 1, 100) } : {}), div: /wom[ae]n/i.test(t.name) || t.division === "Women's" ? "Women's" : '', mid: i > 0 && !/wom[ae]n/i.test(t.name), holder: t.holder.filter(id => r.roster.some(w => w.id === id)).slice(0, 1), since: 1, d: 0, reigns: (t.reigns || []).map(x => ({ nm: x.nm, from: 1, to: x.to ? 1 : 0, d: x.d || 0 })).slice(-10) }));
@@ -11468,6 +11784,7 @@ function cleanWorld(raw) {
   const g = scrubGame({ v: 1, promo: { name: 'World', show: 'Show' }, wrestlers: [], rivalPromos: [...raw.cos.slice(0, 10), fa] });
   const out = g.rivalPromos.filter(r => r.id !== 'fa').slice(0, 10), free = g.rivalPromos.find(r => r.id === 'fa')?.roster || [];
   const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156);
+    if (w.rDates != null) { if (+w.rDates >= 1) w.rDates = clamp(Math.floor(+w.rDates), 1, DATES_MAX); else delete w.rDates; }
     if (w.bi != null) { w.bi = clamp(Math.floor(+w.bi) || 0, 0, MAX_SHOWS - 1); if (w.both !== true) delete w.both; } else delete w.both;
     if (w.rIndie !== true) delete w.rIndie; for (const k of WORLD_DROP) if (k !== 'brand' && k !== 'photoLocal') delete w[k];
     return w; };
@@ -12001,7 +12318,7 @@ function applyWorld(z) {
   const taken = new Set([...cos.flatMap(c => c.roster), ...wd.fa].map(w => w.name));
   if (take) {
     G.wrestlers = [];
-    for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156), ...(x.rIndie ? { indie: true } : {}) }; delete x.rival; delete x.rWeeks; delete x.rSal; delete x.rIndie; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
+    for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156), ...(x.rIndie ? { indie: true } : {}), ...(x.rDates ? { dates: x.rDates } : {}) }; delete x.rival; delete x.rWeeks; delete x.rSal; delete x.rIndie; delete x.rDates; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
     const tag = G.titles.find(t => t.tag);
     G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: +t.pres || (rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70), holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}),
       ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(t.bi != null ? { bi: t.bi } : {}) }));
@@ -12160,7 +12477,7 @@ function sanitizeGame(g) {
     if (w.look != null && !faceOK(w.look)) delete w.look;
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
-    if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520), ...(w.contract.indie === true ? { indie: true } : {}) };
+    if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520), ...(w.contract.indie === true ? { indie: true } : {}), ...(+w.contract.dates >= 1 ? { dates: clamp(Math.floor(+w.contract.dates), 1, DATES_MAX) } : {}) };
     if (w.xt) w.xt = w.xt && typeof w.xt === 'object' ? { n: String(w.xt.n || 'Indie Championship').slice(0, 80), p: String(w.xt.p || 'an indie').slice(0, 60), wk: Math.floor(+w.xt.wk) || 0, d: clamp(Math.floor(+w.xt.d) || 0, 0, 999) } : undefined;
     if (!w.xt) delete w.xt;
     if (w.xtPast) w.xtPast = (Array.isArray(w.xtPast) ? w.xtPast : []).filter(x => x && typeof x === 'object').slice(0, 5).map(x => ({ n: String(x.n || 'Indie Championship').slice(0, 80), p: String(x.p || '').slice(0, 60), wk: Math.floor(+x.wk) || 0, to: Math.floor(+x.to) || 0, d: clamp(Math.floor(+x.d) || 0, 0, 999) }));
@@ -13136,9 +13453,9 @@ function personaWeek(booked) {
   for (const m of G.phone) if (m.ask && m.ans == null && G.week - m.wk >= 2) { m.ans = -1; const w = W(m.wid); if (w?.contract) remember(w, -4, 'You ignored my message'); }
   for (const w of signed()) {
     if (w.pers === 'work' && !w.loan && CON() && !w.contract.indie) w.morale = clamp(w.morale - .5, 0, 100);
-    if ((w.pers === 'star' || w.pers === 'work') && inRing(w) && !booked.has(w.id) && !w.injury && !w.away && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
+    if ((w.pers === 'star' || w.pers === 'work') && inRing(w) && !datesFor(w) && !booked.has(w.id) && !w.injury && !w.away && G.week - (w.lastBooked || 0) >= 2) w.morale = clamp(w.morale - 1.5, 0, 100);
     if (w.pers === 'money' && CON() && w.contract.salary < asking(w) * .85) w.morale = clamp(w.morale - 1, 0, 100);
-    if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? pick(['My deal is up for talks. I want to stay. Let\'s get it done.', 'Contract time. I\'m happy here, so let\'s make it easy.']) : w.trust < 35 ? pick(['My contract is up soon. Honestly, I\'m listening to other offers.', 'My deal\'s nearly done and other companies have called. Just so you know.']) : pick(['My contract is coming up. Make me a fair offer and we can talk.', 'We should talk about my next deal. I\'m open to staying for the right offer.']) + (wantsIndie(w) ? pick([' And I want indie dates in the new deal.', ' One thing: I want to keep working indie shows on my nights off.']) : ''), null, { act: 'talks' });
+    if (CON() && !w.loan && w.contract.weeks === TALKS_OPEN) textFrom(w, w.trust >= 65 ? pick(['My deal is up for talks. I want to stay. Let\'s get it done.', 'Contract time. I\'m happy here, so let\'s make it easy.']) : w.trust < 35 ? pick(['My contract is up soon. Honestly, I\'m listening to other offers.', 'My deal\'s nearly done and other companies have called. Just so you know.']) : pick(['My contract is coming up. Make me a fair offer and we can talk.', 'We should talk about my next deal. I\'m open to staying for the right offer.']) + (wantsIndie(w) ? pick([' And I want indie dates in the new deal.', ' One thing: I want to keep working indie shows on my nights off.']) : '') + (wantsDates(w) && !datesFor(w) ? pick([` At my age I want a lighter schedule: ${dPlural(wantsDates(w))}.`, ` I want limited dates in the next deal. ${dPlural(wantsDates(w))[0].toUpperCase() + dPlural(wantsDates(w)).slice(1)}, no more.`]) : ''), null, { act: 'talks' });
   }
   if (G.week >= 2 && G.phone.filter(m => m.ask && m.ans == null).length < 2 && Math.random() < .5) newAsk();
   indieWeek();
@@ -13149,6 +13466,100 @@ function personaWeek(booked) {
 // as your show. They take it unless you say no, and saying no stings.
 const wantsIndie = w => PER() && w?.pers === 'work' && !w.loan;
 const indieOn = w => wantsIndie(w) && !!w.contract?.indie;
+// ---------- limited dates: veterans (and a few big part-time stars) sign for a set number of shows a month ----------
+// They ask for it in contract talks. With the clause, they can only be booked on that many shows in a calendar month
+// (weekly shows and big events alike). The picker and the auto-booker stop at the limit; a card booked past it still
+// goes ahead, but they're unhappy about it.
+const DATES_MAX = 4;
+function idHash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; }
+// how many shows a month they'd ask for, or 0 if they're happy with a full schedule
+function wantsDates(w) {
+  if (!CON() || !w || w.loan || w.retired || !inRing(w)) return 0;
+  const a = +w.age || 0, h = idHash(w.id + ':dates');
+  if (!(a >= 40 || (a >= 36 && h < 0.45) || (a >= 33 && (w.pop || 0) >= 85 && h < 0.3))) return 0;
+  return a >= 46 ? 1 : a >= 42 ? 2 : 3;
+}
+const datesFor = w => CON() && w?.contract?.dates > 0 ? w.contract.dates : 0;
+const dMonth = wk => mkAt(wk, 0);
+const dPlural = n => `${n} show${n === 1 ? '' : 's'} a month`;
+// one show's card for a week, whether it's the show open now or one stored away
+function cardOfShow(sid, wk) {
+  if (sid === G.showId) return wk === G.week ? G.card : G.future?.[wk];
+  const s = sid === EV ? G.bigShow : showById(sid); if (!s) return null;
+  if (wk === G.week) return (s.wk ?? G.week) < G.week ? s.future?.[wk] : s.card;
+  return s.future?.[wk];
+}
+// shows this month: run already, plus booked on a card for later (leaving out the card you're editing)
+function datesUse(w, wk = UI.selWeek ?? G.week, skipSid = G.showId, skipWk = wk) {
+  const k = dMonth(wk), id = w.id;
+  const ran = G.history.filter(h => dMonth(h.wk) === k && (h.results || []).some(r => r.seg && segPeople(r.seg).includes(id))).length;
+  let plan = 0;
+  const sids = [...SHOWS().map(s => s.id), EV];
+  for (let x = G.week; x <= G.week + 6; x++) {
+    if (dMonth(x) !== k) { if (dMonth(x) > k) break; continue; }
+    for (const sid of sids) {
+      if (x === skipWk && sid === skipSid) continue;
+      const c = cardOfShow(sid, x);
+      if (Array.isArray(c) && c.some(s => segPeople(s).includes(id))) plan++;
+    }
+  }
+  return { k, ran, plan, max: datesFor(w), used: ran + plan };
+}
+const datesOut = (w, wk, sid, swk) => { if (!datesFor(w)) return false; const u = datesUse(w, wk, sid, swk); return u.used >= u.max; };
+// the tag in the picker: how many dates are left this month
+function datesTag(w, wk = UI.selWeek ?? G.week) {
+  if (!datesFor(w)) return '';
+  const u = datesUse(w, wk), left = Math.max(0, u.max - u.used), mo = MONTHS[dMonth(wk) % 12];
+  return left ? `📅 ${left} of ${u.max} dates left in ${mo}` : `📅 no dates left in ${mo} (${u.max} a month)`;
+}
+// someone on this card who has run out of dates: the card can still run, but they'll be upset
+function datesOver(card = BK(), wk = UI.selWeek ?? G.week) {
+  if (!CON() || !Array.isArray(card)) return [];
+  return [...new Set(card.flatMap(segPeople))].map(W).filter(w => w && datesFor(w) && datesUse(w, wk).used >= datesFor(w));
+}
+function datesAlert() {
+  const ws = datesOver(); if (!ws.length) return '';
+  const w = ws[0];
+  return `<button class="bs-alert" data-act="openW" data-id="${w.id}"><span class="bs-alert-i">📅</span><span class="sp"><span class="bs-alert-k">${esc(ws.map(x => x.name).join(', '))}</span><b>Booked past ${ws.length === 1 ? 'their' : 'the'} limited dates this month</b></span><span class="bs-alert-go">See ›</span></button>`;
+}
+// after a show: anyone worked past their dates is unhappy, and tells you
+function datesShow(ids) {
+  for (const id of ids) {
+    const w = W(id); if (!w || !datesFor(w)) continue;
+    const u = datesUse(w, G.week, null, null);
+    if (u.ran <= u.max) continue;
+    w.morale = clamp(w.morale - 8, 0, 100);
+    remember(w, -4, 'You booked me past the dates in my deal');
+    if (PER() && Array.isArray(G.phone)) textFrom(w, pick([`My deal says ${dPlural(u.max)}. That was number ${u.ran}. Don't make a habit of it.`, `I signed for ${dPlural(u.max)} for a reason. My body can't do more than that.`, `That's ${u.ran} shows this month. We agreed on ${u.max}. Not happy.`]));
+    news(`📅 ${w.name} worked past the ${dPlural(u.max)} in their deal and isn't happy about it.`, 'contract');
+  }
+}
+// the contract talks card for anyone who wants limited dates
+function datesBox(ws, m) {
+  const dw = ws.filter(wantsDates); if (!dw.length) return '';
+  const want = Math.min(...dw.map(wantsDates)), opts = [want, want + 1].filter(n => n <= DATES_MAX);
+  const one = dw.length === 1, x = dw[0];
+  const why = one ? `${esc(lastName(x))} is ${x.age} and wants a lighter schedule: ${dPlural(wantsDates(x))}.` : `${esc(dw.map(lastName).join(' & '))} want a lighter schedule: ${dPlural(want)}.`;
+  const note = m.dates === 0 ? `<div class="tiny" style="margin-top:6px;color:var(--bad)">Much harder to sign${dw.some(y => y.age >= 42) ? ', especially at their age' : ''}, and they'll remember you said no.</div>`
+    : m.dates > want ? `<div class="tiny muted" style="margin-top:6px">A little harder to sign than giving them what they asked for.</div>`
+    : `<div class="tiny muted" style="margin-top:6px">They're more likely to say yes.</div>`;
+  return `<div class="card" style="margin-top:10px"><div class="small" style="margin-bottom:8px"><b>📅 Limited dates clause</b><div class="tiny muted">${why} You can't book ${one ? 'them' : 'them'} on more shows than that in a calendar month, weekly shows and big events alike. The auto-booker skips ${one ? 'them' : 'them'} once the month is used up.</div></div>
+     <div class="seg-ctl">${opts.map(n => `<button class="${m.dates === n ? 'on' : ''}" data-act="negDates" data-id="${n}">${n} a month</button>`).join('')}<button class="${m.dates === 0 ? 'on' : ''}" data-act="negDates" data-id="0">Full schedule</button></div>${note}</div>`;
+}
+// chance change for one wrestler, given the dates on offer (0 = full schedule)
+function datesChance(w, d) {
+  const want = wantsDates(w); if (!want || d == null) return 0;
+  if (d === 0) return w.age >= 42 ? -0.35 : -0.2;
+  return d <= want ? 0.08 : -0.06 * (d - want);
+}
+function datesBlock(w) {
+  if (!CON() || !w.contract || w.retired) return '';
+  const d = datesFor(w), want = wantsDates(w);
+  if (!d && !want) return '';
+  if (!d) return `<div class="sec">Schedule</div><div class="card"><div class="small">📅 ${esc(lastName(w))} wants a limited dates clause at the next contract talks: ${dPlural(want)}.</div></div>`;
+  const u = datesUse(w, G.week, null, null), mo = MONTHS[u.k % 12];
+  return `<div class="sec">Schedule</div><div class="card"><div class="row small"><span class="sp muted">Limited dates</span><b>${dPlural(d)}</b></div><div class="row small"><span class="sp muted">${mo}</span><b>${u.ran} worked · ${u.plan} booked · ${Math.max(0, d - u.used)} left</b></div><div class="tiny muted" style="margin-top:4px">Their deal caps how many shows they work each month. Weekly shows and big events both count, and promos too.</div></div>`;
+}
 const INDIE_BELTS = ['Championship', 'Heavyweight Championship', 'Openweight Championship', 'Television Championship'];
 function indieName() {
   const taken = new Set([G.promo.name, ...(G.rivalPromos || []).map(r => r.name), ...(G.cos || []).map(c => c.promo?.name)]);
@@ -13999,6 +14410,7 @@ function agentBonus(seg, ctx) {
 
 // ---------- staff ----------
 const STAFF_ROLES = {
+  booker: ['📋', 'Head Booker', 'Books Auto-fill and any show set to Auto-book, in the style you pick. Their playbook grows as your company levels up.', 1],
   trainer: ['🎓', 'Head Trainer', 'Everyone grows faster in training and at the school.', 1],
   agent: ['🤼', 'Road Agent', 'Lays out matches: better ratings, and wrestlers learn more from each match.', 1],
   doctor: ['🩹', 'Doctor', 'Fewer injuries, and injured wrestlers come back sooner.', 1],
@@ -14008,6 +14420,35 @@ const STAFF_ROLES = {
   writer: ['✍️', 'Writer', 'Storylines heat up faster.', 3]
 };
 const STAFF_PAY = [0, 900, 1600, 2600, 4000, 6000];
+// ---------- the Head Booker: Auto-fill gets smarter with their stars, your company level and your other staff ----------
+const HB_STYLES = {
+  bal: ['Balanced', 'A bit of everything: stories, title matches and the best match-ups.'],
+  story: ['Story first', 'Every hot feud gets time, more promos, and the stories build to the big event.'],
+  work: ['Workrate', 'The best workers face each other, fewer promos, and the best match closes the show.'],
+  star: ['Star power', 'Your most popular wrestlers get booked first, every week.']
+};
+// [company level, what the Head Booker starts doing]
+const HB_STEPS = [[1, 'Fills the card with the best match-ups and picks the main event'], [5, 'Builds every show toward the next big event: matches and promos take turns'], [8, 'Rests tired wrestlers and makes room for unhappy ones'], [12, 'Picks stipulations and finishes for each story'], [18, 'Keeps your top stars on every show'], [25, 'Genius: tries several cards and keeps the best one']];
+const hbStyle = () => G && Object.hasOwn(HB_STYLES, G.bstyle) ? G.bstyle : 'bal';
+function hb() {
+  const s = staffOf('booker'), q = s ? staffQ('booker') : 0, L = s ? coLvl() : 0, at = n => !!s && L >= n, sty = s ? hbStyle() : 'bal';
+  const bl = s ? bookerLvl() : 0, ag = staffQ('agent'), wr = staffQ('writer');
+  const top = at(18) ? new Set(BR.crew().slice().sort((a, b) => b.pop - a.pop).slice(0, 3).map(w => w.id)) : new Set();
+  return {
+    s, q, L, sty,
+    // opponents compared for each match: the Head Booker's stars, the Road Agent and your booker level all help
+    opp: s ? clamp(4 + q * 2 + Math.ceil(ag / 2) + (bl >= 10) + (bl >= 25), 4, 18) : 3,
+    noise: s ? (sty === 'work' ? 2 : 5) - q * 0.4 : 12,
+    build: at(5), care: at(8), stips: at(12), stars: at(18),
+    tries: at(25) ? 2 + q : 1,
+    // how many feuds get on the card: without a Head Booker only the hottest (and one more with a Writer)
+    stories: s ? 99 : 1 + (wr ? 1 : 0),
+    tired: at(8) ? 70 - q * 2 : 80,
+    promo: sty === 'work' ? 0.05 : sty === 'story' ? 0.18 : 0.12,
+    need: w => BR.need(w) + (at(8) ? (w.morale < 40 ? 4 + q : 0) : (w.morale < 40 ? -6 : 0)) + (sty === 'star' ? w.pop * 0.25 : 0) + (top.has(w.id) ? 6 : 0) + (!s ? rnd(0, 12) : 0)
+  };
+}
+
 const STAFF_BIO = ['Former world champion', 'Ran a famous indie', 'Ex-network producer', 'Thirty years in the business', 'Came up through the dojo system', 'Worked every territory', 'Former tag team specialist', 'Quietly the best in the business', 'Young and full of ideas', 'Old school, hard but fair'];
 const staffOf = role => G && G.staff && G.staff[role] && Object.hasOwn(STAFF_ROLES, role) ? G.staff[role] : null;
 // 0 means nobody is hired; 1-5 stars otherwise
@@ -14449,7 +14890,25 @@ function staffView() {
   };
   return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week, and can take a job off your hands. Goals, the school and training are in the <button class="link" data-act="faTab" data-id="training">Training</button> tab.</div>
     <div class="list">${roles.map(sRow).join('')}</div>
+    ${hbView()}
     ${staffJobsView()}`;
+}
+// Office → Staff: the Head Booker's booking style and playbook
+function hbView() {
+  const s = staffOf('booker'), L = coLvl(), who = s ? esc(firstName(s.n)) : 'A Head Booker', st = hbStyle(), H = hb();
+  const chips = Object.entries(HB_STYLES).map(([k, [n]]) => `<button class="chip ${st === k ? 'on' : ''}" data-act="hbStyle" data-id="${k}" aria-pressed="${st === k}">${n}</button>`).join('');
+  const steps = HB_STEPS.map(([lv, t]) => { const on = s && L >= lv; return `<div style="margin-top:6px;${on ? '' : 'opacity:.6'}">${on ? '✓' : '🔒'} <b>Level ${lv}</b> <span class="muted">${t}</span></div>`; }).join('');
+  return `<div class="sec">🧠 Booking style</div>
+    <div class="card"><div class="chips">${chips}</div><div class="tiny muted" style="margin-top:8px">${HB_STYLES[st][1]}${s ? '' : ' Used once you hire a Head Booker.'}</div></div>
+    <div class="sec">📈 ${s ? `${who}'s playbook` : 'Head Booker playbook'}</div>
+    <div class="card small">${s ? '' : '<div class="muted" style="margin-bottom:4px">Without a Head Booker, Auto-fill books a basic show: random match-ups, only your hottest feud, and the biggest names go last.</div>'}${steps}
+      <div class="tiny muted" style="margin-top:8px">Unlocks with your company level (now ${L}). More stars means better picks at every step${s ? `: ${who} compares ${H.opp} opponents for each match` : ''}. A Road Agent and a high booker level help too.</div></div>`;
+}
+// the Head Booker's notes on the card they just filled
+function hbNotesCard(wk, card) {
+  const n = UI.hbNotes;
+  if (!n || n.wk !== wk || n.sid !== G.showId || n.co !== G.promo.name || !card.length) return '';
+  return `<div class="card small" style="margin-top:10px"><div class="row"><b class="sp">📋 ${esc(n.by)}'s notes on this card</b><button class="link small" data-act="hbNotesHide" aria-label="Hide notes">Hide</button></div>${n.list.map(t => `<div style="margin-top:6px">${esc(t)}</div>`).join('')}</div>`;
 }
 // Office → Training: goals and trainer calls, the school, and who is training what
 function trainingView() {
@@ -14592,6 +15051,7 @@ function cleanTraining(g, shared) {
   const st = {};
   if (g.staff && typeof g.staff === 'object') for (const r of Object.keys(STAFF_ROLES)) { const s = g.staff[r]; if (s && typeof s === 'object') st[r] = { n: txt(s.n, 40) || 'Staff', q: clamp(Math.round(+s.q) || 1, 1, 5), pay: clamp(+s.pay || 0, 0, 1e5), bio: txt(s.bio, 60), wk: Math.floor(+s.wk) || 1, ...(s.off ? { off: true } : {}) }; }
   g.staff = st;
+  if (g.bstyle != null && !Object.hasOwn(HB_STYLES, g.bstyle)) delete g.bstyle;
   // jobs your staff handle (older saves: a paused PR Agent means the media job is off)
   const J = g.sjobs && typeof g.sjobs === 'object' ? g.sjobs : {}, nj = {};
   for (const k of ['media', 'rest', 'resign', 'focus', 'trips']) nj[k] = typeof J[k] === 'boolean' ? J[k] : SJ_DEF[k];
@@ -14845,8 +15305,8 @@ function takeRivalInto(r, host) {
   host.rivalPromos = (host.rivalPromos || []).filter(x => x !== r); host.rivals = host.rivalPromos.map(x => x.name);
   G.fromRival = r.id;
   G.wrestlers = JSON.parse(JSON.stringify(r.roster)).map(w => {
-    w.contract = { salary: CON() ? Math.max(500, Math.round((w.rSal || asking(w)) / 100) * 100) : 0, weeks: clamp(Math.round(+w.rWeeks) || 52, 4, 156), ...(w.rIndie ? { indie: true } : {}) };
-    for (const k of ['rival', 'rWeeks', 'rSal', 'rIndie', 'bi', 'both', 'courted', 'cutBy', 'cutWk']) delete w[k];
+    w.contract = { salary: CON() ? Math.max(500, Math.round((w.rSal || asking(w)) / 100) * 100) : 0, weeks: clamp(Math.round(+w.rWeeks) || 52, 4, 156), ...(w.rIndie ? { indie: true } : {}), ...(w.rDates ? { dates: w.rDates } : {}) };
+    for (const k of ['rival', 'rWeeks', 'rSal', 'rIndie', 'rDates', 'bi', 'both', 'courted', 'cutBy', 'cutWk']) delete w[k];
     w.joined = host.week; w.lastBooked = host.week - 1; return w; });
   const byName = nm => String(nm || '').split(' & ').map(n => G.wrestlers.find(w => w.name === n)?.id).filter(Boolean);
   G.titles = r.titles.map(t => {
@@ -15298,6 +15758,8 @@ document.addEventListener('change', e => {
   if (el.dataset.mt) { const d = UI.modal?.edit?.d; if (d) d[el.dataset.mt] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value; return; }
   if (el.dataset.sig) { const n = el.dataset.n ?? G.bigEvents[+el.dataset.i]; if (!n) return; const cur = { mt: '', gm: '', ...(sigFor(n) || {}) }; cur[el.dataset.sig] = el.value;
     G.ppvSig = (G.ppvSig || []).filter(x => x.name !== n); if (cur.mt || cur.gm) G.ppvSig.push({ name: n, mt: cur.mt, gm: cur.gm }); commit(cur.mt || cur.gm ? `${n}: the ${sigName(cur)} is its signature match.` : `${n} has no signature match.`); return; }
+  if (el.dataset.prod) { const d = UI.modal?.draft, P = d && prodOf(d), k = el.dataset.prod, B = PROD_BEATS.find(b => b[0] === k);
+    if (P && B && Object.hasOwn(B[3], el.value)) { d.prod = { ...P, [k]: el.value, t: 'custom' }; render(); } return; }
   if (el.dataset.seg) { const d = UI.modal.draft, k = el.dataset.seg;
     if (k === 'mtype') { if (el.value === 'Tag Team' && tagSizeOf(d.mtype)) return; d.mtype = el.value; const mt = MT(d.mtype), flat = [...new Set(d.sides.flat())]; if (!elimOK(mt)) delete d.elim;
       if (mt.ffa) { d.n = mt.def; d.sides = flat.slice(0, d.n).map(id => [id]); } else { delete d.n; d.sides = Array.from({ length: mt.sides }, (_, i) => (d.sides[i] || []).slice(0, sideSize(mt, i))); }
@@ -15555,8 +16017,10 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.79';
+const VERSION = '1.9.82';
 const WHATS_NEW = [
+  ['📅 Limited dates for veterans', 'Older wrestlers (and a few big part-time stars) can ask for a limited dates clause in contract talks: a set number of shows a month. Give them what they ask for and they are easier to sign. Once their month is used up, the picker and Auto-fill skip them, and booking them anyway upsets them. Their profile shows the dates left this month.'],
+  ['🤼 Produce your matches', 'The match editor has a new Produce the match section. Pick a plan (Classic, Sprint, Epic or Squash), or Custom to set the opening, the heat, the comeback, a big spot and the near falls yourself, plus the length. Plans that fit the wrestlers rate higher, and long matches and big spots take a toll. On the live show a produced match plays out beat by beat with a crowd meter, and your agent asks you on the headset what to do next: start the comeback, go for a big spot, one more near fall or go home. Leave it on Agent calls it and nothing changes.'],
   ['🏆 Awards & Prizes', 'Office → Titles has a new Awards & Prizes shelf for trophies: tournament cups, yearly matches, year-end awards and prizes you hand out. Design each one like a belt (9 shapes, handles, toppers, bases and every metal and centre icon) or use a photo. Champions and trophy holders now wear their belt and trophy on their photo everywhere. The belt designer adds any colour, side plates with icons or the champion\'s own initials, size sliders, your own templates, and new title rules: year established, past champions, big events only, open challenges and unifying two titles.'],
   ['🗞️ Universe headlines and paid stories', 'World news is now Universe headlines: a lead story, colour-coded kinds you can filter, and more news from around the world (big show results, best-ever shows, late paychecks, title reigns, retirements, new feuds and the show of the week). Buy up to two headlines a week to hype a wrestler, sell your show, talk up the company or dig at a rival. Each one has a small chance to backfire.'],
   ['💥 Backfires you can\'t miss', 'When something you chose blows up in your face (a walkout, a refused finish, a blown interview, a training injury, a social media blast, a paid story exposed and more), a full-screen BACKFIRE moment shows what happened and what it cost. Backfires are marked in red in the news, the headlines and the Dirt Sheet.'],
