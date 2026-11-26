@@ -4678,6 +4678,7 @@ function endOfWeek(card, world = true) {
   if (G.week % 52 === 0) yearEnd(world);
   if (world && (Math.random() < 0.25 || freeAgents().length < 6)) { const w = makeWrestler(randomName(), '', null, null, rnd(0.05, 0.75)); w.joined = G.week; G.wrestlers.push(w); news(`🆕 ${w.name} (${w.style}, ${w.align}) is now an indie star.`, 'contract'); }
   // TV deals: talks open near the end of a deal, and a deal that runs out is renewed or replaced
+  if (world) tvRivWeek();
   tvWeek();
   teamPayWeek();
   relWeek(booked); personaWeek(booked);
@@ -4756,6 +4757,10 @@ function dirtRumours() {
     if (w.morale < 30) add(pick([`${w.name} is said to be unhappy with how ${G.promo.name} is using ${pn(w).them}.`, `Friends of ${w.name} say ${pn(w).re} miserable at ${G.promo.name} right now.`]), 1, 2.5);
   }
   for (const w of mine.filter(w => w.xt)) add(pick([`${w.name} has been tearing it up on the indies as ${w.xt.p}'s champion. ${G.promo.name} lets ${pn(w).them} work outside dates.`, `Indie fans can't get enough of ${w.name}, who still holds the ${w.xt.n}.`]), 1, 1.3);
+  if (tvOn()) {
+    for (const sh of tvShows()) { const d = sh.tv, r = d && RV(d.bid); if (r) add(pick([`${r.name} has been in talks with ${d.nw} about ${G.promo.name}'s slot.`, `Word is ${d.nw} likes what ${r.name} is doing and might give them ${sh.name}'s slot.`]), 1, 2.5); }
+    for (const r of rs) if (r.tv && tvNetTier(r.tv.nw) !== 'local' && tvAvgR(r) < 52) add(`${r.tv.nw} is said to be unhappy with ${r.show || r.name}'s ratings. The slot could open up.`, 1, 1.5);
+  }
   const happy = mine.filter(w => w.morale >= 70 && w.pop >= 45);
   if (happy.length) { const w = pick(happy); add(pick([`${w.name} has quietly asked for ${pn(w).their} release from ${G.promo.name}.`, `${w.name} is said to be eyeing the exit at ${G.promo.name}.`]), 0, 1.2); }
   const champ = (G.titles || []).find(t => t.holder.length === 1 && W(t.holder[0])); if (champ && Math.random() < .5) add(pick([`${nameOf(champ.holder[0])} wants out of the ${champ.short} title picture and has told management so.`, `${nameOf(champ.holder[0])} is tired of carrying the ${champ.short} title and wants a break.`]), 0, .8);
@@ -4881,7 +4886,7 @@ function perfR(r, w) {
 }
 const rSalFor = (r, w) => Math.max(300, Math.round(asking(w) * TIERS[tierIx(r)][4] / 100) * 100);
 const payrollR = r => sum(r.roster.map(w => w.rSal || 0));
-const incomeR = r => Math.round((r.fans || 0) * [1.5, 1.25, 1.05, 0.9][tierIx(r)] * (0.55 + (r.last || 55) / 110));
+const incomeR = r => Math.round((r.fans || 0) * [1.5, 1.25, 1.05, 0.9][tierIx(r)] * (0.55 + (r.last || 55) / 110) * (MON() && r.tv ? ({ nat: 1.08, cable: 1, stream: .96, local: .92 })[tvNetTier(r.tv.nw)] || 1 : 1)); // where they air counts too
 const rW = (r, id) => id ? r.roster.find(w => w.id === id) : null;
 // AI company titles: t.n is how many hold it (1 singles, 2 tag team, 3 trios)
 const rN = t => +t?.n === 3 ? 3 : +t?.n === 2 ? 2 : 1;
@@ -7047,10 +7052,14 @@ function tvBump(mult = 1, add = 0) { for (const s of tvShows()) { const d = tvOf
 function tvOffers(s) {
   const d = tvOf(s), avgR = tvRecent(s), happy = avgR >= d.tgt ? 1.06 : avgR < d.tgt - 5 ? 0.85 : 0.97;
   const out = [];
-  if ((d.str || 0) < TV_STRIKES) out.push({ ...tvMake(s, d.nw, d.slot, d.hrs, pick([52, 104]), happy * (d.str ? 0.95 : 1)), ren: 1 });
+  if ((d.str || 0) < TV_STRIKES && !d.lost) out.push({ ...tvMake(s, d.nw, d.slot, d.hrs, pick([52, 104]), happy * (d.str ? 0.95 : 1)), ren: 1, ...(RV(d.bid) ? { vs: d.bid } : {}) });
   const nets = shuffle(TV_NETS.filter(x => x[0] !== d.nw && tvTierOK(x[1]))), used = new Set();
-  for (const [n, t] of nets) { if (out.length >= 3) break; if (used.has(t) && nets.length > 3) continue; used.add(t);
-    out.push(tvMake(s, n, pick(Object.keys(TV_SLOTS)), +pick(t === 'local' ? ['1', '1', '2'] : t === 'nat' ? ['2', '2', '3'] : ['1', '2', '2', '3']), pick([26, 52, 104]), rnd(.92, 1.1))); }
+  for (const [n, t] of nets) { if (out.length >= 3) break; if (used.has(t) && nets.length > 3) continue;
+    // a full network only talks if it would drop its weakest AI show for you: that offer is a bid against them
+    let vs = null;
+    if (tvFree(n) <= 0) { const weak = tvHolders(n).filter(h => h.r).sort((a, b) => a.avg - b.avg)[0]; if (!weak) continue; vs = weak.r.id; }
+    used.add(t);
+    out.push({ ...tvMake(s, n, pick(Object.keys(TV_SLOTS)), +pick(t === 'local' ? ['1', '1', '2'] : t === 'nat' ? ['2', '2', '3'] : ['1', '2', '2', '3']), pick([26, 52, 104]), rnd(.92, 1.1)), ...(vs ? { vs } : {}) }); }
   s.tvO = out; s.tvOWk = G.week;
 }
 function tvSign(s, o) {
@@ -7087,8 +7096,11 @@ function tvWeek() {
       G.todos.unshift({ t: `Pick a TV deal for ${s.name} before week ${d.end} (Office → TV deals)`, done: false });
     }
     if (G.week >= d.end) {
-      const o = (s.tvO || []).find(x => x.ren) || (s.tvO || [])[0] || { ...tvMake(s, 'Harbor Access', 'late', 1, 26) };
-      tvSign(s, o); news(`📺 ${s.name}'s deal ran out with nothing signed, so it went to ${o.nw}: ${money(o.fee)} a week, ${o.hrs} hour${o.hrs > 1 ? 's' : ''}, target ${o.tgt}.`, 'office');
+      // an AI company that went after this slot takes it when nothing was signed
+      const thief = RV(d.bid) || (d.lost ? tvRivals().find(r => r.tv && r.tv.nw !== d.nw && tvOKFor(r.fans || 0, r.prestige || 0, tvNetTier(d.nw))) : null);
+      if (thief) { const was = d.nw; thief.tv = tvDealR(thief, was, rint(52, 104)); s.tvO = (s.tvO || []).filter(x => !x.ren && !x.vs); news(`📉 ${thief.name} took ${s.name}'s slot on ${was}.`, 'office'); wnews(`📺 ${thief.name} took ${G.promo.name}'s slot on ${was}.`, thief, false, { k: 'tv' }); }
+      const o = (s.tvO || []).find(x => x.ren && !x.vs) || (s.tvO || []).filter(x => !x.vs).sort((a, b) => b.fee - a.fee)[0] || { ...tvMake(s, 'Harbor Access', 'late', d.hrs, 26) };
+      if (o.vs) delete o.vs; tvSign(s, o); news(`📺 ${s.name}'s deal ran out with nothing signed, so it went to ${o.nw}: ${money(o.fee)} a week, ${o.hrs} hour${o.hrs > 1 ? 's' : ''}, target ${o.tgt}.`, 'office');
     }
   }
   tvSync();
@@ -7099,8 +7111,94 @@ function tvClean(d) {
   if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
   const net = TV_NETS.some(x => x[0] === d.nw) ? d.nw : 'Sportsline 24', n = (k, lo, hi, def) => { const v = Math.floor(+d[k]); return Number.isFinite(v) ? clamp(v, lo, hi) : def; };
   return { nw: net, slot: Object.hasOwn(TV_SLOTS, d.slot) ? d.slot : 'prime', hrs: Object.hasOwn(TV_LENS, String(d.hrs)) ? +d.hrs : 2, fee: n('fee', 0, 10000000, 20000), tgt: n('tgt', 30, 95, 60), bon: n('bon', 0, 1000000, 0),
-    ...(d.term != null ? { term: n('term', 1, 260, 52) } : {}), ...(d.ren ? { ren: 1 } : {}), ...(d.push != null ? { push: n('push', 0, 9, 0) } : {}),
+    ...(d.term != null ? { term: n('term', 1, 260, 52) } : {}), ...(d.ren ? { ren: 1 } : {}), ...(typeof d.vs === 'string' && d.vs ? { vs: d.vs.slice(0, 40) } : {}), ...(typeof d.bid === 'string' && d.bid ? { bid: d.bid.slice(0, 40) } : {}), ...(d.bidOff ? { bidOff: 1 } : {}), ...(d.lost ? { lost: 1 } : {}), ...(d.raise != null ? { raise: n('raise', 0, 3, 0) } : {}), ...(d.push != null ? { push: n('push', 0, 9, 0) } : {}),
     ...(d.from != null ? { from: n('from', 0, 100000, 1), end: n('end', 0, 100260, 26), str: n('str', 0, TV_STRIKES, 0), n: n('n', 0, 100000, 0) } : {}) };
+}
+// ---------- networks fight over slots: each network has a few slots, held by your shows and the AI companies (r.tv) ----------
+// A full network can still offer you a slot by dropping its weakest AI show: that offer is a bid (o.vs = the rival holding it).
+// Hot AI companies bid for your slot as your deal nears its end (d.bid): your renewal becomes a bid, and if nothing is signed
+// when the deal runs out, they take the slot. Local TV never runs out of room.
+const TV_CAP = { nat: 1, cable: 2, stream: 2, local: 99 };
+const tvAvgR = r => { const L = (r.hist || []).slice(-TV_CHECK); return L.length ? avg(L) : r.last || 55; };
+const tvOKFor = (fans, pres, t) => t === 'nat' ? fans >= 60000 || pres >= 62 : t === 'cable' ? fans >= 15000 || pres >= 45 : true;
+const tvRivals = () => (G.rivalPromos || []).filter(r => r && r.id !== 'fa' && Array.isArray(r.roster));
+// an AI company's deal: checked on read, and a free slot found for it the first time
+function tvOfR(r) {
+  if (r.tv && TV_NETS.some(x => x[0] === r.tv.nw)) return r.tv;
+  delete r.tv;
+  const order = ['nat', 'cable', 'stream', 'local'].filter(t => tvOKFor(r.fans || 0, r.prestige || 0, t));
+  for (const t of order) { const free = shuffle(TV_NETS.filter(x => x[1] === t && tvFree(x[0]) > 0)); if (free.length) { r.tv = tvDealR(r, free[0][0], rint(8, 80)); break; } }
+  return r.tv || (r.tv = tvDealR(r, 'Channel 12', rint(8, 80)));
+}
+const tvDealR = (r, nw, len) => ({ nw, slot: pick(['early', 'prime', 'prime', 'late']), fee: r500(30000 * Math.pow((r.fans || 10000) / 22000, 0.65) * (TV_TIERS[tvNetTier(nw)].fee)), end: G.week + len });
+// everyone on a network right now: your shows (in every company you run) and the AI companies
+function tvHolders(nw) {
+  const out = [];
+  for (const c of [G, ...(G.cos || [])]) for (const s of Array.isArray(c.shows) ? c.shows : []) if (s.tv?.nw === nw) out.push({ me: 1, c, s, name: s.id === c.showId && c.promo ? c.promo.show : s.name, co: c.promo?.name, end: s.tv.end, avg: c === G ? Math.round(tvRecent(s)) : null, fee: s.tv.fee, str: s.tv.str || 0 });
+  for (const r of tvRivals()) if (r.tv?.nw === nw) out.push({ r, name: r.show || r.name, co: r.name, end: r.tv.end, avg: Math.round(tvAvgR(r)), fee: r.tv.fee });
+  return out;
+}
+const tvFree = nw => (TV_CAP[tvNetTier(nw)] || 3) - tvHolders(nw).length;
+// your chance of winning a bid for a slot against an AI company
+function tvOdds(s, o) {
+  const r = RV(o.vs); if (!r) return 1;
+  const fans = Math.log(Math.max(1000, G.fans) / Math.max(1000, r.fans || 10000));
+  return clamp(0.5 + (tvRecent(s) - tvAvgR(r)) / 25 + fans * 0.2 + 0.12 * (o.raise || 0) + (o.ren ? 0.15 : 0), 0.08, 0.92);
+}
+const tvOddsLbl = p => p >= .75 ? 'strong' : p >= .55 ? 'good' : p >= .4 ? 'even' : p >= .25 ? 'poor' : 'a long shot';
+// an AI company loses its slot: down to the best free network a tier below, or local TV
+function tvDropR(r, why) {
+  const was = r.tv?.nw; delete r.tv;
+  const tiers = ['nat', 'cable', 'stream', 'local'], from = tiers.indexOf(tvNetTier(was));
+  for (const t of tiers.slice(from + 1)) { const free = TV_NETS.filter(x => x[1] === t && x[0] !== was && tvFree(x[0]) > 0); if (free.length) { r.tv = tvDealR(r, pick(free)[0], rint(26, 52)); break; } }
+  if (!r.tv) r.tv = tvDealR(r, 'Channel 12', 26);
+  r.prestige = clamp((r.prestige || 40) - 3, 1, 100); r.fans = Math.max(500, Math.round((r.fans || 10000) * 0.97));
+  wnews(`📉 ${was} dropped ${r.show || r.name}${why ? ' ' + why : ''}. ${r.name} moves to ${r.tv.nw}.`, r, true, { k: 'tv' });
+}
+// the AI side of TV each week: renewals, networks dropping weak shows, hot companies moving up, and bids for your slots
+function tvRivWeek() {
+  if (!tvOn()) return;
+  for (const r of tvRivals()) {
+    const d = tvOfR(r), a = tvAvgR(r), t = tvNetTier(d.nw);
+    if (G.week < d.end) continue;
+    // their deal ends: a weak show gets dropped, a hot one tries to move up a tier, the rest renew
+    const up = { local: 'stream', stream: 'cable', cable: 'nat' }[t];
+    if (t !== 'local' && a < 48) { tvDropR(r, 'after a run of weak ratings'); continue; }
+    if (up && a >= 64 && tvOKFor(r.fans || 0, r.prestige || 0, up)) {
+      const free = TV_NETS.filter(x => x[1] === up && tvFree(x[0]) > 0);
+      if (free.length) { const nw = pick(free)[0]; r.tv = tvDealR(r, nw, rint(52, 104)); wnews(`📺 ${r.name} moved ${r.show || 'its show'} to ${nw}.`, r, true, { k: 'tv' }); continue; }
+    }
+    d.end = G.week + rint(52, 104); d.fee = tvDealR(r, d.nw, 0).fee;
+  }
+  // a hot AI company goes after your slot as your deal nears its end (once a deal)
+  for (const s of tvShows()) {
+    const d = tvOf(s); if (d.bid || d.bidOff || G.week < d.end - TV_TALKS - 4 || G.week >= d.end) continue;
+    const t = tvNetTier(d.nw); if (t === 'local') continue;
+    const mine = tvRecent(s), r = tvRivals().filter(x => x.tv && x.tv.nw !== d.nw && tvOKFor(x.fans || 0, x.prestige || 0, t) && tvAvgR(x) >= mine - 3).sort((a, b) => tvAvgR(b) - tvAvgR(a))[0];
+    d.bidOff = 1; // the roll happens once
+    if (!r || Math.random() > 0.45) continue;
+    d.bid = r.id;
+    if (s.tvO) { const ren = s.tvO.find(o => o.ren); if (ren) ren.vs = r.id; }
+    news(`📺 ${r.name} wants ${s.name}'s slot on ${d.nw}. When the deal is up, the network will pick one of you.`, 'office');
+    wnews(`📺 ${r.name} is chasing ${G.promo.name}'s slot on ${d.nw}.`, r, false, { k: 'tv' });
+  }
+}
+// a bid: win and you get the slot (an AI company holding it is moved down), lose and the offer is gone
+function tvBid(s, i) {
+  const o = s.tvO?.[i]; if (!o) return null;
+  const r = RV(o.vs), p = tvOdds(s, o);
+  if (!r || Math.random() < p) {
+    if (r && o.ren) { delete tvOf(s).bid; wnews(`📺 ${o.nw} kept ${s.name} and turned down ${r.name}.`, r, false, { k: 'tv' }); }
+    else if (r) tvDropR(r, `to make room for ${G.promo.name}'s ${s.name}`);
+    return true;
+  }
+  s.tvO.splice(i, 1);
+  if (o.ren && r) { // you lost your own slot
+    const d = tvOf(s); d.lost = 1;
+    if (tvFree(o.nw) <= 0 && r.tv) { /* they take your place when the deal ends */ }
+    wnews(`📺 ${o.nw} picked ${r.name} over ${G.promo.name}. ${s.name} has to find a new home when its deal ends.`, r, true, { k: 'tv' });
+  } else if (r) wnews(`📺 ${o.nw} kept ${r.show || r.name} and turned down ${G.promo.name}'s bid.`, r, false, { k: 'tv' });
+  return false;
 }
 const maxSegs = wk => isBig(wk) ? 10 + bigBonus() : G && isSpecial(wk) ? tvSegs() + 1 : tvSegs();
 const roomLeft = (wk, card) => Math.max(0, maxSegs(wk) - card.length);
@@ -8893,20 +8991,31 @@ function moneyView(last, payroll) {
 function tvDealCard(sh, d, o, i) {
   const T = TV_TIERS[tvNetTier(d.nw)], left = o ? 0 : d.end - G.week, a = Math.round(tvRecent(sh)), ok = a >= d.tgt;
   const box = (k, v) => `<div><span>${k}</span><b>${v}</b></div>`;
-  const badge = o ? `<span class="tv-bdg y">${o.ren ? 'Renewal' : 'Offer'}</span>` : d.str ? `<span class="tv-bdg r">${d.str} strike${d.str > 1 ? 's' : ''}</span>` : !G.history.some(h => !h.big && recSid(h) === sh.id) ? '<span class="tv-bdg">New deal</span>' : `<span class="tv-bdg ${ok ? 'g' : ''}">${ok ? 'On target' : 'Below target'}</span>`;
+  const vs = o && RV(o.vs), badge = vs ? `<span class="tv-bdg r">Bidding war</span>` : o ? `<span class="tv-bdg y">${o.ren ? 'Renewal' : 'Offer'}</span>` : d.str ? `<span class="tv-bdg r">${d.str} strike${d.str > 1 ? 's' : ''}</span>` : !G.history.some(h => !h.big && recSid(h) === sh.id) ? '<span class="tv-bdg">New deal</span>' : `<span class="tv-bdg ${ok ? 'g' : ''}">${ok ? 'On target' : 'Below target'}</span>`;
   return `<div class="tvd${o ? ' offer' : ''}"><div class="hd">${ic('tv')}<div class="sp"><div class="nm">${esc(d.nw)}</div><div class="tg">${o ? `${T.n} · ${T.d}` : `${esc(sh.name)} · ${T.n}`}</div></div>${badge}</div>
     <div class="tvg">${box('Fee a week', money(d.fee))}${box('Time slot', tvSlotLbl(sh, d))}${box('Length', `${d.hrs} hr · ${TV_LENS[d.hrs].seg} seg`)}${box('Target', d.tgt + '+')}${box('Bonus', '+' + money(d.bon))}${box(o ? 'Term' : 'Ends', o ? o.term + ' wk' : `wk ${d.end}`)}</div>
-    ${o ? `<div class="grid2"><button class="btn sm pri" data-act="tvSignO" data-id="${sh.id}|${i}">${ic('checkc')} Sign</button><div class="grid2" style="gap:6px"><button class="btn sm" data-act="tvPush" data-id="${sh.id}|${i}|fee" aria-label="Ask ${esc(d.nw)} for more money">${ic('coin')} More</button><button class="btn sm" data-act="tvPush" data-id="${sh.id}|${i}|tgt" aria-label="Ask ${esc(d.nw)} for an easier target">${ic('target')} Easier</button></div></div>${o.push ? `<div class="tiny muted" style="margin-top:6px">You pushed ${o.push} time${o.push > 1 ? 's' : ''}. Push again and they are more likely to walk.</div>` : ''}`
+    ${vs ? `<div class="small" style="margin-bottom:8px">${o.ren ? `<b>${esc(vs.name)}</b> wants this slot too.` : `${esc(d.nw)} would drop <b>${esc(vs.show || vs.name)}</b> (${esc(vs.name)}) for you.`} Their last ${TV_CHECK} shows: <b>${Math.round(tvAvgR(vs))}</b>, yours: <b>${Math.round(tvRecent(sh))}</b>. Your odds: <b>${tvOddsLbl(tvOdds(sh, o))}</b>.</div>
+      <div class="grid2"><button class="btn sm pri" data-act="tvSignO" data-id="${sh.id}|${i}">${ic('checkc')} Bid</button><button class="btn sm" data-act="tvPush" data-id="${sh.id}|${i}|raise" aria-label="Raise your bid: take a smaller fee for better odds">${ic('trend')} Raise your bid</button></div>${o.raise ? `<div class="tiny muted" style="margin-top:6px">You raised your bid ${o.raise} time${o.raise > 1 ? 's' : ''}: a smaller fee for better odds.</div>` : ''}`
+    : o ? `<div class="grid2"><button class="btn sm pri" data-act="tvSignO" data-id="${sh.id}|${i}">${ic('checkc')} Sign</button><div class="grid2" style="gap:6px"><button class="btn sm" data-act="tvPush" data-id="${sh.id}|${i}|fee" aria-label="Ask ${esc(d.nw)} for more money">${ic('coin')} More</button><button class="btn sm" data-act="tvPush" data-id="${sh.id}|${i}|tgt" aria-label="Ask ${esc(d.nw)} for an easier target">${ic('target')} Easier</button></div></div>${o.push ? `<div class="tiny muted" style="margin-top:6px">You pushed ${o.push} time${o.push > 1 ? 's' : ''}. Push again and they are more likely to walk.</div>` : ''}`
     : `<div class="tv-meter" role="img" aria-label="Last ${TV_CHECK} shows average ${a}, target ${d.tgt}"><i style="width:${clamp(a, 0, 100)}%;background:var(--${ok ? 'good' : 'bad'})"></i><u style="left:${clamp(d.tgt, 0, 100)}%"></u></div>
     <div class="row tiny muted"><span class="sp">${G.history.some(h => !h.big && recSid(h) === sh.id) ? `Last ${TV_CHECK} shows: <b>${a}</b>` : 'No shows yet'} · ${left > 0 ? `${left} week${left > 1 ? 's' : ''} left` : 'ends this week'}</span><span class="tv-strk" aria-label="${d.str || 0} of ${TV_STRIKES} strikes">${Array.from({ length: TV_STRIKES }, (_, k) => `<i class="${k < (d.str || 0) ? 'on' : ''}"></i>`).join('')}</span></div>
+    ${!o && RV(d.bid) ? `<div class="warnline small" style="margin-top:8px">${ic('alert')} ${esc(RV(d.bid).name)} wants this slot. Sign the renewal when talks open (it becomes a bid), or they take it when the deal ends.</div>` : ''}
     ${d.str >= TV_STRIKES - 1 ? `<div class="warnline small" style="margin-top:8px">${ic('alert')} ${esc(d.nw)}: "One more bad month and we pull ${esc(sh.name)}."</div>` : ''}`}</div>`;
+}
+// every network that isn't local TV, its slots and who holds them
+function tvNetsView() {
+  for (const r of tvRivals()) tvOfR(r);
+  const rows = TV_NETS.filter(x => x[1] !== 'local').map(([nw, t]) => { const H = tvHolders(nw), cap = TV_CAP[t];
+    return `<div class="sec">${ic('tv')} ${esc(nw)} · ${TV_TIERS[t].n} · ${H.length}/${cap} slots</div><div class="list">${H.map(h => `<div class="item"><div class="main"><div class="t">${h.me ? ic('user') + ' ' : ''}<b>${esc(h.name)}</b>${h.co && !h.me ? ` · ${esc(h.co)}` : h.me && h.c !== G ? ` · ${esc(h.co)}` : ''}</div><div class="d">${money(h.fee)}/wk · ends wk ${h.end}${h.avg != null ? ` · avg ${h.avg}` : ''}</div></div>${h.me ? '<span class="tv-bdg g">You</span>' : h.avg < 52 ? '<span class="tv-bdg r">Shaky</span>' : '<span class="tv-bdg">Rival</span>'}</div>`).join('')}${cap - H.length > 0 ? `<div class="item"><div class="main"><div class="t"><b>Open</b></div><div class="d">${cap - H.length} free slot${cap - H.length > 1 ? 's' : ''}</div></div><span class="tv-bdg y">Free</span></div>` : ''}</div>`; }).join('');
+  return `<details class="card" style="margin-top:12px"><summary><b>${ic('globe')} The networks ▾</b></summary><div class="tiny muted" style="margin-top:8px">Every network has a few slots. The AI companies hold them too: a full network only offers you a slot by dropping its weakest show, and a hot company can bid for yours when your deal is nearly up.</div>${rows}</details>`;
 }
 function tvView() {
   const shs = tvShows();
-  return `<div class="small muted" style="margin-bottom:10px">Each weekly show has its own TV deal. The slot sets the audience and the target, and the length sets how many segments you book. Every ${TV_CHECK} shows the network checks your average: miss the target and it's a strike and a 10% fee cut. ${TV_STRIKES} strikes and they cancel the show. Talks open ${TV_TALKS} weeks before a deal ends.</div>
+  return `<div class="small muted" style="margin-bottom:10px">Each weekly show has its own TV deal. The slot sets the audience and the target, and the length sets how many segments you book. Every ${TV_CHECK} shows the network checks your average: miss the target and it's a strike and a 10% fee cut. ${TV_STRIKES} strikes and they cancel the show. Talks open ${TV_TALKS} weeks before a deal ends. The AI companies hold slots too, and a hot one can bid for yours.</div>
     ${shs.map(sh => { const d = tvOf(sh); return `${shs.length > 1 ? `<div class="sec">${bDot(sh.id)} ${esc(sh.name)}</div>` : ''}${tvDealCard(sh, d)}
       ${sh.tvO ? `<div class="sec">${ic('briefcase')} Offers for ${esc(sh.name)}</div>${sh.tvO.length ? `<div class="tiny muted" style="margin-bottom:8px">Sign one before week ${d.end}, or the renewal is signed for you. Push for more and the network may walk away.</div>${sh.tvO.map((o, i) => tvDealCard(sh, o, o, i)).join('')}` : '<div class="empty">Every network walked away. When the deal ends the show goes to local TV.</div>'}`
         : `<div class="tiny muted" style="margin:-2px 0 12px">Talks open in week ${Math.max(G.week, d.end - TV_TALKS)}.</div>`}`; }).join('')}
+    ${tvNetsView()}
     <div class="tiny muted" style="margin-top:8px">A second weekly show on the same roster draws a smaller audience, so its offers are about half. With the brand split on, every brand is a main show. Big events are pay-per-view and have no TV deal.</div>`;
 }
 // Office tabs in three groups, so twelve tabs read as three short lists. Money only shows when money is on.
@@ -11311,10 +11420,12 @@ const A = {
   faTabGo(t) { UI.tab = 'office'; UI.faTab = t; UI.modal = null; render(); pageTop(); },
   // TV deals: sign an offer, or push for more money or an easier target (each push risks the network walking away)
   tvSignO(id) { const [sid, i] = String(id).split('|'), sh = showById(sid), o = sh?.tvO?.[+i]; if (!o) return;
+    if (o.vs && RV(o.vs)) { const rn = RV(o.vs).name; if (!tvBid(sh, +i)) return commit(`${o.nw} went with ${rn}. ${sh.tvO.length ? 'The other offers are still on the table.' : 'No offers left.'}`); }
     const was = tvOf(sh).hrs; tvSign(sh, o); news(`📺 ${sh.name} signed with ${o.nw}: ${money(o.fee)} a week, ${tvSlotLbl(sh, o)}, ${o.hrs} hour${o.hrs > 1 ? 's' : ''}, target ${o.tgt}, for ${o.term} weeks.`, 'office');
     for (const t of G.todos || []) if (!t.done && t.t.startsWith(`Pick a TV deal for ${sh.name} `)) t.done = true;
     commit(`${sh.name} is on ${o.nw} from now on.${o.hrs < was ? ` It is a shorter show now: ${TV_LENS[o.hrs].seg} segments a week.` : o.hrs > was ? ` It is a longer show now: room for ${TV_LENS[o.hrs].seg} segments a week.` : ''}`); },
   tvPush(id) { const [sid, i, k] = String(id).split('|'), sh = showById(sid), o = sh?.tvO?.[+i]; if (!o) return;
+    if (k === 'raise') { if ((o.raise || 0) >= 3) return toast('That is as low as the fee can go.'); o.raise = (o.raise || 0) + 1; o.fee = r500(o.fee * 0.92); o.bon = r500(o.fee * .06); return commit(`You'd take ${money(o.fee)} a week. Your odds are now ${tvOddsLbl(tvOdds(sh, o))}.`); }
     const walk = clamp(0.15 + 0.2 * (o.push || 0) - (tvRecent(sh) >= o.tgt + 5 ? 0.1 : 0) + (o.ren && tvOf(sh).str ? 0.1 : 0), 0.05, 0.8);
     if (Math.random() < walk) { sh.tvO.splice(+i, 1); news(`📺 ${o.nw} walked away from talks for ${sh.name}.`, 'office'); return commit(`${o.nw} walked away. ${sh.tvO.length ? 'The other offers are still on the table.' : 'No offers left: when the deal ends the show goes to local TV, unless new offers come in.'}`); }
     o.push = (o.push || 0) + 1;
@@ -12760,6 +12871,7 @@ function cleanWorld(raw) {
     return w; };
   const cos = out.map(r => {
     r.name = String(r.name).slice(0, 40); r.short = String(r.short).slice(0, 5); r.show = String(r.show).slice(0, 40); r.color = safeColor(r.color) || pick(RIV_COLORS);
+    delete r.tv; // a world starts fresh TV deals, like contracts
     r.roster = r.roster.slice(0, CO_ROSTER_MAX).map(fixW); r.money = clamp(+r.money || 100000, -1e7, 1e9); r.fans = clamp(+r.fans || 10000, 500, 5e6); r.prestige = clamp(+r.prestige || 40, 1, 100);
     const onR = new Set(r.roster.map(w => w.id)), gName = v => maskRude(String(v || '').slice(0, 40).trim());
     r.teams = (Array.isArray(r.teams) ? r.teams : []).slice(0, WORLD_TEAMS).map(t => { const ms = [...new Set((Array.isArray(t?.members) ? t.members : []).filter(id => onR.has(id)))], k = t?.kind === 'trios' ? 3 : 2; return ms.length === k && gName(t.name) ? { id: SAFE_ID.test(t.id) ? t.id : uid(), name: gName(t.name), ...(k === 3 ? { kind: 'trios' } : {}), members: ms } : null; }).filter(Boolean);
