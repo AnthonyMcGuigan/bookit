@@ -847,6 +847,15 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .lv-champ { margin-top: 8px; text-align: center; font-family: var(--f-display); font-size: 22px; letter-spacing: .06em; color: #1a1306; background: linear-gradient(90deg, #c9952b, #ffe08a, #c9952b); background-size: 200%; border-radius: 10px; padding: 6px; animation: shine 1.6s linear infinite; }
 @keyframes shine { to { background-position: 200% 0; } }
 .lv-hurt { margin-top: 6px; font-size: 13px; color: #ff8a92; font-weight: 700; }
+.tgl { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.tgl.on { border-color: var(--accent); border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0; }
+.tgl .sp b { display: block; }
+.tgl i { flex: none; position: relative; width: 46px; height: 28px; border-radius: 14px; background: var(--line); transition: background .15s; }
+.tgl i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
+.tgl.on i { background: var(--accent); }
+.tgl.on i::after { left: 21px; }
+.tgl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tgl-body { border: 1px solid var(--accent); border-top: 0; border-radius: 0 0 var(--r) var(--r); padding: 12px; margin-bottom: 12px; }
 .btn.st-go { margin-top: 10px; border-color: var(--accent); color: var(--accent); }
 .lv-conf { position: absolute; inset: 0; pointer-events: none; }
 .lv-conf i { position: absolute; top: -10px; width: 7px; height: 11px; background: var(--c); border-radius: 2px; opacity: 0; animation: conf 1.6s ease-in forwards; }
@@ -1930,11 +1939,11 @@ function startStory(a, b, heat, why, o = {}) {
 function storyStartCtl(s) {
   const pr = freshPair(segPair(s)); if (!pr) return '';
   const on = !!s.nst, k = on && STORY_KINDS.includes(s.nst.k) ? s.nst.k : 'Feud', who = ids => esc(ids.map(nameOf).join(' & '));
-  let h = `<label class="f"><span>Storyline</span><div class="seg-ctl" role="group" aria-label="Storyline"><button class="${on ? '' : 'on'}" aria-pressed="${!on}" data-act="segNst" data-id="0">Just this ${s.kind}</button><button class="${on ? 'on' : ''}" aria-pressed="${on}" data-act="segNst" data-id="1">🔥 Start a storyline</button></div></label>`;
-  if (on) h += `<div class="side" style="border-style:solid;border-color:var(--accent)"><div class="lbl">🔥 New storyline starts here</div>
+  let h = `<button class="tgl ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-act="segNst" data-id="${on ? 0 : 1}"><span class="sp"><b>🔥 Start feud</b><span class="tiny muted">${on ? 'A new storyline starts when this airs' : `${who(pr[0])} and ${who(pr[1])} have no storyline yet`}</span></span><i aria-hidden="true"></i></button>`;
+  if (on) h += `<div class="tgl-body">
     <label class="f" style="margin-bottom:8px"><span>Title</span><input type="text" data-segst maxlength="50" value="${esc(stClean(s.nst.t))}" placeholder="${esc(lnOf(pr[0]) + ' vs ' + lnOf(pr[1]))}"></label>
-    <div class="seg-ctl wrap" role="group" aria-label="Storyline type" style="margin-bottom:8px">${STORY_KINDS.slice(0, 4).map(x => `<button class="${x === k ? 'on' : ''}" aria-pressed="${x === k}" data-act="segNstK" data-id="${x}">${x}</button>`).join('')}</div>
-    <div class="tiny muted">${who(pr[0])} on one side, ${who(pr[1])} on the other. It starts when this ${s.kind} airs. The better it goes, the hotter it starts: about 15 to 40 heat.</div></div>`;
+    <label class="f" style="margin-bottom:8px"><span>Type</span><div class="seg-ctl wrap" role="group" aria-label="Storyline type">${STORY_KINDS.slice(0, 4).map(x => `<button class="${x === k ? 'on' : ''}" aria-pressed="${x === k}" data-act="segNstK" data-id="${x}">${x}</button>`).join('')}</div></label>
+    <div class="tiny muted">${who(pr[0])} on one side, ${who(pr[1])} on the other. The better this ${s.kind} goes, the hotter it starts: about 15 to 40 heat.</div></div>`;
   return h;
 }
 // open the storyline sheet already filled in, and come back to where the booker was
