@@ -827,7 +827,7 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .mz-t { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; text-align: center; cursor: pointer; min-width: 0; }
 .mz-t .mz { width: 64px; height: 64px; }
 .mz-t b { font-size: 12.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mz-t span { font-size: 11px; color: var(--dim); } .mz-t i { font-style: normal; font-size: 11px; font-weight: 700; }
+.mz-t span { font-size: 11px; color: var(--dim); } .mz-t i { font-style: normal; font-size: 11px; font-weight: 700; } .mz-t i.mz-st { font-weight: 500; color: var(--dim); }
 .mz-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
 .mz-t.sm { flex: none; width: 78px; } .mz-t.sm .mz { width: 52px; height: 52px; }
 .mz-add { justify-content: center; border-style: dashed; } .mz-add .i { width: 22px; height: 22px; margin: 10px 0; }
@@ -16892,7 +16892,7 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9.93';
 const WHATS_NEW = [
-  ['👕 Wrestler merch', 'Office → Merch shows your hot sellers. Design shirts, caps, posters, foam signs, action figures and replica titles for any wrestler in the workshop, with their face, a game icon and a slogan. New designs sell best, stars and champions sell most, and contract talks now include a merch cut that helps you sign people for less.'],
+  ['👕 Wrestler merch', 'Office → Merch shows your hot sellers. Design shirts, caps, posters, foam signs, action figures and replica titles for any wrestler in the workshop, with their face, a game icon and a slogan. New designs sell best and stars and champions sell most. You set each price and order print runs: sell out and you miss sales, and leftovers go to the bargain bin. Contract talks now include a merch cut that helps you sign people for less.'],
   ['🎨 One workshop for every design', 'Wrestler looks, championship belts and trophies now share the same editor: a live preview on top, then Templates, Surprise me and Undo, then tabs. The pixel face and full body are one editor now, with game templates (Luchador, Rock star, Royalty and more), your own saved looks, a teammate\'s look to copy, Undo, and any colour at all for skin, hair, gear, masks, headwear, bottoms and boots. Every icon in the game is now a symbol you can use: on a belt\'s centre or side plates, on a trophy or on top of it, and on a wrestler\'s chest, trunks or forehead. Trophies also get the belts\' engravings, ornate detail, a ring of gems, any base colour, and strap colours for a belt on a stand. Existing designs look exactly the same.'],
   ['🧍 Pronouns for every wrestler', 'Pick any wrestler\'s pronouns in their editor: he/him, she/her, they/them, he/they, she/they, any pronouns, or your own custom set (like xe/xem). Pronouns are separate from the division, so anyone can be in any division. Backstage events, texts, news, the Dirt Sheet, contract talks, Story Mode and more now use each wrestler\'s own pronouns. Usual follows the division (Women\'s she/her, Men\'s he/him, Open they/them). Pronouns go with shares, worlds and imports (add a Pronouns column), and you can add yours to your Community profile.'],
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
@@ -17044,13 +17044,22 @@ if ('serviceWorker' in navigator && location.protocol === 'https:' && !NATIVE) n
 // a slogan, the wrestler's face on it, the week it launched, units and money it made, and last show's money.
 // A wrestler with no products still sells a plain stock shirt, so a new game earns what it always did.
 const MERCH_K = {
-  shirt: { n: 'T-shirt', ic: 'user', cost: 3000, x: 1, price: 25, d: 'The best seller. Everyone wants one.' },
-  cap: { n: 'Cap', ic: 'cap', cost: 2000, x: .45, price: 20, d: 'Cheap to make, steady sales.' },
-  poster: { n: 'Poster', ic: 'file', cost: 800, x: .3, price: 10, d: 'Costs almost nothing. Sells a little.' },
-  sign: { n: 'Foam sign', ic: 'megaphone', cost: 1200, x: .35, price: 8, d: 'Fans hold it up at the show.' },
-  figure: { n: 'Action figure', ic: 'wrestle', cost: 15000, x: 1.1, price: 30, pop: 60, d: 'Big money, big order. Popularity 60 or more.' },
-  belt: { n: 'Replica title', ic: 'crown', cost: 20000, x: 1.3, price: 150, champ: 1, d: 'For champions. Sells less once they lose the belt.' }
+  shirt: { n: 'T-shirt', ic: 'shirt', setup: 1000, uc: 8, x: 1, price: 25, d: 'The best seller. Everyone wants one.' },
+  cap: { n: 'Cap', ic: 'cap', setup: 800, uc: 7, x: .45, price: 20, d: 'Cheap to make, steady sales.' },
+  poster: { n: 'Poster', ic: 'file', setup: 300, uc: 2, x: .3, price: 10, d: 'Costs almost nothing. Sells a little.' },
+  sign: { n: 'Foam sign', ic: 'megaphone', setup: 400, uc: 2.5, x: .35, price: 8, d: 'Fans hold it up at the show.' },
+  figure: { n: 'Action figure', ic: 'wrestle', setup: 6000, uc: 12, x: 1.1, price: 30, pop: 60, d: 'Big money, big order. Popularity 60 or more.' },
+  belt: { n: 'Replica title', ic: 'crown', setup: 8000, uc: 70, x: 1.3, price: 150, champ: 1, d: 'For champions. Sells less once they lose the belt.' }
 };
+// prices: cheaper sells more, dearer sells fewer. Fans of a hot wrestler pay up; fans of a cold one won't.
+const MPRICE = [[.8, 'Sale'], [1, 'Usual'], [1.2, 'Premium'], [1.6, 'Top dollar']];
+const mPrice = it => Math.round(MERCH_K[it.k].price * (MPRICE[it.pr ?? 1]?.[0] || 1));
+const mElastic = w => (w.momentum || 0) > 5 ? 1.1 : (w.momentum || 0) < -5 ? 2.2 : 1.6;
+// print runs: a bigger run is cheaper per item. Unsold stock goes to the bargain bin for 40% of what it cost.
+const MRUNS = [[100, 1], [250, .9], [500, .8], [1000, .7]];
+const mRunCost = (k, n) => { const R = MRUNS.find(r => r[0] === n); return R ? Math.round(n * MERCH_K[k].uc * R[1]) : 0; };
+const mNm = k => k === 'shirt' ? 'T-shirt' : MERCH_K[k].n.toLowerCase();
+const mBin = it => Math.round((it.stock || 0) * MERCH_K[it.k].uc * .7 * .4);
 const MERCH_MAX = 6, MERCH_W = [1, .6, .45, .35, .3, .25];
 const MERCH_COLS = ['#111111', '#f4f4f4', '#c8102e', '#1f4fbf', '#1f8a3b', '#7b2cbf', '#ff6b00', '#f2c94c', '#0891b2', '#e23a8a', '#6b4a2b', '#5b6170'];
 const MERCH_TPL = [['Classic black', { col: '#111111', acc: '#f2c94c', face: 1 }], ['Bright white', { col: '#f4f4f4', acc: '#c8102e', face: 0, sym: 'ic-star' }], ['Hot red', { col: '#c8102e', acc: '#f4f4f4', face: 0, sym: 'ic-flame' }], ['Royal', { col: '#1f4fbf', acc: '#f2c94c', face: 0, sym: 'ic-crown' }], ['Villain', { col: '#111111', acc: '#c8102e', face: 1, sym: 'ic-heel' }], ['Retro', { col: '#f2c94c', acc: '#111111', face: 0, sym: 'ic-bolt' }]];
@@ -17058,22 +17067,23 @@ const mHex = (v, d) => isHex(v) ? String(v).toLowerCase() : d;
 function merchClean1(o) {
   if (!o || typeof o !== 'object' || !Object.hasOwn(MERCH_K, o.k)) return null;
   const n = v => Math.max(0, Math.round(+v) || 0);
-  const x = { k: o.k, col: mHex(o.col, '#111111'), acc: mHex(o.acc, '#f2c94c'), wk: Math.max(-999, Math.floor(+o.wk) || 0), sold: n(o.sold), earned: n(o.earned), lw: n(o.lw) };
+  const x = { k: o.k, col: mHex(o.col, '#111111'), acc: mHex(o.acc, '#f2c94c'), wk: Math.max(-999, Math.floor(+o.wk) || 0), sold: n(o.sold), earned: n(o.earned), lw: n(o.lw), stock: Math.min(5000, o.stock == null ? 250 : n(o.stock)), pr: clamp(Math.round(+(o.pr ?? 1)) || 0, 0, MPRICE.length - 1) };
+  if (+o.miss > 0) x.miss = n(o.miss);
   if (symOK(o.sym)) x.sym = o.sym; if (o.face) x.face = 1;
   const t = String(o.txt || '').replace(/[\u0000-\u001f<>`"&]/g, '').trim().slice(0, 22); if (t) x.txt = t;
   return x;
 }
 const merchClean = l => Array.isArray(l) ? l.map(merchClean1).filter(Boolean).slice(0, MERCH_MAX) : [];
 const merchOf = w => Array.isArray(w?.merch) ? w.merch : [];
-const mStock = w => ({ k: 'shirt', col: safeColor(w.color) || '#111111', acc: '#f4f4f4', face: 1, stock: 1 });
+const mStock = w => ({ k: 'shirt', col: safeColor(w.color) || '#111111', acc: '#f4f4f4', face: 1, std: 1 });
 // new stuff sells best; after a few months a design goes stale and only sells about half as well
-const mFresh = it => { if (it.stock) return 1; const a = G.week - (it.wk || 0); return a < 4 ? 1.3 : Math.max(.55, 1.3 - (a - 4) * .025); };
+const mFresh = it => { if (it.std) return 1; const a = G.week - (it.wk || 0); return a < 4 ? 1.3 : Math.max(.55, 1.3 - (a - 4) * .025); };
 // how much this wrestler moves at one show: popularity first, then momentum, gold, a hot story; heels sell a bit less
 function mDemand(w) {
   const heat = Math.max(0, ...storiesOf(w.id).map(s => s.heat || 0));
   return w.pop * w.pop / 9 * (1 + clamp(w.momentum || 0, -50, 50) / 125) * (titlesOf(w.id).length ? 1.2 : 1) * (w.align === 'heel' ? .92 : 1) * (1 + Math.min(.25, heat / 400));
 }
-const mItemX = (w, it) => { const K = MERCH_K[it.k]; let x = it.stock ? .95 : K.x * mFresh(it) * (1 + (it.sym || it.face ? .05 : 0) + (it.txt ? .05 : 0)); if (K.champ && !titlesOf(w.id).length) x *= .5; return x; };
+const mItemX = (w, it) => { const K = MERCH_K[it.k]; let x = it.std ? .95 : K.x * mFresh(it) * (1 + (it.sym || it.face ? .05 : 0) + (it.txt ? .05 : 0)); if (K.champ && !titlesOf(w.id).length) x *= .5; return x; };
 // each product's share of one show: the best one sells fully, each extra product adds less
 function mSplit(w, mult) {
   const L = merchOf(w).length ? merchOf(w) : [mStock(w)], D = mDemand(w) * (mult || 1);
@@ -17087,16 +17097,24 @@ function merchRun(crew, wsh, share) {
   for (const w of crew) {
     if (w.away || w.injury > 0 && Math.random() < .5) continue;
     for (const p of mSplit(w, wsh(w) * f)) {
-      const v = Math.round(p.v * rnd(.85, 1.15)); if (v <= 0) continue;
+      let v = Math.round(p.v * rnd(.85, 1.15)), units = Math.max(1, Math.round(v / MERCH_K[p.it.k].price));
+      if (p.i >= 0) {
+        // your own products: the price moves how many people buy, and you can only sell what's in stock
+        const it = w.merch[p.i], pr = mPrice(it), want = Math.max(0, Math.round(units * Math.pow(pr / MERCH_K[it.k].price, -mElastic(w))));
+        const had = it.stock || 0; units = Math.min(had, want); v = units * pr; it.stock = had - units;
+        if (want > units) it.miss = want - units; else delete it.miss;
+        if (had > 0 && !it.stock) news(`${ic('alert')} ${w.name}'s ${mNm(it.k)} sold out${want > units ? `: ${(want - units).toLocaleString()} more fans wanted one` : ''}. Order more in Office → Merch.`, 'office');
+        it.sold = (it.sold || 0) + units; it.earned = (it.earned || 0) + Math.round(v * DF().income); it.lw = Math.round(v * DF().income);
+        if (!units) continue;
+      }
+      if (v <= 0) continue;
       gross += v; cut += v * mCut(w) / 100;
-      const units = Math.max(1, Math.round(v / MERCH_K[p.it.k].price));
-      if (p.i >= 0) { const it = w.merch[p.i]; it.sold = (it.sold || 0) + units; it.earned = (it.earned || 0) + Math.round(v * DF().income); it.lw = Math.round(v * DF().income); }
       rows.push({ wid: w.id, i: p.i, u: units, v: Math.round(v * DF().income) });
     }
   }
   rows.sort((a, b) => b.v - a.v);
   const top = rows[0], tw = top && W(top.wid);
-  if (tw && top.i >= 0 && G.mLast?.r?.[0]?.wid !== top.wid && G.week - (tw.merch[top.i].wk || 0) <= 6) news(`${ic('flame')} ${tw.name}'s new ${MERCH_K[tw.merch[top.i].k].n.toLowerCase()} is your best seller this week.`, 'office');
+  if (tw && top.i >= 0 && G.mLast?.r?.[0]?.wid !== top.wid && G.week - (tw.merch[top.i].wk || 0) <= 6) news(`${ic('flame')} ${tw.name}'s new ${mNm(tw.merch[top.i].k)} is your best seller this week.`, 'office');
   G.mLast = { wk: G.week, r: rows.slice(0, 40), g: Math.round(gross * DF().income), c: Math.round(cut * DF().income) };
   return { gross, cut };
 }
@@ -17125,18 +17143,26 @@ function merchArt(w, it, cls) {
   return `<svg class="${cls || 'mz'}" viewBox="0 0 100 100" role="img" aria-label="${esc(K.n)}">${g}</svg>`;
 }
 
-// ---- Office → Merch: the hot sellers and every product on the roster ----
+// ---- Office → Merch: the hot sellers, what's running low and every product on the roster ----
+// about how many of a product sell at one show, at its price (for the stock tab and the low-stock list)
+function mEst(w, it) {
+  const K = MERCH_K[it.k], others = merchOf(w).filter(x => x !== it).length;
+  return Math.max(0, Math.round(mDemand(w) * mItemX(w, it) * (others ? .75 : 1) / K.price * Math.pow(mPrice(it) / K.price, -mElastic(w)) * DF().income));
+}
+const mLow = (w, it) => (it.stock || 0) < Math.max(5, mEst(w, it) * 2);
+const mStockTag = (w, it) => !it.stock ? '<b style="color:var(--bad)">Sold out</b>' : mLow(w, it) ? `<b style="color:var(--warn)">${it.stock.toLocaleString()} left</b>` : `${it.stock.toLocaleString()} left`;
 function merchView() {
   const L = G.mLast && G.mLast.wk >= G.week - 2 ? G.mLast : null, ws = signed().filter(w => !isNW(w) || merchOf(w).length);
   const prod = ws.flatMap(w => merchOf(w).map((it, i) => ({ w, it, i }))), rowOf = r => { const w = W(r.wid); if (!w) return null; const it = r.i >= 0 ? merchOf(w)[r.i] : mStock(w); return it && { w, it, r }; };
-  const hot = L ? L.r.map(rowOf).filter(Boolean).slice(0, 5) : [];
-  const tile = (w, it, i, sub) => `<button class="mz-t" data-act="merchEdit" data-id="${w.id}" data-f="${i}" aria-label="${esc(w.name)}: ${esc(MERCH_K[it.k].n)}">${merchArt(w, it)}<b>${esc(lastName(w))}</b><span>${esc(MERCH_K[it.k].n)}</span>${sub || ''}</button>`;
-  return `<div class="small muted" style="margin-bottom:8px">Every weekly show has a merch table. Popular, hot wrestlers sell the most, champions and big stories sell more, and new designs sell best before they go stale.</div>
+  const hot = L ? L.r.map(rowOf).filter(Boolean).slice(0, 5) : [], low = prod.filter(({ w, it }) => mLow(w, it)).sort((a, b) => (a.it.stock || 0) - (b.it.stock || 0));
+  const tile = (w, it, i, sub) => `<button class="mz-t" data-act="merchEdit" data-id="${w.id}" data-f="${i}" aria-label="${esc(w.name)}: ${esc(MERCH_K[it.k].n)}">${merchArt(w, it)}<b>${esc(lastName(w))}</b><span>${esc(MERCH_K[it.k].n)} · $${mPrice(it)}</span>${sub || ''}</button>`;
+  return `<div class="small muted" style="margin-bottom:8px">Every weekly show has a merch table. Popular, hot wrestlers sell the most, champions and big stories sell more, and new designs sell best before they go stale. You set the price and order the stock.</div>
   <div class="grid2"><div class="stat"><div class="k">Last show</div><div class="v">${L ? money(L.g) : '–'}</div><div class="s">merch sold</div></div><div class="stat"><div class="k">Wrestlers' cut</div><div class="v">${L ? money(L.c) : '–'}</div><div class="s">paid from that</div></div></div>
+  ${low.length ? `<div class="sec">${ic('alert')} Running low</div><div class="list">${low.map(({ w, it, i }) => `<div class="item">${merchArt(w, it, 'mz-sm')}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">${esc(MERCH_K[it.k].n)} · ${mStockTag(w, it)} · sells about ${mEst(w, it)} a show${it.miss ? ` · missed ${it.miss.toLocaleString()} sales` : ''}</div></div><button class="btn sm pri" data-act="merchEdit" data-id="${w.id}" data-f="${i}" data-tab="stock">Restock</button></div>`).join('')}</div>` : ''}
   <div class="sec">${ic('flame')} Hot sellers</div>
-  ${hot.length ? `<div class="list">${hot.map(({ w, it, r }, n) => `<button class="item" data-act="merchEdit" data-id="${w.id}" data-f="${r.i}"><span class="mz-rank">${n + 1}</span>${merchArt(w, it, 'mz-sm')}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">${esc(MERCH_K[it.k].n)}${it.stock ? ' (stock shirt)' : ''} · ${r.u.toLocaleString()} sold · <b>${money(r.v)}</b>${!it.stock && mFresh(it) >= 1.3 ? ' · <span class="tag gold">New</span>' : !it.stock && mFresh(it) < .8 ? ' · <span class="tag">Going stale</span>' : ''}</div></div></button>`).join('')}</div>` : '<div class="empty">Run a weekly show to see what sells.</div>'}
+  ${hot.length ? `<div class="list">${hot.map(({ w, it, r }, n) => `<button class="item" data-act="merchEdit" data-id="${w.id}" data-f="${r.i}"><span class="mz-rank">${n + 1}</span>${merchArt(w, it, 'mz-sm')}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">${esc(MERCH_K[it.k].n)}${it.std ? ' (stock shirt)' : ''} · ${r.u.toLocaleString()} sold · <b>${money(r.v)}</b>${!it.std && mFresh(it) >= 1.3 ? ' · <span class="tag gold">New</span>' : !it.std && mFresh(it) < .8 ? ' · <span class="tag">Going stale</span>' : ''}</div></div></button>`).join('')}</div>` : '<div class="empty">Run a weekly show to see what sells.</div>'}
   <div class="sec">Your products <span class="cnt">${prod.length}</span></div>
-  ${prod.length ? `<div class="mz-grid">${prod.sort((a, b) => (b.it.lw || 0) - (a.it.lw || 0)).map(({ w, it, i }) => tile(w, it, i, `<i>${it.lw ? money(it.lw) + ' last show' : 'No sales yet'}</i>`)).join('')}</div>` : '<div class="empty">No designs yet. Everyone sells a plain stock shirt until you make them something better.</div>'}
+  ${prod.length ? `<div class="mz-grid">${prod.sort((a, b) => (b.it.lw || 0) - (a.it.lw || 0)).map(({ w, it, i }) => tile(w, it, i, `<i>${it.lw ? money(it.lw) + ' last show' : 'No sales yet'}</i><i class="mz-st">${mStockTag(w, it)}</i>`)).join('')}</div>` : '<div class="empty">No designs yet. Everyone sells a plain stock shirt until you make them something better.</div>'}
   <label class="f" style="margin-top:12px"><span>Make something new for</span><select data-in="merchWho"><option value="">Pick a wrestler…</option>${ws.slice().sort((a, b) => mDemand(b) - mDemand(a)).map(w => `<option value="${w.id}">${esc(w.name)} · Pop ${Math.round(w.pop)} · ${merchOf(w).length}/${MERCH_MAX} products</option>`).join('')}</select></label>
   <div class="tiny muted">You set each wrestler's cut of their merch in contract talks. A bigger cut helps them sign for less.</div>`;
 }
@@ -17145,53 +17171,79 @@ function wMerch(w) {
   if (!MON() || !w.contract) return '';
   const L = merchOf(w), wk = mWeekly(w);
   return `<div class="card mz-card"><div class="row small" style="margin-bottom:6px"><b class="sp">${ic('shirt')} Merch</b><span class="muted">about ${money(wk)} a show${mCut(w) ? ` · ${mCut(w)}% to ${pn(w).them}` : ''}</span></div>
-    <div class="mz-row">${(L.length ? L : [mStock(w)]).map((it, i) => `<button class="mz-t sm" data-act="merchEdit" data-id="${w.id}" data-f="${L.length ? i : -1}">${merchArt(w, it)}<span>${esc(MERCH_K[it.k].n)}</span></button>`).join('')}${L.length < MERCH_MAX ? `<button class="mz-t sm mz-add" data-act="merchEdit" data-id="${w.id}" data-f="new">${ic('pen')}<span>New product</span></button>` : ''}</div></div>`;
+    <div class="mz-row">${(L.length ? L : [mStock(w)]).map((it, i) => `<button class="mz-t sm" data-act="merchEdit" data-id="${w.id}" data-f="${L.length ? i : -1}">${merchArt(w, it)}<span>${esc(MERCH_K[it.k].n)}</span>${it.std ? '' : `<i class="mz-st">${mStockTag(w, it)}</i>`}</button>`).join('')}${L.length < MERCH_MAX ? `<button class="mz-t sm mz-add" data-act="merchEdit" data-id="${w.id}" data-f="new">${ic('pen')}<span>New product</span></button>` : ''}</div></div>`;
 }
 
-// ---- the merch workshop: same parts as the look, belt and trophy editors ----
-const MD_TABS = [['product', 'Product'], ['colour', 'Colours'], ['symbol', 'Symbol'], ['words', 'Words']];
+// ---- the merch workshop: same parts as the look, belt and trophy editors, plus price and stock ----
+const MD_TABS = [['product', 'Product'], ['colour', 'Colours'], ['symbol', 'Symbol'], ['words', 'Words'], ['stock', 'Price & stock']];
 const mdKeep = m => { (m.undo ||= []).push(JSON.parse(JSON.stringify(m.draft))); if (m.undo.length > 40) m.undo.shift(); };
-const mdCost = m => { const K = MERCH_K[m.draft.k]; return m.idx >= 0 ? Math.round(K.cost / 2) : K.cost; };
-const mdBlock = (m, w) => { const K = MERCH_K[m.draft.k]; return K.pop && w.pop < K.pop ? `${esc(w.name)} needs popularity ${K.pop} for an action figure.` : K.champ && !titlesOf(w.id).length && !(m.idx >= 0 && merchOf(w)[m.idx]?.k === 'belt') ? 'Only a champion gets a replica title.' : MON() && G.money < mdCost(m) ? `Not enough money: it costs ${money(mdCost(m))}.` : ''; };
+const mdKey = d => [d.k, d.col, d.acc, d.sym || '', d.txt || '', d.face ? 1 : 0].join('|');
+const mdOld = m => m.idx >= 0 ? merchOf(W(m.id))[m.idx] : null;
+const mdNewLook = m => !mdOld(m) || mdKey(m.draft) !== m.orig;
+// a new product pays its setup; a new look on an old product pays half and its leftovers go to the bargain bin
+const mdCost = m => { const K = MERCH_K[m.draft.k], o = mdOld(m); return (!o ? K.setup : mdNewLook(m) ? Math.round(K.setup / 2) - mBin(o) : 0) + mRunCost(m.draft.k, +m.draft.run || 0); };
+const mdBlock = (m, w) => { const K = MERCH_K[m.draft.k]; return K.pop && w.pop < K.pop ? `${esc(w.name)} needs popularity ${K.pop} for an action figure.` : K.champ && !titlesOf(w.id).length && !(m.idx >= 0 && merchOf(w)[m.idx]?.k === 'belt') ? 'Only a champion gets a replica title.' : mdNewLook(m) && !(+m.draft.run) ? 'A new design needs a print run. Pick one in Price & stock.' : MON() && mdCost(m) > 0 && G.money < mdCost(m) ? `Not enough money: it costs ${money(mdCost(m))}.` : ''; };
+function mdStockPane(m, w) {
+  const d = m.draft, K = MERCH_K[d.k], o = mdOld(m), nl = mdNewLook(m), est = mEst(w, { ...d, wk: o && !nl ? o.wk : G.week }), have = o && !nl ? o.stock || 0 : 0, run = +d.run || 0;
+  const mom = (w.momentum || 0) > 5 ? `${esc(lastName(w))} is hot, so fans will pay more.` : (w.momentum || 0) < -5 ? `${esc(lastName(w))} is cold, so fans won't pay much.` : 'Higher prices sell fewer.';
+  const seg = (f, list) => `<div class="seg-ctl ${list.length > 4 ? 'bd-many' : ''}">${list.map(([v, l]) => { const on = String(d[f]) === String(v); return `<button class="${on ? 'on' : ''}" data-act="mdSet" data-f="${f}" data-id="${v}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>`;
+  const lasts = est ? Math.floor((have + run) / est) : 0;
+  return `<div class="bd-lab">Price</div>${seg('pr', MPRICE.map(([x, l], i) => [i, `$${Math.round(K.price * x)}`]))}<div class="tiny muted" style="margin-top:4px">${MPRICE[d.pr ?? 1][1]} price. ${mom}</div>
+    <div class="bd-lab">${o && !nl ? 'Order more' : 'Print run'}</div>${seg('run', [...(o && !nl ? [[0, 'None']] : []), ...MRUNS.map(([n]) => [n, `${n.toLocaleString()} · ${money(mRunCost(d.k, n))}`])])}
+    <div class="tiny muted" style="margin-top:4px">Bigger runs cost less each. Sell out and you miss sales. Leftovers go to the bargain bin for a fraction of what they cost.</div>
+    <div class="card" style="margin-top:10px;padding:10px 12px">${o ? `<div class="row small"><span class="sp muted">In stock</span><b>${nl ? `${(o.stock || 0).toLocaleString()} of the old design${o.stock ? ` · bargain bin pays ${money(mBin(o))}` : ''}` : mStockTag(w, o)}</b></div>` : ''}
+      <div class="row small"><span class="sp muted">Sells at this price</span><b>about ${est.toLocaleString()} a show</b></div>
+      <div class="row small"><span class="sp muted">${run ? 'With this order' : 'Stock'} lasts</span><b>${est ? `about ${lasts} show${lasts === 1 ? '' : 's'}` : '–'}</b></div>
+      ${o?.miss ? `<div class="row small"><span class="sp muted">Missed last show</span><b style="color:var(--bad)">${o.miss.toLocaleString()} sales</b></div>` : ''}</div>`;
+}
 function modalMerch(m) {
   const w = W(m.id); if (!w) return '';
   const d = m.draft; m.tab ||= 'product';
   const sw = f => `<div class="swatches">${MERCH_COLS.map(c => `<button class="sw ${d[f] === c ? 'on' : ''}" style="background:${c}" data-act="mdSet" data-f="${f}" data-id="${c}" aria-pressed="${d[f] === c}" aria-label="Colour ${c}"></button>`).join('')}${anyColour(f, d[f], 'data-md', !MERCH_COLS.includes(d[f]))}</div>`;
-  const pane = m.tab === 'product' ? `<div class="bd-grid">${Object.entries(MERCH_K).map(([k, K]) => `<button class="bd-tile ${d.k === k ? 'on' : ''}" data-act="mdSet" data-f="k" data-id="${k}" aria-pressed="${d.k === k}">${merchArt(w, { ...d, k }, 'bd-mini')}<span>${esc(K.n)}</span></button>`).join('')}</div><div class="tiny muted" style="margin-top:6px">${esc(MERCH_K[d.k].d)}${MON() ? ` Costs ${money(MERCH_K[d.k].cost)} to make.` : ''}</div>`
+  const std = m.idx === -1;
+  const pane = m.tab === 'product' ? `<div class="bd-grid">${Object.entries(MERCH_K).map(([k, K]) => `<button class="bd-tile ${d.k === k ? 'on' : ''}" data-act="mdSet" data-f="k" data-id="${k}" aria-pressed="${d.k === k}">${merchArt(w, { ...d, k }, 'bd-mini')}<span>${esc(K.n)}</span></button>`).join('')}</div><div class="tiny muted" style="margin-top:6px">${esc(MERCH_K[d.k].d)}${MON() ? ` Setup ${money(MERCH_K[d.k].setup)}, then ${money(MERCH_K[d.k].uc)} or less each to print. Sells for $${MERCH_K[d.k].price}.` : ''}</div>`
     : m.tab === 'colour' ? `<div class="bd-lab">Main colour</div>${sw('col')}<div class="bd-lab">Print colour</div>${sw('acc')}`
     : m.tab === 'symbol' ? `<label class="todo" style="margin-bottom:8px"><input type="checkbox" data-md="face" ${d.face ? 'checked' : ''}><span>Put ${esc(lastName(w))}'s face on it</span></label><div class="bd-lab">Game icons</div>${wsSyms(d.sym || '', 'mdSet', 'sym', 'None')}`
+    : m.tab === 'stock' ? mdStockPane(m, w)
     : `<label class="f"><span>Slogan <span class="muted">(optional)</span></span><input type="text" data-md="txt" value="${esc(d.txt || '')}" maxlength="22" placeholder="e.g. ${esc(w.nick || 'BELIEVE')}"></label><div class="tiny muted">A design with a slogan, a face or a symbol sells a little better.</div>`;
   const tpl = m.tpl ? wsTplPanel({ k: 'm', what: 'merch design', act: 'md', cls: '', draw: x => merchArt(w, { ...d, ...x }, 'bd-mini'),
     others: signed().filter(x => x !== w).flatMap(x => merchOf(x).map((it, i) => [x.id + ':' + i, lastName(x) + ' ' + MERCH_K[it.k].n.toLowerCase(), it])).slice(0, 12), othersLab: 'Copy a design from the roster', keeps: 'Keeps your product and slogan.', game: MERCH_TPL }) : '';
-  const it = m.idx >= 0 ? merchOf(w)[m.idx] : null, block = mdBlock(m, w);
-  const stats = it ? `<div class="card" style="margin-top:10px"><div class="row small"><span class="sp muted">Launched</span><b>Week ${it.wk}</b></div><div class="row small"><span class="sp muted">Sold</span><b>${(it.sold || 0).toLocaleString()} · ${money(it.earned || 0)}</b></div><div class="row small"><span class="sp muted">Selling</span><b>${mFresh(it) >= 1.3 ? 'Brand new' : mFresh(it) >= .9 ? 'Steady' : 'Going stale'}</b></div><div class="tiny muted" style="margin-top:4px">Saving a change prints a fresh run for half the price, and it sells like new again.</div></div>` : m.idx === -1 ? '<div class="tiny muted" style="margin-top:8px">This is the plain stock shirt everyone sells. Design a product and it takes its place.</div>' : '';
+  const it = mdOld(m), block = mdBlock(m, w), cost = mdCost(m), nl = mdNewLook(m);
+  const stats = it ? `<div class="card" style="margin-top:10px"><div class="row small"><span class="sp muted">Launched</span><b>Week ${it.wk}</b></div><div class="row small"><span class="sp muted">Sold</span><b>${(it.sold || 0).toLocaleString()} · ${money(it.earned || 0)}</b></div><div class="row small"><span class="sp muted">Selling</span><b>${mFresh(it) >= 1.3 ? 'Brand new' : mFresh(it) >= .9 ? 'Steady' : 'Going stale'}</b></div><div class="tiny muted" style="margin-top:4px">A new look costs half the setup and sells like new again. The old stock goes to the bargain bin.</div></div>` : std ? '<div class="tiny muted" style="margin-top:8px">This is the plain stock shirt everyone sells. Design a product and it takes its place.</div>' : '';
+  const lbl = !it ? 'Launch it' : nl ? 'Print the new look' : +d.run ? 'Order more' : 'Save';
   const body = `<div class="bd-prev" aria-live="off">${merchArt(w, d, 'mz-big')}</div>
     ${wsTools('md', m.tpl, m.undo)}${tpl}${wsTabs(MD_TABS, m.tab, 'mdTab', 'Merch parts')}<div class="bd-pane" role="tabpanel">${pane}</div>${stats}
     ${block ? `<div class="tiny" style="color:var(--bad);margin-top:8px">${block}</div>` : ''}`;
-  return modal(`${esc(lastName(w))} merch`, body, `${it ? '<button class="btn bad" data-act="merchDel">Stop selling</button>' : ''}<button class="btn pri" data-act="merchSave" ${block ? 'disabled' : ''}>${it ? 'Print a fresh run' : 'Launch it'}${MON() ? ' · ' + money(mdCost(m)) : ''}</button>`, { cls: 'bd-modal' });
+  return modal(`${esc(lastName(w))} merch`, body, `${it ? '<button class="btn bad" data-act="merchDel">Stop selling</button>' : ''}<button class="btn pri" data-act="merchSave" ${block ? 'disabled' : ''}>${lbl}${MON() && cost ? ' · ' + (cost < 0 ? '+' + money(-cost) : money(cost)) : ''}</button>`, { cls: 'bd-modal' });
 }
 // add a product for free (events: a viral shirt, a fan design going official)
-function merchGift(w, k, o) { if (!w || !w.contract) return; const L = merchOf(w).slice(); const it = merchClean1({ k, col: safeColor(w.color) || '#111111', acc: '#f4f4f4', face: 1, ...o, wk: G.week }); if (!it) return; if (L.length >= MERCH_MAX) L.sort((a, b) => (a.lw || 0) - (b.lw || 0)).shift(); L.push(it); w.merch = L; }
+function merchGift(w, k, o) { if (!w || !w.contract) return; const L = merchOf(w).slice(); const it = merchClean1({ k, col: safeColor(w.color) || '#111111', acc: '#f4f4f4', face: 1, stock: 300, ...o, wk: G.week }); if (!it) return; if (L.length >= MERCH_MAX) L.sort((a, b) => (a.lw || 0) - (b.lw || 0)).shift(); L.push(it); w.merch = L; }
 Object.assign(A, {
   merchEdit(id, el) { const w = W(id); if (!w) return; const f = el?.dataset.f, L = merchOf(w), idx = f === 'new' ? null : +f, base = idx >= 0 && L[idx] ? L[idx] : null;
     if (f === 'new' && L.length >= MERCH_MAX) return toast(`${w.name} already has ${MERCH_MAX} products. Stop selling one first.`);
-    const d = base ? JSON.parse(JSON.stringify(base)) : { ...mStock(w), stock: undefined, txt: '' }; delete d.stock;
-    UI.modal = { type: 'merch', id, idx: base ? idx : f === 'new' ? -2 : -1, draft: d, back: UI.modal?.type === 'wrestler' ? UI.modal.id : null }; render(); },
+    const d = base ? JSON.parse(JSON.stringify(base)) : { ...mStock(w), txt: '', pr: 1 }; delete d.std; d.run = base ? 0 : 250;
+    UI.modal = { type: 'merch', id, idx: base ? idx : f === 'new' ? -2 : -1, draft: d, orig: base ? mdKey(base) : '', tab: el?.dataset.tab || 'product', back: UI.modal?.type === 'wrestler' ? UI.modal.id : null }; render(); },
   mdTab(v) { UI.modal.tab = v; UI.modal.tpl = false; render(); },
-  mdSet(v, el) { const m = UI.modal, f = el.dataset.f; mdKeep(m); if (f === 'sym') { if (symOK(v)) m.draft.sym = v; else delete m.draft.sym; } else m.draft[f] = v; render(); },
+  mdSet(v, el) { const m = UI.modal, f = el.dataset.f; mdKeep(m); if (f === 'sym') { if (symOK(v)) m.draft.sym = v; else delete m.draft.sym; } else m.draft[f] = f === 'pr' || f === 'run' ? +v : v;
+    // a new look needs a print run of its own
+    if (f !== 'run' && f !== 'pr' && mdNewLook(m) && !(+m.draft.run)) m.draft.run = 250; render(); },
   mdTpl(v) { const m = UI.modal; if (v === 'open') { m.tpl = !m.tpl; return render(); } const x = MERCH_TPL[+v]; if (!x) return; mdKeep(m); Object.assign(m.draft, { sym: undefined, ...x[1] }); if (!m.draft.sym) delete m.draft.sym; m.tpl = false; render(); },
   mdMine(i) { const m = UI.modal, x = myTpls('m')[+i]; if (!x) return; mdKeep(m); Object.assign(m.draft, { col: x.b.col, acc: x.b.acc, face: x.b.face, sym: x.b.sym }); if (!m.draft.sym) delete m.draft.sym; m.tpl = false; render(); },
   mdCopy(v) { const m = UI.modal, [id, i] = String(v).split(':'), x = merchOf(W(id))[+i]; if (!x) return; mdKeep(m); Object.assign(m.draft, { col: x.col, acc: x.acc, face: x.face, sym: x.sym }); if (!m.draft.sym) delete m.draft.sym; m.tpl = false; render(); },
   mdRand() { const m = UI.modal; mdKeep(m); const c = pick(MERCH_COLS); Object.assign(m.draft, { col: c, acc: pick(MERCH_COLS.filter(x => x !== c)), face: Math.random() < .4 ? 1 : 0 }); if (Math.random() < .7) m.draft.sym = 'ic-' + pick(symList()); else delete m.draft.sym; render(); },
   mdUndo() { const m = UI.modal; if (m.undo?.length) { m.draft = m.undo.pop(); render(); } },
   merchSave() { const m = UI.modal, w = W(m.id); if (!w) return; const b = mdBlock(m, w); if (b) return toast(b);
-    const it = merchClean1({ ...m.draft, wk: G.week, sold: 0, earned: 0, lw: 0 }); if (!it) return;
-    const L = merchOf(w).slice(), cost = mdCost(m);
-    if (m.idx >= 0 && L[m.idx]) { const o = L[m.idx]; L[m.idx] = { ...it, sold: o.sold || 0, earned: o.earned || 0 }; } else { if (L.length >= MERCH_MAX) return toast(`${MERCH_MAX} products is the most.`); L.push(it); }
+    const o = mdOld(m), nl = mdNewLook(m), run = +m.draft.run || 0, cost = mdCost(m);
+    const it = merchClean1({ ...m.draft, wk: o && !nl ? o.wk : G.week, sold: o?.sold || 0, earned: o?.earned || 0, lw: o?.lw || 0, stock: (o && !nl ? o.stock || 0 : 0) + run }); if (!it) return;
+    if (run) delete it.miss;
+    const L = merchOf(w).slice();
+    if (o) L[m.idx] = it; else { if (L.length >= MERCH_MAX) return toast(`${MERCH_MAX} products is the most.`); L.push(it); }
     w.merch = L; if (MON()) G.money -= cost;
-    news(`${ic('shirt')} New ${MERCH_K[it.k].n.toLowerCase()} for ${w.name}${MON() ? ` (${money(cost)})` : ''}.`, 'office');
-    const back = m.back; UI.modal = back ? { type: 'wrestler', id: back } : null; save(); render(); toast(m.idx >= 0 ? 'A fresh run is on the merch table.' : `${MERCH_K[it.k].n} is on the merch table.`); },
-  merchDel() { const m = UI.modal, w = W(m.id); if (!w || !(m.idx >= 0)) return; w.merch = merchOf(w).filter((_, i) => i !== m.idx); if (!w.merch.length) delete w.merch; const back = m.back; UI.modal = back ? { type: 'wrestler', id: back } : null; save(); render(); },
+    if (!o || nl) news(`${ic('shirt')} ${o ? 'A new look' : 'New ' + mNm(it.k)} for ${w.name}: ${run.toLocaleString()} printed at $${mPrice(it)} each.`, 'office');
+    const back = m.back; UI.modal = back ? { type: 'wrestler', id: back } : null; save(); render();
+    toast(!o ? `${MERCH_K[it.k].n} is on the merch table.` : nl ? 'The new look is on the merch table.' : run ? `${run.toLocaleString()} more on the way.` : 'Saved.'); },
+  merchDel() { const m = UI.modal, w = W(m.id), o = mdOld(m); if (!w || !o) return; const r = mBin(o); if (MON() && r) G.money += r;
+    w.merch = merchOf(w).filter((_, i) => i !== m.idx); if (!w.merch.length) delete w.merch; const back = m.back; UI.modal = back ? { type: 'wrestler', id: back } : null; save(); render(); if (r && MON()) toast(`The leftovers went to the bargain bin: +${money(r)}.`); },
   negMc(v) { UI.modal.mc = clamp(+v || 0, 0, 50); render(); }
 });
 
