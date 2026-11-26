@@ -4520,6 +4520,8 @@ function endOfWeek(card, world = true) {
   }
   teamPayWeek();
   relWeek(booked); personaWeek(booked);
+  // the phone keeps its badge for things that need you: old chit-chat and offers that ran out are filed as read
+  for (const m of G.phone || []) if (!m.read && G.week - m.wk >= 2 && !msgOpen(m)) m.read = true;
   if (G.settings.finances && G.money < 0) news('💸 You are in the red. Cut payroll or run bigger events.', 'office');
   if (world) dirtWeek();
 }
@@ -5339,14 +5341,14 @@ function feudAdvice() {
       : c.k === 'ready' ? [`${st.title} is ready`, pick([`${wk} weeks in and the crowd wants the payoff. Let's blow it off at ${nb}.`, `${nm} have built this for ${wk} weeks and it's peaking. ${nb} is the place to end it.`])]
       : c.k === 'stale' ? [`${st.title} has run long`, pick([`${wk} weeks is a long time. Blow it off at ${nb} before the fans move on.`, `I'm seeing people check their phones during ${nm}. After ${wk} weeks, let's finish it at ${nb}.`])]
       : [`${st.title} is dying`, pick([`Nobody is buying ${nm}. ${wk} weeks is enough. Let's end it on the next show.`, `The crowd is silent for ${nm}. Let's cut our losses and end it on the next show.`])];
-    asstText(t[0], t[1], { feud: st.id, fk: c.k, by: producerName() });
+    asstText(t[0], t[1], { feud: st.id, fk: c.k, by: producerName(), nb: nextBig() });
     sent++;
   }
 }
-const feudMsgOpen = m => { if (!m.feud || m.ans != null || G.week - m.wk >= 2) return false; const st = G.stories.find(x => x.id === m.feud); return !!st && st.status === 'active'; };
+const feudMsgOpen = m => { if (!m.feud || m.ans != null || G.week - m.wk >= 2 || (m.nb && (nextBig() !== m.nb || G.history.some(h => h.big && h.wk === m.nb)))) return false; // the producer's advice is about one big event: once it has run, the question is gone const st = G.stories.find(x => x.id === m.feud); return !!st && st.status === 'active'; };
 function feudChoices(m) {
   const st = G.stories.find(x => x.id === m.feud); if (!st) return [];
-  const nb = nextBig(), nn = bigAfter(nb);
+  const nb = m.nb || nextBig(), nn = bigAfter(nb);
   const ext = ['Extend it', `It runs to ${bigName(nn)}`, 'ext'], atBig = [`Blow it off at ${bigName(nb)}`, 'Their match there ends it', 'big'];
   return m.fk === 'hot' ? [ext, atBig] : m.fk === 'dull' ? [['Blow it off early', 'Their next match ends it', 'now'], ['Give it more time', 'Heat keeps cooling', 'wait']] : [atBig, ext];
 }
@@ -13501,7 +13503,7 @@ function newAsk() {
 function personaShow(results, rec) {
   if (!PER()) return; ensurePers();
   const n = results.length; let said = 0;
-  const say = (w, t) => { if (said < 2 && !(G.phone[0]?.wid === w.id && G.phone[0].wk === G.week)) { textFrom(w, t); said++; } };
+  const say = (w, t) => { if (said < 1 && !(G.phone[0]?.wid === w.id && G.phone[0].wk === G.week)) { textFrom(w, t); said++; } };
   results.forEach((r, i) => {
     const main = n > 1 && i === n - 1, isM = r.seg.kind === 'match', win = new Set(r.winners || []);
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x));
