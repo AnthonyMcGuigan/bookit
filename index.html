@@ -5856,15 +5856,16 @@ function liveScreen(m) {
   const p = h.prog || { goals: [], trophies: [] };
   let t = 1.4; const n = h.results.length;
   const mo = h.moments || [];
-  // effects stay rare: camera flashes only for the one best non-main segment, and only when it's 85+
-  const fxTop = h.results.reduce((b, r, i) => i < n - 1 && r.rating >= 85 && (b < 0 || r.rating > h.results[b].rating) ? i : b, -1);
+  // effects are saved for the moments a player should notice: a world title changing hands, a big event's 85+ main event,
+  // and (on Lots) camera flashes for the one best segment of the night when it's 90+
+  const fxTop = h.results.reduce((b, r, i) => i < n - 1 && r.rating >= 90 && (b < 0 || r.rating > h.results[b].rating) ? i : b, -1);
   const segs = h.results.map((r, i) => {
     const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0), d1 = d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
     t = d1 + 1.3;
     const after = mo.map((m, j) => m.at === i ? (() => { const c = momCard(h, j, t); t += MOMENTS[m.k]?.big ? 1.2 : 1.8; return c; })() : '').join('');
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x)), hurt = (r.notes || []).find(x => /injured/i.test(x));
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
-    <div class="lv-seg ${main ? 'main' : ''} k-${r.seg.kind}" style="--d:${t0(d0)}" data-lv="${i}"${(k => k ? ` data-fx="${k}" data-fxd="${d1}"` : '')(champ ? 'champ' : main && r.rating >= 75 ? 'main' : i === fxTop ? 'big' : '')}>
+    <div class="lv-seg ${main ? 'main' : ''} k-${r.seg.kind}" style="--d:${t0(d0)}" data-lv="${i}"${(k => k ? ` data-fx="${k}" data-fxd="${d1}"` : '')(champ && fxWorld(G.titles.find(x => x.id === r.seg.title)) ? 'champ' : main && h.big && r.rating >= 85 ? 'main' : i === fxTop ? 'big' : '')}>
       ${r.seg.kind === 'angle' ? '<i class="cam tl"></i><i class="cam tr"></i><i class="cam bl"></i><i class="cam br"></i>' : ''}
       <div class="lv-k lv-kh">${kindTag(r.seg)}<span>${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${r.seg.kind === 'match' ? segTitle(r.seg) : esc(r.seg.ptype || r.seg.atype)}</span>${r.seg.kind === 'angle' ? `<span class="rec"><b></b>REC${segPlace(r.seg) ? ' · ' + esc(SEG_PLACES[segPlace(r.seg)].n) : ''}</span>` : ''}</div>
       ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>` : lvTalk(r, main)}
@@ -5922,7 +5923,7 @@ function cutOpen(j) {
     <div class="cs-loc">${esc(M.where)} · ${esc(h.name)}</div><div class="cs-t">${esc(M.head)}</div>
     <div class="cs-f">${ws.map(w => momFace(w, ws.length > 2 ? 72 : 96)).join('')}</div><div class="cs-line">${esc(txt)}</div>
     ${ask ? `<div class="cs-q">What do you tell the producer?</div>${momBtns(M, m, j, 'cs-c')}` : `<div class="cs-c">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`}</div><div class="cs-bar"></div>`;
-  live.appendChild(el); FX.moment('big', live);
+  live.appendChild(el);
   (el.querySelector('.cs-c .btn') || el.querySelector('.cs-skip'))?.focus({ preventScroll: true });
   if (M.cheer || m.k === 'comeback' || m.k === 'chant') SFX.crowd('cheer', .9, .2); else SFX.crowd('applause', .5, .3);
   // a moment with nothing to decide moves on by itself
@@ -5985,7 +5986,7 @@ function lvTalk(r, main) {
     <div class="l3"><span>${esc(s.atype)}${r.stTag ? ' · ' + esc(r.stTag) : ''}</span>${headline}</div>${r.quote ? `<div class="bub a-bub">“${esc(r.quote)}”</div>` : ''}${intr}`;
 }
 // ---------- big moment effects: confetti, pyro and camera flashes drawn on one canvas ----------
-// The canvas only animates while particles are alive, stops at a few hundred pieces, follows
+// Kept rare on purpose (see liveScreen). The canvas only animates while particles are alive, stops at a few hundred pieces, follows
 // Settings → Big moment effects (meta.fx: 0 off, 1 some, 2 lots) and stays off with Less motion.
 const FX_LV = () => [0, 1, 2].includes(meta.fx) ? meta.fx : 1;
 const FX = (() => {
@@ -6032,7 +6033,7 @@ const FX = (() => {
     step(dt); draw();
     if (P.length || E.length || flash > 0) raf = requestAnimationFrame(tick); else { raf = 0; cx.clearRect(0, 0, W, H); } };
   const api = {
-    // k: 'champ' (a new champion: confetti drop), 'main' (the main event: pyro), 'big' (a great segment or a surprise moment: camera flashes)
+    // k: 'champ' (a new world champion: confetti drop), 'main' (a big event's main event: pyro), 'big' (the night's 90+ segment: camera flashes)
     moment(k, host) {
       const lv = FX_LV(); if (!lv || reduceMotion() || !host?.isConnected || (k === 'big' && lv < 2)) return;
       mount(host); const lots = lv > 1;
@@ -6046,6 +6047,10 @@ const FX = (() => {
   };
   return api;
 })();
+// a world title: the top singles belt, or the women's belt with the most prestige
+const fxWorld = t => { if (!t || t.tag) return false; if (titleTier(t) === 'main') return true;
+  const fem = x => (x.holder || []).map(W).filter(Boolean).some(isWomen);
+  return fem(t) && !G.titles.some(x => x !== t && !x.tag && fem(x) && (x.prestige || 0) > (t.prestige || 0)); };
 function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
   const box = document.querySelector('.live .lv-body'); if (!box || box.closest('.skip')) return;
@@ -6058,7 +6063,7 @@ function startLive() {
   box.querySelectorAll('.lv-fin').forEach(el => at(el, dOf(el), () => { SFX.bell(1); if (NATIVE) buzz(12); SFX.show(+el.dataset.rating); }));
   // keep the newest segment in view as it comes in
   box.querySelectorAll('.lv-seg, .lv-fin, .cut').forEach(el => at(el, dOf(el) + .05, () => el.scrollIntoView({ behavior: 'smooth', block: 'center' })));
-  // big moment effects as the result comes in: confetti for a new champion, pyro for a 75+ main event, camera flashes for the best 85+ segment
+  // big moment effects as the result comes in: confetti for a new world champion, pyro for a big event's 85+ main event, camera flashes for a 90+ segment
   FX.stop(); const live = box.closest('.live');
   box.querySelectorAll('.lv-seg[data-fx]').forEach(el => at(el, parseFloat(el.dataset.fxd) || 0, () => FX.moment(el.dataset.fx, live)));
   // the big surprise moments stop the show for a cutscene
@@ -7716,7 +7721,7 @@ const displaySettings = () => `
     <label class="f"><span>Music volume</span><input type="range" min="0" max="100" step="5" data-in="musicVol" value="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}" aria-valuetext="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}%" ${meta.sound === false || meta.music === false ? 'disabled' : ''}></label>
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
-    <label class="f"><span>🎆 Big moment effects</span><select data-in="fx">${[[0, 'Off'], [1, 'Some: title wins, main events'], [2, 'Lots: plus the best segment']].map(([v, l]) => `<option value="${v}" ${FX_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f"><span>🎆 Big moment effects</span><select data-in="fx">${[[0, 'Off'], [1, 'Some: world titles, big main events'], [2, 'Lots: plus a 90+ segment']].map(([v, l]) => `<option value="${v}" ${FX_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="f"><span>Wrestlers without a photo</span><select data-in="faces"><option value="pixel">Pixel faces</option><option value="initials" ${meta.faces === 'initials' ? 'selected' : ''}>Initials</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
     ${sbOn() ? `<div class="small muted" style="margin:14px 0 8px">Privacy</div>
@@ -14700,7 +14705,7 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9.71';
 const WHATS_NEW = [
-  ['🎆 Big moment effects', 'Big moments on the live show now light up: confetti falls for a new champion and pyro goes off for a strong main event. Set it to Lots for camera flashes on the best segment of the night and on big surprise moments too, or turn it off. Find it in Menu → Big moment effects. Less motion turns it off as well.'],
+  ['🎆 Big moment effects', 'The biggest moments on the live show now light up: confetti falls when a world title (or the top women\'s title) changes hands, and pyro goes off when a big event\'s main event rates 85 or more. Set it to Lots for camera flashes on a 90+ segment too, or turn it off. Find it in Menu → Big moment effects. Less motion turns it off as well.'],
   ['🎤 Cheaper guest promos', 'Per-appearance stars now charge a tenth of their fee for a promo or angle. Their full fee is only for matches. Promos have a new Remote spot under Where: the promo is sent in by video, and a per-appearance star who likes you does it for free.'],
   ['📅 Calendar settings', 'Menu → Settings has a new Calendar section. Start weeks on Sunday, shrink the calendar to this week or hide it, show week numbers, and pick which shows appear. Choose which weekend of the month big events air on, turn off weekly shows on big event weeks, and book up to 26 weeks ahead. Planning helpers add a big event countdown, rival big events and holidays on your calendar, and when the "book the big event" reminder comes.'],
   ['🎆 Book the big event', 'Tapping Book the card on the big event panel, or a big event reminder, now opens the big event. Before, it opened the weekly show that airs the same week.'],
