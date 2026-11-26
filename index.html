@@ -426,6 +426,11 @@ button.mrow:active { background: var(--card2); }
 .hero-w .bm-hero { width: 132px; height: 264px; }
 .hc-facts { margin: 10px 0; display: grid; gap: 4px; }
 .hc-f { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; } .hc-f span { color: var(--dim); } .hc-f b { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rpk-odds { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 12px 0 4px; background: var(--line); }
+.rpk-odds i { display: block; height: 100%; }
+.rpk-odds .h { background: var(--good); } .rpk-odds .m { background: var(--dim); opacity: .55; } .rpk-odds .f { background: var(--bad); }
+.rpk-why { list-style: none; padding: 0; margin: 8px 0; font-size: 12.5px; }
+.rpk-why li { margin: 2px 0; color: var(--dim); } .rpk-why li.up { color: var(--good); } .rpk-why li.dn { color: var(--bad); }
 .tt-wrap { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin: 6px 0 8px; }
 .tt-side { display: grid; justify-items: center; gap: 2px; font-size: 12px; color: var(--dim); text-align: center; min-width: 0; flex: 1; }
 .tt-side b { font-size: 14px; color: var(--ink); }
@@ -580,6 +585,7 @@ html.in-game .app > main .runbar { bottom: -16px; padding-bottom: 16px; }
 /* stars and gold */
 .stars, .cal-r { color: var(--gold); text-shadow: 0 0 10px color-mix(in srgb, var(--gold) 35%, transparent); }
 .tag.gold { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, transparent); }
+.tag.st-rising { color: var(--good); } .tag.st-twilight { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
 /* the title belt chip: gold plate with leather strap ends */
 .belt { display: inline-flex; align-items: center; gap: 4px; position: relative; margin: 0 7px; padding: 1px 8px; border-radius: 5px;
   font-family: var(--f-cond); font-weight: 800; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; line-height: 1.5;
@@ -1571,6 +1577,7 @@ const STIPS = {
   'Street Fight': { noDQ: true, style: 'Brawler', bonus: 6, fat: 10, inj: .03, heat: 6, desc: 'Brutal and personal. Adds heat.' },
   'The Cell': { noDQ: true, style: 'Brawler', bonus: 8, fat: 18, inj: .05, heat: 10, feud: true, desc: 'A roofed cage around the ring. The final chapter of a feud.' },
   'The Chamber': { noDQ: true, style: 'High Flyer', bonus: 7, fat: 16, inj: .04, heat: 5, multi: true, desc: 'Pods and steel. Best with four to six people.' },
+  'Career Match': { feud: true, bonus: 5, heat: 8, career: true, desc: 'Loser retires. The biggest stakes there are. Best to end a long feud.' },
   'Iron Endurance': { style: 'Technician', bonus: 7, fat: 18, inj: .02, desc: 'Long match. Needs stamina.', stam: true }
 };
 const GM_RULES = { any: 'Normal rules', nodq: 'No DQ', sub: 'Give up only (no pins)', ko: 'Knockout only (no pins)' };
@@ -2406,7 +2413,7 @@ function organicStories(results, before) {
 // stories, titles and roster you already have. A moment with a choice waits for you; skip it and the producer
 // lets it play out. Settings → Surprise moments: Off, Some (default) or Lots.
 const MOM_LV = () => [0, 1, 2].includes(G.settings.moments) ? G.settings.moments : 1;
-const momOk = w => !!w && !!w.contract && inRing(w) && !w.injury && !w.away && !offTV(w);
+const momOk = w => !!w && !!w.contract && inRing(w) && !w.injury && !w.away && !offTV(w) && !(w.farewell && w.farewell.wk <= G.week); // a last night belongs to the goodbye
 const sameG = (a, b) => isWomen(a) === isWomen(b);
 const lnOf = ids => ids.map(id => lastName(W(id))).join(' & ');
 // start a feud, or warm up the one they already have
@@ -2833,6 +2840,39 @@ Object.assign(MOMENTS, {
     ids: d => [d.a],
     text: d => vary(d, `The broadcast is over, but ${nameOf(d.a)} stays in the ring, grabs a mic and thanks every fan in the building.`, `Off the air, ${nameOf(d.a)} walks the whole barricade high-fiving fans. Phones are out everywhere.`, `The cameras are off, but ${nameOf(d.a)} stays out to sign autographs and take photos with the front row.`),
     go(d) { const w = W(d.a); if (!w) return []; momPush(w, 1, 2); momMood(w, 4); const f = Math.round(G.fans * .003 * Math.max(.15, 1 - G.fans / fanCap())); G.fans += f; return [`😊 ${lastName(w)} made some fans for life`, `+${kfmt(f)} fans`]; }
+  }
+});
+// moments that always play when their night comes (never random): a farewell and a Hall of Fame ceremony
+Object.assign(MOMENTS, {
+  farewell: {
+    p: 0, forced: true, big: true, cheer: true, where: 'After the bell', head: 'THANK YOU',
+    when: () => null,
+    ids: d => [d.a, ...(d.b ? [d.b] : [])],
+    text: d => d.won ? vary(d, `${nameOf(d.a)} wins ${pn(d.a).their} last match. ${pn(d.a).They} leave${pn(d.a).s} the boots in the middle of the ring as the whole building sings.`, `One more win for ${nameOf(d.a)}, the last one. The roster empties onto the stage to clap ${pn(d.a).them} out.`, `${nameOf(d.a)} goes out a winner. ${pn(d.a).They} take${pn(d.a).s} one last long look around the arena before walking up the ramp.`)
+      : d.b ? vary(d, `${nameOf(d.b)} beat ${nameOf(d.a)} in ${pn(d.a).their} last match. ${nameOf(d.a)} raises ${pn(d.b).their} hand. The torch is passed.`, `It's over. ${nameOf(d.a)} hugs ${nameOf(d.b)} in the middle of the ring and whispers something only the two of them will ever know.`, `${nameOf(d.a)} lost ${pn(d.a).their} final match to ${nameOf(d.b)}, then pointed at ${pn(d.b).them}: you're next. The fans are on their feet.`)
+      : vary(d, `${nameOf(d.a)}'s career ends here. The crowd chants "thank you" until ${pn(d.a).they} disappear${pn(d.a).s} behind the curtain.`, `${nameOf(d.a)} sits in the corner after ${pn(d.a).their} last match, taking it all in. The whole building is chanting ${pn(d.a).their} name.`),
+    go(d) {
+      const w = W(d.a), b = W(d.b); if (!w) return [];
+      const fx = [`${lastName(w)} said goodbye`];
+      if (b) { momPush(b, 4, 10); fx.push(`${lastName(b)} +popularity, +momentum`); }
+      for (const x of signed()) momMood(x, 2);
+      fx.push('The locker room was moved'); return fx;
+    }
+  },
+  hofCer: {
+    p: 0, forced: true, end: true, big: true, cheer: true, where: 'Hall of Fame ceremony', head: 'HALL OF FAME',
+    when: () => null,
+    ids: d => [...(d.ids || []), ...(d.by ? [d.by] : [])],
+    text: d => { const n = (d.nms || []).length ? d.nms : (d.ids || []).map(nameOf), all = n.length > 1 ? n.slice(0, -1).join(', ') + ' and ' + n.at(-1) : n[0] || 'A legend';
+      return vary(d, `${all} ${n.length > 1 ? 'are' : 'is'} inducted into the ${G.promo.name} Hall of Fame.${d.by ? ` ${nameOf(d.by)} makes the speech.` : ''} The whole locker room stands.`, `The lights go down and the Hall of Fame video plays. ${all} walk${n.length > 1 ? '' : 's'} out to a standing ovation${d.by ? `, with ${nameOf(d.by)} there to present the ring` : ''}.`, `Tonight ${all} take${n.length > 1 ? '' : 's'} ${n.length > 1 ? 'their places' : 'a place'} in the ${G.promo.name} Hall of Fame.${d.by ? ` ${nameOf(d.by)} hands over the plaque.` : ''} Not a dry eye in the building.`); },
+    go(d) {
+      const f = Math.round(G.fans * 0.004 * Math.max(0.2, 1 - G.fans / fanCap())); G.fans += f;
+      G.promo.prestige = clamp(G.promo.prestige + 1, 1, 100);
+      for (const id of d.ids || []) momPush(W(id), 2, 0);
+      const by = W(d.by); if (by) momPush(by, 1, 3);
+      for (const x of signed()) momMood(x, 2);
+      return [`+${kfmt(f)} fans`, '+1 prestige', 'The roster is inspired'];
+    }
   }
 });
 const MOM_AFTER = Object.keys(MOMENTS).filter(k => !MOMENTS[k].end), MOM_END = Object.keys(MOMENTS).filter(k => MOMENTS[k].end);
@@ -3360,14 +3400,14 @@ function advanceWeek() {
   G.card = (G.future[G.week] || []).filter(s => { removeGone(s); return segPeople(s).length; });
   delete G.future[G.week];
   UI.selWeek = G.week; UI.calMonth = UI.calWkv = null;
-  storyTick(); rollEvent(); ensureGoals();
+  careerWeek(); storyTick(); rollEvent(); ensureGoals();
 }
 function catchUpCo() {
   if (!G.curWk || G.curWk >= G.week) { G.curWk = G.week; return; }
   G.curWk = G.week; guestTick();
   G.card = (G.future[G.week] || []).filter(s => { removeGone(s); return segPeople(s).length; });
   for (const k of Object.keys(G.future)) if (+k <= G.week) delete G.future[k];
-  rollEvent(); ensureGoals();
+  careerWeek(); rollEvent(); ensureGoals();
 }
 // a company that can't put a card together still loses its week
 function skipShow() {
@@ -3780,24 +3820,185 @@ function yearEnd(world = true) {
   if (G.settings.aging !== false) {
     ensureRivals();
     const all = [...G.wrestlers.filter(w => !w.retired && (world || w.contract)), ...(world ? G.rivalPromos.flatMap(r => r.roster) : [])];
-    for (const w of all) {
-      w.age = (+w.age || 25) + 1;
-      if (w.age >= 34) { const d = (w.age - 33) * 0.7; w.ring = clamp(Math.round(w.ring - rnd(0, d)), 1, 99); w.stam = clamp(Math.round(w.stam - rnd(0, d * 1.4)), 1, 99); if (typeof w.air === 'number') w.air = clamp(w.air - rnd(0, d * 1.2), 1, 99); }
-      // your own roster grows through training (trainWeek); everyone else still grows a little by age
-      else if (w.age <= 26 && !w.contract) { w.ring = clamp(w.ring + rint(0, 3), 1, 99); w.mic = clamp(w.mic + rint(0, 2), 1, 99); w.cha = clamp(w.cha + rint(0, 2), 1, 99); }
-    }
+    for (const w of all) ageYear(w);
     for (const w of trainees()) w.age = (+w.age || 20) + 1;
-    for (const w of G.wrestlers.filter(w => !w.retired && w.age >= 38 && (world || w.contract))) if (Math.random() < (w.age - 37) * 0.1 + (w.injury > 4 ? 0.1 : 0)) retire(w);
-    for (const r of world ? G.rivalPromos : []) r.roster = r.roster.filter(w => { const go = w.age >= 39 && Math.random() < (w.age - 38) * 0.12; if (go) wnews(`🎤 ${w.name} retired from ${r.name}${w.pop >= 55 ? ' after a big career' : ''}.`, r, w.pop >= 55); return !go; });
+    // your own people announce it and get a farewell tour (you can try to talk them out of it); indie stars just stop
+    for (const w of G.wrestlers.filter(w => !w.retired && !w.farewell && !w.loan && (world || w.contract))) { const o = retireOdds(w); if (o && Math.random() < o) { if (w.contract) announceRet(w, 'age'); else retire(w, 'quiet'); } }
+    for (const r of world ? G.rivalPromos : []) r.roster = r.roster.filter(w => { const go = Math.random() < retireOdds(w) * 0.9; if (go) { wnews(`🎤 ${w.name} retired from ${r.name}${w.pop >= 55 ? ' after a big career' : ''}.`, r, w.pop >= 55); if (w.pop >= 55) { (G.exLeg ||= []).push({ id: w.id, nm: w.name, co: r.name, pop: Math.round(w.pop), rec: recStr(w), wk: G.week }); if (G.exLeg.length > 40) G.exLeg.shift(); } } return !go; });
     for (const r of G.rivalPromos) setRivalChamp(r);
   }
+  hofYear(yr);
   G.popAt = Object.fromEntries(G.wrestlers.map(w => [w.id, Math.round(w.pop)]));
 }
-function retire(w) {
+function retire(w, how) {
   if (w.contract) leaveCompany(w, 'retired');
-  w.contract = null; w.retired = G.week; delete w.courted;
+  w.contract = null; w.retired = G.week; w.rpop = Math.round(w.pop); delete w.courted; delete w.farewell; delete w.cb;
+  G.retAsk = (G.retAsk || []).filter(id => id !== w.id);
   const n = reignsOfW(w.id).length;
-  news(`🎤 ${w.name} retired at ${w.age}. Career record ${recStr(w)}${n ? `, ${n} title reign${n > 1 ? 's' : ''}` : ''}.`, 'contract');
+  news(`🎤 ${w.name} ${how === 'farewell' ? 'said goodbye and retired' : 'retired'} at ${w.age}. Career record ${recStr(w)}${n ? `, ${n} title reign${n > 1 ? 's' : ''}` : ''}.`, 'contract');
+}
+// ---------- ageing, farewell tours, the Hall of Fame and legend comebacks ----------
+// Everyone has a peak age set by style (high flyers peak early, talkers late) with a little personal spread.
+// Past the peak the body slows a bit more each year, while mic work and ring smarts hold up much longer.
+const PEAK_BY = { 'High Flyer': 29, Powerhouse: 31, Brawler: 32, Technician: 33, Showman: 34 };
+const peakAge = w => (PEAK_BY[w?.style] || 32) + Math.floor(idHash((w?.id || '') + ':peak') * 5) - 2;
+const AGING = () => G.settings.aging !== false;
+function ageStage(w) {
+  const a = +w.age || 27, p = peakAge(w);
+  if (w.retired) return { k: 'retired', n: 'Retired', d: `Retired at ${a}` };
+  if (a < p - 3) return { k: 'rising', n: 'Rising', d: `Still getting better. Peaks around ${p}.` };
+  if (a <= p + 1) return { k: 'prime', n: 'Prime', d: `At ${pn(w).their} physical peak.` };
+  if (a <= p + 5) return { k: 'vet', n: 'Veteran', d: 'Slowing down a little each year. Mic work and ring smarts hold up.' };
+  return { k: 'twilight', n: 'Twilight', d: 'The body is slowing fast. Retirement is getting close.' };
+}
+// one birthday: past their peak the in-ring stats slide (faster after 40); experience keeps growing for a while
+function ageYear(w) {
+  w.age = (+w.age || 25) + 1;
+  const past = w.age - peakAge(w);
+  if (past > 0) {
+    const d = Math.min(6, past * 0.6) * (w.age >= 40 ? 1.3 : 1);
+    const dn = (k, m) => { if (typeof w[k] === 'number') w[k] = clamp(Math.round(w[k] - rnd(0, d * m)), 1, 99); };
+    dn('ring', 1); dn('stam', 1.4); dn('air', 1.3); dn('safety', 0.5);
+    if (w.age >= 42) dn('cha', 0.3);
+    if (typeof w.psych === 'number' && w.age <= 42) w.psych = clamp(w.psych + rint(0, 2), 1, 99);
+    if (w.age <= 38) w.mic = clamp(w.mic + rint(0, 1), 1, 99);
+  } else if (w.age <= 26 && !w.contract) { w.ring = clamp(w.ring + rint(0, 3), 1, 99); w.mic = clamp(w.mic + rint(0, 2), 1, 99); w.cha = clamp(w.cha + rint(0, 2), 1, 99); }
+}
+// how likely someone is to decide this is their last year (checked at the end of each year)
+function retireOdds(w) {
+  const a = +w.age || 27;
+  if (isNW(w)) return a >= 62 ? 0.25 : 0;
+  if (a < 35) return 0;
+  let o = (a - 35) * 0.08 + Math.max(0, a - peakAge(w) - 6) * 0.03 + (w.injury > 4 ? 0.12 : 0) + (w.ring < 45 ? 0.08 : 0) - (w.pop >= 75 ? 0.05 : 0);
+  if (w.stay > G.week) o *= 0.25; // talked into one more year
+  return clamp(o, 0, 0.9);
+}
+// the last match goes on the next big event at least a month away, or eight weeks out
+function farewellWk(min = 4) { for (let k = G.week + min; k <= G.week + 16; k++) if (bigWk(k)) return k; return G.week + 8; }
+const fwShow = w => { const k = w?.farewell?.wk; return k == null ? '' : bigWk(k) ? `${bigName(k)} (week ${k})` : `week ${k}`; };
+function announceRet(w, why) {
+  if (!w || w.retired || w.farewell) return;
+  w.farewell = { wk: farewellWk(), ann: G.week, tour: 0, why: why || 'age' };
+  G.retAsk = [...(G.retAsk || []).filter(id => id !== w.id), w.id];
+  news(`🎤 ${w.name} will retire after ${fwShow(w)}. The farewell tour starts now.`, 'contract');
+}
+// a try at keeping them one more year: age, how they feel about you and their mood set the odds (one try per announcement)
+function talkOdds(w) { const a = +w.age || 38; return clamp(0.45 - Math.max(0, a - 37) * 0.07 + (relV(w) - 50) / 200 + ((+w.morale || 60) - 60) / 400 - (w.injury > 4 ? 0.2 : 0), 0.05, 0.75); }
+function talkStay(w) {
+  const f = w?.farewell; if (!f || f.cm) return `${w?.name || 'They'} can't stay: it was a Career Match.`;
+  if (f.talk) return `You already asked. ${pn(w).Their} mind is made up.`;
+  f.talk = 1;
+  if (Math.random() < talkOdds(w)) {
+    delete w.farewell; w.stay = G.week + 52; w.morale = clamp(w.morale + 4, 0, 100);
+    G.retAsk = (G.retAsk || []).filter(id => id !== w.id);
+    news(`🎤 ${w.name} changed ${pn(w).their} mind and will wrestle one more year.`, 'contract');
+    return `${w.name} agreed to one more year.`;
+  }
+  w.morale = clamp(w.morale - 3, 0, 100);
+  return `${w.name} thanked you, but ${pn(w).their} mind is made up. ${pn(w).They} still retire${pn(w).s} after ${fwShow(w)}.`;
+}
+function finishFarewell(w) {
+  const f = w.farewell || {}; delete w.farewell;
+  const booked = G.history.some(h => h.wk === f.wk && h.results.some(r => segPeople(r.seg).includes(w.id)));
+  if (f.cm) w.cmLost = 1;
+  retire(w, booked || f.cm ? 'farewell' : 'quiet');
+  if (!booked && !f.cm && w.pop >= 50) { G.fans = Math.max(1000, G.fans - Math.round(G.fans * 0.004)); news(`📉 Fans are upset that ${w.name} never got a farewell match.`, 'show'); }
+}
+// every week: farewells that are due, and now and then an older wrestler decides it's time
+function careerWeek() {
+  if (!AGING()) return;
+  for (const w of G.wrestlers.slice()) {
+    if (w.retired) continue;
+    if (w.farewell) { if (w.farewell.wk < G.week) finishFarewell(w); continue; }
+    if (!w.contract || w.loan || w.stay > G.week) continue;
+    const a = +w.age || 0;
+    if (a >= 34 && w.injury >= 8 && !(w.injRet > G.week - 26)) { w.injRet = G.week; if (Math.random() < 0.25 + (a - 34) * 0.05) { announceRet(w, 'injury'); continue; } }
+    if (a >= 37 && !isNW(w) && Math.random() < 0.0015 * (a - 36)) announceRet(w, 'age');
+  }
+}
+// in a match: the farewell tour, the last match itself and a legend's return all give the crowd something
+function careerBoost(ps) {
+  if (!AGING()) return null;
+  const last = ps.find(w => w.farewell && w.farewell.wk === G.week && !w.farewell.cm);
+  if (last) return [5 + Math.round(last.pop / 20), `${last.name}'s last match`];
+  const tour = ps.find(w => w.farewell && w.farewell.wk > G.week);
+  if (tour) return [2, `Farewell tour: fans saying goodbye to ${lastName(tour)}`];
+  const back = ps.find(w => w.cb && G.week - w.cb.wk <= 8 && !w.cb.seen);
+  if (back) return [back.cmLost ? 1 : 4, `${back.name} is back from retirement`];
+  return null;
+}
+// after a show: count tour stops, settle Career Matches, and play the farewell and Hall of Fame moments
+function careerShow(results) {
+  const out = [], on = new Set(results.flatMap(r => segPeople(r.seg)));
+  for (const id of on) { const w = W(id); if (!w) continue; if (w.farewell && w.farewell.wk >= G.week) w.farewell.tour = (w.farewell.tour || 0) + 1; if (w.cb && !w.cb.seen) w.cb.seen = 1; }
+  results.forEach((r, i) => {
+    if (r.seg.kind !== 'match' || !r.winners?.length) return;
+    if (GM(r.seg.stip).career && !MT(r.seg.mtype).ffa) for (const id of segPeople(r.seg)) { const w = W(id); if (!w || r.winners.includes(id) || w.retired || (w.farewell && w.farewell.cm)) continue;
+      w.farewell = { wk: G.week, ann: G.week, tour: 0, why: 'career', cm: 1, done: 1 };
+      r.notes = [...(r.notes || []), `🎤 ${w.name} lost the Career Match and must retire.`]; news(`🎤 ${w.name} lost a Career Match to ${r.winners.map(nameOf).join(' & ')} and has to retire.`, 'contract'); }
+    if (!AGING()) return;
+    for (const id of segPeople(r.seg)) { const w = W(id); if (!w?.farewell || w.farewell.wk !== G.week || w.farewell.done) continue;
+      w.farewell.done = 1; const won = r.winners.includes(id), b = !won && r.winners.find(x => W(x) && x !== id);
+      out.push({ k: 'farewell', at: i, d: { a: id, won: won ? 1 : 0, ...(b ? { b } : {}), vx: rint(0, 99) }, id: uid() }); }
+  });
+  if (G.hofCer && G.hofCer.wk <= G.week && results.length) {
+    const c = G.hofCer; delete G.hofCer;
+    const by = signed().filter(w => !c.ids.includes(w.id) && inRing(w)).sort((a, b) => b.pop - a.pop)[0];
+    out.push({ k: 'hofCer', at: results.length - 1, end: 1, d: { ids: c.ids.filter(id => W(id)), nms: c.nms || [], ...(by ? { by: by.id } : {}), vx: rint(0, 99) }, id: uid() });
+  }
+  for (const m of out) momDo(m, 0);
+  return out;
+}
+// coming out of retirement: the years away show on the body, the fans are excited (unless it was a Career Match)
+function comeback(w) {
+  const yrs = Math.floor(Math.max(0, G.week - (+w.retired || G.week)) / 52);
+  w.age = (+w.age || 40) + yrs;
+  if (yrs) { w.ring = clamp(Math.round(w.ring - rint(1, 3) * yrs), 1, 99); w.stam = clamp(Math.round(w.stam - rint(2, 4) * yrs), 1, 99); }
+  delete w.retired; delete w.farewell; w.morale = 75; w.cb = { wk: G.week, num: (w.cb?.num || 0) + 1 };
+  addPop(w, w.cmLost ? -4 : 4);
+  news(w.cmLost ? `📣 ${w.name} is coming back, even after losing a Career Match. Not every fan is happy about it.` : `📣 ${w.hof ? 'Hall of Famer ' : ''}${w.name} is coming out of retirement!`, 'contract');
+}
+// ----- the Hall of Fame: a class every year, picked by you or the committee, inducted at the next big event -----
+const HOF_MAX = 3, HOF_BAR = 40;
+const hofList = () => G.hof || [];
+const inHof = id => hofList().some(e => e.id === id);
+function hofScore(w) {
+  if (!w) return 0;
+  if (w.snap) return w.pop * 0.7; // a legend from another company: only their fame is known
+  const st = STATS(w), rs = reignsOfW(w.id);
+  const aw = (G.awards || []).reduce((n, a) => n + a.list.filter(x => x.wid === w.id || (x.ids || []).includes(w.id)).length, 0);
+  return Math.max(w.pop, +w.rpop || 0) * 0.55 + Math.min(30, sum(rs.map(x => 3 + (+x.t.prestige || 50) / 20))) + aw * 6 + Math.min(12, st.m / 25) + (st.best >= 85 ? 4 : 0) + Math.min(6, (st.motn || 0) * 0.3);
+}
+// who can go in: anyone retired, plus big names from other companies who retired (kept by name only)
+function hofCands() {
+  const mine = G.wrestlers.filter(w => w.retired && !inHof(w.id) && !isNW(w));
+  const ex = (G.exLeg || []).filter(e => !inHof(e.id) && !W(e.id)).map(e => ({ ...e, snap: 1, name: e.nm }));
+  return [...mine, ...ex].map(w => ({ w, sc: hofScore(w) })).filter(x => x.sc >= HOF_BAR).sort((a, b) => b.sc - a.sc);
+}
+const hofYr = () => Math.max(1, Math.round(G.week / 52));
+function hofYear(yr) {
+  if (G.hofNom && !G.hofNom.done) hofInduct(hofAuto(), 'committee'); // last year's class was never picked
+  const c = hofCands().slice(0, 6); if (!c.length) return;
+  G.hofNom = { yr, wk: G.week, ids: c.map(x => x.w.id), done: 0 };
+}
+const hofNomW = id => W(id) || (() => { const e = (G.exLeg || []).find(x => x.id === id); return e && { ...e, snap: 1, name: e.nm }; })();
+function hofAuto() { const n = G.hofNom; if (!n) return []; const l = n.ids.map(id => [id, hofScore(hofNomW(id))]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]); return l.filter((x, i) => i === 0 || x[1] >= 55).slice(0, 2).map(x => x[0]); }
+function hofInduct(ids, by, special) {
+  const yr = special ? hofYr() : G.hofNom?.yr || hofYr(), added = [];
+  for (const id of [...new Set(ids)].slice(0, HOF_MAX)) {
+    if (inHof(id)) continue; const w = W(id), x = !w && hofNomW(id); if (!w && !x) continue;
+    const reigns = w ? reignsOfW(id).length : 0;
+    (G.hof ||= []).push({ id, nm: w ? w.name : x.nm, yr, wk: G.week, co: w ? G.promo.name : x.co || '', rec: w ? `${recStr(w)}${reigns ? ` · ${reigns} title reign${reigns > 1 ? 's' : ''}` : ''}` : x.rec || '', by, sc: Math.round(hofScore(w || x)) });
+    if (w) { w.hof = yr; addPop(w, 3); w.morale = clamp(w.morale + 10, 0, 100); }
+    added.push(id);
+  }
+  if (!special && G.hofNom) G.hofNom.done = 1;
+  if (special) G.hofSp = yr;
+  if (!added.length) return [];
+  const nms = added.map(id => hofList().find(e => e.id === id)?.nm || nameOf(id)), cw = farewellWk(1);
+  G.hofCer = { wk: cw, ids: [...(G.hofCer?.ids || []), ...added], nms: [...(G.hofCer?.nms || []), ...nms] };
+  news(`👑 ${special ? 'A special Hall of Fame induction' : `The Year ${yr} Hall of Fame class`}: ${nms.join(', ')}. The ceremony is at ${bigWk(cw) ? bigName(cw) : 'the show'} in week ${cw}.`, 'office');
+  return added;
 }
 function bookRecord(seg, res, rating) {
   if (seg.kind !== 'match') return [];
@@ -3918,6 +4119,8 @@ function simSegment(seg, ctx) {
     if (stip.feud) r += st && st.heat >= 50 ? add(4, seg.stip + ' ends a hot feud') : add(-3, seg.stip + ' without a feud to settle');
     const title = seg.title && G.titles.find(t => t.id === seg.title);
     if (title) r += add(title.prestige * 0.08, title.name + ' on the line');
+    { const cb = careerBoost(people); if (cb) r += add(cb[0], cb[1]); }
+    if (stip.career) { const big2 = people.filter(w => w.pop >= 55 || +w.age >= 36).length; if (big2) r += add(2 + big2, 'A career on the line'); }
     r += add(fin.r, fk + ' finish');
     if (fin.cheap && ctx.big && ctx.main) r += add(-5, 'Cheap finish in a big main event');
     if (st && !ctx.big && !['Clean', 'Submission'].includes(fk)) r += add(1, 'Leaves the feud unsettled');
@@ -4098,6 +4301,8 @@ function simSegment(seg, ctx) {
     if (at.brawl && tg.length) r += add(3, 'Wild brawl: fans love chaos');
     if (at.party) { const real = d.some(w => titlesOf(w.id).length || formOf(w)[0] === 'W' || (w.streak || 0) >= 3); r += real ? add(4, 'Celebrating something real') : add(-5, 'Celebrating nothing in particular');
       if (tg.length && tg.every(w => w.align === 'heel') && d.some(w => w.align === 'face')) r += add(3, 'Heels crashed the party'); }
+    // a freshly repackaged wrestler's debut: the vignettes pay off (or the flop follows them out)
+    if (seg.atype === 'Debut / Return') { const nd = d.filter(w => w.rpkNew); if (nd.length) r += nd.some(w => w.rpkNew.r === 'flop') ? add(-3, 'Debut of a character fans don\'t buy') : add(nd.some(w => w.rpkNew.r === 'hit') ? 9 : 5, 'Debut of a brand new character'); }
     const st = tg.length ? storyBetween(d.map(w => w.id), tg.map(w => w.id)) : storiesTouching(d.map(w => w.id))[0];
     if (st) r += add(st.heat * 0.15, 'Storyline: ' + st.title);
     // tale of the tape: the rivals sized up side by side. Dead without a hot feud, a big hype piece on a special or go-home show
@@ -4261,6 +4466,7 @@ function applySegment(seg, res, ctx) {
       news(`🔄 ${w.name} turned ${at.turn}!`, 'story'); notes.push(`🔄 ${w.name} is now a ${at.turn}.`);
     }
     if (at.pop) res.doers.forEach(w => addPop(w, at.pop));
+    if (seg.atype === 'Debut / Return') for (const w of res.doers) if (w.rpkNew) { if (w.rpkNew.r !== 'flop') { addPop(w, 2); w.momentum = clamp(w.momentum + 4, -50, 50); } notes.push(`🎭 ${w.name}'s new character made ${pn(w).their} debut`); delete w.rpkNew; }
     if (at.morale) res.doers.forEach(w => w.morale = clamp(w.morale + at.morale, 0, 100));
     if (seg.atype === 'Sneak Attack') res.targets.forEach(w => { w.fatigue = clamp(w.fatigue + 12, 0, 100); w.momentum = clamp(w.momentum - 3, -50, 50); });
     if (at.brawl) [...res.doers, ...res.targets].forEach(w => w.fatigue = clamp(w.fatigue + 10, 0, 100));
@@ -4642,7 +4848,7 @@ function runShow(opts = {}) {
   const mark = G.news[0];
   organicStories(results, holdersBefore);
   { const cl = makeCalls(results, big); if (cl.length) rec.calls = cl; }
-  { const mo = showMoments(results, big); if (mo.length) rec.moments = mo; if (opts.quiet) momSettle(); }
+  { const mo = [...showMoments(results, big), ...careerShow(results)].sort((a, b) => a.at - b.at || (a.end || 0) - (b.end || 0)); if (mo.length) rec.moments = mo; if (opts.quiet) momSettle(); }
   relShow(results, rec); personaShow(results, rec);
   // the week's upkeep (fatigue, contracts, injuries, rivals) happens once, after the company's last show
   if (coLast) endOfWeek(G.history.filter(h => h.wk === G.week).flatMap(h => h.results.map(r => r.seg)), world);
@@ -4675,7 +4881,7 @@ function endOfWeek(card, world = true) {
     if (!booked.has(w.id)) w.fatigue = clamp(w.fatigue - 18, 0, 100); else w.fatigue = clamp(w.fatigue - 6, 0, 100);
     medHeal(w, booked.has(w.id));
     w.momentum *= 0.92;
-    if (!w.contract) { if (!booked.has(w.id)) w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
+    if (!w.contract) { if (!booked.has(w.id)) w.pop = clamp(w.pop - (w.retired ? 0.03 : 0.15), 1, 100); continue; } // a legend's name fades slowly
     if (!booked.has(w.id) && w.injury === 0 && !w.away && inRing(w) && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
     if (CON() && w.contract.salary < asking(w) * 0.75) w.morale = clamp(w.morale - 1, 0, 100);
     w.morale += (65 + room + staffQ('talent') * 0.8 + ((w.trust ?? 50) - 50) / 5 - w.morale) * 0.02;
@@ -4692,7 +4898,7 @@ function endOfWeek(card, world = true) {
   }
   feudAdvice();
   // contracts (frozen when contracts are off: nobody's deal runs down and nobody walks out)
-  endLoans(); mediaWeek();
+  endLoans(); mediaWeek(); rpkWeek();
   trainWeek();
   houseWeek(booked); // house shows and tours: after the week's rest, so the road's fatigue carries into next week
   for (const w of CON() ? signed().filter(w => !w.loan) : []) {
@@ -6120,8 +6326,10 @@ const EVENTS = {
   gimmick: {
     when() { const w = pick(healthy().filter(w => w.pop < 55)); return w && { a: w.id }; },
     title: '🎭 Gimmick pitch', text: d => vary(d, `${nameOf(d.a)} pitched a bold new character. It could be huge, or it could flop.`, `${nameOf(d.a)} walked in with a notebook full of ideas for a brand new character. It's a big swing.`, `${nameOf(d.a)} wants to reinvent ${pn(d.a).self} with a totally new character. Bold idea, uncertain payoff.`),
-    choices: d => [['Go for it', 'Big risk, big reward'], ['Stick with what works', 'Play it safe']],
-    pick(i, d) { const w = W(d.a); if (i) { w.morale = clamp(w.morale - 2, 0, 100); return `${w.name} is a bit disappointed.`; }
+    choices: d => [['Go for it', 'Big risk, big reward'], ['Stick with what works', 'Play it safe'], ['Plan a full repackage', 'New name, look and debut. You build it']],
+    pick(i, d) { const w = W(d.a);
+      if (i === 2) { w.morale = clamp(w.morale + 3, 0, 100); G.todos.unshift({ t: `Repackage ${w.name}: open ${pn(w).their} profile and tap Repackage`, done: false }); return `${w.name} is thrilled. Open ${pn(w).their} profile and tap Repackage to build the new character.`; }
+      if (i) { w.morale = clamp(w.morale - 2, 0, 100); return `${w.name} is a bit disappointed.`; }
       if (Math.random() < .6) { addPop(w, 7); w.momentum += 12; return `The fans love it. ${w.name} is suddenly over!`; }
       w.pop = clamp(w.pop - 3, 1, 100); w.momentum -= 6; return `It flopped. ${w.name} loses some steam.`; }
   },
@@ -6421,9 +6629,53 @@ Object.assign(EVENTS, {
       const y = pick(healthy().filter(w => w.age <= 26)); if (y) y.ring = clamp(y.ring + 1, 1, 100); return `The roster hung on every word.${y ? ` ${y.name} picked up a few tricks (Ring +1).` : ''}`; }
   }
 });
+// career events: a retirement announcement and the Hall of Fame class come first, before any random event
+Object.assign(EVENTS, {
+  farewell: {
+    when: () => null,
+    title: '🎤 A retirement announcement',
+    text: d => { const w = W(d.a), why = w?.farewell?.why === 'injury' ? ` The injury made up ${pn(d.a).their} mind.` : '';
+      return vary(d, `${nameOf(d.a)} has decided: ${pn(d.a).their} last match will be at ${fwShow(w)}.${why}`, `${nameOf(d.a)} told the locker room today that ${pn(d.a).re} retiring after ${fwShow(w)}.${why}`, `${nameOf(d.a)} called you first: ${pn(d.a).their} body has had enough. ${pn(d.a).Their} last match is at ${fwShow(w)}.${why}`); },
+    choices: d => { const w = W(d.a); return [['Plan a farewell tour', `${pn(d.a).Re} happy. Book ${pn(d.a).them} on the way out and in a last match`], [`Talk ${pn(d.a).them} into one more year`, w?.farewell ? `About ${Math.round(talkOdds(w) * 100)}% chance. If it fails, ${pn(d.a).re} a little hurt` : 'Ask once'], [`Let ${pn(d.a).them} retire now`, `No tour. ${pn(d.a).They} retire${pn(d.a).s} this week`]]; },
+    pick(i, d) { const w = W(d.a); if (!w || !w.farewell) return 'That moment passed.';
+      if (i === 1) return talkStay(w);
+      if (i === 2) { delete w.farewell; retire(w, 'quiet'); return `${w.name} retired.`; }
+      w.morale = clamp(w.morale + 6, 0, 100); addPop(w, 2);
+      G.todos.unshift({ t: `Book ${w.name}'s last match at ${fwShow(w)}`, done: false });
+      return `The farewell tour is on. ${w.name}'s last match is at ${fwShow(w)}.`; }
+  },
+  hofClass: {
+    when: () => null,
+    title: '👑 The Hall of Fame class',
+    text: d => { const n = (G.hofNom?.ids || []).map(id => hofNomW(id)?.name).filter(Boolean); return `The nominees for the Year ${d.yr} Hall of Fame are in: ${n.slice(0, 4).join(', ')}${n.length > 4 ? ' and more' : ''}. Who goes in?`; },
+    choices: () => [['Pick the class myself', `Choose up to ${HOF_MAX} in Record book → Hall of Fame`], ['Let the committee pick', 'The biggest names go in']],
+    pick(i) { if (!G.hofNom || G.hofNom.done) return 'The class is already picked.';
+      if (i === 1) { const ids = hofInduct(hofAuto(), 'committee'); return ids.length ? `The committee picked ${ids.map(id => hofList().find(e => e.id === id)?.nm).join(' and ')}.` : 'Nobody went in this year.'; }
+      setTimeout(() => { try { openModal({ type: 'records', tab: 'hof' }); } catch (e) { } }, 60);
+      return 'The nominees are waiting in Record book → Hall of Fame.'; }
+  },
+  legendRun: {
+    when() { if (!AGING()) return null; const w = pick(G.wrestlers.filter(w => w.retired && G.week - w.retired >= 26 && !isNW(w) && (+w.age || 40) + Math.floor((G.week - w.retired) / 52) <= 55 && w.pop >= 45 && !guestDeal(w.id) && !(w.cbNo > G.week - 52))); return w && { a: w.id, y: Math.max(1, Math.round((G.week - w.retired) / 52)) }; },
+    title: '🦁 A legend wants one more run',
+    text: d => vary(d, `${nameOf(d.a)} has been retired ${d.y} year${d.y > 1 ? 's' : ''} and called you: ${pn(d.a).they} want${pn(d.a).s} one more run.`, `${nameOf(d.a)} is in the best shape in years and says the itch is back. ${pn(d.a).They}'d come back for you.`, `"I've got one more run in me." ${nameOf(d.a)} wants to come out of retirement${W(d.a)?.hof ? ', Hall of Fame ring and all' : ''}.`),
+    choices: d => [['Bring them back', `Out of retirement, ready to sign${W(d.a)?.cmLost ? '. Some fans remember the Career Match' : ''}`], ...(CON() ? [['A few appearances', 'Book them show by show, still retired']] : []), ['Not now', 'They won\'t ask again for a year']],
+    pick(i, d) { const w = W(d.a); if (!w || !w.retired) return 'They changed their mind.';
+      const k = ['back', ...(CON() ? ['apps'] : []), 'no'][i];
+      if (k === 'no') { w.cbNo = G.week; return `${w.name} understands. Maybe next year.`; }
+      if (k === 'apps') { setTimeout(() => { try { A.guestDeal(w.id); } catch (e) { } }, 60); return `Make ${w.name} an offer for a few appearances.`; }
+      comeback(w); setTimeout(() => { try { A.negotiate(w.id); } catch (e) { } }, 60);
+      return `${w.name} is out of retirement. Sign ${pn(w).them} before someone else does.`; }
+  }
+});
+function careerEvent() {
+  if (AGING()) while ((G.retAsk || []).length) { const w = W(G.retAsk.shift()); if (w && w.farewell && !w.farewell.cm && !w.retired && w.contract) return ['farewell', { a: w.id }]; }
+  if (G.hofNom && !G.hofNom.done && !G.hofNom.asked) { G.hofNom.asked = 1; return ['hofClass', { yr: G.hofNom.yr }]; }
+  return null;
+}
 function rollEvent() {
   G.event = null;
   { const se = storyEvent(); if (se) return setEvent(se[0], se[1]); } // Story Mode's written events come first, when one is due
+  { const ce = careerEvent(); if (ce) return setEvent(ce[0], ce[1]); } // then a retirement announcement or the Hall of Fame class
   if (G.week < 2 || Math.random() > .55) return;
   // business offers from company level unlocks come up more often than a random backstage moment
   for (const k of shuffle(['sponsor', 'special', 'viralSeg'])) if (Math.random() < .3 && !lessSkip('ev', k)) { const d = EVENTS[k].when(); if (d) return setEvent(k, d); }
@@ -6667,7 +6919,7 @@ function momCard(h, j, d) {
   let txt = ''; try { txt = M.text(m.d); } catch (e) { return ''; }
   const ws = M.ids(m.d).map(W).filter(Boolean).slice(0, 6);
   return `<div class="cut ${M.big ? 'big' : 'sm'}" style="--d:${t0(d)}" data-mom="${j}"${M.big ? ' data-cs="1"' : ''}>
-    <div class="cut-top"><span class="cut-b">⚡ ${esc(M.head)}</span>${lessBtn('mom', m.k)}</div><div class="cut-w">${esc(M.where)}</div>
+    <div class="cut-top"><span class="cut-b">⚡ ${esc(M.head)}</span>${M.forced ? '' : lessBtn('mom', m.k)}</div><div class="cut-w">${esc(M.where)}</div>
     ${ws.length ? `<div class="cut-f">${ws.map(w => momFace(w, 44)).join('')}</div>` : ''}<div class="cut-d">${esc(txt)}</div>
     <div class="cut-r">${!m.done && M.ch ? momBtns(M, m, j, 'cut-c') : momFx(m) + momStoryBtn(h, j)}</div></div>`;
 }
@@ -6679,7 +6931,7 @@ function cutOpen(j) {
   liveHold(true);
   const el = document.createElement('div');
   el.className = 'cs'; el.dataset.mom = j; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', M.head);
-  el.innerHTML = `<div class="cs-bar"></div><div class="cs-mid"><div class="cs-top"><span class="cs-rec">● LIVE</span><span class="sp"></span>${lessBtn('mom', m.k, 'cs-less')}<button class="cs-skip" data-act="cutGo">${ask ? 'Skip ›' : 'Continue ›'}</button></div>
+  el.innerHTML = `<div class="cs-bar"></div><div class="cs-mid"><div class="cs-top"><span class="cs-rec">● LIVE</span><span class="sp"></span>${M.forced ? '' : lessBtn('mom', m.k, 'cs-less')}<button class="cs-skip" data-act="cutGo">${ask ? 'Skip ›' : 'Continue ›'}</button></div>
     <div class="cs-loc">${esc(M.where)} · ${esc(h.name)}</div><div class="cs-t">${esc(M.head)}</div>
     <div class="cs-f">${ws.map(w => momFace(w, ws.length > 2 ? 72 : 96)).join('')}</div><div class="cs-line">${esc(txt)}</div>
     ${ask ? `<div class="cs-q">What do you tell the producer?</div>${momBtns(M, m, j, 'cs-c')}` : `<div class="cs-c">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`}</div><div class="cs-bar"></div>`;
@@ -7299,11 +7551,17 @@ function autoFillOnce(wk, card, big, target, H, notes) {
       pool.forEach(w => sd.push(w.id)); take(pool.map(w => w.id)); if (pool.length) any = true; });
     if (any) filled++; take(s.sides.flat());
   }
+  // a retiring wrestler's last night: a farewell match against a younger star (passing the torch)
+  const fwSegs = [];
+  if (AGING()) for (const w of avail().filter(x => x.farewell && x.farewell.wk === wk && !x.farewell.cm && !card.some(s => segPeople(s).includes(x.id)))) {
+    const opp = avail().filter(o => o.id !== w.id && !used.has(o.id) && sameDiv(w, o) && !o.farewell).sort((a, b) => ((b.align !== w.align) - (a.align !== w.align)) * 8 + (b.pop + (+b.age <= 30 ? 15 : 0)) - (a.pop + (+a.age <= 30 ? 15 : 0)))[0];
+    if (!opp) continue; fwSegs.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[w.id], [opp.id]], winner: -1, finish: 'Clean', title: null }); take([w.id, opp.id]); note(`${nm(w.id)} gets a farewell match`);
+  }
   // teams with two members free tonight, best first
   const availTeams = (n = 2) => rankedTeams(n === 3 ? 'trios' : 'tag').map(t => t.members.filter(id => avail().some(w => w.id === id)).slice(0, n)).filter(x => x.length === n);
   // trios: real trios teams first, then three free members of a faction
   const availTrios = () => [...availTeams(3), ...(G.factions || []).map(f => f.members.filter(id => avail().some(w => w.id === id)).slice(0, 3)).filter(x => x.length === 3)];
-  const segs = [];
+  const segs = [...fwSegs];
   // save announced PPV matches for the PPV: on weekly shows those opponents get promos instead
   const nb = !big && nextBig(), pms = nb && nb >= wk ? ppvMatches(nb) : [];
   // a champion whose title is announced for the next big event keeps it off TV until then
@@ -8321,6 +8579,8 @@ function wTags(w) {
   if (w.loan && w.contract) t.push(`<span class="tag">🚪 Invader${RV(w.loan) ? ' · ' + esc(RV(w.loan).short) : ''}</span>`);
   if (w.away && w.contract) t.push(`<span class="tag warn">${MEDIA[w.away.k]?.ic || '🎬'} ${w.away.k === 'gig' ? 'Indie date' : `Away ${awayLeft(w)}wk`}</span>`);
   if (w.xt && PER()) t.push(`<span class="tag gold">🏆 ${esc(w.xt.p)}</span>`);
+  if (w.farewell && !w.retired) t.push(`<span class="tag warn">${ic('mic')} ${w.farewell.wk <= G.week ? 'Last week' : `Retires wk ${w.farewell.wk}`}</span>`);
+  if (w.hof) t.push(`<span class="tag gold">${ic('crown')} Hall of Fame</span>`);
   if (w.injury > 0) t.push(`<span class="tag bad" title="${esc(injName(w))}">🩹 ${w.injury}wk</span>`);
   else if (frailOn(w) && w.contract) t.push(`<span class="tag warn">${ic('alert')} ${w.frail.rush ? 'Rushed back' : 'Healing'}</span>`);
   if (IHP[w.ihp] && w.contract && G.settings.injuries) t.push(`<span class="tag ${w.ihp === 'prone' ? 'warn' : 'good'}">${ic(w.ihp === 'prone' ? 'medical' : 'shield')} ${IHP[w.ihp][0]}</span>`);
@@ -9275,6 +9535,7 @@ function renderModal() {
     case 'editProfile': return modalEditProfile(m);
     case 'rankings': return modalRankings(m);
     case 'records': return modalRecords(m);
+    case 'retPlan': return modalRetPlan(m);
     case 'editTeam': return modalEditTeam(m);
     case 'editFaction': return modalEditFaction(m);
     case 'editTourney': return modalEditTourney(m);
@@ -9667,7 +9928,7 @@ function helpHTML() {
   <h3>Teams and tournaments</h3>
   <p>Office → <b>Teams</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
-  <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Office → Titles → <b>Record book</b> keeps every title history, the all-time records, head to head records, the greatest matches, every show's rating, the awards and the legends. Bring a legend back from its Legends page. Aging can be switched off in Settings.</p>
+  <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out and everyone ages a year. Each wrestler has a peak age (high flyers peak early, talkers late); past it the in-ring stats slide a little more each year. Older wrestlers announce their retirement a few weeks ahead: they get a farewell tour, their last match at a big event gets a big send-off, and you get one try at talking them into one more year. A <b>Career Match</b> makes the loser retire. Retired legends are nominated for the <b>Hall of Fame</b> every year: pick the class in the Record book's Hall of Fame chapter, and they're inducted at the next big event. Legends may call wanting one more run. Office → Titles → <b>Record book</b> keeps every title history, the all-time records, head to head records, the greatest matches, every show's rating, the awards, the legends and the Hall of Fame. Aging can be switched off in Settings.</p>
   <h3>Changed your mind?</h3>
   <p>Right after a show you can <b>Undo</b> it and book it again. <b>Copy as text</b> shares a card or results anywhere.</p>
   <h3>Contracts</h3>
@@ -9956,11 +10217,18 @@ function renderPicker() {
 
 // ----- wrestler profile -----
 function statLine(label, v, color) { return `<div class="statline"><span class="muted">${label}</span><div class="bar"><i style="width:${clamp(v, 0, 100)}%;${color ? 'background:' + color : ''}"></i></div><b>${Math.round(v)}</b></div>`; }
+// on the profile: the farewell date, the tour so far, and one try at talking them into staying
+function fwBlock(w) {
+  const f = w.farewell; if (!f || w.retired) return '';
+  const left = f.wk - G.week;
+  return `<div class="alert warn" style="margin:10px 0"><span class="ic">${ic('mic')}</span><div class="sp small"><b>${f.cm ? 'Lost a Career Match' : `Retiring after ${esc(fwShow(w))}`}</b><br>${f.cm ? `${pn(w).They} retire${pn(w).s} at the end of the week.` : `${left > 0 ? `${left} week${left > 1 ? 's' : ''} left` : 'This is the week'}. Farewell tour: ${f.tour || 0} show${f.tour === 1 ? '' : 's'} so far. Book ${pn(w).them} in a match at the event for a proper send-off.`}</div></div>
+    ${f.cm ? '' : `<div class="grid2" style="margin-bottom:10px">${f.talk ? `<button class="btn" disabled>Already asked to stay</button>` : `<button class="btn" data-act="fwTalk" data-id="${w.id}">Ask for one more year (${Math.round(talkOdds(w) * 100)}%)</button>`}<button class="btn" data-act="fwNow" data-id="${w.id}">Retire now</button></div>`}`;
+}
 function modalWrestler(m) {
   const w = W(m.id); if (!w) return '';
   const sts = storiesOf(w.id);
   const recent = G.history.slice(-8).reverse().flatMap(h => h.results.filter(r => segPeople(r.seg).includes(w.id)).map(r => ({ wk: h.wk, r })));
-  const nameTags = `<div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag" title="Pronouns">${esc(proLabel(w))}</span><span class="tag">Age ${w.age}</span><span class="tag gold">OVR ${overall(w)}</span></div>`;
+  const nameTags = `<div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag" title="Pronouns">${esc(proLabel(w))}</span><span class="tag">Age ${w.age}</span>${AGING() && !w.retired && !isNW(w) ? `<span class="tag st-${ageStage(w).k}" title="${esc(ageStage(w).d)}">${esc(ageStage(w).n)}</span>` : ''}<span class="tag gold">OVR ${overall(w)}</span></div>`;
   // the hero card: their full pixel body beside the name and the facts people check first
   const hero = bodiesOn() && w.name;
   const fact = (l, v) => v ? `<div class="hc-f"><span>${l}</span><b>${esc(String(v))}</b></div>` : '';
@@ -9968,7 +10236,7 @@ function modalWrestler(m) {
       <div class="hc-facts">${fact('Height', w.height)}${fact('Weight', w.weight)}${fact('From', w.hometown)}${fact('Popularity', Math.round(w.pop))}${fact('In-ring', Math.round(w.ring))}${fact('Mic', Math.round(w.mic))}</div>
       <button class="btn sm" data-act="editBody" data-id="${w.id}">${ic('user')} Edit look</button></div></div>`
     : `<div class="row" style="margin-bottom:10px">${av(w, 56)}<div class="sp">${nameTags}</div></div>`;
-  const body = `${top}
+  const body = `${top}${fwBlock(w)}
    ${titlesOf(w.id).map(t => `<button class="champ-card" data-act="editTitle" data-id="${t.id}" aria-label="${esc(t.name)}">${titleArt(t, 'champ-belt')}<div class="cc-t"><span class="cc-k">🏆 ${t.holder.length > 1 ? 'Co-champion' : 'Champion'}</span><b>${esc(t.name)}</b><span class="tiny muted">Since week ${t.since || 1} · ${t.defenses || 0} defense${t.defenses === 1 ? '' : 's'}${t.holder.length > 1 ? ' · with ' + esc(t.holder.filter(id => id !== w.id).map(nameOf).join(' & ')) : ''}</span></div></button>`).join('')}
    ${wPrizes(w)}
    ${wMerch(w)}
@@ -9987,6 +10255,7 @@ function modalWrestler(m) {
      ${CON() ? `<div class="row small"><span class="muted sp">Contract</span><b>${w.contract ? `${money(w.contract.salary)}/wk · ${lenLabel(w.contract.weeks)} left` : 'Indie star'}</b></div>
      <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Indie star'}</b></div>`}
    </div>
+   ${w.retired ? '' : gimBlock(w)}
    ${w.retired ? '' : skillsBlock(w)}
    ${w.retired ? '' : medBlock(w)}
    ${w.contract ? relBlock(w) + personaBlock(w) : ''}${indieBlock(w)}${datesBlock(w)}
@@ -10002,7 +10271,8 @@ function modalWrestler(m) {
    ${recent.length ? `<div class="sec">Recent appearances</div><div class="card" style="padding:4px 14px">${recent.map(x => `<div class="news"><span class="wk">WK ${x.wk}</span><span class="sp">${esc(x.r.text)}</span><span class="stars tiny">${starStr(x.r.rating)}</span></div>`).join('')}</div>` : ''}
    <div class="sec">Your notes on ${esc(lastName(w))}</div>
    <textarea data-in="wNotes" data-id="${w.id}" placeholder="Plans, gimmick ideas, who ${pn(w).they} should feud with next...">${esc(w.notes)}</textarea>
-   ${w.retired ? `<div class="alert" style="margin-top:12px"><span class="ic">🎤</span><div class="sp small"><b>Retired</b> in week ${w.retired}. Legends can always come back.</div><button class="btn sm" data-act="unretireW" data-id="${w.id}">Bring back</button></div>
+   ${w.retired ? `<div class="alert" style="margin-top:12px"><span class="ic">🎤</span><div class="sp small"><b>Retired</b> in week ${w.retired} at ${w.age}.${w.hof ? ` <b>Hall of Fame</b>${w.hof >= 1 ? `, class of Year ${w.hof}` : ''}.` : ''}${w.cmLost ? ' Lost a Career Match.' : ''} Legends can always come back.</div><button class="btn sm" data-act="unretireW" data-id="${w.id}">Bring back</button></div>
+   ${!w.hof && !isNW(w) && G.hofSp !== hofYr() && hofScore(w) >= HOF_BAR ? `<button class="btn block" style="margin-top:8px" data-act="hofSpecial" data-id="${w.id}">${ic('crown')} Induct into the Hall of Fame</button>` : ''}
    <div class="grid2" style="margin-top:10px"><button class="btn" data-act="editW" data-id="${w.id}">✏️ Edit</button>${CON() ? `<button class="btn" data-act="guestDeal" data-id="${w.id}">💰 ${guestDeal(w.id) ? 'Appearance deal' : 'Book appearances'}</button>` : ''}</div>` : `<div class="grid2" style="margin-top:12px">
      <button class="btn" data-act="editW" data-id="${w.id}">✏️ Edit</button>
      <button class="btn" data-act="turn" data-id="${w.id}">🔄 Make ${w.align === 'face' ? 'heel' : 'face'}</button>
@@ -10243,6 +10513,31 @@ function modalRankings(m) {
   body += '<div class="tiny muted" style="margin-top:8px">Ranked by wins over strong opponents, recent form, popularity and match quality. Idle and injured wrestlers slide. Arrows show the change since the last show.</div>';
   return modal('Rankings', body);
 }
+function modalRetPlan(m) {
+  const w = W(m.id); if (!w) return '';
+  const body = `<div class="row" style="margin-bottom:12px">${av(w, 48)}<div class="sp"><b>${esc(w.name)}</b><div class="small muted">Age ${w.age} · ${esc(ageStage(w).n)} · ${recStr(w)}</div></div></div>
+    <div class="list"><button class="item" data-act="retPlan" data-id="tour"><span class="ic">${ic('mic')}</span><div class="main"><div class="t">Announce a farewell</div><div class="d">Last match at ${esc(fwShow({ farewell: { wk: farewellWk() } }))}. A farewell tour until then, and a big send-off.</div></div></button>
+    <button class="item" data-act="retPlan" data-id="now"><span class="ic">${ic('door')}</span><div class="main"><div class="t">Retire right away</div><div class="d">${pn(w).They} leave${pn(w).s} the roster today and join${pn(w).s} your legends.</div></div></button></div>
+    <div class="tiny muted" style="margin-top:8px">Legends can always come back.</div>`;
+  return modal(`Retire ${esc(lastName(w))}?`, body, `<button class="btn" data-act="closeModal">Cancel</button>`);
+}
+// Record book → Hall of Fame: this year's class to pick, the ceremony to come, and every plaque so far
+function hofPage(m) {
+  const n = G.hofNom && !G.hofNom.done ? G.hofNom : null, sel = m.hsel || [];
+  let h = '';
+  if (n) {
+    h += `<div class="card"><div class="review-h">${ic('crown')} Class of Year ${n.yr}: pick up to ${HOF_MAX}</div><div class="list">${n.ids.map(id => { const w = hofNomW(id); if (!w) return ''; const on = sel.includes(id);
+      return `<button class="pick ${on ? 'sel' : ''}" data-act="hofTog" data-id="${id}" aria-pressed="${on}"><span class="ck">${on ? '✓' : ''}</span>${w.snap ? '' : av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t">${esc(w.name)}</div><div class="d tiny muted">${w.snap ? `${esc(w.co || 'Another company')} · Pop ${Math.round(w.pop)}` : `Retired week ${w.retired} · ${recStr(w)} · ${reignsOfW(w.id).length} title reign${reignsOfW(w.id).length === 1 ? '' : 's'}`}</div></div><b class="tiny">${Math.round(hofScore(w))}</b></button>`; }).join('')}</div>
+      <div class="tiny muted" style="margin:6px 0 8px">The number is the committee's career score: fame, title reigns, awards and great matches.</div>
+      <div class="grid2"><button class="btn" data-act="hofCommittee">Let the committee pick</button><button class="btn pri" data-act="hofGo">Induct ${sel.length || ''}</button></div></div>`;
+  }
+  if (G.hofCer) h += `<div class="alert"><span class="ic">${ic('calendar')}</span><div class="sp small"><b>Ceremony at ${esc(bigWk(G.hofCer.wk) ? bigName(G.hofCer.wk) : 'the show')} (week ${G.hofCer.wk})</b><br>${esc((G.hofCer.nms || []).join(', '))} will be honoured at the end of the show.</div></div>`;
+  const l = hofList().slice().sort((a, b) => b.yr - a.yr || b.wk - a.wk);
+  if (l.length) h += `<div class="sec">${ic('crown')} The Hall (${l.length})</div><div class="list">${l.map(e => { const w = W(e.id);
+    return `<${w ? `button class="item" data-act="openW" data-id="${w.id}"` : 'div class="item"'}>${w ? av(w) : `<span class="ic">${ic('crown')}</span>`}<div class="main"><div class="t">${esc(e.nm)}</div><div class="d">${e.yr ? `Class of Year ${e.yr}` : 'Before your time'}${e.co ? ` · ${esc(e.co)}` : ''}${e.rec ? ` · ${esc(e.rec)}` : ''}${e.by === 'committee' ? ' · committee pick' : ''}</div></div></${w ? 'button' : 'div'}>`; }).join('')}</div>`;
+  else if (!n) h += `<div class="empty">The Hall of Fame is empty. At the end of every year (week 52) the committee names nominees from the legends who have retired. You pick who goes in, and they're inducted at the next big event. ${52 - (G.week - 1) % 52} weeks to go.</div>`;
+  return h;
+}
 // ---------- the record book: a small ledger kept for the life of the company ----------
 // G.history only keeps the last 150 shows, so the book keeps its own compact copy of what matters:
 // G.rb = { v, fill, h2h: {'a|b': [a wins, b wins, draws, last week]}, m: [best matches], sh: [[wk, rating, big, name, bid]] }
@@ -10324,7 +10619,8 @@ const RB_CH = [
   ['matches', 'star', 'Greatest matches', () => { const m = RB().m[0]; return m ? `Best: ${m.l} (${m.r})` : 'The best matches you ever booked'; }],
   ['shows', 'tv', 'Show history', () => { const s = RB().sh; return s.length ? `${s.length} shows · ${Math.round(avg(s.map(x => x[1])))} average` : 'Every show you run'; }],
   ['awards', 'medal', 'Year-end awards', () => (G.awards || []).length ? `${G.awards.length} year${G.awards.length === 1 ? '' : 's'} of awards` : `First awards in ${52 - (G.week - 1) % 52} weeks`],
-  ['legends', 'users', 'Legends', () => { const n = G.wrestlers.filter(w => w.retired).length; return n ? `${n} retired` : 'Nobody has retired yet'; }]
+  ['legends', 'users', 'Legends', () => { const n = G.wrestlers.filter(w => w.retired).length; return n ? `${n} retired` : 'Nobody has retired yet'; }],
+  ['hof', 'crown', 'Hall of Fame', () => G.hofNom && !G.hofNom.done ? `Pick the Year ${G.hofNom.yr} class` : hofList().length ? `${hofList().length} inducted${G.hofCer ? ` · ceremony week ${G.hofCer.wk}` : ''}` : `First class in ${52 - (G.week - 1) % 52} weeks`]
 ];
 function rbYears(list, cur) {
   const ys = [...new Set(list)].sort((a, b) => b - a); if (ys.length < 2) return '';
@@ -10380,7 +10676,7 @@ function modalRecords(m) {
       <div class="list">${RB_CH.map(([k, icn, lbl, sub]) => `<button class="item rb-ch" data-act="recTab" data-id="${k}"><span class="rb-ic">${ic(icn)}</span><div class="main"><div class="t">${lbl}</div><div class="d clip">${esc(sub())}</div></div></button>`).join('')}</div>`;
     return modal('Record book', body);
   }
-  const ch = RB_CH.find(c => c[0] === tab), V = { titles: rbTitles, leaders: rbLeadersView, h2h: rbH2HView, matches: rbMatchesView, shows: rbShowsView, awards: rbAwardsView, legends: rbLegendsView }[tab];
+  const ch = RB_CH.find(c => c[0] === tab), V = { titles: rbTitles, leaders: rbLeadersView, h2h: rbH2HView, matches: rbMatchesView, shows: rbShowsView, awards: rbAwardsView, legends: rbLegendsView, hof: hofPage }[tab];
   return modal(ch[2], `<button class="link rb-back" data-act="recTab" data-id="home">‹ Record book</button>${V(m)}`);
 }
 // the wrestler profile's head to head: the people they've met most
@@ -11775,8 +12071,18 @@ const A = {
     UI.modal = null; UI.tab = 'book'; commit(`Added ${add.length} ${T.name} match${add.length > 1 ? 'es' : ''}.${all.length > add.length ? ` ${all.length - add.length} more next week: the card is full.` : ''}`);
   },
   delTourney(id) { const T = TN(id); if (!T) return; confirmBox((T.done ? 'Delete ' : 'Cancel ') + T.name + '?', 'Its matches come off the card. Results already shown stay in your history.', T.done ? 'Delete' : 'Cancel it', () => { G.tourneys = G.tourneys.filter(x => x !== T); [G.card, ...Object.values(G.future || {})].forEach(c => c.forEach(s => { if (s.tid === T.id) { delete s.tid; delete s.tr; delete s.ti; } })); commit(); }, true); },
-  retireW(id) { const w = W(id); if (!w) return; confirmBox(`Retire ${w.name}?`, `${pn(w).They} leave${pn(w).s} the roster and join${pn(w).s} your legends. You can bring ${pn(w).them} back any time.`, 'Retire', () => { retire(w); UI.modal = { type: 'wrestler', id: w.id }; commit(); }); },
-  unretireW(id) { const w = W(id); if (!w) return; delete w.retired; w.morale = 70; news(`📣 ${w.name} is coming out of retirement!`, 'contract'); commit(`${w.name} is an indie star again. Sign ${pn(w).them} in the Office.`); },
+  retireW(id) { const w = W(id); if (!w) return; if (!AGING() || !w.contract) return confirmBox(`Retire ${w.name}?`, `${pn(w).They} leave${pn(w).s} the roster and join${pn(w).s} your legends. You can bring ${pn(w).them} back any time.`, 'Retire', () => { retire(w); UI.modal = { type: 'wrestler', id: w.id }; commit(); });
+    openModal({ type: 'retPlan', id, prev: UI.modal }); },
+  retPlan(k) { const m = UI.modal, w = W(m?.id); if (!w) return;
+    if (k === 'tour') { announceRet(w, 'you'); G.retAsk = (G.retAsk || []).filter(id => id !== w.id); w.farewell.told = 1; UI.modal = { type: 'wrestler', id: w.id }; return commit(`${w.name}'s last match is at ${fwShow(w)}.`); }
+    retire(w); UI.modal = { type: 'wrestler', id: w.id }; commit(`${w.name} retired.`); },
+  fwTalk(id) { const w = W(id); if (!w) return; const msg = talkStay(w); commit(msg); },
+  fwNow(id) { const w = W(id); if (!w) return; confirmBox(`Retire ${w.name} now?`, `No farewell match. ${pn(w).They} retire${pn(w).s} today.`, 'Retire now', () => { retire(w, 'quiet'); UI.modal = { type: 'wrestler', id: w.id }; commit(); }); },
+  unretireW(id) { const w = W(id); if (!w) return; comeback(w); commit(`${w.name} is an indie star again. Sign ${pn(w).them} in the Office.`); },
+  hofTog(id) { const m = UI.modal; m.hsel ||= []; const i = m.hsel.indexOf(id); if (i >= 0) m.hsel.splice(i, 1); else if (m.hsel.length < HOF_MAX) m.hsel.push(id); else return toast(`Up to ${HOF_MAX} a year.`); render(); },
+  hofGo() { const m = UI.modal, ids = (m.hsel || []).filter(id => G.hofNom?.ids.includes(id)); if (!ids.length) return toast('Pick at least one.'); const a = hofInduct(ids, 'you'); m.hsel = []; G.booker.events = G.booker.events || 0; commit(a.length ? `Inducted: ${a.map(id => hofList().find(e => e.id === id)?.nm).join(', ')}.` : 'Nobody was inducted.'); },
+  hofCommittee() { const a = hofInduct(hofAuto(), 'committee'); commit(a.length ? `The committee picked ${a.map(id => hofList().find(e => e.id === id)?.nm).join(' and ')}.` : 'Nobody went in this year.'); },
+  hofSpecial(id) { const w = W(id); if (!w) return; confirmBox(`Induct ${w.name}?`, `A special induction outside the yearly class. One a year. The ceremony is at ${bigWk(farewellWk(1)) ? bigName(farewellWk(1)) : 'the next show'}.`, 'Induct', () => { hofInduct([id], 'you', true); UI.modal = { type: 'wrestler', id }; commit(`${w.name} is going into the Hall of Fame.`); }); },
   copyCard() {
     const card = BK().filter(s => segPeople(s).length); if (!card.length) return toast('Nothing booked yet.');
     const wk = UI.selWeek;
@@ -11970,7 +12276,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body', 'pro', 'lc', 'sym', 'merch'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body', 'pro', 'lc', 'sym', 'merch', 'gimK', 'gims'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 // true when a canvas has see-through pixels (a PNG with its background already cut out)
@@ -12020,6 +12326,8 @@ function cleanW(o) {
   if (bodyOK(o.body)) w.body = o.body;
   { const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) w.lc = lc; if (sy) w.sym = sy; }
   const pr = proClean(o.pro ?? o.pronouns); if (pr) w.pro = pr;
+  if (typeof o.gimK === 'string' && o.gimK && Object.hasOwn(RPK_CHARS, o.gimK)) w.gimK = o.gimK;
+  { const gs = gimsClean(o.gims); if (gs.length) w.gims = gs; }
   { const mz = merchClean(o.merch); if (mz.length) w.merch = mz.map(x => ({ ...x, wk: G?.week || 1, sold: 0, earned: 0, lw: 0 })); }
   return w;
 }
@@ -12449,8 +12757,8 @@ function modalBuilder(m) {
   const sl = (k, l, hint) => { const v = clamp(Math.round(+d[k] || 1), 1, 100), f = (v - 1) / 99;
     return `<div class="sl"><div class="sl-top"><label for="ew-${k}">${l}</label>${hint ? `<small>${hint}</small>` : ''}<output id="ewv-${k}" for="ew-${k}">${v}</output></div><div class="sl-ctl"><button type="button" class="sl-st" data-sl-step="-1" tabindex="-1" aria-label="Lower ${esc(l)}">−</button><div class="sl-trk" style="--p:${(f * 100).toFixed(2)}%;--f:${f.toFixed(4)}"><input type="range" id="ew-${k}" min="1" max="100" step="1" data-ew="${k}" value="${v}"><span class="sl-bub" aria-hidden="true">${v}</span></div><button type="button" class="sl-st" data-sl-step="1" tabindex="-1" aria-label="Raise ${esc(l)}">+</button></div></div>`; };
   const txt = (k, l, ph, max) => `<label class="f"><span>${l}</span><input type="text" data-ew="${k}" value="${esc(d[k] || '')}" placeholder="${esc(ph || '')}" maxlength="${max || 40}"></label>`;
-  const pv = { ...d };
-  const body = `
+  const pv = { ...d }, rp = !!m.rpk;
+  const body = `${rp ? rpkPanel(m) : ''}
    <div class="bld-hero">
      <button class="bld-photo" data-act="bPhoto" aria-label="Add a photo">${av(pv, 84)}<span>${d.photo ? 'Change' : '📷 Photo'}</span></button>
      <div class="sp" style="min-width:0">
@@ -12466,22 +12774,23 @@ function modalBuilder(m) {
 
    <div class="sec">Character</div>
    <label class="f"><span>Alignment</span><div class="seg-ctl">${['face', 'heel'].map(a => `<button class="${d.align === a ? 'on' : ''}" data-act="bSet" data-f="align" data-id="${a}">${a === 'face' ? '😇 Face' : '😈 Heel'}</button>`).join('')}</div></label>
-   <label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${(d.division || 'Open') === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
+   ${rp ? '' : `<label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${(d.division || 'Open') === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
    ${proPicker(d)}
-   <label class="f"><span>Job</span><select data-ew="role">${Object.entries(ROLES).map(([k, x]) => `<option value="${k}" ${roleOf(d) === k ? 'selected' : ''}>${x.n}${k === 'wrestler' ? '' : ' (doesn\'t wrestle)'}</option>`).join('')}</select>${isNW(d) ? `<div class="tiny muted" style="margin-top:4px">${esc(ROLES[roleOf(d)].d)}</div>` : ''}</label>
-   <label class="f"><span>Style</span><select data-ew="style">${STYLES.map(s => `<option ${s === d.style ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+   <label class="f"><span>Job</span><select data-ew="role">${Object.entries(ROLES).map(([k, x]) => `<option value="${k}" ${roleOf(d) === k ? 'selected' : ''}>${x.n}${k === 'wrestler' ? '' : ' (doesn\'t wrestle)'}</option>`).join('')}</select>${isNW(d) ? `<div class="tiny muted" style="margin-top:4px">${esc(ROLES[roleOf(d)].d)}</div>` : ''}</label>`}
+   ${rp ? '' : `<label class="f"><span>Style</span><select data-ew="style">${STYLES.map(s => `<option ${s === d.style ? 'selected' : ''}>${s}</option>`).join('')}</select></label>`}
    <label class="f"><span>Short name <span class="muted">· optional, used where only one name fits</span></span><input type="text" data-ew="short" value="${esc(d.short || '')}" maxlength="20" placeholder="${esc(String(d.name || '').trim().split(' ').pop() || 'e.g. Moxley')}"></label>
-   <div class="grid2">${txt('hometown', 'Hometown', 'e.g. Detroit, MI')}${txt('age', 'Age', '', 2)}${txt('height', 'Height', `6'2"`, 12)}${txt('weight', 'Weight', '240 lbs', 12)}</div>
+   ${rp ? txt('hometown', 'Hometown', 'e.g. Detroit, MI') : `<div class="grid2">${txt('hometown', 'Hometown', 'e.g. Detroit, MI')}${txt('age', 'Age', '', 2)}${txt('height', 'Height', `6'2"`, 12)}${txt('weight', 'Weight', '240 lbs', 12)}</div>`}
    ${txt('finisher', 'Finisher', 'e.g. The Last Call')}${txt('signature', 'Signature move', 'optional')}${txt('theme', 'Entrance theme', 'optional', 60)}
    <label class="f"><span>Bio / gimmick</span><textarea data-ew="bio" maxlength="400" style="min-height:80px" placeholder="Who are they? What do they want?">${esc(d.bio || '')}</textarea></label>
-
+   ${rp ? '' : `
    <div class="sec">Ratings</div>
    <div class="chips" style="margin-bottom:10px">${Object.entries(ARCHETYPES).map(([k, a]) => `<button class="chip" data-act="bArch" data-id="${k}">${a.label}</button>`).join('')}<button class="chip" data-act="bArch" data-id="random">🎲 Random</button></div>
    ${sl('pop', 'Popularity', 'How much fans care')}${sl('ring', 'In-ring', 'Match quality')}${sl('mic', 'Mic', 'Promo quality')}${sl('cha', 'Charisma', 'Star power, angles')}${sl('stam', 'Stamina', 'Slows fatigue')}
    ${skillsShown() ? `<div class="sec">Skills <span class="muted tiny">· Deep sim</span></div>${SK_KEYS.map(k => sl(k, SKILLS[k][0], SKILLS[k][1])).join('')}${sl('pot', 'Potential', 'How good they can become')}` : ''}
    ${m.isNew ? '' : `<div class="sec">Status</div><div class="grid2"><label class="f"><span>Morale</span><input type="number" min="0" max="100" data-ew="morale" value="${Math.round(d.morale)}"></label><label class="f"><span>Injury (weeks)</span><input type="number" min="0" max="52" data-ew="injury" value="${d.injury}"></label></div>`}
    ${G && CON() && !m.rid ? askBlock(d, m) : ''}
-   ${m.isNew && !(G && CON() && !m.rid) ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now${CON() ? ` (${lenLabel(prefLen(d))} at ${pn(d).their} asking price)` : ''}</span></label>` : ''}`;
+   ${m.isNew && !(G && CON() && !m.rid) ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now${CON() ? ` (${lenLabel(prefLen(d))} at ${pn(d).their} asking price)` : ''}</span></label>` : ''}`}`;
+  if (rp) return modal('Repackage ' + esc(W(d.id)?.name || d.name), body, `<button class="btn" data-act="ewClose">Cancel</button><button class="btn pri" data-act="rpkGo">🎭 Repackage</button>`, { closeAct: 'ewClose' });
   return modal(m.isNew ? 'Character builder' : 'Edit ' + esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="deleteW">Delete</button>'}<button class="btn" data-act="bShare">Share</button><button class="btn pri" data-act="saveW">Save</button>`, { closeAct: 'ewClose' });
 }
 
@@ -12798,7 +13107,7 @@ async function commInit() {
       const body = d.data() || {};
       for (const it of Array.isArray(body.items) ? body.items.slice(0, 25) : []) {
         if (!it || typeof it !== 'object') continue;
-        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 800000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {}, ...(it.kind === 'world' && pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}) }); continue; }
+        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 800000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {}, ...(it.kind === 'world' && pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}), ...(+it.upd > 0 ? { upd: +it.upd } : {}) }); continue; }
         if (!it.pack) continue;
         items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack, ...(pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}) });
       }
@@ -12868,7 +13177,7 @@ const packWs = i => i._ws || (i._ws = cleanPack(pixPack(i))?.wrestlers || []);
 // ---- roster photos: a big roster's photos sit in their own gzipped row (pix1..pix10/<player id>), so they don't
 // fill the player's Community space, and Community only downloads them when someone opens that roster ----
 const PIX_SLOTS = 10, pixSlots = () => isSup() ? PIX_SLOTS : 5, pixMax = () => isSup() ? 790000 : 395000, PIX_INLINE = 40000;
-const PIX = new Map(), PIX_LOAD = new Map(), PIX_FAIL = new Set(), pixKey = i => i.author + '|' + i.id;
+const PIX = new Map(), PIX_LOAD = new Map(), PIX_FAIL = new Set(), pixKey = i => i.author + '|' + i.id + (i.upd ? '~' + i.upd : ''); // an updated world has new photos
 // a roster's photos sit in one slot (px: 3) or, for a huge roster, are spread over several (px: [2, 3, 4]); each slot row
 // says where its part starts
 const pxList = i => [...new Set((Array.isArray(i?.px) ? i.px : [i?.px]).filter(k => Number.isInteger(k) && k >= 1 && k <= PIX_SLOTS))].slice(0, PIX_SLOTS);
@@ -12948,10 +13257,12 @@ async function pixParts(shr, cap) {
 }
 // moves a pack's photos into free photo slots when they are too big to sit in the player's space.
 // fit: when they still don't fit after shrinking, fill the free slots and leave the rest out (pack.pixLeft says how many)
-async function pixSplit(pack, itemId, fit) {
+// swap: the upload this one replaces. Its slots count as free, used last so its photos stay whole for as long as possible
+async function pixSplit(pack, itemId, fit, swap) {
   const list = [...pack.wrestlers, ...(pack.titles || [])], photos = list.map(w => w.photo || '');
   if (sum(photos.map(x => x.length)) <= PIX_INLINE || typeof CompressionStream === 'undefined') return 0;
-  const used = new Set(COMM.mine.flatMap(pxList)), free = Array.from({ length: pixSlots() }, (_, k) => k + 1).filter(k => !used.has(k)), cap = pixMax() - 2000;
+  const used = new Set(COMM.mine.filter(x => !swap || x !== swap).flatMap(pxList)), was = new Set(pxList(swap)), cap = pixMax() - 2000,
+    free = Array.from({ length: pixSlots() }, (_, k) => k + 1).filter(k => !used.has(k)).sort((a, b) => was.has(a) - was.has(b));
   let shr = await Promise.all(photos.map(pixShrink)), parts = await pixParts(shr, cap);
   if (parts.length > free.length) { shr = await Promise.all(shr.map(photoSmall)); parts = await pixParts(shr, cap); }
   pack.pixLeft = 0;
@@ -12972,6 +13283,10 @@ async function pixSplit(pack, itemId, fit) {
   return px.length === 1 ? px[0] : px;
 }
 const pixDrop = (author, px) => Promise.all(pxList({ px }).map(k => cdb.doc('pix' + k + '/' + author).delete().catch(() => {})));
+// sharing a world again under the same name updates the first one: same listing, likes and plays, new content
+const worldTitle = m => (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe';
+const sameWorld = m => { const t = worldTitle(m).toLowerCase(); return COMM.mine.find(x => x && x.kind === 'world' && String(x.title || '').trim().toLowerCase() === t) || null; };
+const dayOf = t => new Date(t).toLocaleDateString();
 const kindLbl = i => i.kind === 'world' ? `🌍 World · ${Array.isArray(i.sum?.cos) ? i.sum.cos.length : 0} companies · ${+i.sum?.n || 0} wrestlers` : i.kind === 'roster' ? 'Roster · ' + (+i.count || 0) + ' wrestlers' : (+i.count || 1) > 1 ? (+i.count) + ' wrestlers' : 'Wrestler';
 const REPORT_WHY = [['rude', 'Rude or hateful'], ['spam', 'Spam or junk'], ['copied', 'Copied work or real photos'], ['personal', 'Personal details'], ['other', 'Something else']];
 // things this player reported: hidden for them right away
@@ -13031,14 +13346,14 @@ const WORLD_TITLES = 20, WORLD_TEAMS = 80, WORLD_FACS = 40; // the most belts, t
 const titleRules = t => ({ ...(t.cl && t.tier ? { tier: titleTier(t) } : TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(Number.isInteger(t.bi) ? { bi: t.bi } : {}) });
 // things in progress, or stamped with a week of the sharer's calendar (a world starts at week 1): sit-downs, training goals
 // and pushes, staff moves, indie title reigns, relationship drift, leaks and the like. Skills, badges, personality and records stay.
-const WORLD_DROP = ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem',
-  'sitWk', 'refusedWk', 'raidWk', 'mediaWk', 'tripWk', 'blastWk', 'turnWk', 'payGap', 'praisedWk', 'dinWk', 'lawTill', 'leak', 'relWas', 'relWarn', 'trainBy', 'trTry', 'restBy', 'restWas', 'goal', 'wall', 'tb', 'gt', 'lastLoss', 'gigClash', 'xt'];
+const WORLD_DROP = ['rpk', 'rpkNew', 'contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem',
+  'sitWk', 'refusedWk', 'raidWk', 'mediaWk', 'tripWk', 'blastWk', 'turnWk', 'payGap', 'praisedWk', 'dinWk', 'lawTill', 'leak', 'relWas', 'relWarn', 'trainBy', 'trTry', 'restBy', 'restWas', 'goal', 'wall', 'tb', 'gt', 'lastLoss', 'gigClash', 'xt', 'farewell', 'cb', 'cbNo', 'stay', 'injRet'];
 function worldW(w) {
   const x = JSON.parse(JSON.stringify(w));
   for (const k of WORLD_DROP) delete x[k];
   if (x.bi == null || !x.both) delete x.both; // bi: which of the company's weekly shows they work (0 is the main show)
   if (!safePhoto(x.photo)) x.photo = ''; // photos move to photo slots when the world is shared
-  x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; medReset(x); x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
+  x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; medReset(x); x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0; if (x.gimWk != null) x.gimWk = 1;
   return x;
 }
 // a company's Awards & Prizes in a world: the trophies themselves, who holds them now, and past winners by name (all at week 1)
@@ -13102,7 +13417,10 @@ function makeWorld(withMine) {
   const cos = [...(withMine ? [G, ...(G.cos || [])].map(coAsRival) : []), ...G.rivalPromos].map(worldCo);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop).slice(0, 60).map(worldW);
   const st = G.settings;
-  return { wv: WORLD_V, cos, fa, every: st.bigEvery, mode: st.bigMode, cal: { day: bigDayOf(st), wkd: bigWkdOf(st), home: goHomeOn(st) } };
+  // the world's history comes along: the biggest retired legends (still retired) and the Hall of Fame by name
+  const leg = G.wrestlers.filter(w => w.retired && !isNW(w) && (Math.max(w.pop, +w.rpop || 0) >= 50 || w.hof)).sort((a, b) => !!b.hof - !!a.hof || b.pop - a.pop).slice(0, 20).map(worldW);
+  const hof = hofList().slice(-60).map(e => ({ id: e.id, nm: e.nm, co: e.co || G.promo.name, rec: e.rec || '' }));
+  return { wv: WORLD_V, cos, fa, every: st.bigEvery, mode: st.bigMode, cal: { day: bigDayOf(st), wkd: bigWkdOf(st), home: goHomeOn(st) }, ...(leg.length ? { leg } : {}), ...(hof.length ? { hof } : {}) };
 }
 function worldSummary(wd) {
   return { cos: wd.cos.slice(0, 10).map(c => [String(c.name).slice(0, 40), tierOf(c), c.roster.length, String(c.roster.find(w => w.id === c.titles?.find(t => !t.mid && !t.div)?.holder[0])?.name || '').slice(0, 40)]), fa: wd.fa.length, n: sum(wd.cos.map(c => c.roster.length)) + wd.fa.length };
@@ -13122,8 +13440,10 @@ async function worldPhotos(i, raw) {
 function cleanWorld(raw) {
   if (!raw || raw.wv !== WORLD_V || !Array.isArray(raw.cos)) throw 0;
   const fa = { id: 'fa', name: 'Indie stars', roster: Array.isArray(raw.fa) ? raw.fa.slice(0, 80) : [] };
-  const g = scrubGame({ v: 1, promo: { name: 'World', show: 'Show' }, wrestlers: [], rivalPromos: [...raw.cos.slice(0, 10), fa] });
-  const out = g.rivalPromos.filter(r => r.id !== 'fa').slice(0, 10), free = g.rivalPromos.find(r => r.id === 'fa')?.roster || [];
+  const lg = { id: 'lg', name: 'Legends', roster: Array.isArray(raw.leg) ? raw.leg.slice(0, 20) : [] };
+  const g = scrubGame({ v: 1, promo: { name: 'World', show: 'Show' }, wrestlers: [], rivalPromos: [...raw.cos.slice(0, 10), fa, lg], hof: Array.isArray(raw.hof) ? raw.hof.slice(0, 60) : [] });
+  const out = g.rivalPromos.filter(r => r.id !== 'fa' && r.id !== 'lg').slice(0, 10), free = g.rivalPromos.find(r => r.id === 'fa')?.roster || [], legs = g.rivalPromos.find(r => r.id === 'lg')?.roster || [];
+  const hofW = (Array.isArray(g.hof) ? g.hof : []).filter(e => e && typeof e.nm === 'string' && e.nm.trim()).map(e => ({ id: SAFE_ID.test(e.id) ? e.id : uid(), nm: maskRude(e.nm.slice(0, 40)), co: maskRude(String(e.co || '').slice(0, 40)), rec: String(e.rec || '').slice(0, 60) }));
   const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; medReset(w); w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156);
     if (w.rDates != null) { if (+w.rDates >= 1) w.rDates = clamp(Math.floor(+w.rDates), 1, DATES_MAX); else delete w.rDates; }
     if (w.bi != null) { w.bi = clamp(Math.floor(+w.bi) || 0, 0, MAX_SHOWS - 1); if (w.both !== true) delete w.both; } else delete w.both;
@@ -13154,7 +13474,8 @@ function cleanWorld(raw) {
   });
   if (!cos.length) throw 0;
   const cal = raw.cal && typeof raw.cal === 'object' ? { day: bigDayOf({ bigDay: raw.cal.day }), wkd: bigWkdOf({ bigWkd: raw.cal.wkd }), home: raw.cal.home !== false } : null;
-  return { cos, fa: free.slice(0, 80).map(fixW), every: [3, 4, 5, 6, 8].includes(+raw.every) ? +raw.every : 4, ...(cal ? { cal } : {}) };
+  const leg = legs.slice(0, 20).map(fixW); leg.forEach(w => { for (const k of ['rival', 'rWeeks', 'rSal', 'rIndie', 'rDates', 'bi', 'both']) delete w[k]; if (w.hof != null) w.hof = 0; });
+  return { cos, fa: free.slice(0, 80).map(fixW), every: [3, 4, 5, 6, 8].includes(+raw.every) ? +raw.every : 4, ...(cal ? { cal } : {}), ...(leg.length ? { leg } : {}), ...(hofW.length ? { hof: hofW } : {}) };
 }
 // ---------- Story Mode: the BookIt Universe ----------
 // Six companies in one hand-made world. Every wrestler, belt and past champion is original.
@@ -13683,6 +14004,10 @@ function applyWorld(z) {
     for (const w of G.wrestlers) if (taken.has(w.name)) { let n; do n = randomName(); while (taken.has(n)); w.name = n; w.nick = ''; taken.add(n); }
   }
   for (const w of wd.fa) G.wrestlers.push({ ...w, contract: null });
+  // the world's retired legends and its Hall of Fame (from before your time)
+  for (const w of wd.leg || []) if (!G.wrestlers.some(x => x.name === w.name || x.id === w.id)) G.wrestlers.push({ ...w, contract: null, retired: 1 });
+  G.hof = (wd.hof || []).map(e => ({ ...e, yr: 0, wk: 1, by: 'world' }));
+  for (const e of G.hof) { const w = W(e.id); if (w && w.retired) w.hof = 0.5; else if (!w) e.id = uid(); }
   // brand places only matter to the company taken over (worldBrands puts them on its shows); AI companies book everyone
   for (const w of [...cos.flatMap(c => c.roster), ...G.wrestlers.filter(w => !w.contract)]) { delete w.bi; delete w.both; }
   for (const c of cos) for (const t of c.titles) { delete t.bi; delete t.tier; delete t.every; delete t.dq; }
@@ -13837,6 +14162,12 @@ function sanitizeGame(g) {
     if (w.role !== undefined && (!Object.hasOwn(ROLES, w.role) || w.role === 'wrestler')) delete w.role;
     if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && (MEDIA[a.k].long || a.k === 'gig') ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3), ...(a.staff ? { staff: 1 } : {}) } : undefined; if (!w.away) delete w.away; }
     if (w.mediaWk != null) w.mediaWk = Math.floor(+w.mediaWk) || 0;
+    if (w.gimWk != null) { w.gimWk = Math.floor(+w.gimWk); if (!(w.gimWk >= 1)) delete w.gimWk; }
+    if (w.gimK != null && !(typeof w.gimK === 'string' && w.gimK && Object.hasOwn(RPK_CHARS, w.gimK))) delete w.gimK;
+    if (w.gims != null) { const gs = gimsClean(w.gims); if (gs.length) w.gims = gs; else delete w.gims; }
+    if (w.rpk != null) { const r = rpkClean(w.rpk); if (r) w.rpk = r; else delete w.rpk; }
+    if (w.away?.k === 'rpk' && !w.rpk) delete w.away;
+    if (w.rpkNew != null) { const n = w.rpkNew; if (n && typeof n === 'object' && Object.hasOwn(RPK_RES, n.r) && +n.wk >= 1) w.rpkNew = { wk: Math.floor(+n.wk), r: n.r }; else delete w.rpkNew; }
     if (w.askSet != null) { if (+w.askSet > 0) w.askSet = clamp(Math.round(+w.askSet), 100, 10000000); else delete w.askSet; }
     for (const k of ['blastWk', 'payGap']) if (w[k] != null) { w[k] = Math.floor(+w[k]); if (!isFinite(w[k])) delete w[k]; }
     BR.clean(w);
@@ -13994,7 +14325,7 @@ function modalCommunity(m) {
     const cnt = what === 'roster' ? signed().length : sel.length;
     const whatCtl = `<label class="f"><span>What to share</span><div class="seg-ctl"><button class="${what === 'roster' ? 'on' : ''}" data-act="cWhat" data-id="roster">Whole roster</button><button class="${what === 'pick' ? 'on' : ''}" data-act="cWhat" data-id="pick">Pick wrestlers</button><button class="${what === 'world' ? 'on' : ''}" data-act="cWhat" data-id="world">🌍 World</button></div></label>`;
     if (what === 'world') {
-      const mineW = COMM.mine.filter(x => x.kind === 'world').length, mineCo = m.mine !== false;
+      const mineW = COMM.mine.filter(x => x.kind === 'world').length, mineCo = m.mine !== false, old = sameWorld(m), upd = !!old && m.asNew !== true, full = !upd && mineW >= saveShareMax();
       ensureRivals();
       const cos = [...(mineCo ? [G, ...(G.cos || [])].map(c => ({ name: c.promo.name, n: (c === G ? signed() : (c.roster || []).filter(w => w.contract)).length, you: 1 })) : []), ...G.rivalPromos.map(r => ({ name: r.name, n: r.roster.length, tier: tierOf(r) }))];
       body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:6px">A world is the setting, not your game. Others start a new game in it, with every company run by the AI. They can open their own company or take one over, and they start the month before that company's big one.</div>
@@ -14003,9 +14334,12 @@ function modalCommunity(m) {
         <div class="tiny muted" style="margin-top:6px">Rosters, championships and past champions go in. Shows, stories in progress, money and notes don't.</div></div>
         <label class="todo"><input type="checkbox" data-in="cMine" ${mineCo ? 'checked' : ''}><span>Include ${multi() ? 'my companies' : 'my company'} as ${multi() ? 'AI companies' : 'an AI company'}</span></label>
         <label class="f"><span>Title</span><input type="text" data-in="cTitle" value="${esc(m.title || '')}" maxlength="60" placeholder="${esc(G.promo.name + ' universe')}"></label>
-        <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="What kind of world is it? Who's on top? Which company would you take over?">${esc(m.desc || '')}</textarea></label>
-        <div class="tiny muted" style="margin:6px 0 10px">You can have ${saveShareMax()} worlds shared at once${mineW ? ` (you have ${mineW})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
-        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishWorld" ${mineW >= saveShareMax() || cos.length < 2 ? 'disabled' : ''}>${mineW >= saveShareMax() ? 'Remove an old world in My uploads first' : cos.length < 2 ? 'A world needs at least 2 companies' : '🌍 Share this world'}</button>`}`;
+        <div id="cw-upd">${old ? `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:8px">You already shared a world called <b>${esc(old.title)}</b> (${old.upd ? 'updated ' + dayOf(old.upd) : 'shared ' + dayOf(old.created)}).</div>
+          <div class="seg-ctl sm"><button class="${upd ? 'on' : ''}" data-act="cUpd" data-id="1" aria-pressed="${upd}">Update it</button><button class="${upd ? '' : 'on'}" data-act="cUpd" data-id="" aria-pressed="${!upd}">Share as new</button></div>
+          <div class="tiny muted" style="margin-top:6px">${upd ? 'Its listing, likes and player count stay, and new players get this version. Games already started in it carry on as they are.' : 'Both worlds will be listed, with the same name.'}</div></div>` : ''}</div>
+        <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="${upd && old.desc ? esc(old.desc.slice(0, 120)) : 'What kind of world is it? Who\'s on top? Which company would you take over?'}">${esc(m.desc || '')}</textarea></label>
+        <div class="tiny muted" style="margin:6px 0 10px">${upd ? 'Leave the description empty to keep the old one. ' : ''}You can have ${saveShareMax()} worlds shared at once${mineW ? ` (you have ${mineW})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
+        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishWorld" ${full || cos.length < 2 ? 'disabled' : ''}>${full ? 'Remove an old world in My uploads first' : cos.length < 2 ? 'A world needs at least 2 companies' : upd ? '🌍 Update this world' : '🌍 Share this world'}</button>`}`;
       return modal('🌐 Community', body);
     }
     body += whatCtl + ``;
@@ -14023,7 +14357,7 @@ function modalCommunity(m) {
       ${usesGot ? `<div class="tiny muted" style="margin-top:6px">Your uploads have been added or played ${usesGot} time${usesGot > 1 ? 's' : ''}.</div>` : ''}
       <button class="btn block" style="margin-top:10px" data-act="cEditProfile">✏️ ${pr ? 'Edit profile' : 'Set up your profile'}</button></div>
       <div class="sec">Your uploads</div>`;
-    body += `<div class="list">${mine.map(i => `<div class="item"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? '💾 Save · week ' + (+i.sum?.week || 1) : kindLbl({ ...i, sum: i.sum || {} })} · ${new Date(i.created).toLocaleDateString()}</div></div><button class="btn sm bad" data-act="cDel" data-id="${esc(i.author + '|' + i.id)}">Delete</button></div>`).join('') || '<div class="empty">You haven\'t shared anything yet.</div>'}</div>`;
+    body += `<div class="list">${mine.map(i => `<div class="item"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? '💾 Save · week ' + (+i.sum?.week || 1) : kindLbl({ ...i, sum: i.sum || {} })} · ${dayOf(i.created)}${+i.upd ? ' · updated ' + dayOf(+i.upd) : ''}</div></div><button class="btn sm bad" data-act="cDel" data-id="${esc(i.author + '|' + i.id)}">Delete</button></div>`).join('') || '<div class="empty">You haven\'t shared anything yet.</div>'}</div>`;
     if (liked.length) body += `<div class="sec">Liked (${liked.length})</div><div class="list">${liked.map(i => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">by ${esc(authorName(i.author))} · ❤️ ${i.nLikes}</div></div></button>`).join('')}</div>`;
     body += sbAccountCard();
   }
@@ -14216,7 +14550,7 @@ function modalEditProfile(m) {
 }
 function cvHead(i, key, what) {
   const liked = iLike(key);
-  return `<div class="cv-head"><button class="cv-by" data-act="cCreator" data-id="${esc(i.author)}">${creatorAv(i.author, 34)}<span><b>${esc(authorName(i.author))}</b>${flairTag(i.author)}<span class="tiny muted">${esc(what)} · ${new Date(i.created).toLocaleDateString()}</span></span><span class="muted">›</span></button>
+  return `<div class="cv-head"><button class="cv-by" data-act="cCreator" data-id="${esc(i.author)}">${creatorAv(i.author, 34)}<span><b>${esc(authorName(i.author))}</b>${flairTag(i.author)}<span class="tiny muted">${esc(what)} · ${dayOf(i.created)}${i.upd ? ' · updated ' + dayOf(i.upd) : ''}</span></span><span class="muted">›</span></button>
     <button class="btn sm cv-like ${liked ? 'on' : ''}" data-act="cLike" data-id="${esc(key)}" ${COMM.me ? '' : 'disabled'}>❤️ ${i.nLikes || 0}</button></div>${i.nUses ? `<div class="tiny muted" style="margin:-4px 0 6px">${i.nUses} player${i.nUses > 1 ? 's' : ''} ${i.kind === 'save' || i.kind === 'world' ? 'playing this' : 'added this'}</div>` : ''}`;
 }
 function modalCView(m) {
@@ -14617,26 +14951,32 @@ const CREATOR_ACTIONS = {
     }
     catch (e) { if (px) pixDrop(COMM.me, px); toast(e?.code === 'pix_slots' ? `This roster's photos need ${e.need} photo slot${e.need === 1 ? '' : 's'} and you have ${e.free} free (${pixSlots()} in all${isSup() ? '' : ', 10 as a Supporter'}). Delete an older roster with photos first.` : e?.code === 'pix_big' ? 'One of the photos is too big to share. Swap it for a smaller one.' : e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
+  cUpd(v) { UI.modal.asNew = !v; render(); },
   shareWorld() { if (G) openModal({ type: 'community', tab: 'share', what: 'world' }); },
   async cPublishWorld() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
     if (isRude(m.title) || isRude(m.desc)) return toast('Please remove the rude words first.');
     if (typeof CompressionStream === 'undefined') return toast('This browser can\'t pack worlds. Try an up-to-date browser.');
-    if (COMM.mine.filter(x => x.kind === 'world').length >= saveShareMax()) return toast('Remove an old world first.');
+    const old = sameWorld(m), upd = !!old && m.asNew !== true;
+    if (!upd && COMM.mine.filter(x => x.kind === 'world').length >= saveShareMax()) return toast('Remove an old world first.');
     try {
       const wd = makeWorld(m.mine !== false);
       for (const c of wd.cos) for (const t of c.titles || []) if (t.photo) { t.photo = await beltShare(t.photo); if (!t.photo) delete t.photo; }
       if (wd.cos.some(c => isRude(c.name) || c.roster.some(w => isRude(w.name)))) return toast('Please rename anything rude in the world first.');
-      const id = uid(), all = worldAllW(wd), belts = worldAllT(wd); let px = 0, left = 0;
+      const id = upd ? old.id : uid(), all = worldAllW(wd), belts = worldAllT(wd); let px = 0, left = 0;
       // photos (belt photos too) travel in the player's photo slots, like a shared roster's. When they don't all fit, the
       // free slots are filled in order (your own company first); with no free slot at all, only small pixel photos come along
-      try { const pk = { wrestlers: all, titles: belts }; px = await pixSplit(pk, id, true); left = pk.pixLeft || 0; }
+      try { const pk = { wrestlers: all, titles: belts }; px = await pixSplit(pk, id, true, upd ? old : null); left = pk.pixLeft || 0; }
       catch (e) { if (e?.code !== 'pix_slots' && e?.code !== 'pix_big') throw e; for (const w of [...all, ...belts]) if (String(w.photo || '').length > 6000) { w.photo = ''; left++; } }
       const data = await gz(JSON.stringify(wd));
-      const item = { id, title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe', desc: (m.desc || '').trim().slice(0, 300), kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: Date.now(), sum: worldSummary(wd), save: data, ...(px ? { px } : {}) };
-      try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); } catch (e) { if (px) pixDrop(COMM.me, px); throw e; }
+      const desc = (m.desc || '').trim().slice(0, 300) || (upd ? String(old.desc || '').slice(0, 300) : '');
+      const item = { id, title: upd ? String(old.title || '').slice(0, 60) : worldTitle(m), desc, kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: upd ? +old.created || Date.now() : Date.now(), ...(upd ? { upd: Date.now() } : {}), sum: worldSummary(wd), save: data, ...(px ? { px } : {}) };
+      const was = pxList(old && upd ? old : null), now = pxList(item);
+      // an update takes the old one's place in the list; its photo slots that the new version doesn't use are cleared after
+      try { await commWrite(COMM.me, upd ? COMM.mine.map(x => x === old ? item : x) : [item, ...COMM.mine].slice(0, 30)); } catch (e) { if (px) pixDrop(COMM.me, now.filter(k => !was.includes(k))); throw e; }
+      if (upd) pixDrop(COMM.me, was.filter(k => !now.includes(k)));
       UI.modal = { type: 'community', tab: 'mine' }; render();
-      toast(left ? `World shared. ${left} photo${left === 1 ? '' : 's'} didn't fit in your free photo slots, so ${left === 1 ? 'that wrestler shows' : 'those wrestlers show'} a pixel face for other players. Delete an older roster with photos to make room.` : 'World shared with the community.');
+      toast(upd ? `World updated.${left ? ` ${left} photo${left === 1 ? '' : 's'} didn't fit in your free photo slots, so ${left === 1 ? 'that wrestler shows' : 'those wrestlers show'} a pixel face.` : ' New players get this version.'}` : left ? `World shared. ${left} photo${left === 1 ? '' : 's'} didn't fit in your free photo slots, so ${left === 1 ? 'that wrestler shows' : 'those wrestlers show'} a pixel face for other players. Delete an older roster with photos to make room.` : 'World shared with the community.');
     } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   cWorldGo(key, el) {
@@ -15202,6 +15542,7 @@ const EV_MEM = {
   payLeak: [[8, 'You gave me a raise after the pay leak'], [-6, 'You told me to earn my pay']],
   homecoming: [[6, 'You featured me at my hometown show'], [-2]],
   retireTalk: [[6, 'You gave me one last run'], [5, 'You asked me to stay']],
+  farewell: [[5, 'You gave me a proper send-off'], [3, 'You asked me to stay']],
   doctor: [[3, 'You rested me when I was worn out'], [0]],
   earlyReturn: [[3, 'You let me come back early'], [-2]],
   jealous: [[5, 'You put me in the title picture'], [-4, 'You told me to earn a title shot'], [0]],
@@ -15618,7 +15959,9 @@ const MEDIA = {
   tour: { ic: '🌐', n: 'Media tour', d: 'Travel doing press. Your company gains fans too.', long: true, wks: 3, pop: 9, mo: 8, fans: .03, cost: true },
   indies: { ic: '🤼', n: 'Work the indies', d: 'Wrestle on indie shows. Sharpens their ring work.', long: true, wks: 4, pop: 8, mo: 10, ring: 3, fit: true },
   // one outside booking from an indie dates clause (indieClash); never picked from the Media screen
-  gig: { ic: '🤼', n: 'Indie date', d: 'An outside booking on the same night as your show.', long: true, wks: 1, pop: 0, mo: 0, hide: true }
+  gig: { ic: '🤼', n: 'Indie date', d: 'An outside booking on the same night as your show.', long: true, wks: 1, pop: 0, mo: 0, hide: true },
+  // off TV while vignettes hype a new character (rpkWeek); never picked from the Media screen
+  rpk: { ic: '🎭', n: 'Repackaging', d: 'Off TV while vignettes hype a new character.', long: true, wks: 2, pop: 0, mo: 0, hide: true }
 };
 const MEDIA_SLOTS = 3;
 const mText = (w, t) => { if (PER()) { ensurePers(); textFrom(w, t); } };
@@ -15722,6 +16065,7 @@ function mediaWeek() {
     if (!w.away) continue;
     const M = MEDIA[w.away.k];
     if (!w.contract || !M) { delete w.away; continue; }
+    if (w.away.k === 'rpk') continue; // rpkWeek brings them back with the new character
     if (G.week + 1 < w.away.until) continue;
     if (w.away.k === 'gig') {
       const gm = (G.phone || []).find(m => m.gig && m.wid === w.id && m.gig.wk === w.away.from);
@@ -15742,6 +16086,210 @@ function mediaWeek() {
     mText(w, pick(['I\'m back. Put me on the show, the fans are waiting.', 'Good to be home. Let\'s use this buzz while it lasts.', 'Back and ready. Give me something big.']));
   }
 }
+// =====================================================================
+//  Repackaging: give a stale wrestler a new name, character and look
+//  w.gimK (character type), w.gimWk (week this character started), w.gims (past characters),
+//  w.rpk (a repackage in progress), w.rpkNew ({wk, r}: just debuted, for the Debut / Return angle)
+// =====================================================================
+const RPK_CHARS = {
+  '': { n: 'Keep it open', d: 'No set type. A new name and look, and they find the character as they go.' },
+  monster: { n: 'Monster', d: 'Scary and unstoppable. Suits powerhouses and brawlers.', fit: (w, d) => ['Powerhouse', 'Brawler'].includes(w.style) ? 8 : -8 },
+  fighter: { n: 'Legit fighter', d: 'No jokes, just fights. Suits strong ring workers who don\'t talk much.', fit: (w, d) => (w.ring >= 65 ? 6 : -4) + (['Technician', 'Brawler'].includes(w.style) ? 3 : 0) },
+  flyer: { n: 'Daredevil', d: 'Takes huge risks every night. Only works for high flyers.', fit: (w, d) => w.style === 'High Flyer' ? 10 : -10 },
+  rock: { n: 'Rock star', d: 'Loud, flashy entrances. Needs charisma.', fit: (w, d) => (w.style === 'Showman' ? 5 : 0) + (w.cha >= 65 ? 5 : -5) },
+  comedy: { n: 'Comedy act', d: 'Can get very over, or become a joke. Charisma decides it.', fit: (w, d) => w.cha >= 68 ? 9 : -9, swing: 6 },
+  cult: { n: 'Cult leader', d: 'Dark, creepy and a great talker. Best as a heel.', fit: (w, d) => (w.mic >= 65 ? 7 : -6) + (d.align === 'heel' ? 3 : -5) },
+  hero: { n: 'People\'s hero', d: 'Stands up for the fans. Best as a face.', fit: (w, d) => (d.align === 'face' ? 5 : -8) + (w.cha >= 60 ? 3 : 0) },
+  snob: { n: 'Rich snob', d: 'Looks down on everyone. Best as a heel who can talk.', fit: (w, d) => (d.align === 'heel' ? 5 : -6) + (w.mic >= 60 ? 3 : -2) },
+  vet: { n: 'Grizzled veteran', d: 'Been there, done that. Needs some years behind them.', fit: (w, d) => w.age >= 34 ? 8 : w.age < 28 ? -10 : 0 },
+  mystery: { n: 'Masked mystery', d: 'Nobody knows who they are. Hides a weak talker.', fit: (w, d) => (w.mic < 55 ? 5 : 0) + (FACE_MASKS.has(parseInt(faceCode(d)[4], 36)) ? 4 : -3) }
+};
+// how the new character debuts: overnight, or off TV for a few weeks while vignettes hype it
+const RPK_BUILD = {
+  0: { n: 'Overnight', d: 'The new character is on this week\'s show. No build-up, so it is a gamble.', hit: -4, flop: 10 },
+  2: { n: '2 weeks', d: 'Off TV for 2 weeks while vignettes hype the new character.', hit: 5, flop: -3 },
+  4: { n: '4 weeks', d: 'A proper build. Off TV for 4 weeks of vignettes.', hit: 10, flop: -7 },
+  6: { n: '6 weeks', d: 'The full treatment. Safest, but they are gone for 6 weeks.', hit: 13, flop: -10 }
+};
+const RPK_VIG_COST = 500; // per vignette week, when finances are on
+const RPK_FIELDS = ['name', 'nick', 'short', 'align', 'hometown', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'look', 'body', 'lc', 'sym'];
+const RPK_RES = { hit: 'Hit', ok: 'Mixed', flop: 'Flop' };
+const gimWk = w => Math.max(1, Math.floor(+w.gimWk || +w.joined || 1));
+const gimAge = w => Math.max(0, (G?.week || 1) - gimWk(w));
+// 0 = fresh, 1 = very stale: how long they've been this character, how cold they are, how flat the crowd is
+function gimStale(w) {
+  const age = clamp((gimAge(w) - 16) / 60, 0, 1), cold = clamp(-(+w.momentum || 0) / 25, 0, 1), flat = w.pop < 40 ? 1 : w.pop < 55 ? .5 : 0;
+  return clamp(age * .45 + cold * .35 + flat * .2, 0, 1);
+}
+const gimHot = w => w.pop >= 65 && (+w.momentum || 0) > 5;
+const staleLabel = w => { const s = gimStale(w); return s >= .6 ? 'Stale' : s >= .35 ? 'Getting stale' : 'Fresh'; };
+const rpkSoon = w => !!(w.gims?.length && +w.gimWk && G.week - w.gimWk < 26);
+// the odds of a hit, a mixed reaction or a flop, and why. d is the new character (the builder's draft).
+function rpkOdds(w, d, wks) {
+  const why = [], s = gimStale(w), talk = ((+w.mic || 50) + (+w.cha || 50)) / 2, C = RPK_CHARS[d.gimK || ''] || RPK_CHARS[''], B = RPK_BUILD[wks] || RPK_BUILD[0];
+  let hit = 28 + s * 32, flop = 30 - s * 14;
+  why.push(s >= .6 ? [1, 'Stale character: fans are ready for something new'] : s >= .35 ? [1, 'Getting stale: a change could help'] : [0, 'Still fresh: there is less to gain']);
+  if (gimHot(w)) { hit -= 18; flop += 22; why.push([-1, `Fans love ${pn(w).them} as ${pn(w).they} ${pn(w).are} right now`]); }
+  const t = (talk - 55) * .45; hit += t; flop -= t * .6;
+  why.push(t >= 4 ? [1, 'Good talker: can sell a new character'] : t <= -4 ? [-1, 'Weak on the mic and charisma: hard to sell a new character'] : [0, 'Average on the mic']);
+  const f = C.fit ? C.fit(w, d) : 0;
+  if (f) { hit += f; flop -= f * .5; why.push([f > 0 ? 1 : -1, f > 0 ? `${C.n} suits ${pn(w).them}` : `${C.n} is a stretch for ${pn(w).them}`]); }
+  if (C.swing) { flop += C.swing; why.push([-1, `${C.n}: a bigger swing either way`]); }
+  hit += B.hit; flop += B.flop; why.push([B.hit > 0 ? 1 : -1, wks ? `${wks} weeks of vignettes build it up` : 'Overnight: no build-up']);
+  if (d.align && d.align !== w.align) { if (turnedSoon(w)) { flop += 8; why.push([-1, 'Turned too recently to switch sides again']); } else { hit += 4; why.push([1, `New character as a ${d.align}: a fresh start`]); } }
+  if (rpkSoon(w)) { hit -= 15; flop += 15; why.push([-1, 'Repackaged again too soon']); }
+  const cr = staffQ('writer'); if (cr) { hit += cr * 1.5; why.push([1, 'Your Writer helps sell it']); }
+  hit = clamp(Math.round(hit), 5, 85); flop = clamp(Math.round(flop), 5, 75); if (hit + flop > 95) flop = 95 - hit;
+  return { hit, flop, ok: 100 - hit - flop, s, hot: gimHot(w), why };
+}
+function rpkWhyNot(w) {
+  if (!w?.contract) return 'Only wrestlers on your roster can be repackaged.';
+  if (w.retired) return 'Retired wrestlers can\'t be repackaged.';
+  if (w.rpk) return `${w.name} is already being repackaged.`;
+  if (w.away) return `${w.name} is away right now. Wait until ${pn(w).re} back.`;
+  return '';
+}
+// the parts of the builder draft that make up the character, cleaned like a save
+function rpkTake(d) {
+  const o = {};
+  for (const k of RPK_FIELDS) if (d[k] !== undefined) o[k] = d[k];
+  o.name = String(o.name || '').trim().slice(0, 40);
+  o.short = String(o.short || '').replace(/[<>&"'`]/g, '').trim().slice(0, 20); if (!o.short) delete o.short;
+  for (const k of ['nick', 'hometown', 'finisher', 'signature']) o[k] = String(o[k] || '').trim().slice(0, 40);
+  o.theme = String(o.theme || '').trim().slice(0, 60); o.bio = String(o.bio || '').trim().slice(0, 400);
+  o.photo = safePhoto(o.photo); o.color = safeColor(o.color); o.align = o.align === 'heel' ? 'heel' : 'face';
+  if (!o.photo && !faceOK(o.look)) o.look = faceCode(d);
+  if (o.look != null && !faceOK(o.look)) delete o.look; if (o.body != null && !bodyOK(o.body)) delete o.body;
+  { const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) o.lc = lc; else delete o.lc; if (sy) o.sym = sy; else delete o.sym; }
+  return o;
+}
+const rpkSame = (w, o, k) => RPK_FIELDS.every(f => JSON.stringify(w[f] ?? '') === JSON.stringify(o[f] ?? '')) && (w.gimK || '') === (k || '');
+const gimsClean = a => (Array.isArray(a) ? a : []).filter(x => x && typeof x === 'object' && typeof x.n === 'string' && x.n.trim()).slice(-8).map(x => ({ n: x.n.trim().slice(0, 40), ...(typeof x.nick === 'string' && x.nick.trim() ? { nick: x.nick.trim().slice(0, 40) } : {}), ...(Object.hasOwn(RPK_CHARS, x.k) && x.k ? { k: x.k } : {}), ...(Object.hasOwn(RPK_RES, x.r) ? { r: x.r } : {}), ...(+x.from >= 1 ? { from: Math.floor(+x.from) } : {}), ...(+x.to >= 1 ? { to: Math.floor(+x.to) } : {}) }));
+function rpkClean(r) {
+  if (!r || typeof r !== 'object') return null;
+  const nw = cleanW(r.nw); if (!nw) return null;
+  const o = {}; for (const k of RPK_FIELDS) if (nw[k] !== undefined && nw[k] !== '') o[k] = nw[k];
+  const wks = Object.hasOwn(RPK_BUILD, r.wks) ? +r.wks : 0, num = (v, a, b) => clamp(Math.round(+v) || 0, a, b);
+  return { wk: Math.max(1, Math.floor(+r.wk) || 1), wks, ...(r.until != null ? { until: Math.floor(+r.until) || 1 } : {}), k: Object.hasOwn(RPK_CHARS, r.k) ? r.k : '', nw: o,
+    old: { n: String(r.old?.n || '').slice(0, 40), ...(typeof r.old?.nick === 'string' && r.old.nick ? { nick: r.old.nick.slice(0, 40) } : {}), k: Object.hasOwn(RPK_CHARS, r.old?.k) ? r.old.k : '', from: Math.max(1, Math.floor(+r.old?.from) || 1) },
+    o: { hit: num(r.o?.hit, 5, 85), flop: num(r.o?.flop, 5, 75), s: clamp(+r.o?.s || 0, 0, 1), hot: !!r.o?.hot }, vig: num(r.vig, 0, 6) };
+}
+// put the new character on them (the old one goes into their history)
+function rpkApply(w) {
+  const r = w.rpk; if (!r) return;
+  (w.gims ||= []).push({ n: w.name, ...(w.nick ? { nick: w.nick } : {}), ...(w.gimK ? { k: w.gimK } : {}), from: gimWk(w), to: G.week });
+  if (w.gims.length > 8) w.gims.splice(0, w.gims.length - 8);
+  const oldAlign = w.align, oldPhoto = w.photo || '';
+  for (const k of RPK_FIELDS) if (k !== 'name') { if (r.nw[k] === undefined) delete w[k]; else w[k] = r.nw[k]; }
+  if ((w.photo || '') !== oldPhoto) { delete w.photoGen; delete w.photoLocal; }
+  if (w.align !== oldAlign) w.turnWk = G.week;
+  w.name = r.nw.name || w.name;
+  if (r.k) w.gimK = r.k; else delete w.gimK;
+  w.gimWk = G.week;
+}
+function rpkStart(w, nw, wks, k) {
+  const o = rpkOdds(w, { ...nw, gimK: k }, wks);
+  w.rpk = { wk: G.week, wks, k, nw, old: { n: w.name, ...(w.nick ? { nick: w.nick } : {}), k: w.gimK || '', from: gimWk(w) }, o: { hit: o.hit, flop: o.flop, s: o.s, hot: o.hot }, vig: 0 };
+  let mood = '';
+  if (PER() && ['ego', 'hot'].includes(w.pers) && (w.trust ?? 50) < 50) { w.morale = clamp(w.morale - 8, 0, 100); mood = ` ${pn(w).They} ${pn(w).dont} like being told who to be.`; mText(w, pick(['A new character? I liked who I was. Fine. I\'ll try it.', 'You\'re changing my name? This better work, boss.', 'I don\'t love this. But I\'ll give it a shot.'])); }
+  else { w.morale = clamp(w.morale + 3, 0, 100); mText(w, pick(['A fresh start. I\'m excited, let\'s make it work.', 'New character, new me. I\'ve got ideas already.', 'Thanks for believing in a new direction. I won\'t let you down.'])); }
+  if (!wks) {
+    w.rpk.until = G.week; rpkApply(w);
+    news(`🎭 ${w.rpk.old.n} has been repackaged as ${w.name}${RPK_CHARS[k]?.fit ? `, a ${RPK_CHARS[k].n.toLowerCase()}` : ''}. The new character is on this week's show.`, 'story');
+    return `${w.rpk.old.n} is now ${w.name}. Fans react after this week's show.${mood}`;
+  }
+  const pulled = pullFromCards(w);
+  w.away = { k: 'rpk', until: G.week + wks, from: G.week, m: 1 };
+  news(`🎭 ${w.name} is off TV for ${wks} weeks. Vignettes will hype a brand new character.`, 'story');
+  return `${w.name} is off TV until week ${w.away.until} while vignettes air.${pulled ? ` Taken off ${pulled} booked segment${pulled === 1 ? '' : 's'}.` : ''}${mood}`;
+}
+// how the fans take it: a hit, a mixed reaction or a flop
+function rpkRoll(w) {
+  const r = w.rpk; if (!r) return;
+  const x = Math.random() * 100, res = x < r.o.hit ? 'hit' : x < 100 - r.o.flop ? 'ok' : 'flop';
+  const big = r.old.n !== w.name, s = r.o.s, before = w.pop, C = RPK_CHARS[r.k];
+  if (res === 'hit') { addPop(w, 6 + s * 10 + (big ? 3 : 0)); w.momentum = clamp(Math.max(0, w.momentum) + 18, -50, 50); w.morale = clamp(w.morale + 6, 0, 100); }
+  else if (res === 'ok') { addPop(w, 2); w.momentum = clamp(w.momentum + 5, -50, 50); }
+  else { w.pop = clamp(w.pop - (5 + (r.o.hot ? 8 : 0) + (big ? 3 : 0)), 1, 100); w.momentum = clamp(Math.min(0, w.momentum) - 14, -50, 50); w.morale = clamp(w.morale - 6, 0, 100); }
+  const last = w.gims?.[w.gims.length - 1]; if (last && last.to === r.until) last.r = res; else if (last && !last.r) last.r = res;
+  w.rpkNew = { wk: G.week, r: res };
+  const pp = `Pop ${Math.round(before)} → ${Math.round(w.pop)}`;
+  if (res === 'hit') { news(`🎭 ${big ? `${r.old.n} as ${w.name}` : `${w.name}'s new look`} is a hit! The fans have bought in. ${pp}.`, 'story'); mText(w, pick(['Did you hear that crowd? This character is working!', 'They love it. Best call you ever made.', 'I feel like a whole new star. Thank you.'])); }
+  else if (res === 'ok') news(`🎭 Mixed reaction to ${big ? `${r.old.n} as ${w.name}` : `${w.name}'s new look`}. Some fans are into it, some aren't sure yet. ${pp}.`, 'story');
+  else {
+    backfire({ src: 'Repackaging', h: `Fans aren't buying ${w.name}`, d: `${big ? `${r.old.n}'s new character` : `${w.name}'s new look`}${C?.fit ? ` as a ${C.n.toLowerCase()}` : ''} fell flat. The crowd is laughing at it, not with it.`, ids: [w.id], cost: [pp, 'Momentum down', 'Mood down'], cat: 'story' });
+    mText(w, pick(['That was rough out there. They hate it.', 'I knew this was a bad idea.', 'Can we fix this? The crowd isn\'t buying it.']));
+  }
+  delete w.rpk;
+  return res;
+}
+// end of the week: vignettes air, the new character debuts, and the fans react
+function rpkWeek() {
+  for (const w of G.wrestlers) {
+    const r = w.rpk; if (!r) continue;
+    if (!w.contract) { delete w.rpk; if (w.away?.k === 'rpk') delete w.away; continue; }
+    if (w.away?.k === 'rpk') {
+      r.vig = (r.vig || 0) + 1;
+      if (MON()) G.money -= RPK_VIG_COST;
+      const hint = r.nw.nick || r.nw.name;
+      news(pick([`📺 A mysterious vignette aired: "${hint}" is coming.`, `📺 Another strange video package hit the screen. Fans are guessing who "${hint}" is.`, `📺 The lights went out for a vignette: "${hint}". The crowd is buzzing.`]), 'story');
+      if (G.week + 1 < w.away.until) continue;
+      delete w.away; r.until = G.week; rpkApply(w); w.lastBooked = G.week + 1;
+      G.todos.unshift({ t: `${w.name} debuts: book a Debut / Return angle`, done: false });
+      rpkRoll(w);
+    } else if (r.until != null && G.week >= r.until) rpkRoll(w);
+  }
+  for (const w of G.wrestlers) if (w.rpkNew && G.week - w.rpkNew.wk > 4) delete w.rpkNew;
+}
+// on the profile: how fresh their character is, any repackage in progress, and who they used to be
+function gimBlock(w) {
+  const r = w.rpk, C = RPK_CHARS[w.gimK], st = staleLabel(w), col = st === 'Stale' ? 'var(--bad)' : st === 'Fresh' ? 'var(--good)' : 'var(--warn)';
+  const past = (w.gims || []).slice().reverse();
+  return `<div class="sec">Character</div><div class="card">
+    <div class="row small"><span class="muted sp">Character</span><b>${C?.fit ? esc(C.n) + ' · ' : ''}${gimAge(w)} wk</b></div>
+    <div class="row small"><span class="muted sp">Freshness</span><b style="color:${col}">${st}</b></div>
+    ${r ? `<div class="alert" style="margin-top:8px"><span class="ic">🎭</span><div class="sp small">${w.away?.k === 'rpk' ? `<b>Repackaging.</b> Vignettes air until week ${w.away.until}, then ${pn(w).they} debut${pn(w).s} as <b>${esc(r.nw.name)}</b>.` : `<b>New character this week.</b> Fans react after the show.`}<div class="tiny muted">Odds: ${r.o.hit}% hit · ${100 - r.o.hit - r.o.flop}% mixed · ${r.o.flop}% flop</div></div>${w.away?.k === 'rpk' ? `<button class="btn sm" data-act="rpkStop" data-id="${w.id}">Call it off</button>` : ''}</div>`
+      : w.rpkNew ? `<div class="tiny muted" style="margin-top:6px">New character reaction: <b>${RPK_RES[w.rpkNew.r]}</b>. A Debut / Return angle in the next few weeks gets a boost.</div>` : ''}
+    ${past.length ? `<div class="tiny muted" style="margin-top:8px">Used to be: ${past.map(x => `<b>${esc(x.n)}</b>${x.k ? ` (${esc(RPK_CHARS[x.k]?.n || '')})` : ''}${x.r ? ` · ${RPK_RES[x.r]}` : ''}`).join(', ')}</div>` : ''}
+    ${w.contract && !w.retired && !r ? `<button class="btn block" style="margin-top:8px" data-act="rpkOpen" data-id="${w.id}">🎭 Repackage ${esc(lastName(w))}</button>` : ''}
+  </div>`;
+}
+// the builder in repackage mode: plan, character type and odds at the top
+function rpkPanel(m) {
+  const d = m.draft, w = W(d.id); if (!w) return '';
+  const wks = m.rpk.wks, o = rpkOdds(w, d, wks), champ = isChamp(w);
+  const chips = Object.entries(RPK_CHARS).map(([k, C]) => `<button class="chip ${((d.gimK || '') === k) ? 'on' : ''}" data-act="rpkChar" data-id="${k}" aria-pressed="${(d.gimK || '') === k}">${esc(C.n)}</button>`).join('');
+  const C = RPK_CHARS[d.gimK || ''] || RPK_CHARS[''];
+  return `<div class="card rpk-plan" style="margin-bottom:12px">
+    <div class="small" style="margin-bottom:6px">Give ${esc(w.name)} a new name, character and look. Stats stay the same. It is a risk: a fresh character can make a stale star, or it can flop.</div>
+    <div class="small muted">Right now: <b>${esc(staleLabel(w))}</b> · ${gimAge(w)} weeks as this character · Pop ${Math.round(w.pop)} · Momentum ${Math.round(w.momentum)}</div>
+    <div class="bd-lab" style="margin-top:10px">Character type</div><div class="chips">${chips}</div><div class="tiny muted" style="margin-top:4px">${esc(C.d)}</div>
+    <div class="bd-lab" style="margin-top:10px">Debut</div><div class="seg-ctl">${Object.entries(RPK_BUILD).map(([k, B]) => { const dis = champ && +k > 0; return `<button class="${wks === +k ? 'on' : ''}" data-act="rpkWks" data-id="${k}" aria-pressed="${wks === +k}" ${dis ? 'disabled' : ''}>${esc(B.n)}</button>`; }).join('')}</div>
+    <div class="tiny muted" style="margin-top:4px">${esc(RPK_BUILD[wks].d)}${wks && MON() ? ` Vignettes cost ${money(RPK_VIG_COST)} a week.` : ''}${champ ? ' Champions can only change overnight, so the title stays on TV.' : ''}</div>
+    <div class="rpk-odds" role="img" aria-label="Odds: ${o.hit}% hit, ${o.ok}% mixed, ${o.flop}% flop"><i class="h" style="width:${o.hit}%"></i><i class="m" style="width:${o.ok}%"></i><i class="f" style="width:${o.flop}%"></i></div>
+    <div class="row tiny" style="justify-content:space-between"><span style="color:var(--good)">${o.hit}% hit</span><span class="muted">${o.ok}% mixed</span><span style="color:var(--bad)">${o.flop}% flop</span></div>
+    <ul class="rpk-why">${o.why.map(([s, t]) => `<li class="${s > 0 ? 'up' : s < 0 ? 'dn' : ''}">${s > 0 ? '+' : s < 0 ? '−' : '·'} ${esc(t)}</li>`).join('')}</ul>
+    <div class="tiny muted">A hit gives a big jump in popularity and momentum. A flop costs both${o.hot ? ', and a lot more for a star the fans already love' : ''}. A new name makes the swing bigger either way.</div>
+  </div>`;
+}
+Object.assign(A, {
+  rpkOpen(id) { const w = W(id); const no = rpkWhyNot(w); if (no) return toast(no); const d = JSON.parse(JSON.stringify(w)); openModal({ type: 'editW', draft: d, rpk: { wks: isChamp(w) ? 0 : 2 } }); },
+  rpkChar(k) { const m = UI.modal; if (!m?.rpk || !Object.hasOwn(RPK_CHARS, k)) return; if (k) m.draft.gimK = k; else delete m.draft.gimK; render(); },
+  rpkWks(k) { const m = UI.modal; if (!m?.rpk || !Object.hasOwn(RPK_BUILD, k)) return; const w = W(m.draft.id); if (+k && w && isChamp(w)) return toast('Champions can only change overnight.'); m.rpk.wks = +k; render(); },
+  rpkGo() {
+    const m = UI.modal, d = m?.draft, w = d && W(d.id); if (!w || !m.rpk) return;
+    const no = rpkWhyNot(w); if (no) return toast(no);
+    const nw = rpkTake(d); if (!nw.name) return toast('Give them a name.');
+    { const where = wNameTaken(nw.name, d.id); if (where) return toast(`There's already a wrestler called ${nw.name} (${where}). Pick another name.`); }
+    if (nw.name !== w.name && nw.short && nw.short === w.short) delete nw.short; // the old short name goes with the old name
+    if (rpkSame(w, nw, d.gimK)) return toast('Change something first: the name, the look or the character.');
+    const wks = isChamp(w) ? 0 : m.rpk.wks, msg = rpkStart(w, nw, wks, Object.hasOwn(RPK_CHARS, d.gimK) ? d.gimK || '' : '');
+    dropDraft(); UI.modal = { type: 'wrestler', id: w.id }; commit(msg);
+  },
+  rpkStop(id) { const w = W(id); if (!w?.rpk || w.away?.k !== 'rpk') return;
+    confirmBox('Call off the repackage?', `${w.name} stays the character ${pn(w).they} ${pn(w).were}. The vignettes already aired are wasted, and ${pn(w).they} won't be happy about it.`, 'Call it off', () => {
+      delete w.rpk; delete w.away; w.morale = clamp(w.morale - 4, 0, 100); w.lastBooked = G.week; news(`🎭 The ${w.name} repackage was called off. ${pn(w).They} ${pn(w).are} back as before.`, 'story'); UI.modal = { type: 'wrestler', id: w.id }; commit('Repackage called off.'); }); }
+});
 function mediaView() {
   const used = mediaUsed(), away = signed().filter(w => w.away), log = mediaLog().slice(0, 8);
   const item = (k, M, full) => `<button class="item" data-act="mediaType" data-id="${k}" ${full ? 'disabled aria-disabled="true" style="opacity:.55"' : ''}><span class="mile-i">${M.ic}</span><div class="main"><div class="t">${M.n}</div><div class="d">${M.d}</div>
@@ -17680,7 +18228,7 @@ document.addEventListener('input', e => {
     else if (k === 'setQ' && UI.modal?.type === 'settings') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'rrQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'mediaQ') { UI.modal.q = v; debRender(el, e); }
-    else if (k === 'cTitle') UI.modal.title = v;
+    else if (k === 'cTitle') { const m = UI.modal, was = m.what === 'world' && G && sameWorld(m); m.title = v; if (m.what === 'world' && G && sameWorld(m) !== was) debRender(el, e); }
     else if (k === 'cDesc') UI.modal.desc = v;
     else if (k === 'sbEmail') UI.modal.email = v;
     else if (k === 'notebook') { G.notebook = v; debSave(); }
@@ -18004,8 +18552,11 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.98';
+const VERSION = '1.9.101';
 const WHATS_NEW = [
+  ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
+  ['🌍 Update a shared world', 'Share a world again with the same name and you can update the first one instead of listing a second copy. It keeps its listing, likes and player count, and new players get the latest version. Games already started in it carry on as they are. Pick Share as new if you want both.'],
+  ['🎭 Repackage a wrestler', 'Is someone stale? Open their profile and tap Repackage to give them a new name, character and look in the same workshop. Pick a character type (Monster, Cult leader, Rock star and more), then debut it overnight or take them off TV for 2 to 6 weeks of vignettes. You see the odds of a hit, a mixed reaction or a flop before you commit: stale characters, good talkers, a good fit and a longer build help, and changing a star the fans already love is a big risk. Past characters show on the profile, and a Debut / Return angle gets a boost for the new character.'],
   ['👕 Wrestler merch', 'Office → Merch shows your hot sellers. Design shirts, caps, posters, foam signs, action figures and replica titles for any wrestler in the workshop, with their face, a game icon and a slogan. New designs sell best and stars and champions sell most. You set each price and order print runs: sell out and you miss sales, and leftovers go to the bargain bin. Contract talks now include a merch cut that helps you sign people for less.'],
   ['📖 The record book', 'Office → Titles → Record book is the history of your company: every title\'s lineage, all-time records (most wins, longest streak, longest reign and more), head to head records for every pair who have met, the greatest matches you ever booked, every show\'s rating year by year, the year-end awards and your legends. Wrestler profiles now show who they\'ve faced most. Records kept from today on go back as far as your saved shows do.'],
   ['🎟️ House shows and tours', 'Tap the On the road line under the calendar to run up to 3 untelevised house shows a week, or plan a named tour of 3 to 5 shows a week. Cards book themselves from your crew rule (Develop, Mix or Draw). They earn some money, give newer wrestlers experience, build chemistry between pairs and keep people off TV happy. The cost is fatigue and a small injury risk, so watch your TV stars.'],
