@@ -4386,7 +4386,7 @@ function runShow(opts = {}) {
     gate: attendance * (big ? 35 : 20) /* ticket prices: tuned so money stays tight on Normal (it piled up to millions by week 20) */, tv: big ? 0 : Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
     // a big event is an extra night: pay, merch and TV money come in with the weekly shows
     merch: big ? 0 : Math.round(sum(crew.map(w => w.pop * w.pop * wsh(w))) / 9 * share * (perk('merch') ? 1.15 : 1)),
-    payroll: CON() && !big ? -Math.round(sum(crew.map(w => w.contract.salary * wsh(w))) * share) : 0, production: -Math.round((big ? 75000 : bShow ? 25000 : 14000) + G.fans * (big ? 1.1 : bShow ? 0.2 : 0.2)),
+    payroll: CON() && !big ? -Math.round(sum(crew.map(w => w.contract.salary * wsh(w))) * share) : 0, production: -Math.round((big ? 75000 : bShow ? 25000 : 14000) + G.fans * (big ? 1.8 : bShow ? 0.4 : 0.6) /* bigger crowds cost more to serve, so the gate can't outrun costs as fans grow */),
     staff: MON() && !big ? -Math.round(staffCost() / nS) : 0,
     guests: -guestFees(card)
   };
