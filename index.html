@@ -12827,7 +12827,7 @@ async function commInit() {
       const body = d.data() || {};
       for (const it of Array.isArray(body.items) ? body.items.slice(0, 25) : []) {
         if (!it || typeof it !== 'object') continue;
-        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 800000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {}, ...(it.kind === 'world' && pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}) }); continue; }
+        if (it.kind === 'save' || it.kind === 'world') { if (typeof it.save === 'string' && it.save.length < 800000) items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind, count: +it.count || 0, created: +it.created || 0, save: it.save, sum: it.sum && typeof it.sum === 'object' && !Array.isArray(it.sum) ? it.sum : {}, ...(it.kind === 'world' && pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}), ...(+it.upd > 0 ? { upd: +it.upd } : {}) }); continue; }
         if (!it.pack) continue;
         items.push({ id: cleanItemId(it.id), author: d.id, title: maskRude(String(it.title || 'Untitled').slice(0, 60)), desc: maskRude(String(it.desc || '').slice(0, 300)), kind: it.kind === 'wrestler' || (d.id !== 'featured' && !Array.isArray(it.pack.titles)) ? 'wrestler' : 'roster', count: +it.count || 0, created: +it.created || 0, pack: it.pack, ...(pxList(it).length ? { px: Array.isArray(it.px) ? pxList(it) : it.px } : {}) });
       }
@@ -12897,7 +12897,7 @@ const packWs = i => i._ws || (i._ws = cleanPack(pixPack(i))?.wrestlers || []);
 // ---- roster photos: a big roster's photos sit in their own gzipped row (pix1..pix10/<player id>), so they don't
 // fill the player's Community space, and Community only downloads them when someone opens that roster ----
 const PIX_SLOTS = 10, pixSlots = () => isSup() ? PIX_SLOTS : 5, pixMax = () => isSup() ? 790000 : 395000, PIX_INLINE = 40000;
-const PIX = new Map(), PIX_LOAD = new Map(), PIX_FAIL = new Set(), pixKey = i => i.author + '|' + i.id;
+const PIX = new Map(), PIX_LOAD = new Map(), PIX_FAIL = new Set(), pixKey = i => i.author + '|' + i.id + (i.upd ? '~' + i.upd : ''); // an updated world has new photos
 // a roster's photos sit in one slot (px: 3) or, for a huge roster, are spread over several (px: [2, 3, 4]); each slot row
 // says where its part starts
 const pxList = i => [...new Set((Array.isArray(i?.px) ? i.px : [i?.px]).filter(k => Number.isInteger(k) && k >= 1 && k <= PIX_SLOTS))].slice(0, PIX_SLOTS);
@@ -12977,10 +12977,12 @@ async function pixParts(shr, cap) {
 }
 // moves a pack's photos into free photo slots when they are too big to sit in the player's space.
 // fit: when they still don't fit after shrinking, fill the free slots and leave the rest out (pack.pixLeft says how many)
-async function pixSplit(pack, itemId, fit) {
+// swap: the upload this one replaces. Its slots count as free, used last so its photos stay whole for as long as possible
+async function pixSplit(pack, itemId, fit, swap) {
   const list = [...pack.wrestlers, ...(pack.titles || [])], photos = list.map(w => w.photo || '');
   if (sum(photos.map(x => x.length)) <= PIX_INLINE || typeof CompressionStream === 'undefined') return 0;
-  const used = new Set(COMM.mine.flatMap(pxList)), free = Array.from({ length: pixSlots() }, (_, k) => k + 1).filter(k => !used.has(k)), cap = pixMax() - 2000;
+  const used = new Set(COMM.mine.filter(x => !swap || x !== swap).flatMap(pxList)), was = new Set(pxList(swap)), cap = pixMax() - 2000,
+    free = Array.from({ length: pixSlots() }, (_, k) => k + 1).filter(k => !used.has(k)).sort((a, b) => was.has(a) - was.has(b));
   let shr = await Promise.all(photos.map(pixShrink)), parts = await pixParts(shr, cap);
   if (parts.length > free.length) { shr = await Promise.all(shr.map(photoSmall)); parts = await pixParts(shr, cap); }
   pack.pixLeft = 0;
@@ -13001,6 +13003,10 @@ async function pixSplit(pack, itemId, fit) {
   return px.length === 1 ? px[0] : px;
 }
 const pixDrop = (author, px) => Promise.all(pxList({ px }).map(k => cdb.doc('pix' + k + '/' + author).delete().catch(() => {})));
+// sharing a world again under the same name updates the first one: same listing, likes and plays, new content
+const worldTitle = m => (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe';
+const sameWorld = m => { const t = worldTitle(m).toLowerCase(); return COMM.mine.find(x => x && x.kind === 'world' && String(x.title || '').trim().toLowerCase() === t) || null; };
+const dayOf = t => new Date(t).toLocaleDateString();
 const kindLbl = i => i.kind === 'world' ? `🌍 World · ${Array.isArray(i.sum?.cos) ? i.sum.cos.length : 0} companies · ${+i.sum?.n || 0} wrestlers` : i.kind === 'roster' ? 'Roster · ' + (+i.count || 0) + ' wrestlers' : (+i.count || 1) > 1 ? (+i.count) + ' wrestlers' : 'Wrestler';
 const REPORT_WHY = [['rude', 'Rude or hateful'], ['spam', 'Spam or junk'], ['copied', 'Copied work or real photos'], ['personal', 'Personal details'], ['other', 'Something else']];
 // things this player reported: hidden for them right away
@@ -14038,7 +14044,7 @@ function modalCommunity(m) {
     const cnt = what === 'roster' ? signed().length : sel.length;
     const whatCtl = `<label class="f"><span>What to share</span><div class="seg-ctl"><button class="${what === 'roster' ? 'on' : ''}" data-act="cWhat" data-id="roster">Whole roster</button><button class="${what === 'pick' ? 'on' : ''}" data-act="cWhat" data-id="pick">Pick wrestlers</button><button class="${what === 'world' ? 'on' : ''}" data-act="cWhat" data-id="world">🌍 World</button></div></label>`;
     if (what === 'world') {
-      const mineW = COMM.mine.filter(x => x.kind === 'world').length, mineCo = m.mine !== false;
+      const mineW = COMM.mine.filter(x => x.kind === 'world').length, mineCo = m.mine !== false, old = sameWorld(m), upd = !!old && m.asNew !== true, full = !upd && mineW >= saveShareMax();
       ensureRivals();
       const cos = [...(mineCo ? [G, ...(G.cos || [])].map(c => ({ name: c.promo.name, n: (c === G ? signed() : (c.roster || []).filter(w => w.contract)).length, you: 1 })) : []), ...G.rivalPromos.map(r => ({ name: r.name, n: r.roster.length, tier: tierOf(r) }))];
       body += whatCtl + `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:6px">A world is the setting, not your game. Others start a new game in it, with every company run by the AI. They can open their own company or take one over, and they start the month before that company's big one.</div>
@@ -14047,9 +14053,12 @@ function modalCommunity(m) {
         <div class="tiny muted" style="margin-top:6px">Rosters, championships and past champions go in. Shows, stories in progress, money and notes don't.</div></div>
         <label class="todo"><input type="checkbox" data-in="cMine" ${mineCo ? 'checked' : ''}><span>Include ${multi() ? 'my companies' : 'my company'} as ${multi() ? 'AI companies' : 'an AI company'}</span></label>
         <label class="f"><span>Title</span><input type="text" data-in="cTitle" value="${esc(m.title || '')}" maxlength="60" placeholder="${esc(G.promo.name + ' universe')}"></label>
-        <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="What kind of world is it? Who's on top? Which company would you take over?">${esc(m.desc || '')}</textarea></label>
-        <div class="tiny muted" style="margin:6px 0 10px">You can have ${saveShareMax()} worlds shared at once${mineW ? ` (you have ${mineW})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
-        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishWorld" ${mineW >= saveShareMax() || cos.length < 2 ? 'disabled' : ''}>${mineW >= saveShareMax() ? 'Remove an old world in My uploads first' : cos.length < 2 ? 'A world needs at least 2 companies' : '🌍 Share this world'}</button>`}`;
+        <div id="cw-upd">${old ? `<div class="card" style="margin-bottom:10px"><div class="small" style="margin-bottom:8px">You already shared a world called <b>${esc(old.title)}</b> (${old.upd ? 'updated ' + dayOf(old.upd) : 'shared ' + dayOf(old.created)}).</div>
+          <div class="seg-ctl sm"><button class="${upd ? 'on' : ''}" data-act="cUpd" data-id="1" aria-pressed="${upd}">Update it</button><button class="${upd ? '' : 'on'}" data-act="cUpd" data-id="" aria-pressed="${!upd}">Share as new</button></div>
+          <div class="tiny muted" style="margin-top:6px">${upd ? 'Its listing, likes and player count stay, and new players get this version. Games already started in it carry on as they are.' : 'Both worlds will be listed, with the same name.'}</div></div>` : ''}</div>
+        <label class="f"><span>Description</span><textarea data-in="cDesc" maxlength="300" style="min-height:70px" placeholder="${upd && old.desc ? esc(old.desc.slice(0, 120)) : 'What kind of world is it? Who\'s on top? Which company would you take over?'}">${esc(m.desc || '')}</textarea></label>
+        <div class="tiny muted" style="margin:6px 0 10px">${upd ? 'Leave the description empty to keep the old one. ' : ''}You can have ${saveShareMax()} worlds shared at once${mineW ? ` (you have ${mineW})` : ''}. Everyone can see it, with your name. Keep it friendly.</div>
+        ${COMM.canWrite === false ? '<div class="alert warn"><span class="ic">🔒</span><div class="small">You can browse. Sharing needs access from the owner.</div></div>' : `<button class="btn pri block" data-act="cPublishWorld" ${full || cos.length < 2 ? 'disabled' : ''}>${full ? 'Remove an old world in My uploads first' : cos.length < 2 ? 'A world needs at least 2 companies' : upd ? '🌍 Update this world' : '🌍 Share this world'}</button>`}`;
       return modal('🌐 Community', body);
     }
     body += whatCtl + ``;
@@ -14067,7 +14076,7 @@ function modalCommunity(m) {
       ${usesGot ? `<div class="tiny muted" style="margin-top:6px">Your uploads have been added or played ${usesGot} time${usesGot > 1 ? 's' : ''}.</div>` : ''}
       <button class="btn block" style="margin-top:10px" data-act="cEditProfile">✏️ ${pr ? 'Edit profile' : 'Set up your profile'}</button></div>
       <div class="sec">Your uploads</div>`;
-    body += `<div class="list">${mine.map(i => `<div class="item"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? '💾 Save · week ' + (+i.sum?.week || 1) : kindLbl({ ...i, sum: i.sum || {} })} · ${new Date(i.created).toLocaleDateString()}</div></div><button class="btn sm bad" data-act="cDel" data-id="${esc(i.author + '|' + i.id)}">Delete</button></div>`).join('') || '<div class="empty">You haven\'t shared anything yet.</div>'}</div>`;
+    body += `<div class="list">${mine.map(i => `<div class="item"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${i.kind === 'save' ? '💾 Save · week ' + (+i.sum?.week || 1) : kindLbl({ ...i, sum: i.sum || {} })} · ${dayOf(i.created)}${+i.upd ? ' · updated ' + dayOf(+i.upd) : ''}</div></div><button class="btn sm bad" data-act="cDel" data-id="${esc(i.author + '|' + i.id)}">Delete</button></div>`).join('') || '<div class="empty">You haven\'t shared anything yet.</div>'}</div>`;
     if (liked.length) body += `<div class="sec">Liked (${liked.length})</div><div class="list">${liked.map(i => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="main"><div class="t">${esc(i.title)}</div><div class="d">by ${esc(authorName(i.author))} · ❤️ ${i.nLikes}</div></div></button>`).join('')}</div>`;
     body += sbAccountCard();
   }
@@ -14260,7 +14269,7 @@ function modalEditProfile(m) {
 }
 function cvHead(i, key, what) {
   const liked = iLike(key);
-  return `<div class="cv-head"><button class="cv-by" data-act="cCreator" data-id="${esc(i.author)}">${creatorAv(i.author, 34)}<span><b>${esc(authorName(i.author))}</b>${flairTag(i.author)}<span class="tiny muted">${esc(what)} · ${new Date(i.created).toLocaleDateString()}</span></span><span class="muted">›</span></button>
+  return `<div class="cv-head"><button class="cv-by" data-act="cCreator" data-id="${esc(i.author)}">${creatorAv(i.author, 34)}<span><b>${esc(authorName(i.author))}</b>${flairTag(i.author)}<span class="tiny muted">${esc(what)} · ${dayOf(i.created)}${i.upd ? ' · updated ' + dayOf(i.upd) : ''}</span></span><span class="muted">›</span></button>
     <button class="btn sm cv-like ${liked ? 'on' : ''}" data-act="cLike" data-id="${esc(key)}" ${COMM.me ? '' : 'disabled'}>❤️ ${i.nLikes || 0}</button></div>${i.nUses ? `<div class="tiny muted" style="margin:-4px 0 6px">${i.nUses} player${i.nUses > 1 ? 's' : ''} ${i.kind === 'save' || i.kind === 'world' ? 'playing this' : 'added this'}</div>` : ''}`;
 }
 function modalCView(m) {
@@ -14661,26 +14670,32 @@ const CREATOR_ACTIONS = {
     }
     catch (e) { if (px) pixDrop(COMM.me, px); toast(e?.code === 'pix_slots' ? `This roster's photos need ${e.need} photo slot${e.need === 1 ? '' : 's'} and you have ${e.free} free (${pixSlots()} in all${isSup() ? '' : ', 10 as a Supporter'}). Delete an older roster with photos first.` : e?.code === 'pix_big' ? 'One of the photos is too big to share. Swap it for a smaller one.' : e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Too big to share. Remove some photos or share fewer wrestlers.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
+  cUpd(v) { UI.modal.asNew = !v; render(); },
   shareWorld() { if (G) openModal({ type: 'community', tab: 'share', what: 'world' }); },
   async cPublishWorld() {
     const m = UI.modal; if (!cdb || !COMM.me) return toast('Sign in to share creations.');
     if (isRude(m.title) || isRude(m.desc)) return toast('Please remove the rude words first.');
     if (typeof CompressionStream === 'undefined') return toast('This browser can\'t pack worlds. Try an up-to-date browser.');
-    if (COMM.mine.filter(x => x.kind === 'world').length >= saveShareMax()) return toast('Remove an old world first.');
+    const old = sameWorld(m), upd = !!old && m.asNew !== true;
+    if (!upd && COMM.mine.filter(x => x.kind === 'world').length >= saveShareMax()) return toast('Remove an old world first.');
     try {
       const wd = makeWorld(m.mine !== false);
       for (const c of wd.cos) for (const t of c.titles || []) if (t.photo) { t.photo = await beltShare(t.photo); if (!t.photo) delete t.photo; }
       if (wd.cos.some(c => isRude(c.name) || c.roster.some(w => isRude(w.name)))) return toast('Please rename anything rude in the world first.');
-      const id = uid(), all = worldAllW(wd), belts = worldAllT(wd); let px = 0, left = 0;
+      const id = upd ? old.id : uid(), all = worldAllW(wd), belts = worldAllT(wd); let px = 0, left = 0;
       // photos (belt photos too) travel in the player's photo slots, like a shared roster's. When they don't all fit, the
       // free slots are filled in order (your own company first); with no free slot at all, only small pixel photos come along
-      try { const pk = { wrestlers: all, titles: belts }; px = await pixSplit(pk, id, true); left = pk.pixLeft || 0; }
+      try { const pk = { wrestlers: all, titles: belts }; px = await pixSplit(pk, id, true, upd ? old : null); left = pk.pixLeft || 0; }
       catch (e) { if (e?.code !== 'pix_slots' && e?.code !== 'pix_big') throw e; for (const w of [...all, ...belts]) if (String(w.photo || '').length > 6000) { w.photo = ''; left++; } }
       const data = await gz(JSON.stringify(wd));
-      const item = { id, title: (m.title || '').trim().slice(0, 60) || G.promo.name + ' universe', desc: (m.desc || '').trim().slice(0, 300), kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: Date.now(), sum: worldSummary(wd), save: data, ...(px ? { px } : {}) };
-      try { await commWrite(COMM.me, [item, ...COMM.mine].slice(0, 30)); } catch (e) { if (px) pixDrop(COMM.me, px); throw e; }
+      const desc = (m.desc || '').trim().slice(0, 300) || (upd ? String(old.desc || '').slice(0, 300) : '');
+      const item = { id, title: upd ? String(old.title || '').slice(0, 60) : worldTitle(m), desc, kind: 'world', count: sum(wd.cos.map(c => c.roster.length)), created: upd ? +old.created || Date.now() : Date.now(), ...(upd ? { upd: Date.now() } : {}), sum: worldSummary(wd), save: data, ...(px ? { px } : {}) };
+      const was = pxList(old && upd ? old : null), now = pxList(item);
+      // an update takes the old one's place in the list; its photo slots that the new version doesn't use are cleared after
+      try { await commWrite(COMM.me, upd ? COMM.mine.map(x => x === old ? item : x) : [item, ...COMM.mine].slice(0, 30)); } catch (e) { if (px) pixDrop(COMM.me, now.filter(k => !was.includes(k))); throw e; }
+      if (upd) pixDrop(COMM.me, was.filter(k => !now.includes(k)));
       UI.modal = { type: 'community', tab: 'mine' }; render();
-      toast(left ? `World shared. ${left} photo${left === 1 ? '' : 's'} didn't fit in your free photo slots, so ${left === 1 ? 'that wrestler shows' : 'those wrestlers show'} a pixel face for other players. Delete an older roster with photos to make room.` : 'World shared with the community.');
+      toast(upd ? `World updated.${left ? ` ${left} photo${left === 1 ? '' : 's'} didn't fit in your free photo slots, so ${left === 1 ? 'that wrestler shows' : 'those wrestlers show'} a pixel face.` : ' New players get this version.'}` : left ? `World shared. ${left} photo${left === 1 ? '' : 's'} didn't fit in your free photo slots, so ${left === 1 ? 'that wrestler shows' : 'those wrestlers show'} a pixel face for other players. Delete an older roster with photos to make room.` : 'World shared with the community.');
     } catch (e) { toast(e?.code === 'full' ? FULL_MSG : e?.code === 'too_big' || e?.code === 'big' ? 'Your space is full. Remove an older upload.' : e?.code === 'invalid_argument' ? 'You don\'t have permission to share here. Ask the owner for contributor access.' : 'Sharing failed. Try again in a moment.'); }
   },
   cWorldGo(key, el) {
@@ -17932,7 +17947,7 @@ document.addEventListener('input', e => {
     else if (k === 'setQ' && UI.modal?.type === 'settings') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'rrQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'mediaQ') { UI.modal.q = v; debRender(el, e); }
-    else if (k === 'cTitle') UI.modal.title = v;
+    else if (k === 'cTitle') { const m = UI.modal, was = m.what === 'world' && G && sameWorld(m); m.title = v; if (m.what === 'world' && G && sameWorld(m) !== was) debRender(el, e); }
     else if (k === 'cDesc') UI.modal.desc = v;
     else if (k === 'sbEmail') UI.modal.email = v;
     else if (k === 'notebook') { G.notebook = v; debSave(); }
@@ -18256,9 +18271,10 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.99';
+const VERSION = '1.9.100';
 const WHATS_NEW = [
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
+  ['🌍 Update a shared world', 'Share a world again with the same name and you can update the first one instead of listing a second copy. It keeps its listing, likes and player count, and new players get the latest version. Games already started in it carry on as they are. Pick Share as new if you want both.'],
   ['🎭 Repackage a wrestler', 'Is someone stale? Open their profile and tap Repackage to give them a new name, character and look in the same workshop. Pick a character type (Monster, Cult leader, Rock star and more), then debut it overnight or take them off TV for 2 to 6 weeks of vignettes. You see the odds of a hit, a mixed reaction or a flop before you commit: stale characters, good talkers, a good fit and a longer build help, and changing a star the fans already love is a big risk. Past characters show on the profile, and a Debut / Return angle gets a boost for the new character.'],
   ['👕 Wrestler merch', 'Office → Merch shows your hot sellers. Design shirts, caps, posters, foam signs, action figures and replica titles for any wrestler in the workshop, with their face, a game icon and a slogan. New designs sell best and stars and champions sell most. You set each price and order print runs: sell out and you miss sales, and leftovers go to the bargain bin. Contract talks now include a merch cut that helps you sign people for less.'],
   ['📖 The record book', 'Office → Titles → Record book is the history of your company: every title\'s lineage, all-time records (most wins, longest streak, longest reign and more), head to head records for every pair who have met, the greatest matches you ever booked, every show\'s rating year by year, the year-end awards and your legends. Wrestler profiles now show who they\'ve faced most. Records kept from today on go back as far as your saved shows do.'],
