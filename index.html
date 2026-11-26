@@ -9141,6 +9141,8 @@ function modalNegotiate(m) {
    ${tp ? `<div class="tiny muted" style="margin-top:4px">👥 Partner ${esc(tp.w.name)} earns ${money(tp.sal)}/wk. ${esc(lastName(w))} will compare.</div>` : ''}
    ${!w.contract && blastOn() ? `<div class="tiny" style="color:var(--bad);margin-top:4px">📢 Indie stars saw ${esc(nameOf(G.blast.wid))}'s posts about you. They're a little warier until week ${G.blast.until}.</div>` : ''}
    ${ws.some(x => x.refusedWk === G.week) ? '<div class="small" style="color:var(--bad);margin-top:6px">They said no. Try again next week.</div>' : ''}</div>
+   ${m.counter && !team ? `<div class="card" style="margin-top:10px;border-color:var(--accent)"><div class="row small"><span class="sp"><b>💬 Counter-offer</b><div class="tiny muted">${esc(lastName(w))} won't take ${money(m.salary)}, but would sign for ${money(m.counter.sal)}/wk over ${lenLabel(m.counter.weeks)}. It stands until you make another offer.</div></span><button class="btn sm pri" data-act="takeCounter">Accept ${money(m.counter.sal)}</button></div></div>` : ''}
+   ${w.contract && !team && m.salary < w.contract.salary ? `<div class="tiny" style="color:var(--bad);margin-top:6px">This is a pay cut. Even if they sign, they won't be happy about it.</div>` : ''}
    ${teamBox}${indieBox}${datesBox(ws, m)}
    <label class="f"><span id="negSalLbl">Weekly salary${team ? ', each' : ''}: ${money(m.salary)}</span><input type="range" min="${Math.max(300, Math.round(ask * 0.4 / 100) * 100)}" max="${Math.round(ask * 2 / 100) * 100}" step="100" value="${m.salary}" data-in="negSal" style="width:100%"></label>
    <label class="f"><span>Length</span><div class="seg-ctl">${DEAL_LENS.map(([n, l]) => `<button class="${m.weeks === n ? 'on' : ''}" data-act="negLen" data-id="${n}">${l}${n === prefLen(w) ? ' ★' : ''}</button>`).join('')}</div></label>
@@ -10475,14 +10477,19 @@ const A = {
   offer() {
     const m = UI.modal, w = W(m.id); if (!w) return;
     const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
-    const c = team ? teamChance(ws, m.salary, m.weeks, m.indie, m.dates).c : offerChance(w, m.salary, m.weeks, { indie: m.indie, dates: m.dates });
+    const c = m.sure ? 1 : team ? teamChance(ws, m.salary, m.weeks, m.indie, m.dates).c : offerChance(w, m.salary, m.weeks, { indie: m.indie, dates: m.dates });
+    delete m.sure;
     const newbies = ws.filter(x => !x.contract);
     if (G.settings.finances && newbies.length && G.money < m.salary * 2 * newbies.length) return toast(`Not enough money to cover their first weeks.`);
     const tn = team ? (teamFor(w)?.name || ws.map(x => lastName(x)).join(' & ')) : '';
     if (Math.random() < c) {
       for (const x of ws) {
-        const was = !!x.contract, ask = team ? teamAsk(x, ws, m.weeks) : askFor(x, m.weeks);
-        x.contract = { salary: m.salary, weeks: m.weeks, ...(wantsIndie(x) && m.indie ? { indie: true } : {}), ...(wantsDates(x) && m.dates > 0 ? { dates: m.dates } : {}) }; x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100); delete x.courted; delete x.payGap;
+        const was = !!x.contract, old = x.contract?.salary || 0, ask = team ? teamAsk(x, ws, m.weeks) : askFor(x, m.weeks);
+        x.contract = { salary: m.salary, weeks: m.weeks, ...(wantsIndie(x) && m.indie ? { indie: true } : {}), ...(wantsDates(x) && m.dates > 0 ? { dates: m.dates } : {}) };
+        // a pay cut is signed, not loved: they take the deal and hold it against you
+        if (was && m.salary < old) { x.morale = clamp(x.morale - 6, 0, 100); remember(x, -5, 'You cut my pay'); }
+        else x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100);
+        delete x.courted; delete x.payGap;
         if (G.guests) G.guests = G.guests.filter(d => d.id !== x.id);
         if (!was) { x.joined = G.week; x.lastBooked = G.week; }
         if (!team) news(`✍️ ${x.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks})${x.contract.indie ? ', with indie dates' : ''}${x.contract.dates ? `, for ${dPlural(x.contract.dates)}` : ''}.`, 'contract');
@@ -10492,6 +10499,14 @@ const A = {
       for (const x of ws) if (wantsDates(x) && m.dates === 0) remember(x, -3, 'You wouldn\'t give me a lighter schedule');
       UI.modal = null; commit(team ? `${tn} said yes!` : `${w.name} said yes!`);
     } else {
+      // a near miss gets a counter-offer once, instead of a flat no
+      const ask1 = askFor(w, m.weeks);
+      if (!team && !m.countered && c >= 0.15 && m.salary >= ask1 * 0.7) {
+        const sal = Math.max(m.salary + 100, Math.round((m.salary + ask1 * (w.pers === 'money' && PER() ? 1.1 : 1)) / 2 / 100) * 100);
+        m.countered = true; m.counter = { sal, weeks: m.weeks }; w.morale = clamp(w.morale - 1, 0, 100);
+        return commit(`${w.name} came back with ${money(sal)}/wk. Take it, or make another offer.`);
+      }
+      delete m.counter;
       let blasted = null;
       for (const x of ws) {
         x.refusedWk = G.week; x.morale = clamp(x.morale - 4, 0, 100);
@@ -10503,6 +10518,7 @@ const A = {
       commit(blasted ? `${blasted.name} said no, and posted about it. Check your phone.` : `${team ? tn : w.name} said no. ${c > 0.3 ? 'It was close.' : 'Try a better offer.'}`);
     }
   },
+  takeCounter() { const m = UI.modal; if (!m?.counter) return; m.salary = m.counter.sal; m.weeks = m.counter.weeks; delete m.counter; m.sure = true; A.offer(); },
   release(id) {
     const w = W(id); const buyout = Math.round(w.contract.salary * w.contract.weeks * 0.25);
     confirmBox('Release ' + w.name + '?', `${MON() ? `Pay a ${money(buyout)} buyout. ` : ''}They become an indie star.`, 'Release', () => {
@@ -14004,16 +14020,19 @@ const relTrend = w => isFinite(+w.relWas) ? Math.round(w.trust - w.relWas) : 0;
 const sitMax = () => 3 + (staffQ('talent') ? 1 : 0) + (staffQ('talent') >= 4 ? 1 : 0);
 const sitUsed = () => G.sit?.wk === G.week ? +G.sit.used || 0 : 0;
 const sitLeft = () => Math.max(0, sitMax() - sitUsed());
-const SIT_COST = 2500;
+// dinner costs about half a week of their pay, so it isn't free money for a rich company
+const sitCost = w => MON() ? Math.max(2500, Math.round((w?.contract?.salary || 0) * 0.5 / 100) * 100) : 0;
+// how much a night out means depends on who they are (only when personalities are on)
+const DIN_FEEL = { money: 1.4, star: 1.1, hot: 1, ego: .8, loyal: .7, work: .45 };
 const sitHurt = w => (w.mem || []).find(m => m.v < 0 && G.week - m.wk <= 8);
 const SIT = {
-  air: { ic: '🤝', n: 'Clear the air', d: w => { const h = sitHurt(w); return h ? `Talk through "${h.t}". Best when they feel wronged` : 'Nothing big to clear up, so only a small lift'; } },
-  praise: { ic: '👏', n: 'Praise their work', d: w => G.week - (w.praisedWk ?? -99) < 4 ? 'You praised them lately. It won\'t mean much again so soon' : PER() && (w.pers === 'ego' || w.pers === 'star') ? 'Quick lift. They love hearing it' : 'Quick lift for trust and mood' },
+  air: { ic: '🤝', n: 'Clear the air', d: w => { const h = sitHurt(w); return h ? `Talk through "${h.t}"` : 'Check in and see where their head is'; } },
+  praise: { ic: '👏', n: 'Praise their work', d: w => G.week - (w.praisedWk ?? -99) < 4 ? `You praised them in week ${w.praisedWk}` : 'Tell them they are doing good work' },
   pitch: { ic: '🗺️', n: 'Pitch their next run', d: w => (G.promises || []).some(p => p.wid === w.id) ? 'You already owe them a promise' : `Promise them a win by week ${G.week + 3}. Keep it and trust jumps` },
-  dinner: { ic: '🍽️', n: 'Take them to dinner', d: w => G.week - (w.dinWk ?? -99) < 6 ? `You took them out in week ${w.dinWk}. Wait a few weeks` : `${MON() ? money(SIT_COST) + ' · ' : ''}Big lift with almost anyone` },
-  law: { ic: '⚠️', n: 'Lay down the law', d: () => 'No refusals or leaks for 4 weeks. Trust and mood drop' }
+  dinner: { ic: '🍽️', n: 'Take them to dinner', d: w => G.week - (w.dinWk ?? -99) < 6 ? `You took them out in week ${w.dinWk}. Wait a few weeks` : `${MON() ? money(sitCost(w)) + ' · ' : ''}A night out on the company. Not everyone cares for it` },
+  law: { ic: '⚠️', n: 'Lay down the law', d: () => 'No refusals or leaks for 4 weeks, but it costs you goodwill' }
 };
-const sitOff = (w, k) => k === 'pitch' ? (G.promises || []).some(p => p.wid === w.id) : k === 'dinner' ? G.week - (w.dinWk ?? -99) < 6 || (MON() && G.money < SIT_COST) : false;
+const sitOff = (w, k) => k === 'pitch' ? (G.promises || []).some(p => p.wid === w.id) : k === 'dinner' ? G.week - (w.dinWk ?? -99) < 6 || (MON() && G.money < sitCost(w)) : false;
 function sitDo(w, k) {
   ensureRel();
   if (!relMine(w) || !SIT[k] || sitOff(w, k)) return null;
@@ -14034,9 +14053,10 @@ function sitDo(w, k) {
     remember(w, 4 * cold * (P === 'money' ? .7 : 1), 'You told me your plans for me'); w.morale = clamp(w.morale + 4, 0, 100);
     say = pick(['A win by week ' + (G.week + 3) + '? I\'ll hold you to that.', 'Now that\'s a plan. Don\'t let me down.', 'I like it. Let\'s see it happen.']);
   } else if (k === 'dinner') {
-    if (MON()) G.money -= SIT_COST;
-    remember(w, 10 * (w.trust < 20 ? .8 : 1) * (P === 'money' ? 1.2 : 1), 'You took me to dinner'); w.morale = clamp(w.morale + 5, 0, 100); w.dinWk = G.week;
-    say = pick(['Best steak I\'ve had all year. Thanks, boss.', 'Good food, good talk. I needed that.', 'Didn\'t expect that. Means a lot.']);
+    if (MON()) G.money -= sitCost(w);
+    const f = P ? (DIN_FEEL[P] ?? 1) : .7 + Math.random() * .6;
+    remember(w, 7 * f * (w.trust < 20 ? .8 : 1), 'You took me to dinner'); w.morale = clamp(w.morale + Math.round(4 * f), 0, 100); w.dinWk = G.week;
+    say = f < .6 ? pick(['Nice place. I\'d rather have been in the gym, honestly.', 'Thanks. I\'m not really a fancy dinner person.']) : f > 1.2 ? pick(['Now this is how you treat talent. Thanks, boss.', 'Best steak I\'ve had all year. I won\'t forget it.']) : pick(['Good food, good talk. I needed that.', 'Didn\'t expect that. Means a lot.']);
   } else {
     remember(w, P === 'hot' ? -10 : P === 'loyal' ? -3 : -6, 'You laid down the law with me'); w.morale = clamp(w.morale - 4, 0, 100); w.lawTill = G.week + 4;
     say = P === 'hot' ? pick(['Fine. But I won\'t forget how you spoke to me.', 'You want to play it that way? Fine.']) : pick(['Understood. I\'ll do what I\'m told.', 'Message received.', 'Ok. You\'re the boss.']);
