@@ -847,6 +847,16 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .lv-champ { margin-top: 8px; text-align: center; font-family: var(--f-display); font-size: 22px; letter-spacing: .06em; color: #1a1306; background: linear-gradient(90deg, #c9952b, #ffe08a, #c9952b); background-size: 200%; border-radius: 10px; padding: 6px; animation: shine 1.6s linear infinite; }
 @keyframes shine { to { background-position: 200% 0; } }
 .lv-hurt { margin-top: 6px; font-size: 13px; color: #ff8a92; font-weight: 700; }
+.tgl { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.tgl.on { border-color: var(--accent); border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0; }
+.tgl .sp b { display: block; }
+.tgl i { flex: none; position: relative; width: 46px; height: 28px; border-radius: 14px; background: var(--line); transition: background .15s; }
+.tgl i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
+.tgl.on i { background: var(--accent); }
+.tgl.on i::after { left: 21px; }
+.tgl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tgl-body { border: 1px solid var(--accent); border-top: 0; border-radius: 0 0 var(--r) var(--r); padding: 12px; margin-bottom: 12px; }
+.btn.st-go { margin-top: 10px; border-color: var(--accent); color: var(--accent); }
 .lv-conf { position: absolute; inset: 0; pointer-events: none; }
 .lv-conf i { position: absolute; top: -10px; width: 7px; height: 11px; background: var(--c); border-radius: 2px; opacity: 0; animation: conf 1.6s ease-in forwards; }
 @keyframes conf { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: 0; transform: translate(calc(var(--x) * 40px), 160px) rotate(540deg); } }
@@ -862,6 +872,7 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .lv-tease { margin-top: 12px; color: #ffb547; font-weight: 700; }
 .live .btn { color: inherit; }
 .live .btn:not(.pri) { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
+.live .btn.st-go { color: var(--accent); border-color: var(--accent); }
 .live.skip .lv-seg, .live.skip .lv-o, .live.skip .lv-fin, .live.skip .lv-me, .live.skip .lv-st, .live.skip .lv-rank { animation-delay: 0s !important; animation-duration: .01s !important; }
 .live.skip .lv-conf { display: none; }
 /* surprise moments: a card in the feed, and the big ones as a full-screen cutscene that pauses the show */
@@ -1903,6 +1914,74 @@ function momStory(a, b, heat, why, extra = {}) {
   G.stories.push({ id: uid(), title, type: extra.type || 'Feud', a: a.slice(), b: b.slice(), titleId: extra.titleId || null, heat, start: G.week, status: 'active', notes: why, log: [{ wk: G.week, text: why }], autoEnd: true, _touched: G.week });
   news(`🔥 New storyline: "${title}". ${why}`, 'story');
   return `🔥 New feud: ${title}`;
+}
+// ---------- storylines the booker starts from a segment, a backstage event or a surprise moment ----------
+const STORY_KINDS = ['Feud', 'Rivalry', 'Title Chase', 'Betrayal', 'Faction War', 'Redemption'];
+const stClean = t => String(t || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 50);
+// the two sides of a segment, or null when it has no clear two sides (a battle royal, a promo with no target)
+function segPair(seg) {
+  if (!seg) return null;
+  if (seg.kind === 'match') { if (isFFA(seg)) return null; const sd = (seg.sides || []).map(x => x.filter(id => W(id))).filter(x => x.length); return sd.length >= 2 ? [sd[0], sd.slice(1).flat()] : null; }
+  const a = (seg.who || []).filter(id => W(id)), b = (seg.target || []).filter(id => W(id) && !a.includes(id));
+  return a.length && b.length ? [a, b] : null;
+}
+const freshPair = pr => pr && !storyBetween(pr[0], pr[1]) ? pr : null;
+// a better segment starts the story hotter: 15 heat for a dud, 40 for a classic
+const seedHeat = r => clamp(Math.round(15 + ((+r || 50) - 40) * 0.5), 15, 40);
+function startStory(a, b, heat, why, o = {}) {
+  if (!a.length || !b.length || storyBetween(a, b)) return null;
+  const title = stClean(o.title) || `${lnOf(a)} vs ${lnOf(b)}`.slice(0, 50);
+  const st = { id: uid(), title, type: STORY_KINDS.includes(o.type) ? o.type : 'Feud', a: a.slice(), b: b.slice(), titleId: o.titleId || null, heat, start: G.week, status: 'active', notes: why, log: [{ wk: G.week, text: why }], autoEnd: true, _touched: G.week };
+  G.stories.push(st); news(`🔥 New storyline: "${title}". ${why}`, 'story');
+  return st;
+}
+// the booking switch: start a storyline when this segment airs
+function storyStartCtl(s) {
+  const pr = freshPair(segPair(s)); if (!pr) return '';
+  const on = !!s.nst, k = on && STORY_KINDS.includes(s.nst.k) ? s.nst.k : 'Feud', who = ids => esc(ids.map(nameOf).join(' & '));
+  let h = `<button class="tgl ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-act="segNst" data-id="${on ? 0 : 1}"><span class="sp"><b>🔥 Start feud</b><span class="tiny muted">${on ? 'A new storyline starts when this airs' : `${who(pr[0])} and ${who(pr[1])} have no storyline yet`}</span></span><i aria-hidden="true"></i></button>`;
+  if (on) h += `<div class="tgl-body">
+    <label class="f" style="margin-bottom:8px"><span>Title</span><input type="text" data-segst maxlength="50" value="${esc(stClean(s.nst.t))}" placeholder="${esc(lnOf(pr[0]) + ' vs ' + lnOf(pr[1]))}"></label>
+    <label class="f" style="margin-bottom:8px"><span>Type</span><div class="seg-ctl wrap" role="group" aria-label="Storyline type">${STORY_KINDS.slice(0, 4).map(x => `<button class="${x === k ? 'on' : ''}" aria-pressed="${x === k}" data-act="segNstK" data-id="${x}">${x}</button>`).join('')}</div></label>
+    <div class="tiny muted">${who(pr[0])} on one side, ${who(pr[1])} on the other. The better this ${s.kind} goes, the hotter it starts: about 15 to 40 heat.</div></div>`;
+  return h;
+}
+// open the storyline sheet already filled in, and come back to where the booker was
+function storyOpen(pr, heat, why, o = {}) {
+  const cur = UI.modal, back = cur?.type === 'live' ? { type: 'recap', wk: cur.wk } : cur && ['recap', 'phone'].includes(cur.type) ? { ...cur } : null;
+  if (cur?.type === 'live') { liveTimers.forEach(clearTimeout); clearTimeout(LV.auto); momSettle(); }
+  const title = pr[1].length ? `${lnOf(pr[0])} vs ${lnOf(pr[1])}`.slice(0, 50) : '';
+  openModal({ type: 'editStory', isNew: true, from: o.from || '', fromTxt: o.fromTxt || '', fromSeg: !!o.fromSeg, back, draft: { id: uid(), title, type: 'Feud', a: pr[0].slice(), b: pr[1].slice(), titleId: null, heat, start: G.week, status: 'active', notes: why, log: [{ wk: G.week, text: why }], autoEnd: true, _touched: G.week } });
+}
+// the button under an aired segment
+function storyBtn(h, i) {
+  const r = h?.results?.[i], pr = r && freshPair(segPair(r.seg)); if (!pr) return '';
+  return `<button class="btn sm block st-go" data-act="storyFrom" data-id="${h.wk}:${i}">🔥 Start a storyline: ${esc(lnOf(pr[0]))} vs ${esc(lnOf(pr[1]))}</button>`;
+}
+// a surprise moment between two people
+function momPair(m) {
+  const M = MOMENTS[m?.k], d = m?.d; if (!M || !d || !W(d.a)) return null;
+  const b = Array.isArray(d.members) ? d.members.filter(id => W(id) && id !== d.a) : W(d.b) && d.b !== d.a ? [d.b] : [];
+  return b.length ? freshPair([[d.a], b]) : null;
+}
+const momStoryBtn = (h, j) => { const m = h?.moments?.[j], pr = (m?.done || !MOMENTS[m?.k]?.ch) && momPair(m); return pr ? `<button class="btn sm block st-go" data-act="storyFromMom" data-id="${h.wk}:${j}">🔥 Start a storyline: ${esc(lnOf(pr[0]))} vs ${esc(lnOf(pr[1]))}</button>` : ''; };
+// a backstage event between two of your wrestlers can start a storyline instead
+function evPair(e) {
+  const d = e?.d, E = EVENTS[e?.key]; if (!d || !E || d.r || d.sid) return null;
+  const a = W(d.a), b = W(d.b); if (!a || !b || a === b) return null;
+  try { if (/feud|storyline|rivalry/i.test(E.choices(d).map(c => c.join(' ')).join(' '))) return null; } catch (x) { return null; }
+  return freshPair([[a.id], [b.id]]);
+}
+const EV_HEAT = 25;
+function evChoices(e) {
+  const ch = EVENTS[e.key].choices(e.d), pr = evPair(e);
+  return pr ? [...ch, ['🔥 Start a storyline', `${lnOf(pr[0])} vs ${lnOf(pr[1])}. It starts at ${EV_HEAT} heat`]] : ch;
+}
+function evStory(e) {
+  const pr = evPair(e); if (!pr) return 'That moment passed.';
+  let why = ''; try { why = EVENTS[e.key].text(e.d); } catch (x) { why = 'It started backstage.'; }
+  const st = startStory(pr[0], pr[1], EV_HEAT, why, { type: e.d.titleId ? 'Title Chase' : 'Feud', titleId: G.titles.some(t => t.id === e.d.titleId) ? e.d.titleId : null });
+  return st ? `New storyline: ${st.title} starts at ${EV_HEAT} heat.` : 'That moment passed.';
 }
 const momMood = (w, d) => { if (w) w.morale = clamp(w.morale + d, 0, 100); };
 const momPush = (w, pop, mo) => { if (!w) return; if (pop) addPop(w, pop); if (mo) w.momentum = clamp(w.momentum + mo, -50, 50); };
@@ -3553,6 +3632,9 @@ function applySegment(seg, res, ctx) {
     notes.push(`🔥 ${st.title} heat +${gain}`);
     const bo = feudBlowMatch(st, seg, res, ctx); if (bo) notes.push(bo);
   }
+  // the booker planned a new storyline to start here
+  if (seg.nst && !st) { const pr = segPair(seg), ns = pr && startStory(pr[0], pr[1], seedHeat(res.rating), res.text, { title: seg.nst.t, type: seg.nst.k });
+    if (ns) { res.newSt = ns.id; notes.push(`🔥 New storyline: ${ns.title} (${ns.heat} heat)`); } }
   res.notes = notes;
 }
 
@@ -5562,7 +5644,7 @@ function eventCard() {
   const e = G.event; if (!e || e.wk !== G.week) return '';
   const E = EVENTS[e.key];
   return `<div class="bs"><div class="bs-k">Backstage</div><div class="bs-t">${E.title}</div><div class="bs-d">${esc(E.text(e.d))}</div>
-    <div class="bs-c">${E.choices(e.d).map(([l, d], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="evPick" data-id="${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div></div>`;
+    <div class="bs-c">${evChoices(e).map(([l, d], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="evPick" data-id="${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div></div>`;
 }
 function goalCard() {
   ensureGoals();
@@ -5627,7 +5709,7 @@ function liveScreen(m) {
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
         <div class="lv-crowd">${esc(r.crowd || '')}</div>
-        ${champ ? `<div class="lv-champ">🏆 AND NEW CHAMPION!</div>` : ''}${(r.notes || []).filter(x => /streak|lost 4 straight/i.test(x)).map(x => `<div class="lv-streak">${esc(x)}</div>`).join('')}${hurt ? `<div class="lv-hurt">🩹 ${esc(hurt)}</div>` : ''}
+        ${champ ? `<div class="lv-champ">🏆 AND NEW CHAMPION!</div>` : ''}${(r.notes || []).filter(x => /streak|lost 4 straight/i.test(x)).map(x => `<div class="lv-streak">${esc(x)}</div>`).join('')}${hurt ? `<div class="lv-hurt">🩹 ${esc(hurt)}</div>` : ''}${storyBtn(h, i)}
       </div>
       ${r.rating >= 85 || champ ? `<div class="lv-conf" style="--d:${t0(d1)}">${Array.from({ length: 18 }, (_, k) => `<i style="left:${(k * 37) % 100}%;--c:${['#ffb547', '#ff5a5f', '#4c8dff', '#2fbf71', '#fff'][k % 5]};--x:${(k % 3) - 1};animation-delay:calc(var(--d) + ${(k % 6) * 0.06}s)"></i>`).join('')}</div>` : ''}
     </div>${after}`;
@@ -5664,7 +5746,7 @@ function momCard(h, j, d) {
   return `<div class="cut ${M.big ? 'big' : 'sm'}" style="--d:${t0(d)}" data-mom="${j}"${M.big ? ' data-cs="1"' : ''}>
     <span class="cut-b">⚡ ${esc(M.head)}</span><div class="cut-w">${esc(M.where)}</div>
     ${ws.length ? `<div class="cut-f">${ws.map(w => momFace(w, 44)).join('')}</div>` : ''}<div class="cut-d">${esc(txt)}</div>
-    <div class="cut-r">${!m.done && M.ch ? momBtns(M, m, j, 'cut-c') : momFx(m)}</div></div>`;
+    <div class="cut-r">${!m.done && M.ch ? momBtns(M, m, j, 'cut-c') : momFx(m) + momStoryBtn(h, j)}</div></div>`;
 }
 function cutOpen(j) {
   const live = document.querySelector('.live'), h = histFor(UI.modal?.wk), m = h?.moments?.[j], M = MOMENTS[m?.k];
@@ -5692,7 +5774,7 @@ function cutClose() {
 }
 function momRefresh(j) {
   const h = histFor(UI.modal?.wk), m = h?.moments?.[j], box = document.querySelector(`.cut[data-mom="${j}"] .cut-r`);
-  if (box && m) box.innerHTML = momFx(m);
+  if (box && m) box.innerHTML = momFx(m) + momStoryBtn(h, j);
 }
 // the live clock: segments come in on a timeline that a cutscene can pause
 const LV = { t: 0, off: 0, at: 0, jobs: [], auto: 0 };
@@ -7755,6 +7837,7 @@ function modalSeg(m) {
     if (st) body += `<div class="alert good" style="margin-bottom:12px"><span class="ic">🔥</span><div class="small">${mt.ffa ? 'Rivals inside' : 'Part of'} <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}, week ${feudWks(st)} of about ${FEUD_WKS}). ${s.blow || (st.plan === 'blow' && (st.planWk || 0) <= (UI.selWeek || G.week)) ? 'This match ends the feud.' : 'This match builds the story.'}</div></div>`;
     if (st) { const bo = !!s.blow, planned = !bo && st.plan === 'blow' && (st.planWk || 0) <= (UI.selWeek || G.week);
       body += `<label class="f"><span>Blow-off match</span><div class="seg-ctl" role="group" aria-label="Blow-off match"><button class="${bo || planned ? '' : 'on'}" aria-pressed="${!bo && !planned}" data-act="segBlow" data-id="0">Keep it going</button><button class="${bo || planned ? 'on' : ''}" aria-pressed="${bo || planned}" data-act="segBlow" data-id="1">🏁 End the feud here</button></div><div class="tiny muted" style="margin-top:4px">${bo || planned ? 'The feud ends after this match if someone wins clean enough (no DQ or count-out). The payoff is bigger at a big event and after about 3 months of build.' : `${esc(feudCall(st)?.t || '')}`}</div></label>`; }
+    if (!st && !mt.ffa) body += storyStartCtl(s);
     if (!mt.ffa) body += `<label class="f"><span>Winner</span><div class="seg-ctl"><button class="${s.winner === -1 || s.winner == null ? 'on' : ''}" data-act="segWin" data-id="-1">🎲 Sim</button>${s.sides.map((side, i) => `<button class="${s.winner === i ? 'on' : ''}" data-act="segWin" data-id="${i}">${side.length ? esc(side.map(shortOf).join(' & ')) : 'Side ' + (i + 1)}</button>`).join('')}<button class="${s.winner === -2 ? 'on' : ''}" data-act="segWin" data-id="-2">🤝 Draw</button></div>${s.sides.flat().length ? `<div class="tiny muted" style="margin-top:4px">${s.sides.map(side => side.map(W).filter(Boolean).map(w => `${esc(lastName(w))} ${recStr(w)}${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''}`).join(' & ')).filter(Boolean).join(' · ')}</div>` : ''}</label>`;
     body += `<label class="f"><span>Gimmick</span><select data-seg="stip">${grp('Gimmicks', Object.keys(STIPS), s.stip)}${grp('Your gimmicks', gmine, s.stip)}</select><div class="tiny muted" style="margin-top:4px">${esc(gm.desc || '')}</div></label>`;
     body += `<button class="link" data-act="matchTypes" style="margin:-4px 0 12px">＋ Make your own match type or gimmick</button>`;
@@ -7781,6 +7864,7 @@ function modalSeg(m) {
       body += `<label class="f"><span>Who comes out on top?</span><div class="seg-ctl"><button class="${e < 0 ? 'on' : ''}" data-act="segEdge" data-id="-1">🎲 Sim</button><button class="${e === 0 ? 'on' : ''}" data-act="segEdge" data-id="0">${nm1(s.who)}</button><button class="${e === 1 ? 'on' : ''}" data-act="segEdge" data-id="1">${nm1(s.target)}</button><button class="${e === 2 ? 'on' : ''}" data-act="segEdge" data-id="2">🤝 Even</button></div><div class="tiny muted" style="margin-top:4px">Standing tall gives momentum. A heel on top builds heat.</div></label>`; }
     const st = s.target?.length ? storyBetween(s.who, s.target) : storiesTouching(s.who)[0];
     if (st) body += `<div class="alert good"><span class="ic">🔥</span><div class="small">Builds <b>${esc(st.title)}</b> (heat ${Math.round(st.heat)}).</div></div>`;
+    body += storyStartCtl(s);
     body += segPlanEditor(s);
   }
   return modal(m.isNew ? `Add ${s.kind}` : `Edit ${s.kind}`, tutSegHint(s) + body, `${m.isNew ? '' : '<button class="btn bad" data-act="segDelModal">Remove</button>'}<button class="btn pri" data-act="segSave">${m.isNew ? 'Add to card' : 'Save'}</button>`);
@@ -7995,7 +8079,8 @@ function modalEditStory(m) {
    <div class="side"><div class="lbl">Side B</div>${chipsFor(d.b, 'b', 5)}</div>
    <label class="f"><span>Championship involved (optional)</span><select data-es="titleId"><option value="">None</option>${G.titles.map(t => `<option value="${t.id}" ${d.titleId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
    <label class="f" style="margin-top:10px"><span>Notes</span><textarea data-es="notes" placeholder="The plan for this story">${esc(d.notes)}</textarea></label>`;
-  return modal(m.isNew ? 'New storyline' : 'Edit storyline', body, `<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="saveStory">${m.isNew ? 'Create' : 'Save'}</button>`);
+  const fr = m.from ? `<div class="alert good" style="margin-bottom:12px"><span class="ic">🔥</span><div class="small">From <b>${esc(m.from)}</b>${m.fromTxt ? ': ' + esc(m.fromTxt) : ''}<br>It starts at <b>${Math.round(d.heat)} heat</b>.${m.fromSeg ? ' A better segment starts it hotter (15 to 40).' : ''}</div></div>` : '';
+  return modal(m.from ? 'Start a storyline' : m.isNew ? 'New storyline' : 'Edit storyline', fr + body, `<button class="btn" data-act="${m.back ? 'storyBack' : 'closeModal'}">Cancel</button><button class="btn pri" data-act="saveStory">${m.from ? '🔥 Start it' : m.isNew ? 'Create' : 'Save'}</button>`);
 }
 // what a promo or angle does to its target, in place of VS
 function segVerb(s) {
@@ -8028,10 +8113,10 @@ function modalRecap(m) {
   const body = `<div style="text-align:center;margin-bottom:12px"><div class="muted small">Week ${h.wk}${h.big ? ' · BIG EVENT' : ''}</div><div class="res-score">${h.rating}</div><div class="stars" style="font-size:22px">${starStr(h.rating)}</div><div class="muted">${grade(h.rating)} show</div>${h.why.length ? whyList(h.why) : ''}</div>
    <div class="grid3" style="margin-bottom:12px"><div class="stat"><div class="k">Crowd</div><div class="v" style="font-size:17px">${h.attendance.toLocaleString()}</div></div><div class="stat"><div class="k">Fans</div><div class="v" style="font-size:17px;color:${h.fanDelta >= 0 ? 'var(--good)' : 'var(--bad)'}">${h.fanDelta >= 0 ? '+' : ''}${kfmt(h.fanDelta)}</div></div>${MON() ? `<div class="stat"><div class="k">Profit</div><div class="v" style="font-size:17px;color:${h.net >= 0 ? 'var(--good)' : 'var(--bad)'}">${(h.net < 0 ? '-$' : '$') + kfmt(Math.abs(h.net))}</div></div>` : `<div class="stat"><div class="k">Rating</div><div class="v" style="font-size:17px">${h.rating}</div></div>`}</div>
    ${(h.headlines || []).length ? `<div class="heads"><div class="review-h">Headlines</div>${h.headlines.map(t => `<div>${esc(t)}</div>`).join('')}</div>` : ''}
-   ${(h.moments || []).length ? `<div class="heads"><div class="review-h">Surprises on the show</div>${h.moments.map(m => { const M = MOMENTS[m.k]; let t = ''; try { t = M ? M.text(m.d) : ''; } catch (e) { } return t ? `<div><b>⚡ ${esc(M.head)}</b> ${esc(t)}${m.fx?.length ? `<br><span class="tiny muted">${m.fx.map(esc).join(' · ')}</span>` : ''}</div>` : ''; }).join('')}</div>` : ''}
+   ${(h.moments || []).length ? `<div class="heads"><div class="review-h">Surprises on the show</div>${h.moments.map((m, j) => { const M = MOMENTS[m.k]; let t = ''; try { t = M ? M.text(m.d) : ''; } catch (e) { } return t ? `<div><b>⚡ ${esc(M.head)}</b> ${esc(t)}${m.fx?.length ? `<br><span class="tiny muted">${m.fx.map(esc).join(' · ')}</span>` : ''}${momStoryBtn(h, j)}</div>` : ''; }).join('')}</div>` : ''}
    ${h.big ? monthReview(h) : ''}
    ${h.results.map((r, i) => `<details class="seg"><summary><div class="hd"><span class="no">${i === h.results.length - 1 && h.results.length > 1 ? '★ME' : '#' + (i + 1)}</span><span class="ttl">${segTitle(r.seg)}</span><span class="stars">${starStr(r.rating)}</span></div>
-     ${r.seg.kind === 'match' ? `<div class="rwho">${segWho(r.seg)}</div>` : ''}<div class="who">${esc(r.text)}</div>${(r.notes || []).length ? `<div class="meta">${r.notes.map(esc).join('<br>')}</div>` : ''}<div class="tiny muted" style="margin-top:4px">Score ${r.rating} · tap for why ▾</div></summary>${whyList(r.why)}</details>`).join('')}`;
+     ${r.seg.kind === 'match' ? `<div class="rwho">${segWho(r.seg)}</div>` : ''}<div class="who">${esc(r.text)}</div>${(r.notes || []).length ? `<div class="meta">${r.notes.map(esc).join('<br>')}</div>` : ''}<div class="tiny muted" style="margin-top:4px">Score ${r.rating} · tap for why ▾</div></summary>${whyList(r.why)}</details>${storyBtn(h, i)}`).join('')}`;
   return modal(esc(h.name), body, `<button class="btn" data-act="copyResults" data-id="${h.wk}">Copy</button>${canUndo(h.wk) ? '<button class="btn" data-act="undoShow">↶ Undo</button>' : ''}<button class="btn pri" data-act="${h === G.history.at(-1) ? 'afterShow' : 'closeModal'}">${h === G.history.at(-1) ? esc(nextLabel(h)) : 'Close'}</button>`);
 }
 function lineage(t) {
@@ -8498,6 +8583,8 @@ const A = {
   segMain(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0) { c.push(...c.splice(i, 1)); commit('Moved to the main event.'); } },
   segDown(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0 && i < c.length - 1) { [c[i + 1], c[i]] = [c[i], c[i + 1]]; commit(); } },
   segWin(i) { UI.modal.draft.winner = +i; render(); },
+  segNst(i) { const d = UI.modal.draft; if (+i) d.nst = d.nst || { k: 'Feud' }; else delete d.nst; render(); },
+  segNstK(k) { const d = UI.modal.draft; if (d.nst && STORY_KINDS.includes(k)) d.nst.k = k; render(); },
   segBlow(i) { const d = UI.modal.draft; if (+i) d.blow = true; else { delete d.blow; const st = storyBetween(d.sides?.[0] || [], (d.sides || []).slice(1).flat()); if (st?.plan === 'blow') { delete st.plan; delete st.planWk; } } render(); },
   segElim(i) { const d = UI.modal.draft; if (+i) d.elim = true; else delete d.elim; render(); },
   segTagSize(n) { const d = UI.modal.draft, k = TAG_SIZES[+n]; if (!k || d.mtype === k) return; const mt = MT(k); d.mtype = k;
@@ -8541,7 +8628,7 @@ const A = {
     toast('Move buttons are on. Tap Done when you finish.');
   },
   brief() { autoTodo('brief'); save(); openModal({ type: 'brief' }); },
-  dupLast() { const h = lastRec(); if (!h) return; const segs = h.results.map(r => ({ ...JSON.parse(JSON.stringify(r.seg)), id: uid() })).filter(s => { removeGone(s); return segPeople(s).length; }).slice(0, roomLeft(UI.selWeek, BK())); if (!segs.length) return toast(fullMsg(UI.selWeek)); BK().push(...segs); commit(`Copied ${segs.length} segments from last week.`); },
+  dupLast() { const h = lastRec(); if (!h) return; const segs = h.results.map(r => ({ ...JSON.parse(JSON.stringify(r.seg)), id: uid(), nst: undefined })).filter(s => { removeGone(s); return segPeople(s).length; }).slice(0, roomLeft(UI.selWeek, BK())); if (!segs.length) return toast(fullMsg(UI.selWeek)); BK().push(...segs); commit(`Copied ${segs.length} segments from last week.`); },
   runShow() {
     const inj = G.card.flatMap(segPeople).filter(id => W(id)?.injury > 0);
     const go = () => { ding(); runShow(); };
@@ -8566,9 +8653,9 @@ const A = {
   coPerk() { UI.carTab = 'co'; openModal({ type: 'trophies' }); },
   evPick(i) {
     const e = G.event; if (!e) return; const E = EVENTS[e.key];
-    let lbl = ''; try { lbl = E.choices(e.d)[+i]?.[0] || ''; } catch (x) { }
-    let msg; try { msg = E.pick(+i, e.d); personaEvent(e.key, +i, e.d); } catch (x) { msg = 'That moment passed.'; }
-    const m = e.id && (G.phone || []).find(x => x.ev === e.id); if (m) { m.ans = +i; m.you = lbl; m.res = msg; m.read = true; }
+    let lbl = ''; try { lbl = evChoices(e)[+i]?.[0] || ''; } catch (x) { }
+    let msg; try { if (+i >= E.choices(e.d).length) msg = evStory(e); else { msg = E.pick(+i, e.d); personaEvent(e.key, +i, e.d); } } catch (x) { msg = 'That moment passed.'; }
+    const m = e.id && (G.phone || []).find(x => x.ev === e.id); if (m) { m.ans = +i; m.you = lbl; m.res = msg; m.read = true; if (W(e.d?.a)) m.evd = { a: e.d.a, ...(W(e.d.b) && e.d.b !== e.d.a ? { b: e.d.b } : {}) }; }
     G.event = null; G.booker.events = (G.booker.events || 0) + 1; addXP(3); carBump('events'); saveCareer();
     news(`${E.title.split(' ')[0]} ${msg}`, 'office');
     if (G.booker.events >= 5) award('backstage');
@@ -9037,6 +9124,18 @@ const A = {
   openStory(id) { openModal({ type: 'story', id }); },
   newStory() { openModal({ type: 'editStory', isNew: true, draft: { id: uid(), title: '', type: 'Feud', a: [], b: [], titleId: null, heat: 10, start: G.week, status: 'active', notes: '', log: [], autoEnd: true } }); },
   ideaStory(ids) { const [a, b] = ids.split(','); A.newStory(); UI.modal.draft.a = [a]; UI.modal.draft.b = [b]; UI.modal.draft.title = `${shortOf(a)} vs ${shortOf(b)}`; render(); },
+  storyBack() { UI.modal = UI.modal?.back || null; render(); },
+  storyFrom(v) { const [wk, i] = String(v).split(':').map(Number), h = histFor(wk), r = h?.results?.[i], pr = r && freshPair(segPair(r.seg));
+    if (!pr) return toast('They already have a storyline together.');
+    storyOpen(pr, seedHeat(r.rating), r.text, { from: `${h.name}, ${i === h.results.length - 1 && h.results.length > 1 ? 'the main event' : 'segment ' + (i + 1)}`, fromTxt: `${r.text} ${starStr(r.rating)}`, fromSeg: true }); },
+  storyFromMom(v) { const [wk, j] = String(v).split(':').map(Number), h = histFor(wk), m = h?.moments?.[j], pr = momPair(m);
+    if (!pr) return toast('They already have a storyline together.');
+    let why = ''; try { why = MOMENTS[m.k].text(m.d); } catch (x) { why = 'It started with a surprise on the show.'; }
+    storyOpen(pr, EV_HEAT, why, { from: `${h.name}: ${MOMENTS[m.k].head}` }); },
+  storyFromMsg(id) { const m = (G.phone || []).find(x => x.id === id), e = m?.evd; if (!e || !W(e.a)) return;
+    const pr = e.b ? freshPair([[e.a], [e.b]]) : [[e.a], []]; if (!pr) return toast('They already have a storyline together.');
+    const t = String(m.title || 'Backstage').replace(/^\S+\s/, '');
+    storyOpen(pr, EV_HEAT, `${t}: ${m.res || 'it started backstage.'}`, { from: `Backstage, week ${m.wk}: ${t}` }); },
   storyWith(id) { A.newStory(); UI.modal.draft.a = [id]; render(); },
   editStory(id) { openModal({ type: 'editStory', draft: JSON.parse(JSON.stringify(G.stories.find(s => s.id === id))) }); },
   saveStory() {
@@ -9045,7 +9144,7 @@ const A = {
     if (!d.title.trim()) d.title = `${shortOf(d.a[0])} vs ${shortOf(d.b[0])}`;
     const i = G.stories.findIndex(s => s.id === d.id);
     if (i >= 0) G.stories[i] = d; else { G.stories.push(d); news(`🔥 New storyline: "${d.title}" (${d.a.map(nameOf).join(' & ')} vs ${d.b.map(nameOf).join(' & ')}).`, 'story'); }
-    UI.modal = { type: 'story', id: d.id }; commit(i >= 0 ? 'Saved.' : 'Storyline created.');
+    UI.modal = i < 0 && UI.modal.back ? UI.modal.back : { type: 'story', id: d.id }; commit(i >= 0 ? 'Saved.' : 'Storyline created.');
   },
   endStory(id) { const s = G.stories.find(x => x.id === id); if (s?.status === 'active') openModal({ type: 'blowStory', id }); },
   blowPick(k) {
@@ -11978,6 +12077,12 @@ function phoneChoices(m) {
   return [['Promise it', `${A.wk === 1 ? 'This week' : 'By week ' + (G.week + A.wk - 1)}. Keep it and they trust you more`], ['Not now', 'They\'ll remember']];
 }
 const trustWord = v => v >= 75 ? 'Trusts you' : v >= 55 ? 'Likes you' : v >= 40 ? 'Unsure of you' : v >= 25 ? 'Wary of you' : 'Doesn\'t trust you';
+// an answered backstage text can start a storyline for a week or so after it
+function msgStoryBtn(m) {
+  const e = m.evd; if (m.ans == null || !e || !W(e.a) || m.wk < G.week - 1) return '';
+  if (e.b) { const pr = freshPair([[e.a], [e.b]]); return pr ? `<button class="btn sm block st-go" data-act="storyFromMsg" data-id="${m.id}">🔥 Start a storyline: ${esc(lnOf(pr[0]))} vs ${esc(lnOf(pr[1]))}</button>` : ''; }
+  return `<button class="btn sm block st-go" data-act="storyFromMsg" data-id="${m.id}">🔥 Start a storyline with ${esc(shortOf(e.a))}</button>`;
+}
 function phoneMsg(m) {
   const del = `<button class="ph-del" data-act="phoneDel" data-id="${m.id}" aria-label="Delete this message${m.ask && msgOpen(m) ? ' (counts as ignoring it)' : ''}">🗑</button>`;
   if (m.from === 'asst' && m.feud) {
@@ -11990,12 +12095,12 @@ function phoneMsg(m) {
     </div></div>`;
   }
   if (m.from === 'asst') {
-    const open = evOpen(m), ch = open ? EVENTS[G.event.key].choices(G.event.d) : [];
+    const open = evOpen(m), ch = open ? evChoices(G.event) : [];
     return `<div class="ph-m asst${m.read ? '' : ' new'}${open ? ' open' : ''}"><span class="ph-av ph-asst" aria-hidden="true">📋</span><div class="sp">
       <div class="ph-h"><b>Your assistant</b><span class="tiny muted">Week ${m.wk}</span>${del}</div>
       <div class="ph-b">${m.title ? `<b class="ph-tt">${esc(m.title)}</b>` : ''}${esc(m.t)}</div>
       ${open ? `<div class="bs-c">${ch.map(([l, d], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="evPick" data-id="${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>`
-        : m.ev ? `<div class="ph-you">${m.ans != null ? `You: ${esc(m.you || 'decided')}${m.res ? `<span>${esc(m.res)}</span>` : ''}` : 'You didn\'t answer in time'}</div>` : ''}
+        : m.ev ? `<div class="ph-you">${m.ans != null ? `You: ${esc(m.you || 'decided')}${m.res ? `<span>${esc(m.res)}</span>` : ''}` : 'You didn\'t answer in time'}</div>${msgStoryBtn(m)}` : ''}
     </div></div>`;
   }
   const w = W(m.wid); if (!w) return '';
@@ -13255,6 +13360,7 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.in === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); el.setAttribute('aria-valuetext', el.value + '%'); MUSIC.sync(); return; }
   if (el.dataset.wz === 'ppv') { UI.wiz.ppv = el.value; return; }
+  if (el.hasAttribute('data-segst') && UI.modal?.draft?.nst) { UI.modal.draft.nst.t = stClean(el.value); return; }
   if (el.hasAttribute('data-segln') && UI.modal?.draft) { const v = el.value.replace(/[<>`"]/g, '').slice(0, 140); if (v.trim()) UI.modal.draft.line = v; else delete UI.modal.draft.line; return; }
   if (el.dataset.wz === 'month') { (UI.wiz.months ||= Array(12).fill(''))[+el.dataset.i] = el.value; return; }
   if (el.dataset.wz === 'xName') { const x = UI.wiz.extra?.[+el.dataset.i]; if (x) x.name = el.value; return; }
