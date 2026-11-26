@@ -3980,7 +3980,7 @@ function applySegment(seg, res, ctx) {
       if (res.winners.length && !holderWon && !(res.fin?.keep && !t.dq && t.holder.some(h => res.losers.includes(h)))) {
         const old = t.holder.map(nameOf).join(' & ');
         const newH = res.winners.slice(0, tsz(t));
-        crown(t, newH); t.holder = newH; t.since = G.week; t.defenses = 0; t.lastDefense = G.week;
+        const was = t.holder.slice(); crown(t, newH); t.holder = newH; t.since = G.week; t.defenses = 0; t.lastDefense = G.week; titleMoved(t, was, seg);
         t.prestige = clamp(t.prestige + (res.rating - 55) / 8, 5, 100);
         notes.push(`🏆 NEW CHAMPION: ${newH.map(nameOf).join(' & ')}`);
         news(`🏆 ${newH.map(nameOf).join(' & ')} won the ${t.name} from ${old}!`, 'title');
@@ -7307,6 +7307,19 @@ function beltSurprise(cur) {
 }
 // a title's belt as drawn everywhere in the game (titles with no design keep the classic gold belt)
 const titleBelt = (t, cls) => beltRender(t.belt, { title: t, cls, label: (t.name || 'Championship') + ' belt', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BookIt'), champ: champInit(t) });
+// A booked title match follows the belt. When a title changes hands, any match already booked as the old
+// champion's defense (old champ in it, new champ not) is no longer for the title. The player sees a news line.
+function titleMoved(t, was, done) {
+  if (!t || !was?.length) return;
+  const cards = [G.card, ...Object.values(G.future || {})].filter(Array.isArray);
+  for (const c of cards) for (const s of c) {
+    if (s === done || s.title !== t.id || s.kind !== 'match') continue;
+    const ids = (s.sides || []).flat();
+    if (!was.some(h => ids.includes(h)) || t.holder.some(h => ids.includes(h))) continue;
+    s.title = null; s.lostTitle = t.id;
+    news(`${ids.map(shortOf).join(' vs ')} is no longer for the ${t.name}: ${t.holder.map(nameOf).join(' & ')} hold${t.holder.length > 1 ? '' : 's'} it now.`, 'title');
+  }
+}
 // the champion's initials for their own side plates: a team's name, or each holder's first letter.
 // Works in the setup wizard too, before a game exists (G is null there): holders come from the wizard's picks.
 function champInit(t) { const wz = UI.wiz, find = id => (G ? W(id) : null) || (wz && [...(wz.mine || []), ...(wz.pool || [])].find(w => w.id === id)) || null, nm = id => find(id)?.name || ''; const h = (t?.holder || []).filter(id => find(id)); if (!h.length) return ''; if (h.length > 1) { const tm = G && typeof teamOf === 'function' && teamOf(h); if (tm) return abbr(tm.name).slice(0, 3); return h.map(id => (nm(id)[0] || '').toUpperCase()).join('').slice(0, 3); } return initials(nm(h[0])).slice(0, 3); }
@@ -7902,7 +7915,7 @@ function matchRow(s, i, n, o) {
     if (s.cash && !o.past) chips.push('💼 Cash-in');
     if (!o.past && finOf(s) !== 'Clean') chips.push(esc(finOf(s)));
     if (!o.past && s.turn && W(s.turn)) chips.push('🔄 turn');
-    { const P = !o.past && prodOf(s); if (P) chips.push(`${ic('wrestle')} ${esc(PROD_TPL[P.t].n)} · ${esc(PROD_LENS[P.len].n)}${P.live ? ' · ' + ic('mic') : ''}`); }
+    { const P = !o.past && prodOf(s); if (P) chips.push(`${ic('wrestle')} ${esc(PROD_TPL[P.t].n)}${PROD_LENS[P.len].n !== PROD_TPL[P.t].n ? ' · ' + esc(PROD_LENS[P.len].n) : ''}${P.live ? ' · ' + ic('mic') : ''}`); }
     const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat()); if (st) chips.push(`🔥 ${esc(st.title)}`);
     if (!o.past) chips.push(s.winner >= 0 && s.sides[s.winner]?.length ? `👑 ${esc(s.sides[s.winner].map(shortOf).join(' & '))}` : s.winner === -2 ? '🤝 draw' : '🎲 sim decides');
   } else {
@@ -7915,6 +7928,8 @@ function matchRow(s, i, n, o) {
   if (o.builds) chips.push(`<span class="hype">📈 Builds ${esc(o.builds)}</span>`);
   if (!o.past && s.kind === 'match' && s.hype != null && isBig(UI.selWeek)) chips.push(`<span class="hype">📈 Hype ${hypeOf(s)}</span>`);
   if (!o.past) { const gf = guestFees([s]); if (gf) chips.push(`💰 ${money(gf)} per-appearance`); }
+  if (!o.past && t && t.holder.length && !t.holder.some(h => (s.sides || []).flat().includes(h))) chips.push(`<span class="hint">⚠ Champion isn't in this match</span>`);
+  if (!o.past && !t && s.lostTitle && G.titles.some(x => x.id === s.lostTitle)) chips.push(`<span class="hint">⚠ No longer for the ${esc(G.titles.find(x => x.id === s.lostTitle).short)} title</span>`);
   for (const h of o.hints || []) chips.push(`<span class="hint">⚠ ${esc(h)}</span>`);
   const won = id => o.past && (o.winners || []).includes(id);
   const sideHTML = (ids, right) => `<div class="mside ${right ? 'r' : ''}">${ids.map(id => { const w = W(id); if (!w) return '<span class="muted">?</span>'; return `<div class="mw ${won(id) ? 'won' : ''}">${right ? '' : av(w, 26)}<span class="n-${w.align}">${esc(w.name)}</span>${won(id) ? ' 👑' : ''}${right ? av(w, 26) : ''}</div>`; }).join('') || '<span class="muted small">empty</span>'}</div>`;
