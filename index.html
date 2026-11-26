@@ -4254,7 +4254,7 @@ const BR = {
     const c = pool.filter(b => b !== a && sameDiv(a, b)).sort((x, y) => Math.abs(x.pop - a.pop) - Math.abs(y.pop - a.pop)).slice(0, n);
     let best = null, bs = -1e9;
     for (const b of c) {
-      const s = BR.proj({ kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean' }, wk) - Math.abs(a.pop - b.pop) * 0.08 - ((b.fatigue || 0) > 50 ? 4 : 0) + rnd(0, noise);
+      const s = BR.proj({ kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean' }, wk) - Math.abs(a.pop - b.pop) * 0.08 - ((b.fatigue || 0) > 50 ? 4 : 0) - (b.align === a.align && !storyBetween([a.id], [b.id]) ? 12 : 0) + rnd(0, noise);
       if (s > bs) { bs = s; best = b; }
     }
     return best;
@@ -4262,7 +4262,7 @@ const BR = {
   // title shots go to the top contender most of the time, a face for a heel champion (and back) when possible
   challenger(t, top) {
     const fresh = top.filter(w => !recentlyFaced([...t.holder, w.id])); if (fresh.length) top = fresh;
-    const h = W(t.holder[0]), wt = top.map((w, i) => [w, [0.6, 0.25, 0.15, 0.08, 0.05, 0.03][i] * (h && w.align !== h.align ? 1 : 0.5)]);
+    const h = W(t.holder[0]), wt = top.map((w, i) => [w, [0.6, 0.25, 0.15, 0.08, 0.05, 0.03][i] * (h && w.align !== h.align ? 1 : 0.08)]);
     let x = Math.random() * sum(wt.map(p => p[1])); for (const [w, p] of wt) if ((x -= p) <= 0) return w; return top[0];
   },
   // a story that just had a match gets a promo next, a story that just talked gets a match
@@ -6847,7 +6847,11 @@ function autoFillOnce(wk, card, big, target, H, notes) {
   const availTrios = () => [...availTeams(3), ...(G.factions || []).map(f => f.members.filter(id => avail().some(w => w.id === id)).slice(0, 3)).filter(x => x.length === 3)];
   const segs = [];
   // save announced PPV matches for the PPV: on weekly shows those opponents get promos instead
-  const nb = !big && nextBig(), pms = nb && nb > wk ? ppvMatches(nb) : [];
+  const nb = !big && nextBig(), pms = nb && nb >= wk ? ppvMatches(nb) : [];
+  // a champion whose title is announced for the next big event keeps it off TV until then
+  const ppvTitles = new Set(pms.map(m => m.title).filter(Boolean));
+  // the player's main event stays the main event: auto-fill adds around it, it never replaces it
+  const keepMain = card.find(x => x.isMain) || (card.length >= 2 || card[0]?.title ? card[card.length - 1] : null);
   const ppvSaved = ids => pms.some(m => buildsFor({ kind: 'match', sides: [ids] }, m) === 2);
   // stories first: on big events pay them off, otherwise build with promos/matches
   for (const st of G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat).slice(0, H.stories)) {
@@ -6857,7 +6861,7 @@ function autoFillOnce(wk, card, big, target, H, notes) {
     if ((H.build ? BR.storyMatch(st, big) : big || Math.random() < 0.5) && (big || !recentlyFaced([...A.slice(0, size), ...B.slice(0, size)])) && !ppvSaved([...A.slice(0, size), ...B.slice(0, size)])) {
       const mtype = size === 1 ? 'Singles' : size === 2 ? 'Tag Team' : 'Six-Person Tag';
       const title = st.titleId && G.titles.find(t => t.id === st.titleId);
-      segs.push({ id: uid(), kind: 'match', mtype, stip: H.stips && big && st.heat > 60 ? pick(['Street Fight', 'Steel Cage', 'No DQ', 'Ladder']) : 'Standard', sides: [A.slice(0, size), B.slice(0, size)], winner: -1, finish: 'Clean', title: title && title.holder.some(h => [...A, ...B].includes(h)) ? title.id : null, sim: true });
+      segs.push({ id: uid(), kind: 'match', mtype, stip: H.stips && big && st.heat > 60 ? pick(['Street Fight', 'Steel Cage', 'No DQ', 'Ladder']) : 'Standard', sides: [A.slice(0, size), B.slice(0, size)], winner: -1, finish: 'Clean', title: big && title && title.holder.some(h => [...A, ...B].includes(h)) ? title.id : null, sim: true });
       { const sg = segs[segs.length - 1]; if (H.stips) sg.finish = autoFin(big, sg.stip, st.heat); if (feudBlowNow(st, big)) { sg.blow = true; sg.finish = 'Clean'; }
         note(sg.blow ? `"${st.title}" ends tonight. ${nm(A[0])} and ${nm(B[0])} settle it.` : sg.stip !== 'Standard' ? `${nm(A[0])} and ${nm(B[0])} are too heated for a normal match, so I made it a ${sg.stip}.` : big ? `${nm(A[0])} vs ${nm(B[0])} pays off "${st.title}".` : `${nm(A[0])} and ${nm(B[0])} talked last time, so "${st.title}" gets a match.`); }
     } else { segs.push({ id: uid(), kind: 'promo', ptype: pick(['Call-out', 'Face-off']), who: [A[0]], target: [B[0]] }); if (notes.filter(x => x.includes('gets a promo')).length < 2) note(`"${st.title}" gets a promo this week. ${nm(A[0])} goes after ${nm(B[0])}.`); }
@@ -6866,14 +6870,15 @@ function autoFillOnce(wk, card, big, target, H, notes) {
   // title defenses for idle champions
   for (const t of G.titles.filter(t => titleOn(t, wk))) {
     if (segs.length >= target - 1 || !t.holder.length || t.holder.some(h => used.has(h) || W(h)?.injury > 0)) continue;
-    if (wk - t.lastDefense < 2 && !big) continue;
+    if (!big && (wk - t.lastDefense < 3 || ppvTitles.has(t.id))) continue;
     const top = contenders(t, 6).filter(w => avail().includes(w) && !shotsOf(w.id).some(x => x.titleId === t.id && (x.use === 'any' || x.wk > wk))); // a #1 contender waits for their event, and a cash-in is the booker's call
     const pool = top.length ? top : avail().filter(w => !t.holder.includes(w.id) && divOk(t, w)).sort((a, b) => b.pop - a.pop).slice(0, 6);
     const n = tsz(t);
     const tms = n === 3 ? availTrios().filter(x => !x.some(id => t.holder.includes(id))) : n === 2 ? availTeams().filter(x => !x.some(id => t.holder.includes(id))) : [];
     if (pool.length < n && !tms.length) continue;
     const ch = tms.length ? tms[Math.random() < 0.6 ? 0 : rint(0, Math.min(2, tms.length - 1))] : n === 1 ? [BR.challenger(t, pool.slice(0, 6)).id] : shuffle(pool).slice(0, n).map(w => w.id);
-    segs.push({ id: uid(), kind: 'match', mtype: sizeMT(n), stip: 'Standard', sides: [t.holder.slice(), ch], winner: -1, finish: !big && W(t.holder[0])?.align === 'heel' && Math.random() < 0.25 ? pick(['DQ', 'Count-out', 'Cheating']) : 'Clean', title: t.id });
+    // titles change hands at big events: on weekly TV the champion retains (the player can always change the winner)
+    segs.push({ id: uid(), kind: 'match', mtype: sizeMT(n), stip: 'Standard', sides: [t.holder.slice(), ch], winner: big ? -1 : 0, finish: !big && W(t.holder[0])?.align === 'heel' && Math.random() < 0.25 ? pick(['DQ', 'Count-out', 'Cheating']) : 'Clean', title: t.id });
     note(`The ${t.short || t.name} goes on the line: ${nm(t.holder[0])} defends against ${nm(ch[0])}.`);
     take([...t.holder, ...ch]);
   }
@@ -6892,15 +6897,19 @@ function autoFillOnce(wk, card, big, target, H, notes) {
     if (a && H.care && a.morale < 40) note(`${nm(a.id)} is unhappy, so I made sure they're on the card.`);
     if (!a) break; if (!b) { take([a.id]); continue; }
     if (ppvSaved([a.id, b.id])) { segs.push({ id: uid(), kind: 'promo', ptype: 'Face-off', who: [a.id], target: [b.id] }); take([a.id, b.id]); continue; }
-    segs.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: !big && Math.random() < 0.25 ? pick(['Roll-up', 'Cheating', 'Submission']) : 'Clean', title: null });
+    const heelIn = a.align === 'heel' || b.align === 'heel';
+    segs.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: !big && Math.random() < 0.25 ? pick(heelIn ? ['Roll-up', 'Cheating', 'Submission'] : ['Roll-up', 'Submission']) : 'Clean', title: null });
     take([a.id, b.id]);
   }
   // main event = the segment with the most star power, last
   const power = x => avg(segPeople(x).map(id => W(id).pop)) + (x.kind === 'match' ? 0 : -15) + (x.title ? 8 : 0);
   if (!card.length && H.s) card.push(...BR.order(segs, wk));
   else { segs.sort((x, y) => power(x) - power(y)); card.push(...segs); }
+  if (keepMain) { card.splice(card.indexOf(keepMain), 1); card.push(keepMain); }
+  // a show closes with a match: if the last segment is talk, the best new match goes last instead
+  if (!keepMain && card.length > 1 && card[card.length - 1].kind !== 'match') { const ms = card.filter(x => x.kind === 'match' && segs.includes(x)); if (ms.length) { const m = ms.reduce((p, q) => power(q) > power(p) ? q : p); card.splice(card.indexOf(m), 1); card.push(m); } }
   // make sure the best projected segment closes the show (a Head Booker checks; without one the biggest names just go last)
-  for (let k = 0; k < (H.s ? 2 : 0) && card.length > 2; k++) { const r = card.map((x, i) => x.kind === 'match' && segPeople(x).length ? projectFull(x, card.length - 1, card, wk).rating : -1), b = r.indexOf(Math.max(...r)); if (b < 0 || r[b] < 0 || b === card.length - 1) break; card.push(...card.splice(b, 1)); }
+  for (let k = 0; k < (H.s && !keepMain ? 2 : 0) && card.length > 2; k++) { const r = card.map((x, i) => x.kind === 'match' && segPeople(x).length ? projectFull(x, card.length - 1, card, wk).rating : -1), b = r.indexOf(Math.max(...r)); if (b < 0 || r[b] < 0 || b === card.length - 1) break; card.push(...card.splice(b, 1)); }
   if (H.care) { const tired = bookable(wk).filter(w => inRing(w) && !w.injury && (w.fatigue || 0) >= H.tired && !used.has(w.id)).sort((x, y) => y.pop - x.pop)[0]; if (tired) note(`${nm(tired.id)} is worn out (${Math.round(tired.fatigue)}% tired), so I left them off.`); }
   const me = card[card.length - 1]; if (segs.length && me && segs.includes(me) && me.kind === 'match') note(`${segPeople(me).map(nm).join(' vs ')} closes the show.`);
   return { segs: segs.length, filled };
@@ -9999,7 +10008,7 @@ const A = {
   segDelModal() { const d = UI.modal.draft; setBK(BK().filter(x => x.id !== d.id)); UI.modal = null; commit('Removed.'); },
   segDel(id) { setBK(BK().filter(x => x.id !== id)); commit(); },
   segUp(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i > 0) { [c[i - 1], c[i]] = [c[i], c[i - 1]]; commit(); } },
-  segMain(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0) { c.push(...c.splice(i, 1)); commit('Moved to the main event.'); } },
+  segMain(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0) { c.forEach(x => delete x.isMain); c.push(...c.splice(i, 1)); c[c.length - 1].isMain = true; commit('Moved to the main event.'); } },
   segDown(id) { const c = BK(), i = c.findIndex(x => x.id === id); if (i >= 0 && i < c.length - 1) { [c[i + 1], c[i]] = [c[i], c[i + 1]]; commit(); } },
   segWin(i) { UI.modal.draft.winner = +i; render(); },
   segNst(i) { const d = UI.modal.draft; if (+i) d.nst = d.nst || { k: 'Feud' }; else delete d.nst; render(); },
@@ -12398,7 +12407,7 @@ function fixCustomMatch(c) {
 function scrubGame(raw) {
   const ENUMS = { align: ['face', 'heel'], style: STYLES, division: DIVISIONS, kind: ['match', 'promo', 'angle', 'trios'], finish: [...Object.keys(FINISHES), ...Object.keys(OLD_FIN)], ptype: Object.keys(PROMO_TYPES), atype: Object.keys(ANGLE_TYPES), topic: Object.keys(PROMO_TOPICS), tone: Object.keys(PROMO_TONES), loc: Object.keys(SEG_PLACES), span: Object.keys(SEG_LENS), outro: Object.keys(SEG_ENDS) };
   const idMap = new Map(), fixId = v => { v = String(v); if (SAFE_ID.test(v)) return v; if (!idMap.has(v)) idMap.set(v, uid()); return idMap.get(v); };
-  const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|corner|coId|brand|bid|showId|loan|cutBy|inter|ans)$/;
+  const ID_KEYS = /^(id|wid|sid|titleId|holder|a|b|who|target|sides|winners|contenders|ids|champId|rival|members|ents|pair|adv|tid|won|rh|tms|leader|runin|turn|manager|corner|coId|brand|bid|showId|loan|cutBy|inter|ans|lostTitle)$/;
   let budget = 4000000; // values, not characters: a 2,000-wrestler save with years of history needs well over a million
   // a few short keys are ids or numbers almost everywhere but text inside these objects (by the key that holds them):
   // a storyline's own promo lines {a, b}, Dirt Sheet reviews and takes {h, b}, a storyline's one-line summary,
@@ -14459,7 +14468,7 @@ function hb() {
     tries: at(25) ? 2 + q : 1,
     // how many feuds get on the card: without a Head Booker only the hottest (and one more with a Writer)
     stories: s ? 99 : 1 + (wr ? 1 : 0),
-    tired: at(8) ? 70 - q * 2 : 80,
+    tired: at(8) ? 55 - q * 2 : 70,
     promo: sty === 'work' ? 0.05 : sty === 'story' ? 0.18 : 0.12,
     need: w => BR.need(w) + (at(8) ? (w.morale < 40 ? 4 + q : 0) : (w.morale < 40 ? -6 : 0)) + (sty === 'star' ? w.pop * 0.25 : 0) + (top.has(w.id) ? 6 : 0) + (!s ? rnd(0, 12) : 0)
   };
@@ -15884,6 +15893,7 @@ function moveSeg(id, to, rel) {
   const c = BK(), from = c.findIndex(x => x.id === id); if (from < 0) return;
   const dest = clamp(rel ? from + to : to, 0, c.length - 1); if (dest === from) return;
   const [x] = c.splice(from, 1); c.splice(dest, 0, x);
+  if (dest === c.length - 1) { c.forEach(y => delete y.isMain); x.isMain = true; } else delete x.isMain; // you picked the main event: Auto-fill keeps it there
   commit(`Moved to ${cardPos(dest, c.length).toLowerCase().replace('main event', 'the main event').replace('opener', 'the opener')}.`);
   const g = [...root.querySelectorAll('.mgrip')].find(b => b.dataset.id === id); if (g && rel) g.focus({ preventScroll: true });
 }
