@@ -396,6 +396,9 @@ button.mrow:active { background: var(--card2); }
 .fm-tile { display: grid; justify-items: center; gap: 4px; padding: 6px 4px 5px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); color: var(--dim); font-family: var(--f-cond); font-weight: 700; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; line-height: 1.1; }
 .fm-tile img { width: 52px; height: 52px; border-radius: 8px; display: block; }
 .fm-tabs { margin-top: 10px; }
+.bm-big { width: 36px; height: 72px; border-radius: 8px; flex: none; box-shadow: 0 0 0 2px var(--line); }
+.bm-tiles .fm-tile img { width: 40px; height: 80px; }
+.bm-hero { width: 150px; height: 300px; border-radius: 14px; flex: none; display: block; }
 .fm-tile.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--ink); }
 .fm .sw.mine { background: conic-gradient(#c8102e 0 25%, #1f4fbf 0 50%, #f2b705 0 75%, #1f8a3b 0) !important; }
 .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); }
@@ -11206,7 +11209,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 // true when a canvas has see-through pixels (a PNG with its background already cut out)
@@ -11253,6 +11256,7 @@ function cleanW(o) {
   const age = num(o.age, 16, 70); if (age !== undefined) w.age = age;
   const rl = roleFromText(o.role); if (rl && rl !== 'wrestler') w.role = rl;
   if (faceOK(o.look)) w.look = o.look;
+  if (bodyOK(o.body)) w.body = o.body;
   return w;
 }
 // "Manager", "GM", "commentary", "on hiatus"... from a spreadsheet or pasted list
@@ -11605,6 +11609,28 @@ function faceMaker(d) {
     <div role="tabpanel">${panes[tab]()}</div>
   </details>`;
 }
+// the body maker in the wrestler editor: the full wrestler shown on their wrestler page
+const BM_TABS = [['pose', 'Build & stance'], ['gear', 'Gear']];
+function bodyMaker(d) {
+  const c = bodyCode(d), at = i => parseInt(c[i], 36), tab = BM_TABS.some(([k]) => k === UI.bmTab) ? UI.bmTab : 'pose';
+  const peek = (i, j) => bodyURL({ ...d, body: c.slice(0, i) + j.toString(36) + c.slice(i + 1) });
+  const chips = (i, list) => `<div class="fm-tiles bm-tiles">${list.map((l, j) => `<button class="fm-tile ${at(i) === j ? 'on' : ''}" data-act="bBody" data-f="${i}" data-id="${j}" aria-pressed="${at(i) === j}"><img class="px" alt="" src="${peek(i, j)}"><span>${l}</span></button>`).join('')}</div>`;
+  const sws = (i, label, none) => `<div class="swatches">${FACE.col.map((col, j) => `<button class="sw ${at(i) === j ? 'on' : ''}${col || none ? '' : ' mine'}" style="background:${col || none || safeColor(d.color) || '#c8102e'}" data-act="bBody" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : none ? 'black' : 'their colour'}" aria-pressed="${at(i) === j}"></button>`).join('')}</div>`;
+  const row = (l, h) => `<div class="fm-row"><span>${l}</span>${h}</div>`;
+  const panes = {
+    pose: () => row('Build', chips(0, BODY.build)) + row('Stance', chips(1, BODY.stance)),
+    gear: () => row('Bottoms', chips(2, BODY.bottoms)) + row('Bottoms colour', sws(3, 'Bottoms'))
+      + row('Boots', chips(4, BODY.boots)) + (at(4) === 4 ? '' : row('Boots colour', sws(5, 'Boots', '#1b1b20')))
+      + row('Pads', chips(6, BODY.pads)) + row('Hands', chips(7, BODY.hands))
+      + row('Title belt', `<div class="seg-ctl">${BODY.belt.map((l, j) => `<button class="${at(8) === j ? 'on' : ''}" data-act="bBody" data-f="8" data-id="${j}" aria-pressed="${at(8) === j}">${l}</button>`).join('')}</div>`)
+      + '<p class="tiny muted fm-row">The top half wears the gear from the pixel face.</p>',
+  };
+  return `<details class="fm" ${UI.bmOpen ? 'open' : ''}><summary data-act="bmTog"><img class="bm-big px av-${d.align === 'heel' ? 'heel' : 'face'}" alt="Full body preview" src="${bodyURL(d)}"><span>Full body<span class="tiny muted" style="display:block;font-weight:500">Shown on their wrestler page</span></span></summary>
+    <div class="fm-row"><button class="btn" data-act="bBodyRand">${ic('dice')} Random body</button></div>
+    <div class="seg-ctl fm-tabs" role="tablist" aria-label="Body maker">${BM_TABS.map(([k, l]) => `<button role="tab" class="${tab === k ? 'on' : ''}" data-act="bmTab" data-id="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
+    <div role="tabpanel">${panes[tab]()}</div>
+  </details>`;
+}
 // ---- the builder screen ----
 function modalBuilder(m) {
   const d = m.draft;
@@ -11625,6 +11651,7 @@ function modalBuilder(m) {
    ${d.photo ? `<div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPhotoDel">Remove photo${facesOn() ? ' and use a pixel face' : ''}</button></div>` : ''}
    ${pxPanel(d)}
    ${!d.photo && facesOn() ? faceMaker(d) : ''}
+   ${facesOn() ? bodyMaker(d) : ''}
    <div class="swatches">${SWATCHES.map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bColor" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div>
 
    <div class="sec">Character</div>
@@ -12976,6 +13003,7 @@ function sanitizeGame(g) {
     w.id = String(w.id || uid()); w.name = String(w.name || 'Unknown').slice(0, 40); w.nick = String(w.nick || '').slice(0, 40);
     w.photo = safePhoto(w.photo); w.color = safeColor(w.color); w.align = w.align === 'heel' ? 'heel' : 'face';
     if (w.look != null && !faceOK(w.look)) delete w.look;
+    if (w.body != null && !bodyOK(w.body)) delete w.body;
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
     if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520), ...(w.contract.indie === true ? { indie: true } : {}), ...(+w.contract.dates >= 1 ? { dates: clamp(Math.floor(+w.contract.dates), 1, DATES_MAX) } : {}) };
@@ -13557,6 +13585,10 @@ const CREATOR_ACTIONS = {
   bFace(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < FACE_LEN) || !(n >= 0 && n < FACE_MAX[i])) return; const c = [...faceCode(d)]; c[i] = n.toString(36); if (i === 4 && FACE_HOOD.has(n) && !['2', '3', '7'].includes(c[7])) c[7] = '0'; d.look = c.join(''); UI.fmOpen = true; render(); },
   bFaceRand() { const d = UI.modal.draft; d.look = faceRandom(Math.random(), looksWomen(d), true); UI.fmOpen = true; render(); },
   fmTab(v) { UI.fmTab = v; UI.fmOpen = true; render(); },
+  bBody(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < BODY_LEN) || !(n >= 0 && n < BODY_MAX[i])) return; const c = [...bodyCode(d)]; c[i] = n.toString(36); d.body = c.join(''); UI.bmOpen = true; render(); },
+  bBodyRand() { const d = UI.modal.draft; d.body = bodyRandom(d, Math.random()); UI.bmOpen = true; render(); },
+  bmTab(v) { UI.bmTab = v; UI.bmOpen = true; render(); },
+  bmTog(v, el) { UI.bmOpen = !el.parentElement.open; },
   fmTog(v, el) { UI.fmOpen = !el.parentElement.open; },
   bPx(v, el) { pxSet(PX, el.dataset.f, v); applyPX(); render(); },
   bColor(c) { UI.modal.draft.color = c; if (PX?.bg === 'color') applyPX(); render(); },
