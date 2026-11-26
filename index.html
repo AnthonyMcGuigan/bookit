@@ -7074,7 +7074,7 @@ const r500 = x => Math.max(500, Math.round(x / 500) * 500);
 function tvMake(s, net, slot, hrs, term, adj = 1) {
   const T = TV_TIERS[tvNetTier(net)], S = TV_SLOTS[slot], L = TV_LENS[hrs];
   const fee = r500(tvBase(s) * T.fee * S.fee * L.fee * adj);
-  return { nw: net, slot, hrs, fee, tgt: clamp(Math.round(tvRecent(s) - 2 + T.tgt + S.tgt + L.tgt), 40, 85), bon: r500(fee * .06), term };
+  return { nw: net, slot, hrs, fee, tgt: clamp(Math.round(tvRecent(s) - 4 + T.tgt + S.tgt + L.tgt), 40, 85), bon: r500(fee * .06), term };
 }
 // a deal on an old save: same money, same 8 segments, same weeks left as the old single TV deal
 function tvStarter(s, i) {
