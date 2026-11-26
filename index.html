@@ -7474,7 +7474,7 @@ function renderModal() {
     case 'rtools': return modalRoster(m);
     case 'community': return modalCommunity(m);
     case 'cview': return modalCView(m);
-    case 'story': return modalStory(m);
+    case 'suPick': return modalSuPick(m);
     case 'shareOne': return modal('Share ' + esc(m.pack.wrestlers[0].name), `<p class="small muted" style="margin-top:0">Send this code to a friend. They paste it into Roster tools → Import.</p><textarea id="oneCode" readonly style="min-height:110px;font-size:11px;font-family:ui-monospace,monospace">${esc(m.code)}</textarea><button class="btn block" style="margin-top:8px" data-act="copyEl" data-id="oneCode">📋 Copy code</button>${m.draftBack?.draft?.id && W(m.draftBack.draft.id) ? `<button class="btn block" style="margin-top:8px" data-act="shareOneComm">🌐 Share in Community</button>` : ''}`, `<button class="btn" data-act="shareBack">Back to builder</button>`);
     case 'negotiate': return modalNegotiate(m);
     case 'guest': return modalGuest(m);
@@ -10883,7 +10883,7 @@ function suClean(g) {
     past: (Array.isArray(s.past) ? s.past : []).slice(-50).map(p => ({ season: num(p?.season, 1, 999, 1), n: num(p?.n, 0, 5, 0), of: num(p?.of, 0, 5, 0) })) };
 }
 // the Story Mode picker: one of the six companies, which save slot
-function modalStory() {
+function modalSuPick() {
   const slots = Array.from({ length: SLOTS }, (_, i) => ({ n: i + 1, info: slotInfo(i + 1) })), free = slots.find(s => !s.info)?.n || meta.slot || 1;
   const ros = c => c.roster.split('\n').length, champ = c => c.titles[0][5].join(' & ');
   return modal('Story Mode', `<p class="small" style="margin-top:0">The BookIt Universe: six companies, ${sum(SU_COS.map(ros)) + SU_FA.split('\n').length} original wrestlers and a world that keeps moving. Pick a company to run. The other five run themselves, and the owner sets you goals every season.</p>
@@ -10891,7 +10891,7 @@ function modalStory() {
     <div class="su-cos">${SU_COS.map(c => `<button class="su-co" data-act="storyGo" data-id="${c.id}" style="--co:${c.color}"><span class="su-co-top"><b>${esc(c.name)}</b><span class="tag ${c.diff === 'Hardest' ? 'bad' : c.diff === 'Hard' ? 'warn' : ''}">${c.diff}</span></span><span class="small">${esc(c.pitch)}</span><span class="tiny muted">🏆 ${esc(champ(c))} · ${ros(c)} wrestlers · ${esc(c.show)}</span></button>`).join('')}</div>`);
 }
 const STORY_ACTIONS = {
-  story() { UI.modal = { type: 'story' }; render(); },
+  story() { UI.modal = { type: 'suPick' }; render(); },
   storyGo(id) {
     const c = suCo(id); if (!c) return;
     const n = clamp(+(document.getElementById('su-slot')?.value || meta.slot || 1), 1, SLOTS), info = slotInfo(n);
@@ -14472,7 +14472,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.69';
+const VERSION = '1.9.70';
 const WHATS_NEW = [
   ['🎤 Cheaper guest promos', 'Per-appearance stars now charge a tenth of their fee for a promo or angle. Their full fee is only for matches. Promos have a new Remote spot under Where: the promo is sent in by video, and a per-appearance star who likes you does it for free.'],
   ['📅 Calendar settings', 'Menu → Settings has a new Calendar section. Start weeks on Sunday, shrink the calendar to this week or hide it, show week numbers, and pick which shows appear. Choose which weekend of the month big events air on, turn off weekly shows on big event weeks, and book up to 26 weeks ahead. Planning helpers add a big event countdown, rival big events and holidays on your calendar, and when the "book the big event" reminder comes.'],
