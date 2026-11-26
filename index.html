@@ -646,6 +646,33 @@ img.belt-ph.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .lv-belt { margin: 6px auto 4px; width: min(220px, 62%); }
 .lv-belt.main { width: min(320px, 84%); }
 .lv-belt-art { width: 100%; height: auto; display: block; filter: drop-shadow(0 8px 18px rgba(246,197,68,.25)); }
+/* Awards & Prizes: trophies, the shelf, and belts/trophies worn on photos */
+.tr-prev { display: flex; justify-content: center; }
+.tr-big { display: block; height: 230px; width: auto; max-width: 100%; margin: 0 auto; filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)); }
+img.tr-big { object-fit: contain; }
+.tr-mini { width: 100%; height: 70px; display: block; }
+.bd-grid.tr-grid { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
+.bd-tw { position: relative; display: flex; } .bd-tw .bd-tile { flex: 1; }
+.bd-x { position: absolute; top: -6px; right: -6px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; padding: 0; }
+.bd-x .i { width: 16px; height: 16px; }
+.bd-tpls { margin-bottom: 8px; }
+.bd-sides .bd-mini { height: 54px; }
+.bd-sl input[type=range] { width: 100%; }
+.sw-any { position: relative; display: grid; place-items: center; background: conic-gradient(#e33, #ec3, #3c5, #3ce, #36e, #c3e, #e33); cursor: pointer; overflow: hidden; }
+.sw-any input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: 0; padding: 0; }
+.sw-any .i { width: 14px; height: 14px; color: #fff; filter: drop-shadow(0 1px 1px #000); pointer-events: none; }
+.sw-any:focus-within { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px 8px; padding: 12px 8px 10px; border-radius: 14px; background: linear-gradient(color-mix(in srgb, var(--card2) 80%, #5b3a1e), var(--card)); border: 1px solid var(--line); }
+.sh-it { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1px; background: none; border: 0; color: var(--ink); padding: 0 2px 7px; border-bottom: 7px solid #5b3a1e; box-shadow: 0 6px 0 -1px #2a1608; border-radius: 0; }
+.sh-it b { font-size: 14px; margin-top: 2px; line-height: 1.2; } .sh-it span { font-size: 12.5px; } .sh-it i { font-style: normal; font-size: 11.5px; color: var(--dim); }
+.tr-sh { width: 100%; height: 124px; display: block; } img.tr-sh { object-fit: contain; }
+.champ-cup { width: 64px; height: 80px; flex: none; display: block; filter: drop-shadow(0 6px 12px rgba(0,0,0,.35)); } img.champ-cup { object-fit: contain; }
+.lv-cup { width: min(110px, 34%); } .lv-cup-art { width: 100%; height: auto; display: block; filter: drop-shadow(0 8px 18px rgba(246,197,68,.25)); }
+.avw { position: relative; display: inline-block; flex: none; line-height: 0; vertical-align: middle; }
+.avw > .av { width: 100% !important; height: 100% !important; }
+.avw .av-bt { position: absolute; left: 50%; bottom: -22%; width: 126%; max-width: none; height: auto; transform: translateX(-50%); pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.avw .av-tr { position: absolute; right: -26%; bottom: -4%; height: 72%; width: auto; max-width: none; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.avw .av-tr.solo { height: 76%; bottom: -10%; }
 .wz-belt { flex: none; width: 104px; padding: 0; border: 0; background: none; }
 .belt-th { width: 100%; height: auto; display: block; }
 .wz-add { margin-top: 10px; border-style: dashed !important; color: var(--accent-t); font-weight: 700; }
@@ -1709,6 +1736,7 @@ function migrate(g) {
   g.factions = (Array.isArray(g.factions) ? g.factions : []).filter(f => f && f.id && Array.isArray(f.members)).map(f => ({ ...f, name: String(f.name || 'Faction').slice(0, 40), tms: Array.isArray(f.tms) ? f.tms : [], w: +f.w || 0, l: +f.l || 0, d: +f.d || 0 }));
   g.tourneys = (Array.isArray(g.tourneys) ? g.tourneys : []).filter(t => t && t.id && Array.isArray(t.ents) && Array.isArray(t.rounds) && t.rounds.length && t.rounds.every(r => Array.isArray(r) && r.every(x => x && Array.isArray(x.pair) && x.pair.length === 2))).map(t => ({ ...t, name: String(t.name || 'Tournament').slice(0, 50) }));
   g.awards = (Array.isArray(g.awards) ? g.awards : []).filter(a => a && Array.isArray(a.list));
+  g.prizes = (Array.isArray(g.prizes) ? g.prizes : []).map(pzCleanOne).filter(Boolean).slice(0, 40);
   if (!g.popAt || typeof g.popAt !== 'object' || Array.isArray(g.popAt)) g.popAt = {};
   if (!g.rankPrev || typeof g.rankPrev !== 'object' || Array.isArray(g.rankPrev)) g.rankPrev = {};
   for (const t of g.titles || []) if (t.reigns && !(Array.isArray(t.reigns) && t.reigns.every(r => r && Array.isArray(r.rh)))) delete t.reigns;
@@ -1768,7 +1796,7 @@ function newGame(opts) {
     wrestlers: [], titles: [], stories: [], card: [], future: {}, news: [], history: [], todos: [], notebook: '',
     settings: { injuries: true, finances: opts.finances !== false, contracts: opts.contracts !== false, persona: opts.persona !== false, deep: !!opts.deep, bigEvery: 4, difficulty: Object.hasOwn(DIFF, String(opts.challenge)) ? opts.challenge : 'normal' }, bigEvents: BIG_EVENTS.slice(),
     booker: { xp: 0, trophies: {}, goals: [], goalsWk: 0, done: 0, events: 0, cxp: 0, coPaid: 1, perks: [] }, event: null,
-    teams: [], factions: [], tourneys: [], awards: [], popAt: {}, rankPrev: {}
+    teams: [], factions: [], tourneys: [], awards: [], prizes: [], popAt: {}, rankPrev: {}
   };
   G = g; g.settings.organic = true; g.settings.aging = true;
   if (opts.roster === 'empty') {
@@ -2703,6 +2731,7 @@ function tFinish(T, wid) {
   if (t && T.prize === 'title' && !t.holder.includes(wid) && w?.contract) { crown(t, [wid]); t.holder = [wid]; t.since = G.week; t.defenses = 0; t.lastDefense = G.week; STATS(w).tw++; prize = ` and is the new ${t.name} champion`; }
   else if (t && T.prize === 'shot') { const s = w?.contract && giveShot([wid], t, 'event'); prize = s ? ` and gets a ${t.name} match ${shotWhen(s)}` : ` and is now #1 contender for the ${t.name}`; if (!s) t.contenders = [wid, ...(t.contenders || []).filter(x => x !== wid)].slice(0, 3); }
   news(`🏆 ${nameOf(wid)} won the ${T.name}${prize}!`, 'title');
+  const P = T.prz && PZ(T.prz); if (P && pzOpen(P)) prizeWin(P, [wid], 'tourney');
 }
 // record a tournament match; walkovers for anyone who has left
 function tResult(seg, res) {
@@ -3335,17 +3364,18 @@ function yearEnd(world = true) {
     const wd = ringers().some(w => w.division === "Women's") && top(w => w.division === "Women's");
     if (wd && wd !== woy) list.push({ lbl: "Women's Wrestler of the Year", nm: nameOf(wd), det: `${apps(wd)} appearances`, wid: wd });
     const motm = segs.filter(r => r.seg.kind === 'match').sort((a, b) => b.rating - a.rating)[0];
-    if (motm) list.push({ lbl: 'Match of the Year', nm: vsLine(motm.seg), det: `${starStr(motm.rating)} · week ${motm.wk}` });
+    if (motm) list.push({ lbl: 'Match of the Year', nm: vsLine(motm.seg), det: `${starStr(motm.rating)} · week ${motm.wk}`, ids: (motm.winners || []).filter(id => W(id)) });
     const sh = shows.slice().sort((a, b) => b.rating - a.rating)[0];
     if (sh) list.push({ lbl: 'Show of the Year', nm: sh.name, det: `${sh.rating} · week ${sh.wk}` });
     const feud = G.stories.map(st => [st, st.log.filter(l => l.wk > from).length]).filter(x => x[1] >= 2).sort((a, b) => (b[1] * 4 + b[0].heat / 5) - (a[1] * 4 + a[0].heat / 5))[0];
     if (feud) list.push({ lbl: 'Feud of the Year', nm: feud[0].title, det: `${feud[0].a.map(nameOf).join(' & ')} vs ${feud[0].b.map(nameOf).join(' & ')}` });
     const tw = {}; for (const r of segs) if (r.seg.kind === 'match' && r.winners?.length) for (const sd of r.seg.sides) { const tm = teamOf(sd); if (tm && sd.some(id => r.winners.includes(id))) tw[tm.id] = (tw[tm.id] || 0) + 1; }
     const tt = Object.entries(tw).sort((a, b) => b[1] - a[1])[0];
-    if (tt && TM(tt[0])) list.push({ lbl: 'Tag Team of the Year', nm: TM(tt[0]).name, det: `${tt[1]} wins this year` });
+    if (tt && TM(tt[0])) list.push({ lbl: 'Tag Team of the Year', nm: TM(tt[0]).name, det: `${tt[1]} wins this year`, ids: TM(tt[0]).members.filter(id => W(id)) });
     const br = ringers().map(w => [w, w.pop - (G.popAt[w.id] ?? w.pop)]).filter(x => x[1] >= 3 && x[0].id !== woy).sort((a, b) => b[1] - a[1])[0];
     if (br) list.push({ lbl: 'Breakout Star', nm: br[0].name, det: `+${Math.round(br[1])} popularity`, wid: br[0].id });
     for (const a of list) if (a.wid) { const w = W(a.wid); if (w) { addPop(w, 2); w.morale = clamp(w.morale + 8, 0, 100); } }
+    prizeAwards(list);
     G.awards.push({ yr, wk: G.week, list });
     news(`🏅 Year ${yr} awards: ${list.slice(0, 3).map(a => `${a.lbl}, ${a.nm}`).join('. ')}.`, 'office');
   }
@@ -4103,6 +4133,7 @@ function runShow(opts = {}) {
     const cue = cueOf(seg, res, ctx);
     applySegment(seg, res, ctx);
     if (seg.tid) tResult(seg, res);
+    if (seg.prz && seg.kind === 'match' && res.winners?.length) { const P = PZ(seg.prz); if (P && pzOpen(P)) { const msg = prizeWin(P, res.winners, 'match'); if (msg) res.notes = [...(res.notes || []), '🏆 ' + msg]; } }
     if (veto) res.notes = [veto, ...(res.notes || [])];
     results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue, ...(res.quote ? { quote: res.quote } : {}), ...(res.stTag ? { stTag: res.stTag } : {}), ...(res.ans ? { ans: res.ans } : {}), ...(res.inter ? { inter: res.inter } : {}) });
     if (seg.kind === 'match') keys.push(segPeople(seg).slice().sort().join(','));
@@ -6095,7 +6126,7 @@ function liveScreen(m) {
     <div class="lv-seg ${main ? 'main' : ''} k-${r.seg.kind}" style="--d:${t0(d0)}" data-lv="${i}"${(k => k ? ` data-fx="${k}" data-fxd="${d1}"` : '')(champ && fxWorld(G.titles.find(x => x.id === r.seg.title)) ? 'champ' : main && h.big && r.rating >= 85 ? 'main' : i === fxTop ? 'big' : '')}>
       ${r.seg.kind === 'angle' ? '<i class="cam tl"></i><i class="cam tr"></i><i class="cam bl"></i><i class="cam br"></i>' : ''}
       <div class="lv-k lv-kh">${kindTag(r.seg)}<span>${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${r.seg.kind === 'match' ? segTitle(r.seg) : esc(r.seg.ptype || r.seg.atype)}</span>${r.seg.kind === 'angle' ? `<span class="rec"><b></b>REC${segPlace(r.seg) ? ' · ' + esc(SEG_PLACES[segPlace(r.seg)].n) : ''}</span>` : ''}</div>
-      ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>` : lvTalk(r, main)}
+      ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${(P => P ? `<div class="lv-belt lv-cup">${prizeArt(P, 'lv-cup-art')}</div>` : '')(r.seg.prz && PZ(r.seg.prz))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>` : lvTalk(r, main)}
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -6810,8 +6841,14 @@ function beltClean(b, t) {
   return { plate: one(o.plate, BPLATE, d.plate), metal: one(o.metal, BMETAL, d.metal), trim: o.trim && Object.hasOwn(BMETAL, o.trim) ? o.trim : '', strap: col(o.strap, d.strap), tex: one(o.tex, BSTRAP, d.tex),
     sides: [0, 2, 4, 6].includes(+o.sides) ? +o.sides : d.sides, side: ['rect', 'round', 'shield'].includes(o.side) ? o.side : 'rect', emblem: one(o.emblem, BEMBLEM, d.emblem), gem: col(o.gem, d.gem),
     ring: o.ring ? 1 : 0, carve: one(o.carve, BCARVE, d.carve), top: String(o.top ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 30), line: String(o.line ?? d.line).replace(/[<>`"]/g, '').toUpperCase().slice(0, 30),
-    font: one(o.font, BFONT, 'block'), enamel: col(o.enamel, d.enamel), banner: o.banner == null ? d.banner : o.banner ? 1 : 0, sub: String(o.sub ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 4), orn: o.orn == null ? d.orn : o.orn ? 1 : 0 };
+    font: one(o.font, BFONT, 'block'), enamel: col(o.enamel, d.enamel), banner: o.banner == null ? d.banner : o.banner ? 1 : 0, sub: String(o.sub ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 4), orn: o.orn == null ? d.orn : o.orn ? 1 : 0,
+    // side plate look, centre plate size, strap width and side plate size (in %)
+    sp: BSIDE_LOOK(String(o.sp || 'gem')) ? String(o.sp) : 'gem', ps: pctIn(o.ps, 80, 120), sw: pctIn(o.sw, 70, 130), ss: pctIn(o.ss, 80, 125) };
 }
+// a size in %: 100 unless set inside its range
+function pctIn(v, lo, hi) { const n = Math.round(+v); return isFinite(n) && n ? clamp(n, lo, hi) : 100; }
+// what a side plate can show: a gem, the company's initials, the champion's initials, or any centre icon
+const BSIDE_LOOK = k => k === 'gem' || k === 'co' || k === 'champ' || (Object.hasOwn(BEMBLEM, k) && !['none', 'logo', 'gem'].includes(k));
 // text that always fits: shrink to a floor, then squeeze the letters to the width
 function beltTxt(s, maxW, size, F, attrs) {
   const n = s.length; if (!n) return { fs: size, a: '' };
@@ -6837,11 +6874,18 @@ function beltEmblem(b, cx, cy, r, M, T, id, abbrTxt) {
   return '';
 }
 // one side plate: a raised frame, a metal field and a gem
-function beltSide(b, x, id, T, orn) {
-  const y = 75, sh = (w, h) => b.side === 'round' ? `<circle cx="${x}" cy="${y}" r="${h / 2}"` : b.side === 'shield' ? `<path d="M${x - w / 2} ${y - h / 2}H${x + w / 2}V${y + h * .05}Q${x + w / 2} ${y + h * .38} ${x} ${y + h / 2 + 2}Q${x - w / 2} ${y + h * .38} ${x - w / 2} ${y + h * .05}Z"` : `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${w / 4.5}"`;
+function beltSide(b, x, id, T, orn, M, opt = {}) {
+  const y = 75, k = (b.ss || 100) / 100, sc = k === 1 ? '' : ` transform="translate(${x} ${y}) scale(${k}) translate(${-x} ${-y})"`, sh = (w, h) => b.side === 'round' ? `<circle cx="${x}" cy="${y}" r="${h / 2}"` : b.side === 'shield' ? `<path d="M${x - w / 2} ${y - h / 2}H${x + w / 2}V${y + h * .05}Q${x + w / 2} ${y + h * .38} ${x} ${y + h / 2 + 2}Q${x - w / 2} ${y + h * .38} ${x - w / 2} ${y + h * .05}Z"` : `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${w / 4.5}"`;
   return `<g>${sh(36, 56)} fill="#000" opacity=".35" transform="translate(0 2.5)"/>${sh(36, 56)} fill="url(#${id}t)" stroke="${T[4]}" stroke-width="1.4"/>${sh(29, 48)} fill="url(#${id}d)"/>${sh(26, 44)} fill="url(#${id}m)"/>
     ${orn ? `${sh(22, 40)} fill="none" stroke="${T[1]}" stroke-width="2" stroke-dasharray="0 4.2" stroke-linecap="round" opacity=".9"/>` : `${sh(22, 40)} fill="none" stroke="${T[1]}" stroke-opacity=".55" stroke-width=".9"/>`}
-    ${beltGem(x, y, 5.5, id, T[4])}</g>`;
+    ${beltSideMid(b, x, y, id, T, M || T, opt)}</g>`.replace(/^<g>/, `<g${sc}>`);
+}
+// the middle of a side plate: a gem, initials or a small centre icon
+function beltSideMid(b, x, y, id, T, M, opt) {
+  if (b.sp === 'co' || b.sp === 'champ') { const s = (b.sp === 'champ' ? opt.champ : opt.abbr) || opt.abbr || 'BK', F = BFONT[b.font], f = beltTxt(s.slice(0, 3), 20, 11, F);
+    return `<text x="${x}" y="${y + f.fs * .36}" text-anchor="middle" font-family="${F[1]}" font-weight="700" font-size="${f.fs}" letter-spacing=".3" ${f.a} fill="${T[5]}">${esc(s.slice(0, 3))}</text>`; }
+  if (b.sp && b.sp !== 'gem') return beltEmblem({ ...b, emblem: b.sp, sub: '' }, x, y, 7.5, T, T, id, opt.abbr);
+  return beltGem(x, y, 5.5, id, T[4]);
 }
 function beltRender(raw, opt = {}) {
   const b = beltClean(raw, opt.title), id = 'bz' + (++beltN), M = BMETAL[b.metal], T = BMETAL[b.trim || b.metal];
@@ -6850,10 +6894,11 @@ function beltRender(raw, opt = {}) {
   // side plates spread along the strap, behind the main plate
   const sx = { 0: [], 2: [58, 302], 4: [36, 80, 280, 324], 6: [22, 58, 94, 266, 302, 338] }[b.sides].filter(x => !['winged', 'eagle'].includes(b.plate) || x < 40 || x > 320 || b.sides === 2);
   const sxw = ['winged', 'eagle'].includes(b.plate) && b.sides ? (b.sides === 2 ? [22, 338] : [20, 340]) : sx;
-  const strap = `<rect x="2" y="50" width="356" height="50" rx="14" fill="${b.strap}"/><rect x="2" y="50" width="356" height="50" rx="14" fill="url(#${id}s)"/>
-    ${b.tex === 'snake' ? `<rect x="2" y="50" width="356" height="50" rx="14" fill="url(#${id}k)"/>` : ''}
-    ${b.tex === 'leather' || b.tex === 'snake' ? `<path d="M12 57H348M12 93H348" stroke="#fff" stroke-opacity=".3" stroke-width="1.3" stroke-dasharray="5 3.5"/>` : ''}
-    ${b.tex === 'studs' ? [57, 93].map(y => Array.from({ length: 34 }, (_, i) => `<circle cx="${12 + i * 10.2}" cy="${y}" r="2.4" fill="url(#${id}t)" stroke="#000" stroke-opacity=".4" stroke-width=".5"/>`).join('')).join('') : ''}
+  const sH = Math.round(50 * (b.sw || 100) / 100), sY = 75 - sH / 2, sR = Math.min(14, sH / 2.5);
+  const strap = `<rect x="2" y="${sY}" width="356" height="${sH}" rx="${sR}" fill="${b.strap}"/><rect x="2" y="${sY}" width="356" height="${sH}" rx="${sR}" fill="url(#${id}s)"/>
+    ${b.tex === 'snake' ? `<rect x="2" y="${sY}" width="356" height="${sH}" rx="${sR}" fill="url(#${id}k)"/>` : ''}
+    ${b.tex === 'leather' || b.tex === 'snake' ? `<path d="M12 ${sY + 7}H348M12 ${sY + sH - 7}H348" stroke="#fff" stroke-opacity=".3" stroke-width="1.3" stroke-dasharray="5 3.5"/>` : ''}
+    ${b.tex === 'studs' ? [sY + 7, sY + sH - 7].map(y => Array.from({ length: 34 }, (_, i) => `<circle cx="${12 + i * 10.2}" cy="${y}" r="2.4" fill="url(#${id}t)" stroke="#000" stroke-opacity=".4" stroke-width=".5"/>`).join('')).join('') : ''}
     <path d="M6 54Q2 75 6 96" stroke="#000" stroke-opacity=".35" stroke-width="2" fill="none"/><path d="M354 54Q358 75 354 96" stroke="#000" stroke-opacity=".35" stroke-width="2" fill="none"/>`;
   const carve = { lines: `<g stroke="${M[3]}" stroke-opacity=".3" stroke-width=".9">${Array.from({ length: 36 }, (_, i) => `<path d="M60 ${4 + i * 4}H300"/>`).join('')}</g>`,
     sunburst: `<g stroke="${M[1]}" stroke-opacity=".5" stroke-width="2.2">${Array.from({ length: 48 }, (_, i) => { const a = i * Math.PI / 24; return `<path d="M180 ${Z.em[0]}L${(180 + 220 * Math.cos(a)).toFixed(0)} ${(Z.em[0] + 220 * Math.sin(a)).toFixed(0)}"/>`; }).join('')}</g>`,
@@ -6892,7 +6937,8 @@ function beltRender(raw, opt = {}) {
   <pattern id="${id}k" width="10" height="8" patternUnits="userSpaceOnUse"><path d="M0 4L5 0L10 4L5 8Z" fill="none" stroke="#000" stroke-opacity=".38" stroke-width="1"/><path d="M2 4L5 2L8 4" stroke="#fff" stroke-opacity=".14" fill="none"/></pattern>
   <clipPath id="${id}c"><path d="${P}" ${inner(.86)}/></clipPath></defs>
   ${strap}
-  ${sxw.map(x => beltSide(b, x, id, T, orn)).join('')}
+  ${sxw.map(x => beltSide(b, x, id, T, orn, M, opt)).join('')}
+  <g${b.ps && b.ps !== 100 ? ` transform="translate(180 75) scale(${b.ps / 100}) translate(-180 -75)"` : ''}>
   <path d="${P}" fill="#000" opacity=".4" transform="translate(1 4)"/>
   <path d="${P}" fill="url(#${id}t)" stroke="${T[4]}" stroke-width="1.6"/>
   <path d="${P}" ${inner(.93)} fill="url(#${id}d)"/>
@@ -6901,7 +6947,7 @@ function beltRender(raw, opt = {}) {
   <path d="${P}" ${inner(.86)} fill="none" stroke="${M[4]}" stroke-opacity=".55" stroke-width="1"/>
   <path d="${P}" ${inner(.81)} fill="none" stroke="${M[1]}" stroke-opacity=".75" stroke-width="1.1"/>
   ${orn ? ornate : rivets}
-  ${topT}${ringGems}${beltEmblem(b, cx, emY, er, M, T, id, opt.abbr)}${ban}
+  ${topT}${ringGems}${beltEmblem(b, cx, emY, er, M, T, id, opt.abbr)}${ban}</g>
   </svg>`;
 }
 
@@ -6966,14 +7012,16 @@ const BTPL = [
   ['Grand Slam', { plate: 'tablet', metal: 'gold', strap: '#0f4a2c', emblem: 'trophy', gem: '#1f9e5a', carve: 'sunburst', sides: 4, enamel: '#0c5a35' }]
 ];
 // a template's look with this title's own words kept
-const beltFromTpl = (i, cur) => { const c = beltClean(cur), x = BTPL[i]?.[1] || {}; return beltClean({ ...beltDefault(), trim: '', tex: 'leather', side: 'rect', ring: 0, font: 'block', banner: 1, ...x, top: c.top, line: c.line, sub: c.sub, orn: c.orn }); };
+const beltFromTpl = (i, cur) => { const c = beltClean(cur), x = BTPL[i]?.[1] || {}; return beltClean({ ...beltDefault(), trim: '', tex: 'leather', side: 'rect', ring: 0, font: 'block', banner: 1, ...x, top: c.top, line: c.line, sub: c.sub, orn: c.orn, sp: c.sp, ps: c.ps, sw: c.sw, ss: c.ss }); };
 function beltSurprise(cur) {
   const c = beltClean(cur), p = a => a[Math.floor(Math.random() * a.length)], k = o => p(Object.keys(o));
   return beltClean({ plate: k(BPLATE), metal: k(BMETAL), trim: Math.random() < .3 ? k(BMETAL) : '', strap: p(BSTRAPS), tex: k(BSTRAP), sides: p([0, 2, 2, 4, 4, 6]), side: p(['rect', 'round', 'shield']), emblem: p(Object.keys(BEMBLEM).filter(x => x !== 'none')),
-    gem: p(BGEMS), ring: Math.random() < .35 ? 1 : 0, carve: k(BCARVE), font: k(BFONT), enamel: p(BENAMEL), banner: Math.random() < .8 ? 1 : 0, top: c.top, line: c.line, sub: c.sub, orn: c.orn });
+    gem: p(BGEMS), ring: Math.random() < .35 ? 1 : 0, carve: k(BCARVE), font: k(BFONT), enamel: p(BENAMEL), banner: Math.random() < .8 ? 1 : 0, top: c.top, line: c.line, sub: c.sub, orn: c.orn, sp: Math.random() < .3 ? p(['co', 'star', 'crown', 'globe', ...Object.keys(BICON)]) : 'gem', ps: c.ps, sw: c.sw, ss: c.ss });
 }
 // a title's belt as drawn everywhere in the game (titles with no design keep the classic gold belt)
-const titleBelt = (t, cls) => beltRender(t.belt, { title: t, cls, label: (t.name || 'Championship') + ' belt', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BookIt') });
+const titleBelt = (t, cls) => beltRender(t.belt, { title: t, cls, label: (t.name || 'Championship') + ' belt', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BookIt'), champ: champInit(t) });
+// the champion's initials for their own side plates: a team's name, or each holder's first letter
+function champInit(t) { const h = (t?.holder || []).filter(id => W(id)); if (!h.length) return ''; if (h.length > 1) { const tm = typeof teamOf === 'function' && teamOf(h); if (tm) return abbr(tm.name).slice(0, 3); return h.map(id => (nameOf(id)[0] || '').toUpperCase()).join('').slice(0, 3); } return initials(nameOf(h[0])).slice(0, 3); }
 // title rules: level and how often it must be defended
 // a title's card level: where it sits on the show. Its prestige starts in that level's band and still moves with how it's booked.
 // [key, name, short name, starting prestige, band low, band high, hint]
@@ -7120,7 +7168,10 @@ function faceURL(w, tight) {
 }
 const facesOn = () => meta.faces !== 'initials';
 function av(w, size, lazy) {
-  const s = size || 38;
+  const s = size || 38, h = avImg(w, s, lazy), b = avBadges(w, s);
+  return b ? `<span class="avw" style="width:${s}px;height:${s}px">${h}${b}</span>` : h;
+}
+function avImg(w, s, lazy) {
   const ph = safePhoto(w.photo);
   const ac = w.align === 'face' || w.align === 'heel' ? ' av-' + w.align : '';
   // small PNG photos are pixel art, so keep their pixels crisp
@@ -7812,7 +7863,9 @@ function viewOffice() {
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
   ${t === 'contracts' && CON() ? `<div class="small muted" style="margin-bottom:8px">Talks open ${TALKS_OPEN} weeks before a deal ends. Rivals call in the last 8.</div><div class="list">${exp.map(w => wItem(w, 'negotiate', `<b>${money(w.contract.salary)}</b>/wk · ${lenLabel(w.contract.weeks)} left${w.contract.weeks <= TALKS_OPEN ? ' · <b>talks open</b>' : ''}`)).join('')}</div>` : ''}
   ${t === 'fa' ? faView(fa) : ''}
-  ${t === 'titles' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleArt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${tkindName(ti).toLowerCase()}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
+  ${t === 'titles' ? `<div class="seg-ctl" style="margin:0 0 10px" role="group" aria-label="Belts or trophies"><button class="${UI.ttab === 'prizes' ? '' : 'on'}" aria-pressed="${UI.ttab !== 'prizes'}" data-act="tTab" data-id="belts">${ic('crown')} Belts <span class="cnt">${G.titles.length}</span></button><button class="${UI.ttab === 'prizes' ? 'on' : ''}" aria-pressed="${UI.ttab === 'prizes'}" data-act="tTab" data-id="prizes">${ic('trophy')} Awards &amp; Prizes <span class="cnt">${(G.prizes || []).length}</span></button></div>` : ''}
+  ${t === 'titles' && UI.ttab === 'prizes' ? prizesView() : ''}
+  ${t === 'titles' && UI.ttab !== 'prizes' ? `<div class="list">${G.titles.map(ti => `<button class="item" data-act="editTitle" data-id="${ti.id}">${titleArt(ti, 'belt-sm')}<div class="main"><div class="t">${esc(ti.name)}</div><div class="d">${ti.holder.length ? nmList(ti.holder) : 'Vacant'} · ${tierName(ti)} · ${esc(titleDiv(ti))} · ${tkindName(ti).toLowerCase()}${titleEvery(ti) ? ` · every ${titleEvery(ti)} wk` : ''}${ti.holder.length ? ` · ${ti.defenses || 0} defenses` : ''}</div>${ti.tag ? '' : `<div class="contend">${contenders(ti, 3).map((w, i) => `<span><b>#${i + 1}</b> ${esc(w.name)} <span class="muted">${recStr(w)}</span></span>`).join('')}</div>`}</div></button>`).join('')}</div>
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <button class="btn block" style="margin-top:12px" data-act="beltPhotos">📷 Import belt photos</button>
@@ -7947,6 +8000,7 @@ function renderModal() {
     case 'blowStory': return modalBlowStory(m);
     case 'recap': return modalRecap(m);
     case 'title': return modalTitle(m);
+    case 'prize': return modalPrize(m);
     case 'creator': return modalCreator(m);
     case 'support': return modalSupport(m);
     case 'report': return modal('Report', `<p style="margin-top:0" class="small">What's wrong with it? Only the owner sees reports. It's hidden for you right away.</p>
@@ -8004,6 +8058,7 @@ const displaySettings = () => `
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
     <label class="f"><span>🎆 Big moment effects</span><select data-in="fx">${[[0, 'Off'], [1, 'Some: world titles, big main events'], [2, 'Lots: plus a 90+ segment']].map(([v, l]) => `<option value="${v}" ${FX_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="todo"><input type="checkbox" data-in="avBelts" ${meta.avBelts === false ? '' : 'checked'}><span>Champions wear their belt on their photo<br><span class="tiny muted">Trophy holders show their trophy too.</span></span></label>
     <label class="f"><span>Wrestlers without a photo</span><select data-in="faces"><option value="pixel">Pixel faces</option><option value="initials" ${meta.faces === 'initials' ? 'selected' : ''}>Initials</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
     ${sbOn() ? `<div class="small muted" style="margin:14px 0 8px">Privacy</div>
@@ -8301,6 +8356,8 @@ function helpHTML() {
   <p>Start one yourself, or let them grow from your booking: rematches after a title change, revenge for a broken streak, betrayals, great matches and repeat clashes. Put both sides together to build heat. A classic feud runs about 3 months across big events. It only ends when you blow it off, and your producer tells you when to extend it or end it early.</p>
   <h3>Rival promotions</h3>
   <p>Office → <b>Companies</b>. Rival companies run weekly shows, sign indie stars and compete for your fans. Create your own, or import any roster and pick <b>Make it a rival promotion</b>. Tap <b>Sign</b> on a rival wrestler to try to lure them away. With Sandbox on, open a company and tap <b>Take over</b> to run it yourself as one of your companies.</p>
+  <h3>Awards &amp; Prizes</h3>
+  <p>Office → Titles → <b>Awards &amp; Prizes</b> holds your trophies. A trophy is won, not defended: pick a tournament, a match (the match editor has <b>Winner lifts a trophy</b>), a year-end award, or hand it out yourself. Make it a yearly prize or a one-time one, and add a reward: a title shot, prize money or a big push. Every winner goes on its list. Champions wear their belt on their photo and trophy holders show their trophy, which you can turn off in Settings.</p>
   <h3>Teams and tournaments</h3>
   <p>Office → <b>Teams</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
@@ -8434,7 +8491,7 @@ function modalSeg(m) {
   let body = '';
   if (s.kind === 'match') {
     const mt = MT(s.mtype), gm = GM(s.stip);
-    const titleOpts = G.titles.filter(t => titleFits(t, mt) && (titleOn(t) || s.title === t.id));
+    const titleOpts = G.titles.filter(t => titleFits(t, mt) && (titleOn(t) || s.title === t.id) && (!t.big || isBig(UI.selWeek ?? G.week) || s.title === t.id));
     const opt = (k, cur) => `<option value="${esc(k)}" ${k === cur ? 'selected' : ''}>${esc(k)}</option>`;
     const grp = (l, ks, cur) => ks.length ? `<optgroup label="${l}">${ks.map(k => opt(k, cur)).join('')}</optgroup>` : '';
     const bt = Object.keys(MATCH_TYPES), mine = CM().types.map(x => x.name), gmine = CM().gims.map(x => x.name);
@@ -8470,6 +8527,7 @@ function modalSeg(m) {
     body += `<label class="f"><span>Championship on the line</span><select data-seg="title"><option value="">None</option>${titleOpts.map(t => `<option value="${t.id}" ${s.title === t.id ? 'selected' : ''}>${esc(t.name)} (${t.holder.length ? esc(t.holder.map(nameOf).join(' & ')) : 'vacant'})</option>`).join('')}</select></label>`;
     if (s.title) { const t = G.titles.find(x => x.id === s.title); if (t && t.holder.length && !t.holder.some(h => s.sides.flat().includes(h))) body += `<div class="tiny muted" style="margin-top:-6px;margin-bottom:10px">The champion isn't in this match. Whoever wins takes the title.</div>`; }
     body += shotEditor(s, mt);
+    { const pz = (G.prizes || []).filter(P => pzOpen(P) && (P.how === 'match' || P.how === 'hand' || s.prz === P.id)); if (pz.length) body += `<label class="f"><span>${ic('trophy')} Winner lifts a trophy</span><select data-seg="prz"><option value="">No trophy</option>${pz.map(P => `<option value="${P.id}" ${s.prz === P.id ? 'selected' : ''}>${esc(P.name)}${P.ev && P.ev === (isBig(UI.selWeek ?? G.week) ? bigName(UI.selWeek ?? G.week) : '') ? ' (tonight\'s)' : ''}</option>`).join('')}</select></label>`; }
   } else {
     const types = s.kind === 'promo' ? PROMO_TYPES : ANGLE_TYPES, key = s.kind === 'promo' ? 'ptype' : 'atype';
     const def = types[s[key]];
@@ -8567,6 +8625,7 @@ function modalWrestler(m) {
   const recent = G.history.slice(-8).reverse().flatMap(h => h.results.filter(r => segPeople(r.seg).includes(w.id)).map(r => ({ wk: h.wk, r })));
   const body = `<div class="row" style="margin-bottom:10px">${av(w, 56)}<div class="sp"><div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag">Age ${w.age}</span><span class="tag gold">OVR ${overall(w)}</span></div></div></div>
    ${titlesOf(w.id).map(t => `<button class="champ-card" data-act="editTitle" data-id="${t.id}" aria-label="${esc(t.name)}">${titleArt(t, 'champ-belt')}<div class="cc-t"><span class="cc-k">🏆 ${t.holder.length > 1 ? 'Co-champion' : 'Champion'}</span><b>${esc(t.name)}</b><span class="tiny muted">Since week ${t.since || 1} · ${t.defenses || 0} defense${t.defenses === 1 ? '' : 's'}${t.holder.length > 1 ? ' · with ' + esc(t.holder.filter(id => id !== w.id).map(nameOf).join(' & ')) : ''}</span></div></button>`).join('')}
+   ${wPrizes(w)}
    ${[w.hometown && '📍 ' + esc(w.hometown), (w.height || w.weight) && '📏 ' + esc([w.height, w.weight].filter(Boolean).join(' · ')), w.finisher && '💥 Finisher: <b>' + esc(w.finisher) + '</b>', w.signature && '✨ Signature: ' + esc(w.signature), w.theme && '🎵 ' + esc(w.theme)].filter(Boolean).map(x => `<div class="small" style="margin:2px 0">${x}</div>`).join('')}
    ${w.bio ? `<p class="small muted" style="margin:6px 0 10px">${esc(w.bio)}</p>` : ''}
    <div class="card">
@@ -8759,12 +8818,12 @@ function modalRecap(m) {
   return modal(esc(h.name), body, `<button class="btn" data-act="copyResults" data-id="${h.wk}">Copy</button>${canUndo(h.wk) ? '<button class="btn" data-act="undoShow">↶ Undo</button>' : ''}<button class="btn pri" data-act="${h === G.history.at(-1) ? 'afterShow' : 'closeModal'}">${h === G.history.at(-1) ? esc(nextLabel(h)) : 'Close'}</button>`);
 }
 function lineage(t) {
-  const rs = ensureReigns(t); if (!rs.length) return '<div class="sec">Title history</div><div class="tiny muted">Nobody has held this title yet.</div>';
+  const rs = ensureReigns(t); if (!rs.length) return `<div class="sec">Title history</div>${lineagePre(t)}<div class="tiny muted">Nobody has held this title yet.</div>`;
   const real = rs.filter(r => !r.old), long = real.reduce((a, r) => reignLen(r) > reignLen(a) ? r : a, real[0]);
   const cnt = {}; rs.forEach(r => { const k = r.nm; cnt[k] = (cnt[k] || 0) + 1; });
   const most = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
   return `<div class="sec">Title history (${rs.length} reign${rs.length > 1 ? 's' : ''})</div>
-    ${long || most[1] > 1 ? `<div class="tiny muted" style="margin-bottom:6px">${long ? `Longest: <b>${esc(long.nm)}</b>, ${reignLen(long)} wk` : ''}${most[1] > 1 ? `${long ? ' · ' : ''}Most reigns: <b>${esc(most[0])}</b> (${most[1]})` : ''}</div>` : ''}
+    ${lineagePre(t)}${long || most[1] > 1 ? `<div class="tiny muted" style="margin-bottom:6px">${long ? `Longest: <b>${esc(long.nm)}</b>, ${reignLen(long)} wk` : ''}${most[1] > 1 ? `${long ? ' · ' : ''}Most reigns: <b>${esc(most[0])}</b> (${most[1]})` : ''}</div>` : ''}
     <div class="card lineage" style="padding:4px 12px">${rs.map((r, i) => [r, i]).reverse().map(([r, i]) => `<div class="news"><span class="wk">#${i + 1}</span><span class="sp"><b>${esc(r.nm)}</b>${r.to ? '' : ' <span class="tag gold">Champion</span>'}<br><span class="tiny muted">${r.old ? 'Before the takeover' : `Week ${r.from}${r.to ? '–' + r.to : ' to now'} · ${reignLen(r)} wk · ${reignDef(t, r)} defense${reignDef(t, r) === 1 ? '' : 's'}`}</span></span></div>`).join('')}</div>`;
 }
 
@@ -8820,6 +8879,7 @@ function modalEditTourney(m) {
     <label class="f"><span>For which title?</span><select data-et="titleId"><option value="">No title</option>${G.titles.filter(x => !x.tag).map(x => `<option value="${x.id}" ${d.titleId === x.id ? 'selected' : ''}>${esc(x.name)}${x.holder.length ? '' : ' (vacant)'}</option>`).join('')}</select></label>
     ${t ? `<label class="f"><span>The winner gets</span><div class="seg-ctl">${prizes.map(([k, l]) => `<button class="${d.prize === k ? 'on' : ''}" data-act="bSet" data-f="prize" data-id="${k}">${l}</button>`).join('')}</div></label>` : ''}
     <label class="f"><span>Size</span><div class="seg-ctl">${['4', '8', '16'].map(k => `<button class="${String(d.size) === k ? 'on' : ''}" data-act="bSet" data-f="size" data-id="${k}">${k} wrestlers</button>`).join('')}</div></label>
+    ${(G.prizes || []).some(pzOpen) ? `<label class="f"><span>Trophy for the winner</span><select data-et="prz"><option value="">No trophy</option>${G.prizes.filter(pzOpen).map(P => `<option value="${P.id}" ${d.prz === P.id ? 'selected' : ''}>${esc(P.name)}</option>`).join('')}</select></label>` : ''}
     <div class="side"><div class="lbl">Entrants (${d.ents.length} of ${size}) · seeded in the order you pick</div>${chipsFor(d.ents, 'ents', size)}</div>
     <button class="btn sm" data-act="tFill" style="margin-bottom:10px">Fill with the top contenders</button>
     <div class="tiny muted">One round per show. Add each round to your card from the Shows screen. The final is worth extra.</div>`;
@@ -8828,7 +8888,7 @@ function modalEditTourney(m) {
 function modalTourney(m) {
   const T = TN(m.id); if (!T) return modal('Tournament', '<div class="empty">This tournament is gone.</div>');
   const t = T.titleId && G.titles.find(x => x.id === T.titleId);
-  const prize = T.prize === 'title' && t ? `Winner becomes ${esc(t.name)} champion` : T.prize === 'shot' && t ? `Winner earns a ${esc(t.short)} title shot` : 'Winner gets bragging rights';
+  const P = T.prz && PZ(T.prz), prize = (T.prize === 'title' && t ? `Winner becomes ${esc(t.name)} champion` : T.prize === 'shot' && t ? `Winner earns a ${esc(t.short)} title shot` : P ? '' : 'Winner gets bragging rights') + (P ? `${T.prize === 'title' || T.prize === 'shot' ? ' and lifts' : 'Winner lifts'} the ${esc(P.name)}` : '');
   const body = `<div class="small muted" style="margin-bottom:10px">${prize} · started week ${T.start}${T.done ? ` · won by <b>${esc(nameOf(T.won))}</b> in week ${T.done}` : ''}</div>
     <div class="bracket">${T.rounds.map((rd, r) => `<div class="br-r"><div class="br-h">${roundName(T, r)}</div>${rd.map(x => `<div class="br-m">${x.pair.map(id => `<div class="${x.adv === id ? 'won' : x.adv ? 'out' : ''}">${esc(nameOf(id))}</div>`).join('')}</div>`).join('')}</div>`).join('')}</div>`;
   const off = tPending(T).filter(o => !tOnCard(T, o.r, o.i));
@@ -8917,22 +8977,194 @@ async function beltShare(ph) {
 }
 // a title's look: its photo when it has one, otherwise the drawn belt
 const titleArt = (t, cls) => { const ph = safePhoto(t.photo); return ph ? `<img class="${cls || 'belt-art'} belt-ph${isPixPng(ph, 160) ? ' px' : ''}" alt="${esc((t.name || 'Championship') + ' belt')}" src="${esc(ph)}">` : titleBelt(t, cls); };
+
+// =====================================================================
+//  Awards & Prizes: trophies are won, not defended. A tournament cup, a yearly match, a year-end award or a one-off prize.
+//  They are drawn like the belts (same metals, gems, centre icons and fonts) on a 200 x 248 box.
+// =====================================================================
+const TBASE = { plinth: 'Stepped', round: 'Round', block: 'Tall block', none: 'None' };
+const TBASECOL = { wood: ['Wood', '#7a4a26', '#4a2a12', '#2a1608'], black: ['Black', '#3a3a44', '#16161c', '#000000'], marble: ['Marble', '#f4f2ee', '#c9c4bc', '#7d776e'], red: ['Red', '#c22a2a', '#7a1218', '#3a0508'], blue: ['Blue', '#2f6fe0', '#14306b', '#08183a'], green: ['Green', '#1f9e5a', '#0c5a35', '#032a17'], metal: ['Metal', '', '', ''] };
+const THANDLE = { none: 'None', loop: 'Loops', ear: 'Scrolls', wing: 'Wings' };
+const TTOP = { none: 'None', star: 'Star', crown: 'Crown', figure: 'Champion', ball: 'Orb', flame: 'Flame', eagle: 'Eagle' };
+// each shape: name, then its parts. em = [x, y, r] of the centre piece, hx = [left, right, y1, y2] for handles,
+// eng = [y, width] of an engraved line on the body, top = where a topper stands
+const TBODY = {
+  cup: ['Loving cup', () => ({ body: 'M52 30C52 88 70 112 100 116C130 112 148 88 148 30Z', rim: [100, 30, 48, 7], stem: 'M92 116H108L105 128L108 140H92L95 128Z', foot: 'M74 166Q76 150 100 146Q124 150 126 166Z', em: [100, 66, 17], hx: [54, 146, 40, 96], eng: [98, 70], top: 23 })],
+  chalice: ['Chalice', () => ({ body: 'M66 18C66 72 80 94 100 98C120 94 134 72 134 18Z', rim: [100, 18, 34, 6], stem: 'M96 98H104L103 120L106 126L103 132L104 150H96L97 132L94 126L97 120Z', foot: 'M76 166Q78 152 100 148Q122 152 124 166Z', em: [100, 50, 14], hx: [68, 132, 26, 74], eng: [82, 52], top: 12 })],
+  bowl: ['Rose bowl', () => ({ body: 'M34 64C36 104 64 126 100 128C136 126 164 104 166 64Z', rim: [100, 64, 66, 9], stem: 'M92 128H108L106 144H94Z', foot: 'M70 166Q72 150 100 146Q128 150 130 166Z', em: [100, 94, 15], hx: [36, 164, 70, 110], eng: [114, 80], top: 55 })],
+  urn: ['Urn', () => ({ body: 'M70 46C44 62 46 112 80 124H120C154 112 156 62 130 46Z', rim: [100, 46, 30, 5], lid: 'M72 46Q72 22 100 20Q128 22 128 46Z', stem: 'M90 124H110L106 144H94Z', foot: 'M72 166Q74 150 100 146Q126 150 128 166Z', em: [100, 82, 17], hx: [58, 142, 56, 104], eng: [112, 60], top: 14 })],
+  plaque: ['Plaque', () => ({ body: 'M50 16H150V82Q150 132 100 154Q50 132 50 82Z', stem: 'M94 150H106V166H94Z', em: [100, 72, 24], eng: [118, 70], top: 9, flat: 1 })],
+  column: ['Column', () => ({ body: 'M78 88H122V160H78Z', cap: 'M70 76H130V90H70Z', foot: 'M70 158H130V168H70Z', em: [100, 122, 13], top: 74, flat: 1, flute: 1 })],
+  star: ['Star', () => { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 26 : 60; p.push(`${(100 + q * Math.cos(a)).toFixed(1)} ${(76 + q * Math.sin(a)).toFixed(1)}`); }
+    return { body: 'M' + p.join('L') + 'Z', stem: 'M95 120H105L104 150H96Z', foot: 'M76 166Q78 152 100 148Q122 152 124 166Z', em: [100, 78, 17], flat: 1, noTop: 1 }; }],
+  globe: ['Globe', () => ({ globe: [100, 74, 46], stem: 'M94 118H106L104 150H96Z', foot: 'M74 166Q76 150 100 146Q124 150 126 166Z', top: 25 })],
+  belt: ['Belt on a stand', () => ({ beltOn: 1, stem: 'M94 112H106V158H94Z', foot: 'M70 166Q72 154 100 150Q128 154 130 166Z', noTop: 1 })]
+};
+function trophyDefault(t) { return { body: 'cup', metal: 'gold', trim: '', handle: 'loop', top: 'star', base: 'plinth', bcol: 'wood', emblem: 'trophy', gem: '#d62839', enamel: '#9b1020', line: String(t?.short || t?.name || 'Trophy').toUpperCase().slice(0, 22), sub: '', eng: '', font: 'block', banner: 1, plate: 'classic' }; }
+function trophyClean(o, t) {
+  const d = trophyDefault(t); o = o && typeof o === 'object' ? o : {};
+  const col = (v, f) => /^#[0-9a-f]{6}$/i.test(String(v)) ? String(v) : f, one = (v, m, f) => Object.hasOwn(m, String(v)) ? String(v) : f, txt = (v, f, n) => String(v ?? f).replace(/[<>`"]/g, '').toUpperCase().slice(0, n);
+  return { body: one(o.body, TBODY, d.body), metal: one(o.metal, BMETAL, d.metal), trim: o.trim && Object.hasOwn(BMETAL, o.trim) ? o.trim : '', handle: one(o.handle, THANDLE, d.handle), top: one(o.top, TTOP, d.top), base: one(o.base, TBASE, d.base), bcol: one(o.bcol, TBASECOL, d.bcol),
+    emblem: one(o.emblem, BEMBLEM, d.emblem), gem: col(o.gem, d.gem), enamel: col(o.enamel, d.enamel), line: txt(o.line, d.line, 26), sub: txt(o.sub, '', 26), eng: txt(o.eng, '', 20), font: one(o.font, BFONT, 'block'), banner: o.banner == null ? 1 : o.banner ? 1 : 0, plate: one(o.plate, BPLATE, 'classic') };
+}
+function trophyRender(raw, opt = {}) {
+  const b = trophyClean(raw, opt.title), id = 'tz' + (++beltN), M = BMETAL[b.metal], T = BMETAL[b.trim || b.metal], F = BFONT[b.font], G2 = TBODY[b.body][1](), e = M[4];
+  const m = `url(#${id}m)`, t = `url(#${id}t)`, cx = 100;
+  // handles go behind the body
+  const hand = !G2.hx || b.handle === 'none' ? '' : (() => { const [l, r, y1, y2] = G2.hx, h = y2 - y1;
+    const one = s => { const x = s < 0 ? l + 2 : r - 2, o = s * (b.handle === 'wing' ? 30 : 22);
+      if (b.handle === 'loop') { const d = `M${x} ${y1}C${x + o * 1.3} ${y1 - 4} ${x + o * 1.25} ${y2 - h * .25} ${x} ${y2}`; return `<path d="${d}" fill="none" stroke="${e}" stroke-width="9" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${t}" stroke-width="6" stroke-linecap="round"/>`; }
+      if (b.handle === 'ear') { const d = `M${x} ${y1 + 2}C${x + o * 1.4} ${y1 - 10} ${x + o * 1.6} ${y1 + h * .45} ${x + o * .7} ${y1 + h * .45}C${x + o * .3} ${y1 + h * .45} ${x + o * .35} ${y1 + h * .25} ${x + o * .6} ${y1 + h * .28}M${x + o * .7} ${y1 + h * .45}C${x + o * 1.1} ${y1 + h * .7} ${x + o * .5} ${y2} ${x} ${y2}`; return `<path d="${d}" fill="none" stroke="${e}" stroke-width="8" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${t}" stroke-width="5" stroke-linecap="round"/>`; }
+      return `<path d="M${x} ${y1 + 6}C${x + o * .6} ${y1 - 14} ${x + o * 1.2} ${y1 - 10} ${x + o * 1.3} ${y1 - 6}C${x + o * .95} ${y1 + 2} ${x + o * 1.15} ${y1 + 8} ${x + o * .95} ${y1 + 12}C${x + o * .75} ${y1 + 16} ${x + o * .9} ${y1 + 22} ${x + o * .7} ${y1 + 26}C${x + o * .4} ${y1 + 32} ${x + o * .2} ${y1 + h * .55} ${x} ${y1 + h * .6}Z" fill="${t}" stroke="${e}" stroke-width="1.4" stroke-linejoin="round"/><path d="M${x + o * .2} ${y1 + 6}L${x + o * 1.05} ${y1 - 4}M${x + o * .2} ${y1 + 14}L${x + o * .85} ${y1 + 12}M${x + o * .2} ${y1 + 22}L${x + o * .7} ${y1 + 24}" stroke="${e}" stroke-opacity=".5"/>`; };
+    return one(-1) + one(1); })();
+  // the base, with the nameplate on its front
+  const bc = b.bcol === 'metal' ? [T[1], T[2], T[3]] : TBASECOL[b.bcol].slice(1), bEdge = b.bcol === 'marble' ? '#5d574f' : '#000', baseY = 166;
+  const baseD = { plinth: `<path d="M38 ${baseY + 8}H162V${baseY + 44}H38Z" fill="url(#${id}b)" stroke="${bEdge}" stroke-width="1.4"/><path d="M54 ${baseY}H146V${baseY + 8}H54Z" fill="url(#${id}b)" stroke="${bEdge}" stroke-width="1.2"/><path d="M38 ${baseY + 8}H162" stroke="#fff" stroke-opacity=".35"/><rect x="38" y="${baseY + 40}" width="124" height="4" fill="#000" opacity=".25"/>`,
+    round: `<ellipse cx="100" cy="${baseY + 40}" rx="64" ry="9" fill="#000" opacity=".3"/><path d="M36 ${baseY + 10}V${baseY + 38}A64 9 0 0 0 164 ${baseY + 38}V${baseY + 10}Z" fill="url(#${id}b)" stroke="${bEdge}" stroke-width="1.2"/><ellipse cx="100" cy="${baseY + 10}" rx="64" ry="9" fill="${bc[0]}" stroke="${bEdge}" stroke-width="1.2"/><path d="M50 ${baseY + 2}V${baseY + 8}A50 6 0 0 0 150 ${baseY + 8}V${baseY + 2}Z" fill="url(#${id}b)"/><ellipse cx="100" cy="${baseY + 2}" rx="50" ry="6" fill="${bc[0]}" stroke="${bEdge}" stroke-width="1"/>`,
+    block: `<path d="M50 ${baseY}H150L156 ${baseY + 6}V${baseY + 46}H44V${baseY + 6}Z" fill="url(#${id}b)" stroke="${bEdge}" stroke-width="1.4"/><path d="M44 ${baseY + 6}H156" stroke="#fff" stroke-opacity=".35"/><path d="M44 ${baseY + 40}H156" stroke="#000" stroke-opacity=".3"/>`, none: '' }[b.base];
+  const bw = b.base === 'none' ? 0 : b.base === 'round' ? 96 : 104, py = baseY + (b.base === 'round' ? 24 : 26), lf = beltTxt(b.line, bw - 14, 11, F), sf = beltTxt(b.sub, bw - 22, 7, F);
+  const ink = b.banner ? (inkOn(b.enamel) === '#ffffff' ? (b.metal === 'black' ? M[5] : M[1]) : '#1a1306') : M[5];
+  const plate = !bw || !b.line ? '' : `<rect x="${cx - bw / 2}" y="${py - (b.sub ? 12 : 9)}" width="${bw}" height="${b.sub ? 24 : 18}" rx="2" fill="${t}" stroke="${T[4]}" stroke-width="1"/>
+    <rect x="${cx - bw / 2 + 2.5}" y="${py - (b.sub ? 9.5 : 6.5)}" width="${bw - 5}" height="${b.sub ? 19 : 13}" rx="1" fill="${b.banner ? b.enamel : m}"/>
+    <text x="${cx}" y="${py + (b.sub ? -1.5 : 0) + lf.fs * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${lf.fs}" letter-spacing="${F[2] * .7}" font-weight="700" ${lf.a} fill="${ink}">${esc(b.line)}</text>
+    ${b.sub ? `<text x="${cx}" y="${py + 6.5 + sf.fs * .3}" text-anchor="middle" font-family="${F[1]}" font-size="${sf.fs}" letter-spacing="${F[2] * .5}" font-weight="700" ${sf.a} fill="${ink}" opacity=".85">${esc(b.sub)}</text>` : ''}`;
+  // the topper sits on the rim, the lid or the top of the column
+  const ty = G2.top, top = G2.noTop ? '' : (() => { switch (b.top) {
+    case 'star': { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 6 : 14; p.push(`${(cx + q * Math.cos(a)).toFixed(1)} ${(ty - 14 + q * Math.sin(a)).toFixed(1)}`); } return `<path d="M96 ${ty}H104L102 ${ty - 4}H98Z" fill="${t}" stroke="${e}"/><path d="M${p.join('L')}Z" fill="${m}" stroke="${e}" stroke-width="1.3" stroke-linejoin="round"/>`; }
+    case 'crown': return `<path d="M84 ${ty}L82 ${ty - 20}L91 ${ty - 11}L100 ${ty - 24}L109 ${ty - 11}L118 ${ty - 20}L116 ${ty}Z" fill="${m}" stroke="${e}" stroke-width="1.3" stroke-linejoin="round"/>${beltGem(cx, ty - 6, 3, id, e)}${beltGem(88, ty - 5, 2, id, e)}${beltGem(112, ty - 5, 2, id, e)}`;
+    case 'ball': return `<path d="M95 ${ty}H105L102 ${ty - 5}H98Z" fill="${t}" stroke="${e}"/>${beltGem(cx, ty - 13, 9, id, e)}`;
+    case 'flame': return `<path d="${beltPath('M0 0.9C-0.62 0.9 -0.76 0.32 -0.45 -0.08C-0.36 0.18 -0.18 0.22 -0.14 0.08C-0.27 -0.36 0 -0.62 0.09 -0.9C0.18 -0.54 0.62 -0.36 0.54 0.18C0.68 0.04 0.68 -0.09 0.63 -0.18C0.86 0.27 0.68 0.9 0 0.9Z', cx, ty - 14, 15)}" fill="${m}" stroke="${e}" stroke-width="1.3"/>`;
+    case 'eagle': return BICON.eagle[1]({ cx, cy: ty - 12, r: 14, id, e, g: `url(#${id}g)`, m, M, bez: '', p: d => beltPath(d, cx, ty - 12, 14), x: v => +(cx + v * 14).toFixed(1), y: v => +(ty - 12 + v * 14).toFixed(1) });
+    case 'figure': return `<path d="M100 ${ty - 34}a5.5 5.5 0 1 1 0 11a5.5 5.5 0 1 1 0-11Z M91 ${ty - 42}L95 ${ty - 22}L94 ${ty - 4}L90 ${ty}H97L100 ${ty - 12}L103 ${ty}H110L106 ${ty - 4}L105 ${ty - 22}L109 ${ty - 42}L112 ${ty - 41}L109 ${ty - 20}C108 ${ty - 17} 92 ${ty - 17} 91 ${ty - 20}L88 ${ty - 41}Z" fill="${m}" stroke="${e}" stroke-width="1.2" stroke-linejoin="round"/>`;
+  } return ''; })();
+  let body = '';
+  if (G2.globe) { const [gx, gy, gr] = G2.globe; body = `<circle cx="${gx}" cy="${gy}" r="${gr}" fill="${m}" stroke="${e}" stroke-width="1.6"/><g fill="none" stroke="${M[3]}" stroke-opacity=".7" stroke-width="1.4"><ellipse cx="${gx}" cy="${gy}" rx="${gr * .45}" ry="${gr}"/><path d="M${gx - gr} ${gy}H${gx + gr}M${gx - gr * .87} ${gy - gr * .5}H${gx + gr * .87}M${gx - gr * .87} ${gy + gr * .5}H${gx + gr * .87}M${gx} ${gy - gr}V${gy + gr}"/></g><ellipse cx="${gx}" cy="${gy}" rx="${gr + 8}" ry="${gr * .3}" transform="rotate(-18 ${gx} ${gy})" fill="none" stroke="${t}" stroke-width="5"/><ellipse cx="${gx}" cy="${gy}" rx="${gr + 8}" ry="${gr * .3}" transform="rotate(-18 ${gx} ${gy})" fill="none" stroke="${e}" stroke-width=".8"/><circle cx="${gx - gr * .4}" cy="${gy - gr * .45}" r="${gr * .16}" fill="#fff" opacity=".45"/>`; }
+  else if (G2.beltOn) body = `<g transform="translate(10 32) scale(.5)">${beltRender({ plate: b.plate, metal: b.metal, trim: b.trim, gem: b.gem, enamel: b.enamel, emblem: b.emblem, font: b.font, banner: 1, carve: 'sunburst', sides: 2, strap: '#1a1a1f', line: b.eng || b.line, top: '' }, { cls: '' }).replace(/^<svg[^>]*>|<\/svg>\s*$/g, '')}</g>`;
+  else body = `${G2.lid ? `<path d="${G2.lid}" fill="${m}" stroke="${e}" stroke-width="1.4"/>` : ''}<path d="${G2.body}" fill="#000" opacity=".25" transform="translate(2 3)"/><path d="${G2.body}" fill="${m}" stroke="${e}" stroke-width="1.6" stroke-linejoin="round"/>
+      <clipPath id="${id}c"><path d="${G2.body}"/></clipPath><g clip-path="url(#${id}c)"><rect x="0" y="0" width="200" height="220" fill="url(#${id}h)"/>${G2.flute ? [86, 94, 106, 114].map(x => `<path d="M${x} 90V160" stroke="${M[3]}" stroke-opacity=".6" stroke-width="2"/>`).join('') : ''}</g>
+      ${G2.flat ? `<path d="${G2.body}" fill="none" stroke="${M[1]}" stroke-opacity=".6" stroke-width="1.2" transform="translate(100 ${G2.em[1]}) scale(.9) translate(-100 -${G2.em[1]})"/>` : ''}
+      ${G2.cap ? `<path d="${G2.cap}" fill="${t}" stroke="${e}" stroke-width="1.4"/>` : ''}
+      ${G2.rim ? `<ellipse cx="${G2.rim[0]}" cy="${G2.rim[1]}" rx="${G2.rim[2]}" ry="${G2.rim[3]}" fill="${t}" stroke="${e}" stroke-width="1.4"/><ellipse cx="${G2.rim[0]}" cy="${G2.rim[1] + 1}" rx="${G2.rim[2] - 5}" ry="${G2.rim[3] - 2.5}" fill="url(#${id}d)"/>` : ''}`;
+  const eng = G2.eng && b.eng ? (() => { const f = beltTxt(b.eng, G2.eng[1], 8, F); return `<text x="${cx}" y="${G2.eng[0] + f.fs * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${f.fs}" letter-spacing="${F[2] * .6}" font-weight="700" ${f.a} fill="${M[5]}" opacity=".85">${esc(b.eng)}</text>`; })() : '';
+  const em = G2.em && b.emblem !== 'none' ? beltEmblem({ ...b, sub: '', ring: 0 }, G2.em[0], G2.em[1], G2.em[2], M, T, id, opt.abbr) : '';
+  return `<svg class="${opt.cls || 'trophy-art'}" viewBox="${opt.vb || '0 -34 200 248'}" role="img" aria-label="${esc(opt.label || 'Trophy')}">
+  <defs><linearGradient id="${id}m" x1="0" y1="0" x2="1" y2=".25"><stop offset="0" stop-color="${M[3]}"/><stop offset=".22" stop-color="${M[1]}"/><stop offset=".5" stop-color="${M[2]}"/><stop offset=".85" stop-color="${M[3]}"/><stop offset="1" stop-color="${M[2]}"/></linearGradient>
+  <linearGradient id="${id}t" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="${T[3]}"/><stop offset=".3" stop-color="${T[1]}"/><stop offset=".6" stop-color="${T[2]}"/><stop offset="1" stop-color="${T[3]}"/></linearGradient>
+  <linearGradient id="${id}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${T[3]}"/><stop offset="1" stop-color="${T[2]}"/></linearGradient>
+  <linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${bc[2]}"/><stop offset=".3" stop-color="${bc[0]}"/><stop offset=".7" stop-color="${bc[1]}"/><stop offset="1" stop-color="${bc[2]}"/></linearGradient>
+  <linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="0"><stop offset=".18" stop-color="#fff" stop-opacity="0"/><stop offset=".28" stop-color="#fff" stop-opacity=".45"/><stop offset=".36" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <radialGradient id="${id}g" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".3" stop-color="${b.gem}"/><stop offset=".85" stop-color="${b.gem}"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></radialGradient></defs>
+  ${baseD}${plate}
+  ${G2.foot ? `<path d="${G2.foot}" fill="${t}" stroke="${e}" stroke-width="1.4"/>` : ''}${G2.stem ? `<path d="${G2.stem}" fill="${t}" stroke="${e}" stroke-width="1.3"/>` : ''}
+  ${hand}${body}${em}${eng}${top}
+  </svg>`;
+}
+// finished trophies to start from
+const TTPL = [
+  ['Loving cup', { body: 'cup', metal: 'gold', handle: 'loop', top: 'star', base: 'plinth', bcol: 'wood', emblem: 'trophy' }],
+  ['King of the Ring', { body: 'chalice', metal: 'gold', handle: 'none', top: 'crown', base: 'plinth', bcol: 'black', emblem: 'crown' }],
+  ['Tag Classic', { body: 'bowl', metal: 'silver', handle: 'ear', top: 'ball', base: 'round', bcol: 'marble', emblem: 'star', gem: '#2f6fe0', enamel: '#123a7a' }],
+  ['Grand Prix', { body: 'urn', metal: 'bronze', handle: 'wing', top: 'eagle', base: 'plinth', bcol: 'wood', emblem: 'eagle' }],
+  ['MVP plaque', { body: 'plaque', metal: 'silver', handle: 'none', top: 'star', base: 'block', bcol: 'wood', emblem: 'laurel', enamel: '#123a7a' }],
+  ['Hall of Fame', { body: 'column', metal: 'rose', top: 'figure', base: 'plinth', bcol: 'marble', emblem: 'bell' }],
+  ['Rising star', { body: 'star', metal: 'gold', base: 'plinth', bcol: 'blue', emblem: 'globe', enamel: '#123a7a' }],
+  ['World Cup', { body: 'globe', metal: 'gold', top: 'eagle', base: 'round', bcol: 'black', enamel: '#1a1a1f' }],
+  ['Belt on a stand', { body: 'belt', metal: 'gold', base: 'plinth', bcol: 'wood', emblem: 'gem' }],
+  ['Hardcore cup', { body: 'cup', metal: 'black', handle: 'wing', top: 'flame', base: 'block', bcol: 'red', emblem: 'skull', gem: '#d62839' }]
+];
+const trophyFromTpl = (i, cur) => { const c = trophyClean(cur), x = TTPL[i]?.[1] || {}; return trophyClean({ ...trophyDefault(), trim: '', handle: 'none', top: 'none', ...x, line: c.line, sub: c.sub, eng: c.eng }); };
+function trophySurprise(cur) {
+  const c = trophyClean(cur), p = a => a[Math.floor(Math.random() * a.length)], k = o => p(Object.keys(o));
+  return trophyClean({ body: k(TBODY), metal: k(BMETAL), trim: Math.random() < .3 ? k(BMETAL) : '', handle: k(THANDLE), top: k(TTOP), base: p(['plinth', 'plinth', 'round', 'block']), bcol: k(TBASECOL), emblem: p(Object.keys(BEMBLEM).filter(x => x !== 'none')), gem: p(BGEMS), enamel: p(BENAMEL), font: k(BFONT), banner: Math.random() < .8 ? 1 : 0, plate: k(BPLATE), line: c.line, sub: c.sub, eng: c.eng });
+}
+
+// ---------- the prizes themselves ----------
+const PZ = id => (G.prizes || []).find(p => p.id === id);
+const PZ_HOW = [['tourney', 'Tournament', 'trophy', 'A bracket over several shows. Run it from this page, or pick this prize when you start a tournament.'], ['match', 'A match', 'wrestle', 'Put it on the line in any match: the match editor has Winner lifts a prize.'], ['award', 'Year-end award', 'medal', 'Handed out with the awards at the end of every year (week 52).'], ['hand', 'Hand it out', 'star', 'You choose who gets it, any time, from this page.']];
+const PZ_TIER = [['minor', 'Minor', 2], ['big', 'Big', 4], ['legend', 'Legendary', 7]];
+const PZ_REWARD = [['none', 'Prize only'], ['shot', 'A title shot'], ['cash', 'Cash'], ['push', 'A big push']];
+const PZ_AWARDS = ['Wrestler of the Year', "Women's Wrestler of the Year", 'Tag Team of the Year', 'Breakout Star', 'Match of the Year'];
+const pzCash = P => ({ minor: 2500, big: 10000, legend: 25000 })[P.tier] || 10000;
+const pzLast = P => (P.wins || []).at(-1);
+// a one-off prize is done once won; a yearly prize can be won again after its last win's year
+const pzClosed = P => P.often === 'once' && (P.wins || []).length > 0;
+const pzThisYear = P => { const l = pzLast(P); return !!l && Math.floor((l.wk - 1) / 52) === Math.floor((G.week - 1) / 52); };
+const pzOpen = P => !pzClosed(P);
+function pzCleanOne(p) {
+  if (!p || typeof p !== 'object' || !p.id) return null;
+  const ids = a => (Array.isArray(a) ? a : []).filter(x => typeof x === 'string').slice(0, 4);
+  return { id: String(p.id), name: String(p.name || 'Trophy').replace(/[<>`"]/g, '').slice(0, 50) || 'Trophy', short: String(p.short || '').replace(/[<>`"]/g, '').slice(0, 16), look: trophyClean(p.look, p), ...(safePhoto(p.photo) ? { photo: p.photo } : {}),
+    how: PZ_HOW.some(x => x[0] === p.how) ? p.how : 'hand', often: p.often === 'once' ? 'once' : 'year', ev: String(p.ev || '').slice(0, 40), tier: PZ_TIER.some(x => x[0] === p.tier) ? p.tier : 'big',
+    reward: PZ_REWARD.some(x => x[0] === p.reward) ? p.reward : 'none', rt: typeof p.rt === 'string' ? p.rt : '', award: PZ_AWARDS.includes(p.award) ? p.award : PZ_AWARDS[0],
+    holder: ids(p.holder), wins: (Array.isArray(p.wins) ? p.wins : []).filter(x => x && Array.isArray(x.ids)).slice(-80).map(x => ({ wk: Math.max(1, Math.floor(+x.wk) || 1), ids: ids(x.ids), nm: String(x.nm || '').replace(/[<>`"]/g, '').slice(0, 80), how: String(x.how || '').slice(0, 10) })), made: Math.floor(+p.made) || 1 };
+}
+const prizeArt = (P, cls) => { const ph = safePhoto(P.photo); return ph ? `<img class="${cls || 'trophy-art'} tr-ph" alt="${esc(P.name + ' trophy')}" src="${esc(ph)}">` : trophyRender(P.look, { title: P, cls, label: P.name + ' trophy', abbr: abbr(G?.promo?.name || 'BookIt') }); };
+const prizesOf = id => (G?.prizes || []).filter(p => p.holder.includes(id));
+const prizeTimes = (P, id) => (P.wins || []).filter(x => x.ids.includes(id)).length;
+// someone wins a prize: it goes on their shelf, the list on the trophy grows, and the reward is paid
+function prizeWin(P, ids, how) {
+  ids = [...new Set(ids)].filter(id => W(id)); if (!ids.length || pzClosed(P)) return '';
+  P.holder = ids; P.wins.push({ wk: G.week, ids, nm: ids.map(nameOf).join(' & '), how }); if (P.wins.length > 80) P.wins.shift();
+  const T = PZ_TIER.find(x => x[0] === P.tier) || PZ_TIER[1];
+  for (const id of ids) { const w = W(id); addPop(w, T[2]); w.morale = clamp(w.morale + 6 + T[2], 0, 100); w.momentum = clamp(w.momentum + 4 + T[2], -50, 50); }
+  let extra = '';
+  if (P.reward === 'cash') { const c = pzCash(P); G.money -= c; for (const id of ids) W(id).morale = clamp(W(id).morale + 6, 0, 100); extra = ` and ${money(c)} in prize money`; }
+  else if (P.reward === 'push') { for (const id of ids) { const w = W(id); addPop(w, 3); w.momentum = clamp(w.momentum + 12, -50, 50); } extra = ' and a big push'; }
+  else if (P.reward === 'shot') { const t = G.titles.find(x => x.id === P.rt); if (t && !ids.some(id => t.holder.includes(id)) && ids.every(id => W(id)?.contract)) { const s = giveShot(ids.slice(0, tsz(t)), t, 'event'); extra = s ? ` and a ${t.short} title shot ${shotWhen(s)}` : ` and a ${t.short} title shot`; if (!s) t.contenders = [...ids, ...(t.contenders || []).filter(x => !ids.includes(x))].slice(0, 3); } }
+  const n = ids.length === 1 ? prizeTimes(P, ids[0]) : 0, msg = `${ids.map(nameOf).join(' & ')} won the ${P.name}${n > 1 ? ` for the ${ordN(n)} time` : ''}${extra}!`;
+  news('🏆 ' + msg, 'title'); return msg;
+}
+const ordN = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] || 'th');
+// the year's awards that carry a prize
+function prizeAwards(list) { for (const P of G.prizes || []) if (P.how === 'award' && pzOpen(P)) { const a = list.find(x => x.lbl === P.award); const ids = a ? (a.ids || (a.wid ? [a.wid] : [])) : []; if (ids.length) { prizeWin(P, ids, 'award'); a.prize = P.name; } } }
+
+// ---------- champions and prize holders wear their title on every photo ----------
+// one small picture per belt or trophy, made once and kept as an image, so long lists stay quick
+let HOLD = null; const BADGE = new Map();
+let HOLDK = '';
+function holdOf(id) {
+  if (!G) return null;
+  const k = G.coId + '|' + G.titles.map(t => t.id + t.holder.join()).join(';') + '|' + (G.prizes || []).map(p => p.id + p.holder.join()).join(';');
+  if (k !== HOLDK) { HOLD = null; HOLDK = k; }
+  if (!HOLD) { HOLD = new Map(); const rank = t => ['main', 'upper', 'mid', 'low'].indexOf(titleTier(t)) * 1000 - (t.prestige || 0);
+    for (const t of G.titles.slice().sort((a, b) => rank(a) - rank(b))) for (const h of t.holder) { const o = HOLD.get(h) || {}; if (!o.t) o.t = t; o.n = (o.n || 0) + 1; HOLD.set(h, o); }
+    for (const P of G.prizes || []) for (const h of P.holder) { const o = HOLD.get(h) || {}; if (!o.p) o.p = P; HOLD.set(h, o); } }
+  return HOLD.get(id) || null;
+}
+function badgeURL(kind, x) {
+  const ph = safePhoto(x.photo); if (ph) return ph;
+  const k = kind + x.id + JSON.stringify(kind === 't' ? x.belt || 0 : x.look) + (kind === 't' ? champInit(x) : '');
+  let u = BADGE.get(k); if (u) return u; if (BADGE.size > 300) BADGE.clear();
+  u = 'data:image/svg+xml,' + encodeURIComponent((kind === 't' ? titleBelt(x, 'b') : trophyRender(x.look, { title: x, abbr: abbr(G?.promo?.name || 'BookIt') })).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
+  BADGE.set(k, u); return u;
+}
+// a belt across the bottom of the photo and a trophy at its side
+function avBadges(w, s) {
+  if (!w?.id || s < 18 || meta.avBelts === false) return '';
+  const o = holdOf(w.id); if (!o) return '';
+  return (o.t ? `<img class="av-bt${safePhoto(o.t.photo) ? ' ph' : ''}" alt="" aria-hidden="true" src="${esc(badgeURL('t', o.t))}">` : '') + (o.p ? `<img class="av-tr${o.t ? '' : ' solo'}" alt="" aria-hidden="true" src="${esc(badgeURL('p', o.p))}">` : '');
+}
 // the championship designer: a live belt on top, every part one tap away in tabs, and the title's rules
 const BD_TABS = [['shape', 'Shape'], ['metal', 'Metal'], ['strap', 'Strap'], ['plates', 'Plates'], ['centre', 'Centre'], ['text', 'Text'], ['photo', 'Photo'], ['rules', 'Rules']];
 function bdOpt(f, v, label, inner, cls) { const b = UI.modal.draft.belt, on = String(b[f]) === String(v); return `<button class="${cls || 'bd-tile'} ${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}" aria-label="${esc(label)}">${inner || ''}${cls === 'sw' ? '' : `<span>${esc(label)}</span>`}</button>`; }
 const bdSeg = (f, list) => `<div class="seg-ctl ${list.length > 4 ? 'bd-many' : ''}">${list.map(([v, l]) => { const on = String(UI.modal.draft.belt[f]) === String(v); return `<button class="${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`; }).join('')}</div>`;
-const bdSw = (f, list) => `<div class="swatches">${list.map(c => bdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}</div>`;
+const bdSw = (f, list) => `<div class="swatches">${list.map(c => bdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}${anyColour(f, UI.modal.draft.belt[f], 'data-bt')}</div>`;
+// a size slider for the belt designer
+const bdSlide = (f, lab, lo, hi) => { const v = UI.modal.draft.belt[f] || 100; return `<label class="f bd-sl"><span>${lab} <b id="bdv-${f}">${v}%</b></span><input type="range" data-bt="${f}" min="${lo}" max="${hi}" step="5" value="${v}" aria-label="${esc(lab)}"></label>`; };
 function bdPane(m) {
   const d = m.draft, b = d.belt, mini = x => beltRender({ ...b, sides: 0, top: '', line: '', banner: 0, ...x }, { cls: 'bd-mini', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') });
   switch (m.tab) {
     case 'shape': return `<div class="bd-lab">Centre plate</div><div class="bd-grid">${Object.entries(BPLATE).map(([k, [l]]) => bdOpt('plate', k, l, mini({ plate: k, emblem: 'none', carve: 'none' }))).join('')}</div>
       <div class="bd-lab">Engraving</div>${bdSeg('carve', Object.entries(BCARVE))}
-      <div class="bd-lab">Detail</div>${bdSeg('orn', [[0, 'Relief'], [1, 'Ornate']])}<div class="tiny muted" style="margin-top:4px">Ornate adds a beaded rim, filigree and beaded side plates.</div>`;
+      <div class="bd-lab">Detail</div>${bdSeg('orn', [[0, 'Relief'], [1, 'Ornate']])}<div class="tiny muted" style="margin-top:4px">Ornate adds a beaded rim, filigree and beaded side plates.</div>${bdSlide('ps', 'Centre plate size', 80, 120)}`;
     case 'metal': return `<div class="bd-lab">Plate metal</div><div class="bd-grid">${Object.entries(BMETAL).map(([k, M]) => bdOpt('metal', k, M[0], `<i class="bd-metal" style="background:linear-gradient(${M[1]},${M[2]},${M[3]})"></i>`)).join('')}</div>
       <div class="bd-lab">Trim (the outer edge and side plates)</div>${bdSeg('trim', [['', 'Same'], ...Object.entries(BMETAL).filter(([k]) => k !== b.metal).map(([k, M]) => [k, M[0]])])}`;
-    case 'strap': return `<div class="bd-lab">Strap colour</div>${bdSw('strap', BSTRAPS)}<div class="bd-lab">Strap style</div>${bdSeg('tex', Object.entries(BSTRAP))}`;
+    case 'strap': return `<div class="bd-lab">Strap colour</div>${bdSw('strap', BSTRAPS)}<div class="bd-lab">Strap style</div>${bdSeg('tex', Object.entries(BSTRAP))}${bdSlide('sw', 'Strap width', 70, 130)}`;
     case 'plates': return `<div class="bd-lab">Side plates</div>${bdSeg('sides', [[0, 'None'], [2, '2'], [4, '4'], [6, '6']])}
-      ${b.sides ? `<div class="bd-lab">Side plate shape</div>${bdSeg('side', [['rect', 'Square'], ['round', 'Round'], ['shield', 'Shield']])}` : ''}
+      ${b.sides ? `<div class="bd-lab">Side plate shape</div>${bdSeg('side', [['rect', 'Square'], ['round', 'Round'], ['shield', 'Shield']])}
+      <div class="bd-lab">On the side plates</div><div class="bd-grid bd-sides">${[['gem', 'Gem'], ['co', 'Company initials'], ['champ', "Champion's own"], ...Object.entries(BEMBLEM).filter(([k]) => BSIDE_LOOK(k) && k !== 'gem')].map(([k, l]) => bdOpt('sp', k, l, beltRender({ ...b, sp: k, sides: 2, plate: b.plate, top: '', line: '' }, { cls: 'bd-mini', vb: '28 33 60 84', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK'), champ: champInit(d) || 'RC' }))).join('')}</div>
+      ${b.sp === 'champ' ? '<div class="tiny muted" style="margin-top:4px">The champion\'s initials, or their team\'s. They change when the belt changes hands.</div>' : ''}
+      ${bdSlide('ss', 'Side plate size', 80, 125)}` : ''}
       <div class="bd-lab">Gem colour</div>${bdSw('gem', BGEMS)}<div class="tiny muted">Used on the side plates and the centre piece.</div>`;
     case 'centre': return `<div class="bd-lab">Centre piece</div><div class="bd-grid">${Object.entries(BEMBLEM).map(([k, l]) => bdOpt('emblem', k, l, beltRender({ ...b, emblem: k, ring: 0, top: '' }, { cls: 'bd-mini', vb: '130 24 100 88', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') }))).join('')}</div>
       ${b.emblem === 'logo' ? `<label class="f" style="margin-top:10px"><span>Initials <span class="muted">(blank uses the company's)</span></span><input type="text" data-bt="sub" value="${esc(b.sub)}" maxlength="4" placeholder="${esc(abbr(UI.wiz?.name || G?.promo?.name || 'BK'))}"></label>` : ''}
@@ -8963,6 +9195,10 @@ function bdPane(m) {
     <div class="bd-lab">Must be defended every</div><div class="seg-ctl">${[[0, 'Any time'], [4, '4 wk'], [8, '8 wk'], [12, '12 wk']].map(([k, l]) => `<button class="${ev === k ? 'on' : ''}" data-act="trEvery" data-id="${k}" aria-pressed="${ev === k}">${l}</button>`).join('')}</div>
     <div class="tiny muted" style="margin-top:4px">${ev ? `Miss it and the belt loses prestige each week until it's defended.` : 'No deadline. The Briefing still nudges you after 5 weeks.'}</div>
     <label class="todo" style="margin-top:10px"><input type="checkbox" data-et="dq" ${d.dq ? 'checked' : ''}><span>Belt changes hands on a DQ or count-out<br><span class="tiny muted">Off: the champion keeps it, like most titles.</span></span></label>
+    <label class="todo"><input type="checkbox" data-et="big" ${d.big ? 'checked' : ''}><span>Defended only at big events<br><span class="tiny muted">It can't go on the line on a weekly show.</span></span></label>
+    <label class="f" style="margin-top:10px"><span>Established <span class="muted">(optional)</span></span><input type="text" data-et="est" value="${esc(d.est || '')}" maxlength="24" placeholder="e.g. 1987, or Year one"></label>
+    <label class="f"><span>Champions before your company <span class="muted">(optional, one a line, oldest first)</span></span><textarea data-et="lin" rows="3" maxlength="900" placeholder="e.g. Rex Calloway">${esc(Array.isArray(d.lin) ? d.lin.join('\n') : d.lin || '')}</textarea></label>
+    ${!wiz && !m.isNew && G.titles.some(t => t.id === d.id) ? titleExtras(d) : ''}
     ${!wiz && splitOn() ? `<div class="bd-lab">Brand</div><div class="seg-ctl">${[...SHOWS().map(x => [x.id, brandName(x.id)]), ['', 'Shared']].map(([k, l]) => `<button class="${(showById(d.brand) ? d.brand : '') === k ? 'on' : ''}" data-act="trBrand" data-id="${esc(k)}" aria-pressed="${(showById(d.brand) ? d.brand : '') === k}">${esc(l)}</button>`).join('')}</div>
     <div class="tiny muted" style="margin-top:4px">${showById(d.brand) ? `Defended on ${esc(brandName(d.brand))} and at big events.` : 'Shared titles can be defended on any show.'}</div>` : ''}
     <div class="tiny muted" style="margin-top:10px">Prestige ${m.isNew ? 'starts at' : 'now'} <b>${Math.round(d.prestige)}</b>. It rises with great title matches and falls when the belt is ignored.</div>
@@ -8985,11 +9221,129 @@ function modalTitle(m) {
   const d = m.draft; d.belt = beltClean(d.belt, d); m.tab ||= 'shape';
   const body = `<div class="bd-prev" aria-live="off">${titleArt(d, 'bd-belt')}</div>${safePhoto(d.photo) && m.tab !== 'photo' && m.tab !== 'rules' ? '<div class="tiny muted" style="text-align:center;margin:-4px 0 8px">This title uses its photo. Remove it in the Photo tab to show the drawn belt.</div>' : ''}
     <div class="row bd-tools"><button class="chip ${m.tpl ? 'on' : ''}" data-act="bdTpl" data-id="open" aria-expanded="${!!m.tpl}">Templates</button><button class="chip" data-act="bdRand">🎲 Surprise me</button><button class="chip" data-act="bdUndo" ${m.undo?.length ? '' : 'disabled'}>↶ Undo</button></div>
-    ${m.tpl ? `<div class="bd-grid bd-tpls">${BTPL.map(([n, x], i) => `<button class="bd-tile" data-act="bdTpl" data-id="${i}" aria-label="${esc(n)} template">${beltRender({ ...x, top: '', line: '' }, { cls: 'bd-mini', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') })}<span>${esc(n)}</span></button>`).join('')}</div>` : ''}
+    ${m.tpl ? bdTplPanel(m) : ''}
     <div class="bd-tabs" role="tablist" aria-label="Belt parts">${BD_TABS.map(([k, l]) => `<button role="tab" class="${m.tab === k ? 'on' : ''}" aria-selected="${m.tab === k}" data-act="bdTab" data-id="${k}">${l}</button>`).join('')}</div>
     <div class="bd-pane" role="tabpanel">${bdPane(m)}</div>`;
   const canDel = m.wiz != null ? m.wiz >= 0 && (UI.wiz?.titles?.length || 0) > 1 : !m.isNew;
   return modal(m.isNew ? 'New championship' : esc(d.name || 'Championship'), body, `${canDel ? '<button class="btn bad" data-act="delTitle">' + (m.wiz != null ? 'Remove' : 'Retire title') + '</button>' : ''}<button class="btn pri" data-act="saveTitle">Save title</button>`, { cls: 'bd-modal' });
+}
+
+// ---------- your own templates: any belt or trophy design kept on this device, for every save ----------
+const myTpls = k => { const l = meta[k === 'p' ? 'myCups' : 'myBelts']; return Array.isArray(l) ? l : []; };
+function myTplSave(k, name, look) { const key = k === 'p' ? 'myCups' : 'myBelts', l = myTpls(k).slice(); l.unshift({ n: String(name || 'My design').replace(/[<>`"]/g, '').slice(0, 30), b: look }); meta[key] = l.slice(0, 24); ls.set(META, JSON.stringify(meta)); }
+function myTplDel(k, i) { const key = k === 'p' ? 'myCups' : 'myBelts', l = myTpls(k).slice(); l.splice(i, 1); meta[key] = l; ls.set(META, JSON.stringify(meta)); }
+// the belt designer's Templates panel: the game's templates, yours, and the look of your other titles
+function bdTplPanel(m) {
+  const a = abbr(UI.wiz?.name || G?.promo?.name || 'BK'), mine = myTpls('b'), d = m.draft, others = (m.wiz != null ? UI.wiz?.titles || [] : G?.titles || []).filter(t => t.id !== d.id && t.belt);
+  const tile = (act, id, n, b, del) => `<div class="bd-tw"><button class="bd-tile" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(n)} template">${beltRender({ ...b, top: '', line: '' }, { cls: 'bd-mini', abbr: a })}<span>${esc(n)}</span></button>${del != null ? `<button class="bd-x" data-act="myTplDel" data-id="b${del}" aria-label="Delete ${esc(n)}">${ic('xc')}</button>` : ''}</div>`;
+  return `<div class="bd-tpls"><div class="bd-lab">Your templates</div>${mine.length ? `<div class="bd-grid">${mine.map((x, i) => tile('bdMine', i, x.n, x.b, i)).join('')}</div>` : '<div class="tiny muted">Save a belt you like and it shows here, in every save on this device.</div>'}
+    <button class="chip" style="margin-top:8px" data-act="myTplAdd" data-id="b">${ic('save')} Save this design</button>
+    ${others.length ? `<div class="bd-lab">Copy the look of another title</div><div class="bd-grid">${others.map(t => tile('bdCopy', t.id, t.short || t.name, t.belt)).join('')}</div><div class="tiny muted" style="margin-top:4px">Keeps this title's own wording.</div>` : ''}
+    <div class="bd-lab">Game templates</div><div class="bd-grid">${BTPL.map(([n, x], i) => tile('bdTpl', i, n, x)).join('')}</div></div>`;
+}
+
+// ---------- the trophy workshop: same layout as the belt designer ----------
+const PD_TABS = [['shape', 'Shape'], ['metal', 'Metal'], ['base', 'Base'], ['topper', 'Topper'], ['centre', 'Centre'], ['text', 'Text'], ['photo', 'Photo'], ['rules', 'Rules']];
+function pdOpt(f, v, label, inner, cls) { const b = UI.modal.draft.look, on = String(b[f]) === String(v); return `<button class="${cls || 'bd-tile'} ${on ? 'on' : ''}" data-act="pdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}" aria-label="${esc(label)}">${inner || ''}${cls === 'sw' ? '' : `<span>${esc(label)}</span>`}</button>`; }
+const pdSeg = (f, list) => `<div class="seg-ctl ${list.length > 4 ? 'bd-many' : ''}">${list.map(([v, l]) => { const on = String(UI.modal.draft.look[f]) === String(v); return `<button class="${on ? 'on' : ''}" data-act="pdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`; }).join('')}</div>`;
+// swatches plus a colour picker for any colour at all
+const anyColour = (f, v, attr) => `<label class="sw sw-any" title="Any colour"><input type="color" ${attr}="${f}" value="${esc(v)}" aria-label="Pick any colour">${ic('pen')}</label>`;
+const pdSw = (f, list) => `<div class="swatches">${list.map(c => pdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}${anyColour(f, UI.modal.draft.look[f], 'data-pt')}</div>`;
+function pdPane(m) {
+  const d = m.draft, b = d.look, a = abbr(G?.promo?.name || 'BK'), mini = x => trophyRender({ ...b, line: '', sub: '', eng: '', base: 'none', ...x }, { cls: 'bd-mini tr-mini', abbr: a });
+  switch (m.tab) {
+    case 'shape': return `<div class="bd-lab">Trophy shape</div><div class="bd-grid tr-grid">${Object.entries(TBODY).map(([k, [l]]) => pdOpt('body', k, l, mini({ body: k, top: 'none' }))).join('')}</div>
+      ${TBODY[b.body][1]().hx ? `<div class="bd-lab">Handles</div>${pdSeg('handle', Object.entries(THANDLE))}` : ''}
+      ${b.body === 'belt' ? `<div class="bd-lab">Belt plate</div>${pdSeg('plate', Object.entries(BPLATE).map(([k, v]) => [k, v[0]]))}` : ''}`;
+    case 'metal': return `<div class="bd-lab">Metal</div><div class="bd-grid">${Object.entries(BMETAL).map(([k, M]) => pdOpt('metal', k, M[0], `<i class="bd-metal" style="background:linear-gradient(${M[1]},${M[2]},${M[3]})"></i>`)).join('')}</div>
+      <div class="bd-lab">Trim (handles, foot and stem)</div>${pdSeg('trim', [['', 'Same'], ...Object.entries(BMETAL).filter(([k]) => k !== b.metal).map(([k, M]) => [k, M[0]])])}`;
+    case 'base': return `<div class="bd-lab">Base</div>${pdSeg('base', Object.entries(TBASE))}${b.base !== 'none' ? `<div class="bd-lab">Base colour</div>${pdSeg('bcol', Object.entries(TBASECOL).map(([k, v]) => [k, v[0]]))}` : ''}`;
+    case 'topper': return TBODY[b.body][1]().noTop ? '<div class="tiny muted" style="margin-top:10px">This shape has no topper. Try a cup, an urn, a column or the globe.</div>'
+      : `<div class="bd-lab">On top</div><div class="bd-grid tr-grid">${Object.entries(TTOP).map(([k, l]) => pdOpt('top', k, l, trophyRender({ ...b, top: k, line: '', base: 'none' }, { cls: 'bd-mini tr-mini', vb: '40 -34 120 120', abbr: a }))).join('')}</div>`;
+    case 'centre': return `<div class="bd-lab">Centre piece</div><div class="bd-grid">${Object.entries(BEMBLEM).map(([k, l]) => pdOpt('emblem', k, l, beltRender({ plate: 'round', metal: b.metal, gem: b.gem, enamel: b.enamel, font: b.font, emblem: k, ring: 0, top: '', line: '', sides: 0 }, { cls: 'bd-mini', vb: '130 24 100 88', abbr: a }))).join('')}</div>
+      <div class="bd-lab">Gem colour</div>${pdSw('gem', BGEMS)}`;
+    case 'text': return `<label class="f"><span>Nameplate</span><input type="text" data-pt="line" value="${esc(b.line)}" maxlength="26" placeholder="e.g. KING OF THE RING"></label>
+      <label class="f"><span>Second line <span class="muted">(optional)</span></span><input type="text" data-pt="sub" value="${esc(b.sub)}" maxlength="26" placeholder="e.g. EST. YEAR ONE"></label>
+      ${TBODY[b.body][1]().eng || b.body === 'belt' ? `<label class="f"><span>Engraved on the ${b.body === 'belt' ? 'belt' : 'trophy'} <span class="muted">(optional)</span></span><input type="text" data-pt="eng" value="${esc(b.eng)}" maxlength="20" placeholder="e.g. MOST VALUABLE"></label>` : ''}
+      <div class="bd-lab">Nameplate style</div>${pdSeg('banner', [[1, 'Enamel'], [0, 'Engraved']])}
+      ${b.banner ? `<div class="bd-lab">Enamel colour</div>${pdSw('enamel', BENAMEL)}` : ''}
+      <div class="bd-lab">Lettering</div>${pdSeg('font', Object.entries(BFONT).map(([k, v]) => [k, v[0]]))}`;
+    case 'photo': { const ph = safePhoto(d.photo);
+      return `<p class="small muted" style="margin-top:4px">Use a photo of a real trophy, or one you made in another app, instead of the drawn one. It shows on the shelf, the winner's profile and next to their photo.</p>
+        <div class="row" style="gap:8px;margin-bottom:8px"><button class="btn ${ph ? '' : 'pri'}" data-act="pdPhoto">${ic('camera')} ${ph ? 'Replace photo' : 'Upload a photo'}</button>${ph ? '<button class="btn bad" data-act="pdPhotoDel">Remove photo</button>' : ''}</div>
+        <div class="tiny muted">A see-through background (PNG or WebP) looks best.</div>`; }
+  }
+  // rules: how it is won and what it gives
+  const H = PZ_HOW.find(x => x[0] === d.how) || PZ_HOW[3], evs = [...new Set(bigsAfter(G.week, 14).map(bigName))], tOpts = G.titles;
+  const seg = (f, list) => `<div class="seg-ctl ${list.length > 3 ? 'quad wrap' : ''}">${list.map(([k, l, i]) => `<button class="${d[f] === k ? 'on' : ''}" aria-pressed="${d[f] === k}" data-act="pzSet" data-f="${f}" data-id="${k}">${i ? ic(i) + ' ' : ''}${esc(l)}</button>`).join('')}</div>`;
+  const P = PZ(d.id), run = P && (G.tourneys || []).find(T => T.prz === P.id && !T.done);
+  return `<label class="f"><span>Name</span><input type="text" data-et="name" value="${esc(d.name)}" maxlength="50" placeholder="e.g. King of the Ring"></label>
+    <label class="f"><span>Short name</span><input type="text" data-et="short" value="${esc(d.short)}" maxlength="16" placeholder="e.g. KOTR"></label>
+    <div class="bd-lab">How it's won</div>${seg('how', PZ_HOW)}<div class="tiny muted" style="margin-top:4px">${H[3]}</div>
+    ${d.how === 'award' ? `<label class="f" style="margin-top:10px"><span>Which award</span><select data-et="award">${PZ_AWARDS.map(x => `<option ${d.award === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>` : ''}
+    <div class="bd-lab">How often</div>${seg('often', [['year', 'Every year'], ['once', 'Just once']])}
+    <div class="tiny muted" style="margin-top:4px">${d.often === 'once' ? 'Once someone wins it, it\'s theirs for good.' : 'Won again each year. Every winner goes on the list, and the last one holds it.'}</div>
+    ${d.how === 'tourney' || d.how === 'match' ? `<label class="f" style="margin-top:10px"><span>When <span class="muted">(a reminder for you)</span></span><select data-et="ev"><option value="">Any show</option>${[...new Set([d.ev, ...evs].filter(Boolean))].map(n => `<option ${d.ev === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : ''}
+    <div class="bd-lab">The winner also gets</div>${seg('reward', PZ_REWARD)}
+    ${d.reward === 'shot' ? (tOpts.length ? `<label class="f" style="margin-top:10px"><span>Shot at</span><select data-et="rt">${tOpts.map(t => `<option value="${t.id}" ${d.rt === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : '<div class="tiny muted">Make a championship first.</div>') : ''}
+    <div class="tiny muted" style="margin-top:4px">${d.reward === 'cash' ? `${money(pzCash(d))} prize money, paid by you.` : d.reward === 'push' ? 'Extra popularity and momentum on top of the win.' : d.reward === 'shot' ? 'The winner faces the champion at the next big event.' : 'The trophy, and the popularity that comes with it.'}</div>
+    <div class="bd-lab">Prestige</div>${seg('tier', PZ_TIER)}
+    <div class="side" style="margin-top:12px"><div class="lbl">${d.how === 'hand' ? 'Give it to' : 'Holder'}${d.often === 'year' ? ' (this year)' : ''}</div>${chipsFor(d.holder, 'holder', 4)}<div class="tiny muted" style="margin-top:4px">${d.how === 'hand' ? 'Pick the winner and save. It counts as a win.' : 'Set by the results. Change it here and it counts as your decision.'}</div></div>
+    ${P && P.how === 'tourney' && pzOpen(P) ? `<button class="btn block pri" style="margin:4px 0 10px" data-act="${run ? 'openTourney' : 'prizeRun'}" data-id="${run ? run.id : P.id}">${ic('trophy')} ${run ? 'See the bracket' : 'Run the tournament'}</button>` : ''}
+    ${P ? pzWinList(P) : ''}`;
+}
+function pzWinList(P) {
+  if (!P.wins.length) return '<div class="sec">Winners</div><div class="tiny muted">Nobody has won it yet.</div>';
+  const cnt = {}; P.wins.forEach(x => { cnt[x.nm] = (cnt[x.nm] || 0) + 1; });
+  return `<div class="sec">Winners (${P.wins.length})</div><div class="card lineage" style="padding:4px 12px">${P.wins.map((x, i) => [x, i]).reverse().map(([x, i]) => `<div class="news"><span class="wk">${P.often === 'year' ? 'Yr ' + Math.ceil(x.wk / 52) : '#' + (i + 1)}</span><span class="sp"><b>${esc(x.nm)}</b>${cnt[x.nm] > 1 ? ` <span class="tag gold">×${cnt[x.nm]}</span>` : ''}<br><span class="tiny muted">Week ${x.wk}${x.how === 'hand' ? ' · your decision' : x.how === 'tourney' ? ' · tournament' : x.how === 'award' ? ' · year-end award' : x.how === 'match' ? ' · in a match' : ''}</span></span></div>`).join('')}</div>`;
+}
+const pdKeep = m => { (m.undo ||= []).push(JSON.parse(JSON.stringify(m.draft.look))); if (m.undo.length > 40) m.undo.shift(); };
+function modalPrize(m) {
+  const d = m.draft; d.look = trophyClean(d.look, d); m.tab ||= 'shape';
+  const a = abbr(G?.promo?.name || 'BK'), mine = myTpls('p');
+  const tile = (act, id, n, x, del) => `<div class="bd-tw"><button class="bd-tile" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(n)} template">${trophyRender({ ...x, line: '', sub: '', eng: '', base: 'none' }, { cls: 'bd-mini tr-mini', abbr: a })}<span>${esc(n)}</span></button>${del != null ? `<button class="bd-x" data-act="myTplDel" data-id="p${del}" aria-label="Delete ${esc(n)}">${ic('xc')}</button>` : ''}</div>`;
+  const body = `<div class="bd-prev tr-prev" aria-live="off">${prizeArt(d, 'tr-big')}</div>${safePhoto(d.photo) && m.tab !== 'photo' && m.tab !== 'rules' ? '<div class="tiny muted" style="text-align:center;margin:-4px 0 8px">This trophy uses its photo. Remove it in the Photo tab to show the drawn one.</div>' : ''}
+    <div class="row bd-tools"><button class="chip ${m.tpl ? 'on' : ''}" data-act="pdTpl" data-id="open" aria-expanded="${!!m.tpl}">Templates</button><button class="chip" data-act="pdRand">${ic('dice')} Surprise me</button><button class="chip" data-act="pdUndo" ${m.undo?.length ? '' : 'disabled'}>Undo</button></div>
+    ${m.tpl ? `<div class="bd-tpls"><div class="bd-lab">Your templates</div>${mine.length ? `<div class="bd-grid tr-grid">${mine.map((x, i) => tile('pdMine', i, x.n, x.b, i)).join('')}</div>` : '<div class="tiny muted">Save a trophy you like and it shows here, in every save on this device.</div>'}
+      <button class="chip" style="margin-top:8px" data-act="myTplAdd" data-id="p">${ic('save')} Save this design</button>
+      <div class="bd-lab">Game templates</div><div class="bd-grid tr-grid">${TTPL.map(([n, x], i) => tile('pdTpl', i, n, x)).join('')}</div></div>` : ''}
+    <div class="bd-tabs" role="tablist" aria-label="Trophy parts">${PD_TABS.map(([k, l]) => `<button role="tab" class="${m.tab === k ? 'on' : ''}" aria-selected="${m.tab === k}" data-act="pdTab" data-id="${k}">${l}</button>`).join('')}</div>
+    <div class="bd-pane" role="tabpanel">${pdPane(m)}</div>`;
+  return modal(m.isNew ? 'New trophy' : esc(d.name || 'Trophy'), body, `${m.isNew ? '' : '<button class="btn bad" data-act="delPrize">Delete</button>'}<button class="btn pri" data-act="savePrize">Save trophy</button>`, { cls: 'bd-modal' });
+}
+// Office → Titles → Awards & Prizes: the trophies on a shelf with who holds them
+function prizesView() {
+  const L = G.prizes || [], runs = (G.tourneys || []).filter(T => !T.done && T.prz && PZ(T.prz));
+  const line = P => { const H = PZ_HOW.find(x => x[0] === P.how); return `${esc(H ? H[1] : '')}${P.how === 'award' ? ' · ' + esc(P.award) : ''} · ${P.often === 'once' ? 'one time' : 'every year'}${P.ev ? ' · ' + esc(P.ev) : ''}`; };
+  return `<div class="small muted" style="margin-bottom:8px">Trophies are won, not defended: tournament cups, yearly matches, year-end awards and prizes you hand out.</div>
+    ${L.length ? `<div class="shelf">${L.map(P => { const l = pzLast(P); return `<button class="sh-it" data-act="editPrize" data-id="${P.id}">${prizeArt(P, 'tr-sh')}<b>${esc(P.name)}</b><span>${P.holder.length ? esc(P.holder.map(nameOf).join(' & ')) : 'Not won yet'}${P.holder.length === 1 && prizeTimes(P, P.holder[0]) > 1 ? ' ×' + prizeTimes(P, P.holder[0]) : ''}</span><i>${pzClosed(P) ? `Won for good · week ${l.wk}` : line(P)}</i></button>`; }).join('')}</div>` : `<div class="empty">No trophies yet. Make a tournament cup, a yearly prize or an award to go with the year-end awards.</div>`}
+    ${runs.length ? `<div class="sec">Under way</div><div class="list">${runs.map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">${ic('trophy')} ${esc(T.name)}</div><div class="d">${roundName(T, T.rounds.length - 1)} · for the ${esc(PZ(T.prz).name)}</div></div></button>`).join('')}</div>` : ''}
+    <button class="btn block pri" style="margin-top:12px" data-act="editPrize" data-id="">+ Create a trophy</button>`;
+}
+// a wrestler's trophies on their profile: the ones they hold, then everything else they've won
+function wPrizes(w) {
+  const held = prizesOf(w.id), past = (G.prizes || []).filter(P => !P.holder.includes(w.id) && prizeTimes(P, w.id));
+  return held.map(P => `<button class="champ-card" data-act="editPrize" data-id="${P.id}" aria-label="${esc(P.name)}">${prizeArt(P, 'champ-cup')}<div class="cc-t"><span class="cc-k">${ic('trophy')} ${P.often === 'once' ? 'Won' : 'Holder'}</span><b>${esc(P.name)}</b><span class="tiny muted">Week ${pzLast(P)?.wk || G.week}${prizeTimes(P, w.id) > 1 ? ` · won ${prizeTimes(P, w.id)} times` : ''}</span></div></button>`).join('')
+    + (past.length ? `<div class="small" style="margin:-2px 0 10px">${ic('trophy')} Also won: ${past.map(P => `<b>${esc(P.name)}</b>${prizeTimes(P, w.id) > 1 ? ' ×' + prizeTimes(P, w.id) : ''}`).join(', ')}</div>` : '');
+}
+// a trophy photo: the whole picture fitted into a 5:6 box, background kept see-through
+function cupPic(src) { const c = document.createElement('canvas'); c.width = 240; c.height = 288; const x = c.getContext('2d'), k = Math.min(240 / src.width, 288 / src.height); x.imageSmoothingQuality = 'high'; x.drawImage(src, (240 - src.width * k) / 2, (288 - src.height * k) / 2, src.width * k, src.height * k); return photoData(c, .82); }
+// open challenge and unify, on a title that already exists
+function titleExtras(d) {
+  const mates = G.titles.filter(t => t.id !== d.id && tsz(t) === tsz(d));
+  if (!mates.some(t => t.id === d.uniWith)) d.uniWith = mates[0]?.id || '';
+  return `${tsz(d) === 1 && d.holder.length ? `<div class="side"><div class="lbl">${ic('megaphone')} Open challenge</div><div class="tiny muted" style="margin-bottom:8px">${esc(nameOf(d.holder[0]))} says anyone can step up tonight. A surprise opponent from your roster answers, and the title match goes on tonight's card.</div><button class="btn block" data-act="trOC">Issue an open challenge</button></div>` : ''}
+    ${mates.length ? `<div class="side"><div class="lbl">${ic('layers')} Unify titles</div><label class="f" style="margin-bottom:8px"><span>Merge into this title</span><select data-et="uniWith">${mates.map(t => `<option value="${t.id}" ${d.uniWith === t.id ? 'selected' : ''}>${esc(t.name)} (${t.holder.length ? esc(nmPlain(t.holder)) : 'vacant'})</option>`).join('')}</select></label><button class="btn block" data-act="trUnify">Unify</button><div class="tiny muted" style="margin-top:6px">The other title is retired into this one, and its name is kept in this title's history. This champion keeps the belt.</div></div>` : ''}`;
+}
+// a title's history and rules that travel with it in shared rosters and worlds
+const tExtra = t => { const o = {}, c = v => String(v || '').replace(/[<>`"]/g, '').trim(); if (c(t.est)) o.est = c(t.est).slice(0, 24); if (Array.isArray(t.lin)) { const l = t.lin.map(x => c(x).slice(0, 60)).filter(Boolean).slice(0, 30); if (l.length) o.lin = l; } if (t.big === true) o.big = true; return o; };
+const nmPlain = ids => ids.map(nameOf).join(' & ');
+// the title's extra history: when it began, champions from before your company, and titles merged into it
+function lineagePre(t) {
+  const lin = Array.isArray(t.lin) ? t.lin : [];
+  return (t.est ? `<div class="small" style="margin-bottom:6px">${ic('calendar')} Established <b>${esc(t.est)}</b></div>` : '')
+    + (lin.length ? `<div class="small" style="margin-bottom:6px">${ic('book')} Before your company: ${lin.map(esc).join(', ')}</div>` : '')
+    + ((t.uni || []).length ? `<div class="small" style="margin-bottom:6px">${ic('layers')} Unified with ${t.uni.map(u => `the <b>${esc(u.nm)}</b> (week ${u.wk})`).join(', ')}</div>` : '');
 }
 
 // =====================================================================
@@ -9340,8 +9694,9 @@ const A = {
     else if (m.type === 'editTeam') { cur = d.members; max = 4; }
     else if (m.type === 'editFaction') { if (f === 'leader') { cur = d.leader ? [d.leader] : []; max = 1; } else { cur = d.members; max = 8; } }
     else if (m.type === 'editTourney') { cur = d.ents; max = +d.size; }
+    else if (m.type === 'prize') { cur = d.holder || []; max = 4; }
     // matches, titles, tag teams and tournaments take wrestlers only; promos, angles, ringside and managers take anyone
-    const ring = (m.type === 'seg' && (f.startsWith('side') || f === 'ents')) || ['title', 'editTeam', 'editTourney'].includes(m.type);
+    const ring = (m.type === 'seg' && (f.startsWith('side') || f === 'ents')) || ['title', 'editTeam', 'editTourney', 'prize'].includes(m.type);
     UI.picker = { f, sel: cur.slice(), max, others, free, ring, q: '', allB: m.type === 'seg' && f === 'ents' && !!MT(m.draft.mtype).wide };
     render();
   },
@@ -9485,6 +9840,7 @@ const A = {
       d[p.f === 'contenders' ? 'contenders' : 'holder'] = p.sel; }
     else if (m.type === 'community') m.sel = p.sel;
     else if (m.type === 'editTeam' || m.type === 'editTourney') d[p.f] = p.sel;
+    else if (m.type === 'prize') d.holder = p.sel;
     else if (m.type === 'editFaction') { if (p.f === 'leader') { d.leader = p.sel[0] || null; if (d.leader && !d.members.includes(d.leader) && d.members.length < 8) d.members.push(d.leader); } else { d.members = p.sel; d.tms = d.tms.filter(id => TM(id)?.members.every(x => d.members.includes(x))); } }
     UI.picker = null; render();
   },
@@ -9493,6 +9849,7 @@ const A = {
     if (UI.modal.type === 'community') { UI.modal.sel = (UI.modal.sel || []).filter(x => x !== id); return render(); }
     if (UI.modal.type === 'seg') { if (f === 'ents') { d.sides = d.sides.filter(sd => !sd.includes(id)); if (d.winner >= d.sides.length) d.winner = -1; } else if (f.startsWith('side')) d.sides[+f.slice(4)] = d.sides[+f.slice(4)].filter(x => x !== id); else d[f] = d[f].filter(x => x !== id); }
     else if (UI.modal.type === 'title') { const k = f === 'contenders' ? 'contenders' : 'holder'; d[k] = (d[k] || []).filter(x => x !== id); }
+    else if (UI.modal.type === 'prize') d.holder = (d.holder || []).filter(x => x !== id);
     else if (UI.modal.type === 'editFaction') { if (f === 'leader') d.leader = null; else { d.members = d.members.filter(x => x !== id); if (d.leader === id) d.leader = null; d.tms = d.tms.filter(t => TM(t)?.members.every(x => d.members.includes(x))); } }
     else d[f] = d[f].filter(x => x !== id);
     render();
@@ -9719,6 +10076,7 @@ const A = {
     const ord = bracketOrder(size), first = []; for (let i = 0; i < size; i += 2) first.push({ pair: [ents[ord[i]], ents[ord[i + 1]]], adv: null });
     const T = { id: uid(), name: String(d.name || 'Tournament').trim().slice(0, 50) || 'Tournament', titleId: d.titleId || '', prize: d.titleId ? d.prize : 'none', ents, rounds: [first], start: G.week, done: 0 };
     if (!T.titleId) delete T.titleId;
+    if (d.prz && PZ(d.prz)) T.prz = d.prz;
     (G.tourneys ||= []).push(T);
     news(`🏆 The ${T.name} begins: ${size} wrestlers, one winner.`, 'title');
     UI.modal = { type: 'tourney', id: T.id }; commit('Tournament created. Add round one to a show.');
@@ -9756,6 +10114,8 @@ const A = {
   editTitle(id) { const t = G.titles.find(x => x.id === id); openModal({ type: 'title', isNew: !t, tab: t ? 'rules' : 'shape', draft: t ? JSON.parse(JSON.stringify(t)) : { id: uid(), name: 'New Championship', short: 'New', tag: false, tier: 'mid', cl: 1, division: 'Open', contenders: [], prestige: 45, holder: [], since: G.week, defenses: 0, lastDefense: G.week, belt: beltFromTpl(8, { line: 'NEW' }) } }); },
   saveTitle() {
     const m = UI.modal, d = m.draft; d.prestige = clamp(+d.prestige || 30, 1, 100); d.holder = d.holder.slice(0, tsz(d)); if (tsz(d) !== 3) delete d.size;
+    d.est = String(d.est || '').replace(/[<>`"]/g, '').trim().slice(0, 24); if (!d.est) delete d.est; d.big = !!d.big; if (!d.big) delete d.big; delete d.uniWith;
+    d.lin = (Array.isArray(d.lin) ? d.lin : String(d.lin || '').split('\n')).map(x => String(x).replace(/[<>`"]/g, '').trim().slice(0, 60)).filter(Boolean).slice(0, 30); if (!d.lin.length) delete d.lin;
     d.name = String(d.name || '').trim().slice(0, 50) || 'Championship'; d.short = String(d.short || '').trim().slice(0, 16) || abbr(d.name);
     d.belt = beltClean(d.belt, d); d.photo = safePhoto(d.photo); if (!d.photo) delete d.photo; d.tier = titleTier(d); BPX = null; d.cl = 1; d.every = titleEvery(d); d.dq = !!d.dq;
     if (m.wiz != null) { const z = UI.wiz; if (!z) return closeModal(); d.division ||= 'Open'; if (m.wiz >= 0 && z.titles[m.wiz]) z.titles[m.wiz] = d; else z.titles.push(d); UI.modal = null; render(); return; }
@@ -9779,6 +10139,53 @@ const A = {
   trBrand(v) { const d = UI.modal.draft; d.brand = showById(v) ? v : ''; render(); },
   trTag(v) { const d = UI.modal.draft; d.tag = v !== 'one'; if (v === 'trios') d.size = 3; else delete d.size; if (Array.isArray(d.holder)) d.holder = d.holder.slice(0, tsz(d)); render(); },
   trEvery(v) { UI.modal.draft.every = +v || 0; render(); },
+  trOC() {
+    const t = G.titles.find(x => x.id === UI.modal?.draft?.id); if (!t || !t.holder.length || tsz(t) !== 1) return;
+    if (G.card.some(s => s.title === t.id)) return toast('This title is already on tonight\'s card.');
+    if (t.big && !isBig(G.week)) return toast('This title is only defended at big events.');
+    if (roomLeft(G.week, G.card) < 1) return toast(fullMsg(G.week));
+    const on = new Set(G.card.flatMap(segPeople)), pool = ringers().filter(w => !w.injury && !w.away && !on.has(w.id) && !t.holder.includes(w.id) && divOk(t, w));
+    if (!pool.length) return toast('Nobody is free to answer it tonight.');
+    const ch = pool[Math.floor(Math.random() * pool.length)], s = blankSeg('match'); s.sides = [[t.holder[0]], [ch.id]]; s.title = t.id;
+    G.card.push(s); news(`📣 ${nameOf(t.holder[0])} issued an open challenge for the ${t.name}, and ${ch.name} answered it!`, 'title');
+    UI.modal = null; UI.selWeek = G.week; UI.tab = 'book'; commit(`${ch.name} answered the open challenge. The match is on tonight's card.`);
+  },
+  trUnify() {
+    const d = UI.modal?.draft, t = d && G.titles.find(x => x.id === d.id), o = d && G.titles.find(x => x.id === d.uniWith && x.id !== d.id); if (!t || !o) return;
+    confirmBox(`Unify the ${t.name} and the ${o.name}?`, `The ${o.name} is retired into the ${t.name}.${o.holder.length && o.holder.join() !== t.holder.join() ? ` ${nmPlain(o.holder)} lose${o.holder.length > 1 ? '' : 's'} their belt.` : ''} This can't be undone.`, 'Unify', () => {
+      t.uni = [...(t.uni || []), { nm: o.name, wk: G.week }].slice(-6); t.prestige = clamp(Math.max(t.prestige || 0, o.prestige || 0) + 5, 1, 100);
+      G.titles = G.titles.filter(x => x !== o); [G.card, ...Object.values(G.future || {})].forEach(c => Array.isArray(c) && c.forEach(s => { if (s.title === o.id) s.title = t.id; }));
+      news(`🏆 The ${o.name} was unified with the ${t.name}.`, 'title'); UI.modal = null; commit(`The ${o.name} is now part of the ${t.name}.`);
+    }, true);
+  },
+  // your own templates and copying another title's look
+  myTplAdd(k) { const m = UI.modal, d = m?.draft; if (!d) return; if (k === 'p') myTplSave('p', d.short || d.name, trophyClean(d.look, d)); else myTplSave('b', d.short || d.name, beltClean(d.belt, d)); render(); toast('Saved to your templates.'); },
+  myTplDel(v) { myTplDel(v[0], +v.slice(1)); render(); },
+  bdMine(i) { const m = UI.modal, x = myTpls('b')[+i]; if (!x) return; bdKeep(m); const c = m.draft.belt; m.draft.belt = beltClean({ ...x.b, top: c.top, line: c.line, sub: c.sub }, m.draft); m.tpl = false; render(); },
+  bdCopy(id) { const m = UI.modal, t = (m.wiz != null ? UI.wiz?.titles || [] : G.titles).find(x => x.id === id); if (!t) return; bdKeep(m); const c = m.draft.belt; m.draft.belt = beltClean({ ...t.belt, top: c.top, line: c.line, sub: c.sub }, m.draft); m.tpl = false; render(); },
+  // trophies
+  tTab(v) { UI.ttab = v === 'prizes' ? 'prizes' : 'belts'; render(); },
+  editPrize(id) { const P = PZ(id); openModal({ type: 'prize', isNew: !P, tab: P ? 'rules' : 'shape', draft: P ? JSON.parse(JSON.stringify(P)) : { id: uid(), name: 'New Trophy', short: '', look: trophyFromTpl(0, { line: 'NEW TROPHY' }), how: 'tourney', often: 'year', ev: '', tier: 'big', reward: 'none', rt: '', award: PZ_AWARDS[0], holder: [], wins: [], made: G.week } }); },
+  pdTab(v) { UI.modal.tab = v; UI.modal.tpl = false; render(); },
+  pdSet(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f; pdKeep(m); d.look = trophyClean({ ...d.look, [f]: f === 'banner' ? +v : v }, d); render(); },
+  pdTpl(v) { const m = UI.modal; if (v === 'open') { m.tpl = !m.tpl; return render(); } pdKeep(m); m.draft.look = trophyFromTpl(+v, m.draft.look); m.tpl = false; render(); },
+  pdMine(i) { const m = UI.modal, x = myTpls('p')[+i]; if (!x) return; pdKeep(m); const c = m.draft.look; m.draft.look = trophyClean({ ...x.b, line: c.line, sub: c.sub, eng: c.eng }, m.draft); m.tpl = false; render(); },
+  pdRand() { const m = UI.modal; pdKeep(m); m.draft.look = trophySurprise(m.draft.look); render(); },
+  pdUndo() { const m = UI.modal; if (m.undo?.length) { m.draft.look = m.undo.pop(); render(); } },
+  pdPhoto() { const d = UI.modal.draft; pickBeltPhoto(src => { if (UI.modal?.draft !== d) return; d.photo = safePhoto(cupPic(src)); if (!d.photo) toast('That photo is too big. Try a smaller one.'); render(); }); },
+  pdPhotoDel() { UI.modal.draft.photo = ''; render(); },
+  pzSet(v, el) { const d = UI.modal.draft, f = el.dataset.f; d[f] = v; if (f === 'reward' && v === 'shot' && !G.titles.some(t => t.id === d.rt)) d.rt = G.titles[0]?.id || ''; render(); },
+  savePrize() {
+    const m = UI.modal, d = m.draft; d.name = String(d.name || '').trim() || 'Trophy'; d.short = String(d.short || '').trim();
+    const want = (d.holder || []).slice(), i = (G.prizes ||= []).findIndex(p => p.id === d.id), old = i >= 0 ? G.prizes[i] : null;
+    const P = pzCleanOne({ ...d, holder: old ? old.holder : [] }); if (!P) return closeModal();
+    if (i >= 0) G.prizes[i] = P; else { if (G.prizes.length >= 40) return toast('You can have up to 40 trophies.'); G.prizes.push(P); news(`🏆 The ${P.name} was introduced.`, 'title'); }
+    let msg = 'Saved.';
+    if (want.join() !== P.holder.join()) { if (want.length && pzOpen(P)) msg = prizeWin(P, want, 'hand') || msg; else P.holder = want.filter(id => W(id)); }
+    UI.modal = null; commit(msg);
+  },
+  delPrize() { const d = UI.modal.draft; confirmBox(`Delete the ${d.name}?`, 'The trophy and its list of winners are removed.', 'Delete', () => { G.prizes = (G.prizes || []).filter(p => p.id !== d.id); [G.card, ...Object.values(G.future || {})].forEach(c => Array.isArray(c) && c.forEach(s => { if (s.prz === d.id) delete s.prz; })); (G.tourneys || []).forEach(T => { if (T.prz === d.id) delete T.prz; }); commit(); }, true); },
+  prizeRun(id) { const P = PZ(id); if (!P) return; openModal({ type: 'editTourney', draft: { name: P.name, titleId: '', prize: 'none', size: '8', ents: [], prz: P.id } }); },
 
   // stories
   openStory(id) { openModal({ type: 'story', id }); },
@@ -9961,7 +10368,7 @@ function cleanPack(p) {
   for (const w of ws) for (const k of ['name', 'nick', 'bio', 'finisher', 'signature', 'theme', 'hometown']) if (w[k]) w[k] = maskRude(w[k]);
   if (!ws.length) return null;
   const titles = Array.isArray(p.titles) ? p.titles.slice(0, WORLD_TITLES).map(t => t && typeof t.name === 'string' ? { name: cmText(t.name, 50), short: cmText(t.short || t.name, 16), tag: !!t.tag, ...(t.tag && +t.size === 3 ? { size: 3 } : {}), prestige: clamp(+t.prestige || 40, 1, 100), holders: Array.isArray(t.holders) ? t.holders.slice(0, 3).map(h => String(h).slice(0, 40)) : [],
-    ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...(TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier, cl: 1 } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...(DIVISIONS.includes(t.division) ? { division: t.division } : {}) } : null).filter(Boolean) : null;
+    ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...(TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier, cl: 1 } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(DIVISIONS.includes(t.division) ? { division: t.division } : {}) } : null).filter(Boolean) : null;
   // teams and factions only keep members who are in the pack
   const inPack = new Set(ws.map(w => w.name.toLowerCase())), mem = a => [...new Set((Array.isArray(a) ? a : []).map(x => String(x).slice(0, 40)).filter(x => inPack.has(x.toLowerCase())))];
   const teams = (Array.isArray(p.teams) ? p.teams : []).slice(0, 80).map(t => t && typeof t.name === 'string' ? { name: maskRude(cmText(t.name, 40)), ...(t.kind === 'trios' ? { kind: 'trios' } : {}), members: mem(t.members).slice(0, t.kind === 'trios' ? 3 : 2) } : null).filter(t => t?.name && t.members.length === (t.kind === 'trios' ? 3 : 2));
@@ -10063,7 +10470,7 @@ function importPack(pack, mode) {
   if (mode === 'replace' && pack.titles?.length) {
     const byName = n => G.wrestlers.find(w => w.name.toLowerCase() === String(n).toLowerCase())?.id;
     G.titles = pack.titles.map(t => ({ id: uid(), name: t.name, short: t.short, tag: t.tag, ...(t.size === 3 ? { size: 3 } : {}), prestige: t.prestige, holder: t.holders.map(byName).filter(Boolean).slice(0, tsz(t)), since: G.week, defenses: 0, lastDefense: G.week,
-      ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}), ...(t.cl ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...(t.division ? { division: t.division } : {}) }));
+      ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}), ...(t.cl ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(t.division ? { division: t.division } : {}) }));
   } else for (const t of pack.titles || []) { // a title you already have with the same name picks up the belt photo if it has none
     const mine = G.titles.find(x => x.name.toLowerCase() === t.name.toLowerCase()); if (mine && t.photo && !safePhoto(mine.photo)) mine.photo = t.photo;
   }
@@ -10853,7 +11260,7 @@ const WORLD_V = 1;
 const CO_ROSTER_MAX = 400; // the most wrestlers one company can bring through a shared world or a save
 const WORLD_TITLES = 20, WORLD_TEAMS = 80, WORLD_FACS = 40; // the most belts, teams and factions one company brings into a world
 // a belt's card level, defense deadline and DQ rule, so whoever takes the company over keeps them (bi: its brand, by show position)
-const titleRules = t => ({ ...(t.cl && t.tier ? { tier: titleTier(t) } : TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...(Number.isInteger(t.bi) ? { bi: t.bi } : {}) });
+const titleRules = t => ({ ...(t.cl && t.tier ? { tier: titleTier(t) } : TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(Number.isInteger(t.bi) ? { bi: t.bi } : {}) });
 function worldW(w) {
   const x = JSON.parse(JSON.stringify(w));
   for (const k of ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem']) delete x[k];
@@ -10944,7 +11351,7 @@ function cleanWorld(raw) {
     r.teams = (Array.isArray(r.teams) ? r.teams : []).slice(0, WORLD_TEAMS).map(t => { const ms = [...new Set((Array.isArray(t?.members) ? t.members : []).filter(id => onR.has(id)))], k = t?.kind === 'trios' ? 3 : 2; return ms.length === k && gName(t.name) ? { id: SAFE_ID.test(t.id) ? t.id : uid(), name: gName(t.name), ...(k === 3 ? { kind: 'trios' } : {}), members: ms } : null; }).filter(Boolean);
     r.facs = (Array.isArray(r.facs) ? r.facs : []).slice(0, WORLD_FACS).map(f => { const ms = [...new Set((Array.isArray(f?.members) ? f.members : []).filter(id => onR.has(id)))].slice(0, 8); return ms.length >= 2 && gName(f.name) ? { id: SAFE_ID.test(f.id) ? f.id : uid(), name: gName(f.name), members: ms, leader: ms.includes(f.leader) ? f.leader : null } : null; }).filter(Boolean);
     r.titles = (Array.isArray(r.titles) ? r.titles : []).slice(0, WORLD_TITLES).map(t => ({ id: t.id || uid(), name: String(t.name || 'Championship').slice(0, 50), short: String(t.short || 'Title').slice(0, 12), ...(rN(t) > 1 ? { n: rN(t) } : {}), ...(+t.pres ? { pres: clamp(Math.round(+t.pres), 1, 100) } : {}),
-      ...(TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...([4, 8, 12].includes(+t.every) ? { every: +t.every } : {}), ...(t.dq === true ? { dq: true } : {}), ...(t.bi != null ? { bi: clamp(Math.floor(+t.bi) || 0, 0, MAX_SHOWS - 1) } : {}), ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
+      ...(TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...([4, 8, 12].includes(+t.every) ? { every: +t.every } : {}), ...(t.dq === true ? { dq: true } : {}), ...tExtra(t), ...(t.bi != null ? { bi: clamp(Math.floor(+t.bi) || 0, 0, MAX_SHOWS - 1) } : {}), ...(t.belt && typeof t.belt === 'object' ? { belt: beltClean(t.belt, t) } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), div: t.div === "Women's" ? "Women's" : '', mid: !!t.mid || rN(t) > 1, holder: (Array.isArray(t.holder) ? t.holder : []).slice(0, rN(t)), since: 1, d: 0, past: (Array.isArray(t.past) ? t.past : []).slice(-10).map(x => String(x).slice(0, 60)), reigns: (Array.isArray(t.reigns) ? t.reigns : []).slice(-1).map(x => ({ nm: String(x?.nm || '').slice(0, 60), from: 1, to: 0, d: 0 })) }));
     for (const k of ['feuds', 'push', 'log', 'card', 'counter', 'lv', 'red', 'hist']) delete r[k];
     r.hist = []; r.last = 0; r.born = 1; r.base = r.roster.length; r.ppvs = (Array.isArray(r.ppvs) ? r.ppvs : []).map(x => String(x).slice(0, 40)).slice(0, 12); r.bigOne = r.ppvs.includes(r.bigOne) ? r.bigOne : r.ppvs[0] || '';
     // show names and big event setup, so whoever takes this company over keeps them
@@ -11468,7 +11875,7 @@ function applyWorld(z) {
     for (const w of take.roster) { const x = { ...w }; x.contract = { salary: CON() ? Math.max(500, x.rSal || asking(x)) : 0, weeks: clamp(x.rWeeks || 52, 8, 156) }; delete x.rival; delete x.rWeeks; delete x.rSal; x.joined = 1; x.lastBooked = 0; G.wrestlers.push(x); }
     const tag = G.titles.find(t => t.tag);
     G.titles = take.titles.map(t => ({ id: t.id, name: t.name, short: t.short, tag: rN(t) > 1, ...(rN(t) === 3 ? { size: 3 } : {}), prestige: +t.pres || (rN(t) > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70), holder: t.holder.filter(id => W(id)).slice(0, rN(t)), since: 1, defenses: 0, lastDefense: 1, ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(t.photo ? { photo: t.photo } : {}),
-      ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...(t.bi != null ? { bi: t.bi } : {}) }));
+      ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(t.bi != null ? { bi: t.bi } : {}) }));
     G.teams = (take.teams || []).filter(t => t.members.every(id => W(id))).map(t => ({ ...t, w: 0, l: 0, d: 0 }));
     G.factions = (take.facs || []).map(f => ({ ...f, members: f.members.filter(id => W(id)), tms: G.teams.filter(t => t.members.every(id => f.members.includes(id))).map(t => t.id), w: 0, l: 0, d: 0 })).filter(f => f.members.length >= 2);
     if (tag && !G.titles.some(t => t.tag)) G.titles.push({ ...tag, holder: [] });
@@ -14314,7 +14721,7 @@ function takeRivalInto(r, host) {
     if (cur && !cur.to && (!holder.length || !sameSet(cur.rh, holder))) { if (holder.length && !cur.rh.length) cur.rh = holder.slice(); else cur.to = Math.max(cur.from, host.week); }
     if (holder.length && (!reigns.length || reigns.at(-1).to)) reigns.push({ rh: holder.slice(), nm: holder.map(nameOf).join(' & '), from: +t.since || host.week, to: 0, d: +t.d || 0 });
     return { id: t.id, name: t.name, short: t.short, tag: n > 1, ...(n === 3 ? { size: 3 } : {}), prestige: +t.pres || (n > 1 ? 45 : t.mid ? 50 : t.div ? 55 : 70), holder, since: +t.since || host.week, defenses: +t.d || 0, lastDefense: host.week,
-      ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), reigns: reigns.slice(-80) };
+      ...(t.div ? { division: t.div } : {}), ...(t.belt ? { belt: t.belt } : {}), ...(safePhoto(t.photo) ? { photo: t.photo } : {}), ...(t.tier ? { tier: t.tier, cl: 1 } : {}), ...(t.every ? { every: t.every } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), reigns: reigns.slice(-80) };
   });
   G.teams = (r.teams || []).filter(t => t.members.every(id => W(id))).map(t => ({ ...t, members: t.members.slice(), w: 0, l: 0, d: 0 }));
   G.factions = (r.facs || []).map(f => ({ ...f, members: f.members.filter(id => W(id)), tms: G.teams.filter(t => t.members.every(id => f.members.includes(id))).map(t => t.id), w: 0, l: 0, d: 0 })).filter(f => f.members.length >= 2);
@@ -14725,6 +15132,8 @@ document.addEventListener('input', e => {
   }
   if (el.dataset.es != null && el.type !== 'checkbox' && UI.modal?.draft) { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
   if (el.dataset.et != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.et] = el.value; }
+  if (el.dataset.pt != null && UI.modal?.draft?.look) { const d = UI.modal.draft; d.look = trophyClean({ ...d.look, [el.dataset.pt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = prizeArt(d, 'tr-big'); }
+  if (el.dataset.bt != null && el.type === 'range') { const o = document.getElementById('bdv-' + el.dataset.bt); if (o) o.textContent = el.value + '%'; }
   if (el.dataset.bt != null && el.type !== 'checkbox' && UI.modal?.draft?.belt) { const d = UI.modal.draft; d.belt = beltClean({ ...d.belt, [el.dataset.bt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = titleArt(d, 'bd-belt'); }
   if (el.dataset.tt === 'name' && UI.modal?.draft?.titles?.[+el.dataset.i]) UI.modal.draft.titles[+el.dataset.i].name = el.value;
 });
@@ -14758,6 +15167,7 @@ document.addEventListener('change', e => {
     else if (k === 'n') { const mt = MT(d.mtype); d.n = clamp(Math.round(+el.value || mt.def), mt.min || 3, mt.max || 40); d.sides = d.sides.slice(0, d.n); if (d.winner >= d.sides.length) d.winner = -1; }
     else if (k === 'winner') d.winner = +el.value;
     else if (k === 'title') d.title = el.value || null;
+    else if (k === 'prz') d.prz = el.value || null;
     else if (k === 'shotT') { if (d.shot) d.shot.titleId = el.value; }
     else if (k === 'shotWk') { if (d.shot) d.shot.wk = +el.value || 0; }
     else if (k === 'turn') d.turn = el.value || null;
@@ -14811,6 +15221,7 @@ document.addEventListener('change', e => {
       if (el.checked) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40);
       commit();
     }
+    else if (k === 'avBelts') { meta.avBelts = !!el.checked; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'faces') { meta.faces = el.value === 'initials' ? 'initials' : 'pixel'; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'theme') { meta.theme = ['light', 'auto'].includes(el.value) ? el.value : 'dark'; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'fx') { meta.fx = clamp(+el.value || 0, 0, 2); ls.set(META, JSON.stringify(meta)); if (!meta.fx) FX.stop(); }
@@ -15005,8 +15416,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.77';
+const VERSION = '1.9.78';
 const WHATS_NEW = [
+  ['🏆 Awards & Prizes', 'Office → Titles has a new Awards & Prizes shelf for trophies: tournament cups, yearly matches, year-end awards and prizes you hand out. Design each one like a belt (9 shapes, handles, toppers, bases and every metal and centre icon) or use a photo. Champions and trophy holders now wear their belt and trophy on their photo everywhere. The belt designer adds any colour, side plates with icons or the champion\'s own initials, size sliders, your own templates, and new title rules: year established, past champions, big events only, open challenges and unifying two titles.'],
   ['🗞️ Universe headlines and paid stories', 'World news is now Universe headlines: a lead story, colour-coded kinds you can filter, and more news from around the world (big show results, best-ever shows, late paychecks, title reigns, retirements, new feuds and the show of the week). Buy up to two headlines a week to hype a wrestler, sell your show, talk up the company or dig at a rival. Each one has a small chance to backfire.'],
   ['💥 Backfires you can\'t miss', 'When something you chose blows up in your face (a walkout, a refused finish, a blown interview, a training injury, a social media blast, a paid story exposed and more), a full-screen BACKFIRE moment shows what happened and what it cost. Backfires are marked in red in the news, the headlines and the Dirt Sheet.'],
   ['🎨 One colour per icon', 'Icons no longer mix two colours. The menu lines, speaker waves, arrows and other line parts now match the rest of the icon, and the last few colour emoji (sit-downs, perks, producer notes, holidays and more) are now plain icons too.'],
