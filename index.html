@@ -4220,11 +4220,11 @@ const BR = {
   need(w) { const idle = Math.min(4, G.week - (w.lastBooked || 0)); return idle * 6 + (w.morale < 40 ? 8 : 0) + w.pop * 0.3 - (w.fatigue || 0) * 0.3 + rnd(0, 10); },
   proj(seg, wk, extra = {}) { try { return simSegment(seg, { big: isBig(wk), proj: true, wk, ...extra }).rating; } catch (e) { return 0; } },
   // the opponent the engine itself thinks makes the best match, kept in the same tier
-  opponent(a, pool, wk) {
-    const c = pool.filter(b => b !== a && sameDiv(a, b)).sort((x, y) => Math.abs(x.pop - a.pop) - Math.abs(y.pop - a.pop)).slice(0, 14);
+  opponent(a, pool, wk, n = 14, noise = 5) {
+    const c = pool.filter(b => b !== a && sameDiv(a, b)).sort((x, y) => Math.abs(x.pop - a.pop) - Math.abs(y.pop - a.pop)).slice(0, n);
     let best = null, bs = -1e9;
     for (const b of c) {
-      const s = BR.proj({ kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean' }, wk) - Math.abs(a.pop - b.pop) * 0.08 - ((b.fatigue || 0) > 50 ? 4 : 0) + rnd(0, 5);
+      const s = BR.proj({ kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean' }, wk) - Math.abs(a.pop - b.pop) * 0.08 - ((b.fatigue || 0) > 50 ? 4 : 0) + rnd(0, noise);
       if (s > bs) { bs = s; best = b; }
     }
     return best;
@@ -6770,8 +6770,29 @@ function autoFill(quiet) {
   const big = isBig(wk);
   const target = Math.max(0, (big ? 8 : 6) - card.length);
   if (!target) return quiet ? undefined : toast(card.length >= maxSegs(wk) ? fullMsg(wk) : 'This show already has a full card. Clear it to auto-fill from scratch.');
+  // the Head Booker (Office → Staff) books it: more stars and a higher company level book better shows
+  const H = hb();
+  let best = null;
+  if (H.tries > 1) {
+    const base = JSON.stringify(card);
+    for (let t = 0; t < H.tries; t++) {
+      const c = JSON.parse(base), notes = [], r = autoFillOnce(wk, c, big, target, H, notes), sc = projectShow(c, wk);
+      if (!best || sc > best.sc) best = { c, r, notes, sc };
+    }
+    card.splice(0, card.length, ...best.c);
+    if (best.r.segs) best.notes.push(`I tried ${H.tries} different cards and kept the best one.`);
+  } else { const notes = []; best = { r: autoFillOnce(wk, card, big, target, H, notes), notes }; }
+  UI.hbNotes = H.s && best.r.segs && best.notes.length ? { wk, sid: G.showId, co: G.promo.name, by: firstName(H.s.n), list: best.notes.slice(0, 6) } : null;
+  const { segs, filled } = best.r;
+  if (quiet) return;
+  save(); render(); toast(segs ? `${H.s ? firstName(H.s.n) + ' added' : 'Added'} ${segs} segments.` : filled ? 'Filled in the signature match.' : 'Nobody is available to add.');
+}
+// one pass at filling the card. H is the Head Booker's playbook (hb()), notes collects their notes on the card
+function autoFillOnce(wk, card, big, target, H, notes) {
+  const note = t => { if (H.s && !notes.includes(t)) notes.push(t); };
+  const nm = id => shortOf(id) || 'them';
   const used = new Set(card.filter(s => !wideSeg(s)).flatMap(segPeople));
-  const avail = () => bookable(wk).filter(w => inRing(w) && w.injury === 0 && !used.has(w.id) && w.fatigue < 70);
+  const avail = () => bookable(wk).filter(w => inRing(w) && w.injury === 0 && !used.has(w.id) && (w.fatigue || 0) < H.tired);
   const take = ids => ids.forEach(id => used.add(id));
   // the big event's signature match: fill in anyone missing
   let filled = 0;
@@ -6795,16 +6816,17 @@ function autoFill(quiet) {
   const nb = !big && nextBig(), pms = nb && nb > wk ? ppvMatches(nb) : [];
   const ppvSaved = ids => pms.some(m => buildsFor({ kind: 'match', sides: [ids] }, m) === 2);
   // stories first: on big events pay them off, otherwise build with promos/matches
-  for (const st of G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat)) {
+  for (const st of G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat).slice(0, H.stories)) {
     const A = st.a.filter(id => avail().some(w => w.id === id)), B = st.b.filter(id => avail().some(w => w.id === id));
-    if (!A.length || !B.length || segs.length >= target - 2) continue;
+    if (!A.length || !B.length || segs.length >= target - (H.sty === 'story' ? 1 : 2)) continue;
     const size = Math.min(A.length, B.length, 3);
-    if (BR.storyMatch(st, big) && (big || !recentlyFaced([...A.slice(0, size), ...B.slice(0, size)])) && !ppvSaved([...A.slice(0, size), ...B.slice(0, size)])) {
+    if ((H.build ? BR.storyMatch(st, big) : big || Math.random() < 0.5) && (big || !recentlyFaced([...A.slice(0, size), ...B.slice(0, size)])) && !ppvSaved([...A.slice(0, size), ...B.slice(0, size)])) {
       const mtype = size === 1 ? 'Singles' : size === 2 ? 'Tag Team' : 'Six-Person Tag';
       const title = st.titleId && G.titles.find(t => t.id === st.titleId);
-      segs.push({ id: uid(), kind: 'match', mtype, stip: big && st.heat > 60 ? pick(['Street Fight', 'Steel Cage', 'No DQ', 'Ladder']) : 'Standard', sides: [A.slice(0, size), B.slice(0, size)], winner: -1, finish: 'Clean', title: title && title.holder.some(h => [...A, ...B].includes(h)) ? title.id : null, sim: true });
-      { const sg = segs[segs.length - 1]; sg.finish = autoFin(big, sg.stip, st.heat); if (feudBlowNow(st, big)) { sg.blow = true; sg.finish = 'Clean'; } }
-    } else segs.push({ id: uid(), kind: 'promo', ptype: pick(['Call-out', 'Face-off']), who: [A[0]], target: [B[0]] });
+      segs.push({ id: uid(), kind: 'match', mtype, stip: H.stips && big && st.heat > 60 ? pick(['Street Fight', 'Steel Cage', 'No DQ', 'Ladder']) : 'Standard', sides: [A.slice(0, size), B.slice(0, size)], winner: -1, finish: 'Clean', title: title && title.holder.some(h => [...A, ...B].includes(h)) ? title.id : null, sim: true });
+      { const sg = segs[segs.length - 1]; if (H.stips) sg.finish = autoFin(big, sg.stip, st.heat); if (feudBlowNow(st, big)) { sg.blow = true; sg.finish = 'Clean'; }
+        note(sg.blow ? `"${st.title}" ends tonight. ${nm(A[0])} and ${nm(B[0])} settle it.` : sg.stip !== 'Standard' ? `${nm(A[0])} and ${nm(B[0])} are too heated for a normal match, so I made it a ${sg.stip}.` : big ? `${nm(A[0])} vs ${nm(B[0])} pays off "${st.title}".` : `${nm(A[0])} and ${nm(B[0])} talked last time, so "${st.title}" gets a match.`); }
+    } else { segs.push({ id: uid(), kind: 'promo', ptype: pick(['Call-out', 'Face-off']), who: [A[0]], target: [B[0]] }); if (notes.filter(x => x.includes('gets a promo')).length < 2) note(`"${st.title}" gets a promo this week. ${nm(A[0])} goes after ${nm(B[0])}.`); }
     take([...A.slice(0, size), ...B.slice(0, size)]);
   }
   // title defenses for idle champions
@@ -6818,20 +6840,22 @@ function autoFill(quiet) {
     if (pool.length < n && !tms.length) continue;
     const ch = tms.length ? tms[Math.random() < 0.6 ? 0 : rint(0, Math.min(2, tms.length - 1))] : n === 1 ? [BR.challenger(t, pool.slice(0, 6)).id] : shuffle(pool).slice(0, n).map(w => w.id);
     segs.push({ id: uid(), kind: 'match', mtype: sizeMT(n), stip: 'Standard', sides: [t.holder.slice(), ch], winner: -1, finish: !big && W(t.holder[0])?.align === 'heel' && Math.random() < 0.25 ? pick(['DQ', 'Count-out', 'Cheating']) : 'Clean', title: t.id });
+    note(`The ${t.short || t.name} goes on the line: ${nm(t.holder[0])} defends against ${nm(ch[0])}.`);
     take([...t.holder, ...ch]);
   }
   // fill the rest with matches and a hype promo
   let guard = 0;
   while (segs.length < target && guard++ < 20) {
     const pool = avail(); if (pool.length < 2) break;
-    if ((segs.length >= Math.floor(target / 2) && ![...card, ...segs].some(s => s.kind !== 'match')) || Math.random() < 0.12) { const w = BR.speaker(pool); segs.push({ id: uid(), kind: 'promo', ptype: 'Hype Promo', who: [w.id], target: [] }); take([w.id]); continue; }
+    if ((segs.length >= Math.floor(target / 2) && ![...card, ...segs].some(s => s.kind !== 'match')) || Math.random() < H.promo) { const w = BR.speaker(pool); segs.push({ id: uid(), kind: 'promo', ptype: 'Hype Promo', who: [w.id], target: [] }); take([w.id]); continue; }
     const tr3 = availTeams(3);
     if (tr3.length >= 2 && Math.random() < 0.25) { const x = tr3[0], y = tr3.find(z => z !== x && !z.some(id => x.includes(id)) && sameDiv(W(x[0]), W(z[0]))); if (y) { segs.push({ id: uid(), kind: 'match', mtype: 'Six-Person Tag', stip: 'Standard', sides: [x, y], winner: -1, finish: 'Clean', title: null }); take([...x, ...y]); continue; } }
     const fa = (G.factions || []).map(f => f.members.filter(id => avail().some(w => w.id === id)).slice(0, 3)).filter(x => x.length === 3);
     if (fa.length && Math.random() < 0.15) { const x = pick(fa), opp = shuffle(fa.filter(y => y !== x && !y.some(id => x.includes(id)) && sameDiv(W(x[0]), W(y[0]))))[0] || shuffle(avail().filter(w => !x.includes(w.id) && sameDiv(W(x[0]), w) && !factionsOfW(w.id).some(f => x.every(id => f.members.includes(id))))).slice(0, 3).map(w => w.id); if (opp.length === 3) { segs.push({ id: uid(), kind: 'match', mtype: 'Six-Person Tag', stip: 'Standard', sides: [x, opp], winner: -1, finish: 'Clean', title: null }); take([...x, ...opp]); continue; } }
     const tt = availTeams();
     if (tt.length >= 2 && Math.random() < 0.3) { const xi = rint(0, Math.min(4, tt.length - 1)), x = tt[xi], y = tt.map((z, i) => [z, Math.abs(i - xi) + rnd(0, 1.5)]).sort((p, q) => p[1] - q[1]).map(p => p[0]).find(z => z !== x && !z.some(id => x.includes(id)) && sameDiv(W(x[0]), W(z[0]))); if (y) { segs.push({ id: uid(), kind: 'match', mtype: 'Tag Team', stip: 'Standard', sides: [x, y], winner: -1, finish: 'Clean', title: null }); take([...x, ...y]); continue; } }
-    const a = pool.slice().sort((x, y) => BR.need(y) - BR.need(x))[0], b = a && BR.opponent(a, pool, wk);
+    const nd = new Map(pool.map(w => [w, H.need(w)])), a = pool.slice().sort((x, y) => nd.get(y) - nd.get(x))[0], b = a && BR.opponent(a, pool, wk, H.opp, H.noise);
+    if (a && H.care && a.morale < 40) note(`${nm(a.id)} is unhappy, so I made sure they're on the card.`);
     if (!a) break; if (!b) { take([a.id]); continue; }
     if (ppvSaved([a.id, b.id])) { segs.push({ id: uid(), kind: 'promo', ptype: 'Face-off', who: [a.id], target: [b.id] }); take([a.id, b.id]); continue; }
     segs.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: !big && Math.random() < 0.25 ? pick(['Roll-up', 'Cheating', 'Submission']) : 'Clean', title: null });
@@ -6839,12 +6863,13 @@ function autoFill(quiet) {
   }
   // main event = the segment with the most star power, last
   const power = x => avg(segPeople(x).map(id => W(id).pop)) + (x.kind === 'match' ? 0 : -15) + (x.title ? 8 : 0);
-  if (!card.length) card.push(...BR.order(segs, wk));
+  if (!card.length && H.s) card.push(...BR.order(segs, wk));
   else { segs.sort((x, y) => power(x) - power(y)); card.push(...segs); }
-  // make sure the best projected segment closes the show
-  for (let k = 0; k < 2 && card.length > 2; k++) { const r = card.map((x, i) => x.kind === 'match' && segPeople(x).length ? projectFull(x, card.length - 1, card, wk).rating : -1), b = r.indexOf(Math.max(...r)); if (b < 0 || r[b] < 0 || b === card.length - 1) break; card.push(...card.splice(b, 1)); }
-  if (quiet) return;
-  save(); render(); toast(segs.length ? `Added ${segs.length} segments.` : filled ? 'Filled in the signature match.' : 'Nobody is available to add.');
+  // make sure the best projected segment closes the show (a Head Booker checks; without one the biggest names just go last)
+  for (let k = 0; k < (H.s ? 2 : 0) && card.length > 2; k++) { const r = card.map((x, i) => x.kind === 'match' && segPeople(x).length ? projectFull(x, card.length - 1, card, wk).rating : -1), b = r.indexOf(Math.max(...r)); if (b < 0 || r[b] < 0 || b === card.length - 1) break; card.push(...card.splice(b, 1)); }
+  if (H.care) { const tired = bookable(wk).filter(w => inRing(w) && !w.injury && (w.fatigue || 0) >= H.tired && !used.has(w.id)).sort((x, y) => y.pop - x.pop)[0]; if (tired) note(`${nm(tired.id)} is worn out (${Math.round(tired.fatigue)}% tired), so I left them off.`); }
+  const me = card[card.length - 1]; if (segs.length && me && segs.includes(me) && me.kind === 'match') note(`${segPeople(me).map(nm).join(' vs ')} closes the show.`);
+  return { segs: segs.length, filled };
 }
 
 // ---------- needs-attention list (the "keep up" helper) ----------
@@ -7812,7 +7837,8 @@ function viewBookCard() {
   </div>
   ${card.length
     ? `<div class="tools"><button class="link" data-act="autoFill">✨ Auto-fill</button><button class="link" data-act="dupLast" ${last ? '' : 'disabled'}>⧉ Copy last</button><button class="link" data-act="copyCard">Copy as text</button><button class="link" data-act="clearCard">Clear</button></div>`
-    : `<button class="btn pri block" style="margin-top:10px" data-act="autoFill">✨ Auto-fill the show</button>${last ? '<button class="link center" data-act="dupLast">⧉ Copy last week\'s card</button>' : ''}`}
+    : `<button class="btn pri block" style="margin-top:10px" data-act="autoFill">✨ Auto-fill the show</button>${last ? '<button class="link center" data-act="dupLast">⧉ Copy last week\'s card</button>' : ''}${!staffOf('booker') ? '<div class="tiny muted center" style="margin-top:6px">Auto-fill books a basic show. <button class="link" data-act="goStaff">Hire a Head Booker</button> for smarter cards.</div>' : ''}`}
+  ${hbNotesCard(wk, card)}
   ${card.length || !isNow ? `<div class="runbar">${isNow
     ? `<button class="btn pri block" data-act="runShow">🔔 Run ${esc(showName(wk))} <span class="runproj">· ${starStr(proj)}</span></button>`
     : `<div class="small muted" style="text-align:center;padding:4px 0">Books ahead for week ${wk}. <button class="link" data-act="calToday">Back to tonight</button></div>`}</div>` : ''}
@@ -10322,6 +10348,9 @@ const A = {
     render(); },
   splitTeam(id) { const t = TM(id); if (!t) return; confirmBox('Split up ' + t.name + '?', 'The team and its record are removed. The wrestlers stay.', 'Split up', () => { G.teams = G.teams.filter(x => x.id !== id); for (const f of G.factions || []) f.tms = f.tms.filter(x => x !== id); news(`👥 ${t.name} split up.`, 'story'); commit(); }, true); },
   disbandFaction(id) { const f = FC(id); if (!f) return; confirmBox('Disband ' + f.name + '?', 'The faction and its record are removed. Its wrestlers and tag teams stay.', 'Disband', () => { G.factions = G.factions.filter(x => x.id !== id); news(`👑 ${f.name} has disbanded.`, 'story'); commit(); }, true); },
+  goStaff() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'staff'; render(); pageTop(); },
+  hbStyle(k) { if (!Object.hasOwn(HB_STYLES, k)) return; G.bstyle = k; commit(`${staffOf('booker') ? firstName(staffOf('booker').n) + ' will book' : 'Auto-fill books'} ${HB_STYLES[k][0].toLowerCase()} from now on.`); },
+  hbNotesHide() { UI.hbNotes = null; render(); },
   goTeams() { UI.modal = null; UI.tab = 'office'; UI.faTab = 'teams'; render(); pageTop(); },
   fLeader(id) { const d = UI.modal.draft; if (!d.members.includes(id)) return; d.leader = d.leader === id ? null : id; render(); },
   saveFaction() {
@@ -14141,6 +14170,7 @@ function agentBonus(seg, ctx) {
 
 // ---------- staff ----------
 const STAFF_ROLES = {
+  booker: ['📋', 'Head Booker', 'Books Auto-fill and any show set to Auto-book, in the style you pick. Their playbook grows as your company levels up.', 1],
   trainer: ['🎓', 'Head Trainer', 'Everyone grows faster in training and at the school.', 1],
   agent: ['🤼', 'Road Agent', 'Lays out matches: better ratings, and wrestlers learn more from each match.', 1],
   doctor: ['🩹', 'Doctor', 'Fewer injuries, and injured wrestlers come back sooner.', 1],
@@ -14150,6 +14180,35 @@ const STAFF_ROLES = {
   writer: ['✍️', 'Writer', 'Storylines heat up faster.', 3]
 };
 const STAFF_PAY = [0, 900, 1600, 2600, 4000, 6000];
+// ---------- the Head Booker: Auto-fill gets smarter with their stars, your company level and your other staff ----------
+const HB_STYLES = {
+  bal: ['Balanced', 'A bit of everything: stories, title matches and the best match-ups.'],
+  story: ['Story first', 'Every hot feud gets time, more promos, and the stories build to the big event.'],
+  work: ['Workrate', 'The best workers face each other, fewer promos, and the best match closes the show.'],
+  star: ['Star power', 'Your most popular wrestlers get booked first, every week.']
+};
+// [company level, what the Head Booker starts doing]
+const HB_STEPS = [[1, 'Fills the card with the best match-ups and picks the main event'], [5, 'Builds every show toward the next big event: matches and promos take turns'], [8, 'Rests tired wrestlers and makes room for unhappy ones'], [12, 'Picks stipulations and finishes for each story'], [18, 'Keeps your top stars on every show'], [25, 'Genius: tries several cards and keeps the best one']];
+const hbStyle = () => G && Object.hasOwn(HB_STYLES, G.bstyle) ? G.bstyle : 'bal';
+function hb() {
+  const s = staffOf('booker'), q = s ? staffQ('booker') : 0, L = s ? coLvl() : 0, at = n => !!s && L >= n, sty = s ? hbStyle() : 'bal';
+  const bl = s ? bookerLvl() : 0, ag = staffQ('agent'), wr = staffQ('writer');
+  const top = at(18) ? new Set(BR.crew().slice().sort((a, b) => b.pop - a.pop).slice(0, 3).map(w => w.id)) : new Set();
+  return {
+    s, q, L, sty,
+    // opponents compared for each match: the Head Booker's stars, the Road Agent and your booker level all help
+    opp: s ? clamp(4 + q * 2 + Math.ceil(ag / 2) + (bl >= 10) + (bl >= 25), 4, 18) : 3,
+    noise: s ? (sty === 'work' ? 2 : 5) - q * 0.4 : 12,
+    build: at(5), care: at(8), stips: at(12), stars: at(18),
+    tries: at(25) ? 2 + q : 1,
+    // how many feuds get on the card: without a Head Booker only the hottest (and one more with a Writer)
+    stories: s ? 99 : 1 + (wr ? 1 : 0),
+    tired: at(8) ? 70 - q * 2 : 80,
+    promo: sty === 'work' ? 0.05 : sty === 'story' ? 0.18 : 0.12,
+    need: w => BR.need(w) + (at(8) ? (w.morale < 40 ? 4 + q : 0) : (w.morale < 40 ? -6 : 0)) + (sty === 'star' ? w.pop * 0.25 : 0) + (top.has(w.id) ? 6 : 0) + (!s ? rnd(0, 12) : 0)
+  };
+}
+
 const STAFF_BIO = ['Former world champion', 'Ran a famous indie', 'Ex-network producer', 'Thirty years in the business', 'Came up through the dojo system', 'Worked every territory', 'Former tag team specialist', 'Quietly the best in the business', 'Young and full of ideas', 'Old school, hard but fair'];
 const staffOf = role => G && G.staff && G.staff[role] && Object.hasOwn(STAFF_ROLES, role) ? G.staff[role] : null;
 // 0 means nobody is hired; 1-5 stars otherwise
@@ -14591,7 +14650,25 @@ function staffView() {
   };
   return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week, and can take a job off your hands. Goals, the school and training are in the <button class="link" data-act="faTab" data-id="training">Training</button> tab.</div>
     <div class="list">${roles.map(sRow).join('')}</div>
+    ${hbView()}
     ${staffJobsView()}`;
+}
+// Office → Staff: the Head Booker's booking style and playbook
+function hbView() {
+  const s = staffOf('booker'), L = coLvl(), who = s ? esc(firstName(s.n)) : 'A Head Booker', st = hbStyle(), H = hb();
+  const chips = Object.entries(HB_STYLES).map(([k, [n]]) => `<button class="chip ${st === k ? 'on' : ''}" data-act="hbStyle" data-id="${k}" aria-pressed="${st === k}">${n}</button>`).join('');
+  const steps = HB_STEPS.map(([lv, t]) => { const on = s && L >= lv; return `<div style="margin-top:6px;${on ? '' : 'opacity:.6'}">${on ? '✓' : '🔒'} <b>Level ${lv}</b> <span class="muted">${t}</span></div>`; }).join('');
+  return `<div class="sec">🧠 Booking style</div>
+    <div class="card"><div class="chips">${chips}</div><div class="tiny muted" style="margin-top:8px">${HB_STYLES[st][1]}${s ? '' : ' Used once you hire a Head Booker.'}</div></div>
+    <div class="sec">📈 ${s ? `${who}'s playbook` : 'Head Booker playbook'}</div>
+    <div class="card small">${s ? '' : '<div class="muted" style="margin-bottom:4px">Without a Head Booker, Auto-fill books a basic show: random match-ups, only your hottest feud, and the biggest names go last.</div>'}${steps}
+      <div class="tiny muted" style="margin-top:8px">Unlocks with your company level (now ${L}). More stars means better picks at every step${s ? `: ${who} compares ${H.opp} opponents for each match` : ''}. A Road Agent and a high booker level help too.</div></div>`;
+}
+// the Head Booker's notes on the card they just filled
+function hbNotesCard(wk, card) {
+  const n = UI.hbNotes;
+  if (!n || n.wk !== wk || n.sid !== G.showId || n.co !== G.promo.name || !card.length) return '';
+  return `<div class="card small" style="margin-top:10px"><div class="row"><b class="sp">📋 ${esc(n.by)}'s notes on this card</b><button class="link small" data-act="hbNotesHide" aria-label="Hide notes">Hide</button></div>${n.list.map(t => `<div style="margin-top:6px">${esc(t)}</div>`).join('')}</div>`;
 }
 // Office → Training: goals and trainer calls, the school, and who is training what
 function trainingView() {
@@ -14734,6 +14811,7 @@ function cleanTraining(g, shared) {
   const st = {};
   if (g.staff && typeof g.staff === 'object') for (const r of Object.keys(STAFF_ROLES)) { const s = g.staff[r]; if (s && typeof s === 'object') st[r] = { n: txt(s.n, 40) || 'Staff', q: clamp(Math.round(+s.q) || 1, 1, 5), pay: clamp(+s.pay || 0, 0, 1e5), bio: txt(s.bio, 60), wk: Math.floor(+s.wk) || 1, ...(s.off ? { off: true } : {}) }; }
   g.staff = st;
+  if (g.bstyle != null && !Object.hasOwn(HB_STYLES, g.bstyle)) delete g.bstyle;
   // jobs your staff handle (older saves: a paused PR Agent means the media job is off)
   const J = g.sjobs && typeof g.sjobs === 'object' ? g.sjobs : {}, nj = {};
   for (const k of ['media', 'rest', 'resign', 'focus', 'trips']) nj[k] = typeof J[k] === 'boolean' ? J[k] : SJ_DEF[k];
@@ -15697,7 +15775,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.79';
+const VERSION = '1.9.80';
 const WHATS_NEW = [
   ['🤼 Produce your matches', 'The match editor has a new Produce the match section. Pick a plan (Classic, Sprint, Epic or Squash), or Custom to set the opening, the heat, the comeback, a big spot and the near falls yourself, plus the length. Plans that fit the wrestlers rate higher, and long matches and big spots take a toll. On the live show a produced match plays out beat by beat with a crowd meter, and your agent asks you on the headset what to do next: start the comeback, go for a big spot, one more near fall or go home. Leave it on Agent calls it and nothing changes.'],
   ['🏆 Awards & Prizes', 'Office → Titles has a new Awards & Prizes shelf for trophies: tournament cups, yearly matches, year-end awards and prizes you hand out. Design each one like a belt (9 shapes, handles, toppers, bases and every metal and centre icon) or use a photo. Champions and trophy holders now wear their belt and trophy on their photo everywhere. The belt designer adds any colour, side plates with icons or the champion\'s own initials, size sliders, your own templates, and new title rules: year established, past champions, big events only, open challenges and unifying two titles.'],
