@@ -319,6 +319,30 @@ details > summary::-webkit-details-marker { display: none; }
 .show-score { text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 74px; }
 .show-score b { font-size: 26px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
 .show-score .stars { font-size: 12px; }
+/* TV deals (Office → TV deals) */
+.tv-line { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font-size: 12.5px; color: var(--dim); background: none; border: 0; padding: 2px 2px 10px; cursor: pointer; }
+.tv-line .i { color: var(--gold); flex: none; }
+.tv-line b { color: var(--ink); }
+.tvd { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+.tvd.offer { border-left: 4px solid var(--gold); }
+.tvd .hd { display: flex; align-items: center; gap: 10px; }
+.tvd .hd > .i { width: 26px; height: 26px; color: var(--gold); flex: none; }
+.tvd .nm { font-family: Anton, Impact, sans-serif; font-size: 19px; letter-spacing: .02em; text-transform: uppercase; line-height: 1.1; }
+.tvd .tg { font-size: 12px; color: var(--dim); }
+.tvg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 10px 0; }
+.tvg div { background: color-mix(in srgb, var(--ink) 5%, transparent); border-radius: 10px; padding: 6px 8px; min-width: 0; }
+.tvg span { display: block; font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.tvg b { display: block; font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tv-meter { height: 8px; border-radius: 5px; background: color-mix(in srgb, var(--ink) 12%, transparent); position: relative; margin: 6px 0 4px; }
+.tv-meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+.tv-meter u { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.tv-strk { display: inline-flex; gap: 4px; }
+.tv-strk i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--bad); }
+.tv-strk i.on { background: var(--bad); }
+.tv-bdg { font-size: 11px; padding: 2px 7px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 10%, transparent); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; white-space: nowrap; }
+.tv-bdg.r { background: color-mix(in srgb, var(--bad) 20%, transparent); color: var(--bad); }
+.tv-bdg.g { background: color-mix(in srgb, var(--good) 20%, transparent); color: var(--good); }
+.tv-bdg.y { background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold); }
 .warnline { font-size: 12.5px; color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
 .mcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 4px; }
 .mcard-h { display: flex; align-items: center; padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); border-bottom: 1px solid var(--line); }
@@ -4353,7 +4377,7 @@ const BR = {
     const wts = rs.map((r, i) => i === n - 1 && n > 1 ? 1.6 : i === n - 2 && n >= 4 ? 1.25 : i === 0 && n >= 4 ? 1.15 : 1);
     let o = sum(rs.map((r, i) => r * wts[i])) / sum(wts);
     const push = (v, t) => { v = Math.round(v); if (v) { o += v; why.push([v, t]); } };
-    const ideal = big ? [6, 10] : [4, 8];
+    const cap = big ? 10 : tvSegs(), ideal = big ? [6, 10] : [cap <= 6 ? 3 : cap >= 10 ? 6 : 4, cap + (isSpecial(wk) ? 1 : 0)]; // a 1-hour show is short by design, a 3-hour one long
     if (n < ideal[0]) push(-4 * (ideal[0] - n), 'Short show');
     if (n > ideal[1]) push(-3 * (n - ideal[1]), 'Show ran long');
     push(new Set(segs.map(s => s.kind)).size >= 2 ? 2 : -3, new Set(segs.map(s => s.kind)).size >= 2 ? 'Good variety' : 'No variety (add promos/angles)');
@@ -4518,8 +4542,9 @@ function runShow(opts = {}) {
   const bShow = !onMain() && !splitOn();
   const special = isSpecial(G.week) && !big; // a bonus TV special: bigger building, bigger TV money, more new fans
   const attendance = Math.round(Math.min((big ? 22000 : bShow ? 4000 : 9000) * (special ? 1.5 : 1), G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype * (special ? 1.4 : 1) * (perk('crowd') ? 1.1 : 1)) * rnd(.93, 1.07) * (G.buzzShow?.wk === G.week ? G.buzzShow.x : 1));
+  const tvd = !big && tvOn() ? tvOf(curShow()) : null; // this show's network deal: its fee, plus a bonus for hitting the target
   const fin = {
-    gate: attendance * (big ? 35 : 20) /* ticket prices: tuned so money stays tight on Normal (it piled up to millions by week 20) */, tv: big ? 0 : Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
+    gate: attendance * (big ? 35 : 20) /* ticket prices: tuned so money stays tight on Normal (it piled up to millions by week 20) */, tv: big ? 0 : Math.round((tvd ? tvd.fee : G.tv * (bShow ? 0.5 : 1)) * (special ? 2 : 1)), ...(tvd && overall >= tvd.tgt && tvd.bon ? { tvBon: tvd.bon } : {}), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
     // a big event is an extra night: pay, merch and TV money come in with the weekly shows
     merch: big ? 0 : Math.round(sum(crew.map(w => w.pop * w.pop * wsh(w))) / 9 * share * (perk('merch') ? 1.15 : 1)),
     payroll: CON() && !big ? -Math.round(sum(crew.map(w => w.contract.salary * wsh(w))) * share) : 0, production: -Math.round((big ? 75000 : bShow ? 25000 : 14000) + G.fans * (big ? 1.8 : bShow ? 0.4 : 0.6) /* bigger crowds cost more to serve, so the gate can't outrun costs as fans grow */),
@@ -4528,7 +4553,7 @@ function runShow(opts = {}) {
   };
   if (!fin.guests) delete fin.guests;
   for (const id of new Set(card.flatMap(segPeople))) { const d = guestDeal(id); if (d) { d.apps = (d.apps || 0) + 1; W(id).lastBooked = G.week; } }
-  for (const k of ['gate', 'tv', 'ppv', 'merch']) fin[k] = Math.round(fin[k] * DF().income);
+  for (const k of ['gate', 'tv', 'tvBon', 'ppv', 'merch']) if (k in fin) fin[k] = Math.round(fin[k] * DF().income);
   const net = sum(Object.values(fin));
   if (G.settings.finances) G.money += net;
   // growth slows toward the cap for your prestige; past it, fans drift back unless the shows are great
@@ -4537,6 +4562,7 @@ function runShow(opts = {}) {
   let fanDelta = Math.round(G.fans * (overall - 58) / (big ? 500 : 900) * (overall > 58 ? Math.max(0.02, room) * DF().fanUp : DF().fanDown) / Math.sqrt(nS));
   const spT = special ? specialTarget() : 0, spMiss = special && overall < spT;
   if (special && !spMiss && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.5);
+  if (tvd && fanDelta > 0) fanDelta = Math.round(fanDelta * tvFans(curShow())); // where the show airs: national prime time grows fans faster
   if (perk('fans') && fanDelta > 0) fanDelta = Math.round(fanDelta * 1.1);
   if (room < 0 && overall < 80) fanDelta -= Math.round(G.fans * Math.min(0.01, -room * 0.02));
   G.fans = Math.max(1000, G.fans + fanDelta);
@@ -4544,6 +4570,7 @@ function runShow(opts = {}) {
   // a TV special is a promise to the network: keep it and your name grows, miss it and everyone hears about it
   let spHit = 0;
   if (special) { spHit = spMiss ? -Math.min(10, 3 + Math.floor((spT - overall) / 3)) : 2; G.promo.prestige = clamp(G.promo.prestige + spHit, 1, 100); }
+  const tvr = tvd ? tvAfterShow(curShow(), overall) : null;
   // head to head: your own companies on the same night fight for the same viewers
   const h2h = [];
   for (const c of G.cos || []) {
@@ -4558,7 +4585,7 @@ function runShow(opts = {}) {
 
   if (!big) buildHype(results, G.week);
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
-  const rec = { wk: G.week, name: showTitle(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true, spT, spMiss, spHit } : {}) };
+  const rec = { wk: G.week, name: showTitle(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true, spT, spMiss, spHit } : {}), ...(tvr ? { tvT: tvr.tgt, tvNet: tvr.nw, ...(tvr.strike ? { tvS: tvr.strike } : {}), ...(tvr.cancel ? { tvX: 1 } : {}) } : {}) };
   G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
   datesShow(new Set(card.flatMap(segPeople)));
   PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
@@ -4650,13 +4677,8 @@ function endOfWeek(card, world = true) {
   for (const T of G.tourneys || []) if (!T.done) tWalkovers(T);
   if (G.week % 52 === 0) yearEnd(world);
   if (world && (Math.random() < 0.25 || freeAgents().length < 6)) { const w = makeWrestler(randomName(), '', null, null, rnd(0.05, 0.75)); w.joined = G.week; G.wrestlers.push(w); news(`🆕 ${w.name} (${w.style}, ${w.align}) is now an indie star.`, 'contract'); }
-  // TV deal renewals
-  G.tvWeeks--;
-  if (G.tvWeeks <= 0) {
-    const recent = avg(G.history.slice(-12).map(h => h.rating));
-    const old = G.tv; G.tv = Math.round((30000 * Math.pow(G.fans / 22000, 0.65) * (0.6 + recent / 100) * (perk('tv') ? 1.1 : 1)) / 1000) * 1000; G.tvWeeks = 26;
-    if (MON()) news(`📡 New TV deal: ${money(G.tv)} per week (was ${money(old)}), based on fans and recent show quality.`, 'office');
-  }
+  // TV deals: talks open near the end of a deal, and a deal that runs out is renewed or replaced
+  tvWeek();
   teamPayWeek();
   relWeek(booked); personaWeek(booked);
   // to-dos about one week, or about the first big event, tidy themselves away once that moment has passed
@@ -5812,7 +5834,7 @@ function scoreShow(rec) {
     if (ok) {
       addXP(g.xp); b.done = (b.done || 0) + 1; goalsOk++; carBump('goals');
       const f = Math.round(G.fans * g.fans * Math.max(0.1, 1 - G.fans / fanCap())); G.fans += f; reward = `+${xpScaled(g.xp)} XP · +${kfmt(f)} fans`;
-      if (g.key === 'exec') { G.tv = Math.round(G.tv * 1.08); reward += ' · TV deal +8%'; }
+      if (g.key === 'exec') { tvBump(1.08); reward += ' · TV deal +8%'; }
     } else if (g.key === 'exec') { G.promo.prestige = clamp(G.promo.prestige - 2, 1, 100); reward = 'The exec left unimpressed. Prestige −2'; }
     got.push({ text: g.text, ok, reward });
   }
@@ -6448,7 +6470,7 @@ function goalCard() {
   const g = G.booker.goals, c = CAR();
   const xp = c.xp, cur = RANKS[rankIx(xp)], L = lvlOf(xp), pct = L >= MAX_LVL ? 100 : (xp - xpAt(L)) / (xpAt(L + 1) - xpAt(L)) * 100;
   return `<div class="goals"><button class="g-rank" data-act="trophies" aria-label="Booker level ${L}, ${cur[1]}. Achievements and milestones"><span class="lvl">Lv ${L}</span><b>${cur[1]}</b><span class="bar"><i style="width:${pct}%"></i></span><span class="tiny muted">🏅 ${Object.keys(c.ach).length}/${ACH.length}</span></button>
-    ${perksDue() ? `<button class="btn sm block" style="margin-top:6px" data-act="coPerk">⭐ Company level ${coLvl()}: pick a promotion perk</button>` : ''}${specialPending() && !isBig(G.special) ? `<div class="goal"><span>📺</span><span class="sp">${G.special === G.week ? 'TV special this week' : `TV special booked for week ${G.special}`}: ${esc(specialName())}. Network target ${specialTarget()}+</span></div>` : ''}${G.sponsor ? `<div class="goal"><span>💼</span><span class="sp">${esc(G.sponsor.n)}: rate ${G.sponsor.T}+ to get paid</span><b>${money(G.sponsor.pay)}</b></div>` : ''}
+    ${perksDue() ? `<button class="btn sm block" style="margin-top:6px" data-act="coPerk">⭐ Company level ${coLvl()}: pick a promotion perk</button>` : ''}${specialPending() && !isBig(G.special) ? `<div class="goal"><span>📺</span><span class="sp">${G.special === G.week ? 'TV special this week' : `TV special booked for week ${G.special}`}: ${esc(specialName())}. Network target ${specialTarget()}+</span></div>` : ''}${tvOn() && !onEv() && curShow() ? (d => `<button class="goal" data-act="faTabGo" data-id="tv" style="width:100%;text-align:left"><span>${ic('tv')}</span><span class="sp">${esc(d.nw)} wants ${d.tgt}+ from ${esc(curShow().name)}${d.str ? ` · ${d.str} strike${d.str > 1 ? 's' : ''}` : ''}${curShow().tvO ? ' · <b>talks open</b>' : ''}</span><b>+${money(d.bon)}</b></button>`)(tvOf(curShow())) : ''}${G.sponsor ? `<div class="goal"><span>💼</span><span class="sp">${esc(G.sponsor.n)}: rate ${G.sponsor.T}+ to get paid</span><b>${money(G.sponsor.pay)}</b></div>` : ''}
     ${g.length ? `<div class="goal-l">${g.map(x => `<div class="goal"><span>🎯</span><span class="sp">${esc(x.text)}</span><b>+${xpScaled(x.xp)} XP</b></div>`).join('')}</div>` : ''}</div>`;
 }
 function modalTrophies() {
@@ -6970,7 +6992,117 @@ const lastSpecialAired = () => Math.max(-99, ...G.history.filter(h => h.special)
 // the first week a new special can go on: one every 8 weeks, counted from the last one that aired
 const nextSpecialWk = () => { const lw = lastSpecialAired(), h = G.history.find(r => r.wk === lw && r.special); return Math.max(G.week, lw + (h?.spMiss ? SPECIAL_GAP_MISS : SPECIAL_GAP)); };
 const specialPending = () => G.special >= G.week && !(G.special === G.week && (G.history.some(h => h.wk === G.week && h.special)));
-const maxSegs = wk => isBig(wk) ? 10 + bigBonus() : G && isSpecial(wk) ? 9 : 8;
+// ---------- TV network deals: every weekly show signs its own deal (s.tv on the show) ----------
+// A deal sets the rights fee a week, the time slot, the show's length (how many segments), a ratings target, a bonus for each
+// show that hits it, and when it ends (an absolute week, so companies you aren't running keep their dates). Every 4 shows the
+// network checks the average: below target is a strike and a 10% fee cut, three strikes and they cancel the show.
+// Talks open TV_TALKS weeks before the end: the network offers a renewal and others bid. Push for more and they may walk.
+const TV_TIERS = {
+  local: { n: 'Local TV', fee: .35, tgt: -6, fans: .9, d: 'easy target, small money' },
+  stream: { n: 'Streaming', fee: .6, tgt: -3, fans: 1, d: 'steady, smaller audience' },
+  cable: { n: 'Cable', fee: 1, tgt: 0, fans: 1.05, d: 'the usual home for wrestling' },
+  nat: { n: 'National TV', fee: 1.4, tgt: 5, fans: 1.15, d: 'bigger audience, tougher boss' }
+};
+const TV_SLOTS = { early: { n: '6 PM', fee: .85, tgt: -2, fans: .95 }, prime: { n: '8 PM', fee: 1.15, tgt: 3, fans: 1.1 }, late: { n: '10 PM', fee: .9, tgt: -1, fans: .95 } };
+const TV_LENS = { 1: { seg: 6, fee: .6, tgt: -1 }, 2: { seg: 8, fee: 1, tgt: 0 }, 3: { seg: 10, fee: 1.3, tgt: 2 } };
+const TV_NETS = [['Sportsline 24', 'cable'], ['Metro Sports', 'cable'], ['Crossfire TV', 'cable'], ['Apex Network', 'nat'], ['Summit Network', 'nat'], ['Vantage+', 'stream'], ['Ringcast', 'stream'], ['Channel 12', 'local'], ['Harbor Access', 'local']];
+const TV_TALKS = 6, TV_STRIKES = 3, TV_CHECK = 4;
+const tvOn = () => MON();
+const tvNetTier = n => TV_NETS.find(x => x[0] === n)?.[1] || 'cable';
+// the shows a deal belongs to: weekly shows only (big events are pay-per-view)
+const tvShows = () => SHOWS();
+const tvB = s => s !== SHOWS()[0] && !splitOn(); // an extra night on a shared roster draws a smaller audience, as before
+// which tiers will talk to you: national TV wants a big company, cable a decent one
+const tvTierOK = t => t === 'nat' ? G.fans >= 60000 || G.promo.prestige >= 62 : t === 'cable' ? G.fans >= 15000 || G.promo.prestige >= 45 : true;
+const tvRecent = s => { const L = G.history.filter(h => !h.big && recSid(h) === s.id).slice(-TV_CHECK).map(h => h.rating); return L.length ? avg(L) : 62; };
+const tvBase = s => 30000 * Math.pow(G.fans / 22000, 0.65) * (0.6 + tvRecent(s) / 100) * (perk('tv') ? 1.1 : 1) * (tvB(s) ? 0.5 : 1);
+const r500 = x => Math.max(500, Math.round(x / 500) * 500);
+function tvMake(s, net, slot, hrs, term, adj = 1) {
+  const T = TV_TIERS[tvNetTier(net)], S = TV_SLOTS[slot], L = TV_LENS[hrs];
+  const fee = r500(tvBase(s) * T.fee * S.fee * L.fee * adj);
+  return { nw: net, slot, hrs, fee, tgt: clamp(Math.round(tvRecent(s) - 2 + T.tgt + S.tgt + L.tgt), 40, 85), bon: r500(fee * .06), term };
+}
+// a deal on an old save: same money, same 8 segments, same weeks left as the old single TV deal
+function tvStarter(s, i) {
+  const main = i === 0, fee = Math.max(1000, Math.round((+G.tv || 46000) * (main || splitOn() ? 1 : 0.5) / 500) * 500);
+  const net = main ? 'Sportsline 24' : 'Vantage+', tgt = clamp(Math.round(tvRecent(s) - 1), 40, 85);
+  return { nw: net, slot: main ? 'prime' : 'late', hrs: 2, fee, tgt, bon: r500(fee * .06), from: G.week, end: G.week + (main ? Math.max(1, +G.tvWeeks || 26) : 26), str: 0, n: 0 };
+}
+// old saves move their single deal onto the shows once (G.tvMig); a show added later starts on a small streaming deal
+function tvOf(s) {
+  if (!s) return null;
+  if (!G.tvMig) { G.tvMig = 1; SHOWS().forEach((x, i) => { if (!x.tv || typeof x.tv !== 'object') x.tv = tvStarter(x, i); }); G.tv = SHOWS().reduce((t, x) => t + x.tv.fee, 0); }
+  if (!s.tv || typeof s.tv !== 'object') s.tv = { ...tvMake(s, 'Vantage+', 'late', 2, 26), from: G.week, end: G.week + 26, str: 0, n: 0 }, delete s.tv.term, G.tv = SHOWS().reduce((t, x) => t + (x.tv?.fee || 0), 0);
+  return s.tv;
+}
+const tvSlotLbl = (s, d) => `${(DAYS[+s.day || 0] || 'Monday').slice(0, 3)} ${TV_SLOTS[d.slot]?.n || '8 PM'}`;
+// the weekly TV money of every show together (sponsors are priced off it)
+const tvTotal = () => tvShows().reduce((t, s) => t + tvOf(s).fee, 0);
+const tvSync = () => { G.tv = tvTotal(); };
+// how many segments the show being booked holds: its deal's length (8 with money off)
+const tvSegs = () => { const s = !onEv() && curShow(); return tvOn() && s && s.tv ? TV_LENS[s.tv.hrs]?.seg || 8 : 8; };
+// change every deal's fee at once (old story events and rewards that grew "the TV deal")
+function tvBump(mult = 1, add = 0) { for (const s of tvShows()) { const d = tvOf(s); d.fee = Math.max(500, Math.round((d.fee * mult + (s === SHOWS()[0] ? add : 0)) / 500) * 500); } tvSync(); }
+// offers when talks open: a renewal from the current network (better if you kept them happy) and two others
+function tvOffers(s) {
+  const d = tvOf(s), avgR = tvRecent(s), happy = avgR >= d.tgt ? 1.06 : avgR < d.tgt - 5 ? 0.85 : 0.97;
+  const out = [];
+  if ((d.str || 0) < TV_STRIKES) out.push({ ...tvMake(s, d.nw, d.slot, d.hrs, pick([52, 104]), happy * (d.str ? 0.95 : 1)), ren: 1 });
+  const nets = shuffle(TV_NETS.filter(x => x[0] !== d.nw && tvTierOK(x[1]))), used = new Set();
+  for (const [n, t] of nets) { if (out.length >= 3) break; if (used.has(t) && nets.length > 3) continue; used.add(t);
+    out.push(tvMake(s, n, pick(Object.keys(TV_SLOTS)), +pick(t === 'local' ? ['1', '1', '2'] : t === 'nat' ? ['2', '2', '3'] : ['1', '2', '2', '3']), pick([26, 52, 104]), rnd(.92, 1.1))); }
+  s.tvO = out; s.tvOWk = G.week;
+}
+function tvSign(s, o) {
+  s.tv = { nw: o.nw, slot: o.slot, hrs: o.hrs, fee: o.fee, tgt: o.tgt, bon: o.bon, from: G.week, end: G.week + o.term, str: 0, n: 0 };
+  delete s.tvO; delete s.tvOWk; tvSync();
+}
+// after one of your weekly shows: pay the bonus, and every 4 shows the network checks the average
+function tvAfterShow(s, rating) {
+  if (!tvOn() || !s) return null;
+  const d = tvOf(s), out = { tgt: d.tgt, nw: d.nw, bonus: rating >= d.tgt ? d.bon : 0 };
+  d.n = (d.n || 0) + 1;
+  if (d.n % TV_CHECK === 0) {
+    const a = Math.round(tvRecent(s));
+    if (a < d.tgt) {
+      d.str = (d.str || 0) + 1; d.fee = r500(d.fee * 0.9); out.strike = d.str;
+      if (d.str >= TV_STRIKES) {
+        const was = d.nw; s.tv = { ...tvMake(s, 'Harbor Access', 'late', d.hrs, 26), from: G.week, str: 0, n: 0 }; delete s.tv.term; s.tv.end = G.week + 26; delete s.tvO;
+        G.promo.prestige = clamp(G.promo.prestige - 5, 1, 100); out.cancel = was;
+        news(`📉 ${was} cancelled ${s.name}. It averaged ${a} against a target of ${d.tgt}. It moves to ${s.tv.nw} late at night for ${money(s.tv.fee)} a week, and your reputation took a hit.`, 'office');
+        G.todos.unshift({ t: `${s.name} lost its TV deal. Win back the ratings, then find a better network when talks open`, done: false });
+      } else news(`⚠️ ${d.nw}: "${s.name} averaged ${a} this month. We wanted ${d.tgt}." Strike ${d.str} of ${TV_STRIKES}, and they cut the fee to ${money(d.fee)}.`, 'office');
+    } else if (d.str) { d.str--; news(`📺 ${d.nw} is happier with ${s.name}: a ${a} average. One strike taken off.`, 'office'); }
+  }
+  tvSync(); return out;
+}
+// every week: open talks near the end of a deal, and sign the renewal (or the best offer left) when a deal runs out
+function tvWeek() {
+  if (!tvOn()) return;
+  for (const s of tvShows()) {
+    const d = tvOf(s);
+    if (!s.tvO && G.week >= d.end - TV_TALKS) {
+      tvOffers(s);
+      news(`📺 TV talks are open for ${s.name}: ${s.tvO.map(o => o.nw).join(', ')} made offers. The deal ends in week ${d.end}.`, 'office');
+      G.todos.unshift({ t: `Pick a TV deal for ${s.name} before week ${d.end} (Office → TV deals)`, done: false });
+    }
+    if (G.week >= d.end) {
+      const o = (s.tvO || []).find(x => x.ren) || (s.tvO || [])[0] || { ...tvMake(s, 'Harbor Access', 'late', 1, 26) };
+      tvSign(s, o); news(`📺 ${s.name}'s deal ran out with nothing signed, so it went to ${o.nw}: ${money(o.fee)} a week, ${o.hrs} hour${o.hrs > 1 ? 's' : ''}, target ${o.tgt}.`, 'office');
+    }
+  }
+  tvSync();
+}
+// fan growth from where the show airs (weekly shows only), next to the starting deal
+const tvFans = s => { if (!tvOn() || !s?.tv) return 1; const d = s.tv; return (TV_TIERS[tvNetTier(d.nw)]?.fans || 1) * (TV_SLOTS[d.slot]?.fans || 1) / (TV_TIERS.cable.fans * TV_SLOTS.prime.fans); }; // cable prime time, the starting deal, is 1
+function tvClean(d) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
+  const net = TV_NETS.some(x => x[0] === d.nw) ? d.nw : 'Sportsline 24', n = (k, lo, hi, def) => { const v = Math.floor(+d[k]); return Number.isFinite(v) ? clamp(v, lo, hi) : def; };
+  return { nw: net, slot: Object.hasOwn(TV_SLOTS, d.slot) ? d.slot : 'prime', hrs: Object.hasOwn(TV_LENS, String(d.hrs)) ? +d.hrs : 2, fee: n('fee', 0, 10000000, 20000), tgt: n('tgt', 30, 95, 60), bon: n('bon', 0, 1000000, 0),
+    ...(d.term != null ? { term: n('term', 1, 260, 52) } : {}), ...(d.ren ? { ren: 1 } : {}), ...(d.push != null ? { push: n('push', 0, 9, 0) } : {}),
+    ...(d.from != null ? { from: n('from', 0, 100000, 1), end: n('end', 0, 100260, 26), str: n('str', 0, TV_STRIKES, 0), n: n('n', 0, 100000, 0) } : {}) };
+}
+const maxSegs = wk => isBig(wk) ? 10 + bigBonus() : G && isSpecial(wk) ? tvSegs() + 1 : tvSegs();
 const roomLeft = (wk, card) => Math.max(0, maxSegs(wk) - card.length);
 const fullMsg = wk => `The card is full (${maxSegs(wk)} segments). Remove one to add another.`;
 // story matches: settle feuds clean at big shows, keep them going with dirty finishes on weekly shows
@@ -8390,7 +8522,7 @@ function bigCountdown() {
 function specialStrip(wk, card) {
   if (coLvl() < 8 || onEv()) return '';
   const done = wk === G.week && showRanNow();
-  if (isSpecial(wk)) return `<div class="warnline row sp-line"><span class="sp">📺 <b>${esc(specialName())}</b>: bigger crowd, double TV money, more new fans and room for 9 segments. The network expects <b>${specialTarget()}+</b>. Miss it and your reputation takes a hit.</span>${done ? '' : '<button class="btn sm" data-act="specialOff">Cancel</button>'}</div>`;
+  if (isSpecial(wk)) return `<div class="warnline row sp-line"><span class="sp">📺 <b>${esc(specialName())}</b>: bigger crowd, double TV money, more new fans and room for ${maxSegs(wk)} segments. The network expects <b>${specialTarget()}+</b>. Miss it and your reputation takes a hit.</span>${done ? '' : '<button class="btn sm" data-act="specialOff">Cancel</button>'}</div>`;
   if (done) return '';
   if (specialPending()) return `<div class="tiny muted sp-line" style="margin:0 0 8px">📺 Your next TV special is week ${G.special}${isBig(G.special) ? '' : ` (${dayLabel(G.special)})`}.</div>`;
   const nx = nextSpecialWk();
@@ -8437,6 +8569,7 @@ function viewBookCard() {
   if (h) {
     return `${statusBar}${cal}
     <div class="show-h ${h.big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk} · Results</div><h2>${esc(h.name)}</h2>
+      ${h.tvT ? `<div class="small" style="color:var(--${h.rating >= h.tvT ? 'good' : 'bad'})">${ic('tv')} ${esc(h.tvNet || 'Network')} target ${h.tvT}: ${h.rating >= h.tvT ? `hit${h.fin?.tvBon ? `, +${money(h.fin.tvBon)} bonus` : ''}` : 'missed'}${h.tvX ? ' · they cancelled the show' : h.tvS ? ` · strike ${h.tvS} of ${TV_STRIKES}` : ''}</div>` : ''}
       ${h.special && h.spT ? `<div class="small" style="color:var(--${h.spMiss ? 'bad' : 'good'})">📺 TV special · network target ${h.spT}: ${h.spMiss ? `missed, ${h.spHit} prestige` : `hit, +${h.spHit} prestige`}</div>` : ''}
       <div class="small muted">${h.attendance.toLocaleString()} fans${MON() ? ` · ${h.net >= 0 ? '+' : ''}${money(h.net)}` : ''} · ${h.fanDelta >= 0 ? '+' : ''}${kfmt(h.fanDelta)} fans</div></div>
       <div class="show-score"><b>${h.rating}</b><span class="stars">${starStr(h.rating)}</span></div></div>
@@ -8475,6 +8608,7 @@ function viewBookCard() {
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
   ${warn.length ? `<div class="warnline">${warn.map(esc).join('<br>')}</div>` : ''}
   ${sg ? `<div class="warnline row"><span class="sp">⭐ Signature match: <b>${esc(sigName(sg))}</b>. ${sgMiss ? (card.some(s => isSig(s, sg)) ? 'Fans expect it. Put wrestlers in it.' : 'Fans expect it. Leaving it off costs a little.') : 'Fans will love it.'}</span>${sgMiss && !card.some(s => isSig(s, sg)) && card.length < maxSegs(wk) ? '<button class="btn sm" data-act="addSig">Add it</button>' : ''}</div>` : ''}
+  ${!big && tvOn() && !onEv() ? (d => `<button class="tv-line" data-act="faTabGo" data-id="tv">${ic('tv')}<span class="sp"><b>${esc(d.nw)}</b> · ${tvSlotLbl(curShow(), d)} · ${d.hrs} hr, ${TV_LENS[d.hrs].seg} segments · target <b>${d.tgt}+</b> for +${money(d.bon)}${d.str ? ` · <span style="color:var(--bad)">${d.str} strike${d.str > 1 ? 's' : ''}</span>` : ''}${curShow().tvO ? ' · <b>talks open</b>' : ''}</span>›</button>`)(tvOf(curShow())) : ''}
   ${!big ? specialStrip(wk, card) : ''}
   ${bestIx >= 0 ? `<div class="warnline row"><span class="sp">⭐ Close the show with your best match.</span><button class="btn sm" data-act="segMain" data-id="${card[bestIx].id}">Make it the main event</button></div>` : ''}
   <div class="mcard">
@@ -8747,13 +8881,33 @@ function moneyView(last, payroll) {
   return `  ${MON() ? `<div class="grid2">
     <div class="stat"><div class="k">Bank</div><div class="v" style="color:${G.money < 0 ? 'var(--bad)' : 'inherit'}">${money(G.money)}</div><div class="s">cash on hand</div></div>
     <div class="stat"><div class="k">Payroll</div><div class="v">${CON() ? money(payroll) : '$0'}</div><div class="s">${CON() ? 'per week' : 'contracts off'} · ${signed().length} wrestlers</div></div>
-    <div class="stat"><div class="k">TV deal</div><div class="v">${money(G.tv)}</div><div class="s">per week · renews in ${G.tvWeeks} wk</div></div>
+    <button class="stat" data-act="faTab" data-id="tv" style="text-align:left"><div class="k">TV deals</div><div class="v">${money(tvTotal())}</div><div class="s">per week · ${SHOWS().length > 1 ? `${SHOWS().length} shows` : esc(tvOf(SHOWS()[0]).nw)} ›</div></button>
     <div class="stat"><div class="k">Last show</div><div class="v" style="color:${last && last.net < 0 ? 'var(--bad)' : 'var(--good)'}">${last ? (last.net >= 0 ? '+' : '') + money(last.net) : '–'}</div><div class="s">${last ? last.attendance.toLocaleString() + ' attended' : 'no shows yet'}</div></div>
   </div>` : `<div class="grid2">
     <div class="stat"><div class="k">Roster</div><div class="v">${signed().length}</div><div class="s">wrestlers signed</div></div>
     <div class="stat"><div class="k">Fans</div><div class="v">${kfmt(G.fans)}</div><div class="s">${last ? last.attendance.toLocaleString() + ' at the last show' : 'no shows yet'}</div></div>
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn on Deep sim in Menu → Settings to use it.</div>`}
-  ${last && MON() ? `<details class="card" style="margin-top:12px" open><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school', guests: 'Per-appearance fees' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}`;
+  ${last && MON() ? `<details class="card" style="margin-top:12px" open><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', tvBon: 'Network bonus', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school', guests: 'Per-appearance fees' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}`;
+}
+// ---------- Office → TV deals: one card per weekly show, with offers under it while talks are open ----------
+function tvDealCard(sh, d, o, i) {
+  const T = TV_TIERS[tvNetTier(d.nw)], left = o ? 0 : d.end - G.week, a = Math.round(tvRecent(sh)), ok = a >= d.tgt;
+  const box = (k, v) => `<div><span>${k}</span><b>${v}</b></div>`;
+  const badge = o ? `<span class="tv-bdg y">${o.ren ? 'Renewal' : 'Offer'}</span>` : d.str ? `<span class="tv-bdg r">${d.str} strike${d.str > 1 ? 's' : ''}</span>` : !G.history.some(h => !h.big && recSid(h) === sh.id) ? '<span class="tv-bdg">New deal</span>' : `<span class="tv-bdg ${ok ? 'g' : ''}">${ok ? 'On target' : 'Below target'}</span>`;
+  return `<div class="tvd${o ? ' offer' : ''}"><div class="hd">${ic('tv')}<div class="sp"><div class="nm">${esc(d.nw)}</div><div class="tg">${o ? `${T.n} · ${T.d}` : `${esc(sh.name)} · ${T.n}`}</div></div>${badge}</div>
+    <div class="tvg">${box('Fee a week', money(d.fee))}${box('Time slot', tvSlotLbl(sh, d))}${box('Length', `${d.hrs} hr · ${TV_LENS[d.hrs].seg} seg`)}${box('Target', d.tgt + '+')}${box('Bonus', '+' + money(d.bon))}${box(o ? 'Term' : 'Ends', o ? o.term + ' wk' : `wk ${d.end}`)}</div>
+    ${o ? `<div class="grid2"><button class="btn sm pri" data-act="tvSignO" data-id="${sh.id}|${i}">${ic('checkc')} Sign</button><div class="grid2" style="gap:6px"><button class="btn sm" data-act="tvPush" data-id="${sh.id}|${i}|fee" aria-label="Ask ${esc(d.nw)} for more money">${ic('coin')} More</button><button class="btn sm" data-act="tvPush" data-id="${sh.id}|${i}|tgt" aria-label="Ask ${esc(d.nw)} for an easier target">${ic('target')} Easier</button></div></div>${o.push ? `<div class="tiny muted" style="margin-top:6px">You pushed ${o.push} time${o.push > 1 ? 's' : ''}. Push again and they are more likely to walk.</div>` : ''}`
+    : `<div class="tv-meter" role="img" aria-label="Last ${TV_CHECK} shows average ${a}, target ${d.tgt}"><i style="width:${clamp(a, 0, 100)}%;background:var(--${ok ? 'good' : 'bad'})"></i><u style="left:${clamp(d.tgt, 0, 100)}%"></u></div>
+    <div class="row tiny muted"><span class="sp">${G.history.some(h => !h.big && recSid(h) === sh.id) ? `Last ${TV_CHECK} shows: <b>${a}</b>` : 'No shows yet'} · ${left > 0 ? `${left} week${left > 1 ? 's' : ''} left` : 'ends this week'}</span><span class="tv-strk" aria-label="${d.str || 0} of ${TV_STRIKES} strikes">${Array.from({ length: TV_STRIKES }, (_, k) => `<i class="${k < (d.str || 0) ? 'on' : ''}"></i>`).join('')}</span></div>
+    ${d.str >= TV_STRIKES - 1 ? `<div class="warnline small" style="margin-top:8px">${ic('alert')} ${esc(d.nw)}: "One more bad month and we pull ${esc(sh.name)}."</div>` : ''}`}</div>`;
+}
+function tvView() {
+  const shs = tvShows();
+  return `<div class="small muted" style="margin-bottom:10px">Each weekly show has its own TV deal. The slot sets the audience and the target, and the length sets how many segments you book. Every ${TV_CHECK} shows the network checks your average: miss the target and it's a strike and a 10% fee cut. ${TV_STRIKES} strikes and they cancel the show. Talks open ${TV_TALKS} weeks before a deal ends.</div>
+    ${shs.map(sh => { const d = tvOf(sh); return `${shs.length > 1 ? `<div class="sec">${bDot(sh.id)} ${esc(sh.name)}</div>` : ''}${tvDealCard(sh, d)}
+      ${sh.tvO ? `<div class="sec">${ic('briefcase')} Offers for ${esc(sh.name)}</div>${sh.tvO.length ? `<div class="tiny muted" style="margin-bottom:8px">Sign one before week ${d.end}, or the renewal is signed for you. Push for more and the network may walk away.</div>${sh.tvO.map((o, i) => tvDealCard(sh, o, o, i)).join('')}` : '<div class="empty">Every network walked away. When the deal ends the show goes to local TV.</div>'}`
+        : `<div class="tiny muted" style="margin:-2px 0 12px">Talks open in week ${Math.max(G.week, d.end - TV_TALKS)}.</div>`}`; }).join('')}
+    <div class="tiny muted" style="margin-top:8px">A second weekly show on the same roster draws a smaller audience, so its offers are about half. With the brand split on, every brand is a main show. Big events are pay-per-view and have no TV deal.</div>`;
 }
 // Office tabs in three groups, so twelve tabs read as three short lists. Money only shows when money is on.
 function officeTabs(t, fa) {
@@ -8762,7 +8916,7 @@ function officeTabs(t, fa) {
   const groups = [
     ['People', [b('contracts', CON() ? 'Contracts' : 'Roster'), b('fa', 'Indie Stars', fa.length || ''), b('locker', 'Locker room', lk || ''), b('training', 'Training', (G.phone || []).some(coachOpen) ? '!' : ''), b('teams', 'Teams')]],
     ['Shows', [b('titles', 'Titles'), b('brands', 'Brands'), b('media', 'Media')]],
-    ['Business', [MON() ? b('money', 'Money') : '', b('staff', 'Staff'), b('rivals', 'Companies'), b('setup', 'Setup')]]
+    ['Business', [MON() ? b('money', 'Money') : '', MON() ? b('tv', 'TV deals', tvShows().some(x => x.tvO) ? '!' : '') : '', b('staff', 'Staff'), b('rivals', 'Companies'), b('setup', 'Setup')]]
   ];
   return `<div class="office-groups">${groups.map(([n, bs]) => `<div class="og"><span class="og-k">${n}</span><div class="seg-ctl wrap office-tabs" role="group" aria-label="${n}">${bs.join('')}</div></div>`).join('')}</div>`;
 }
@@ -8776,6 +8930,7 @@ function viewOffice() {
   ${officeTabs(t, fa)}
   ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'brands' ? brandsView() : ''}
+  ${t === 'tv' ? tvView() : ''}
   ${t === 'teams' ? teamsView() : ''}
   ${t === 'setup' ? setupView() : ''}
   ${t === 'media' ? mediaView() : ''}
@@ -10625,7 +10780,7 @@ const A = {
     G.special = wk; G.specialSid = G.showId; G.specialName = pick(SPECIAL_NAMES); G.specialT = specialTargetNow(); G.booker.lastSpecial = wk;
     commit(`${G.promo.show} in week ${wk} is now the ${G.specialName}. Book a big card.`); },
   specialOff() { const wk = UI.selWeek; if (!isSpecial(wk) || (wk === G.week && showRanNow())) return;
-    if (BK().length > 8) return toast('Take one segment off first: a regular show holds 8.');
+    if (BK().length > tvSegs()) return toast(`Take one segment off first: a regular show holds ${tvSegs()}.`);
     G.special = null; G.specialSid = null; G.specialName = null; G.specialT = null; commit('Back to a regular show.'); },
   addSig() { const wk = UI.selWeek, sg = sigOf(wk); if (!sg) return; const card = BK(); if (!roomLeft(wk, card)) return toast(fullMsg(wk)); card.push(sigSeg(sg, wk)); commit(`The ${sigName(sg)} is on the card.`); },
   matchTypes() { openModal({ type: 'mtypes', back: UI.modal && UI.modal.type !== 'menu' ? UI.modal : null, fromMenu: UI.modal?.type === 'menu' }); },
@@ -11153,6 +11308,18 @@ const A = {
     }, true);
   },
   faTab(t) { UI.faTab = t; render(); },
+  faTabGo(t) { UI.tab = 'office'; UI.faTab = t; UI.modal = null; render(); pageTop(); },
+  // TV deals: sign an offer, or push for more money or an easier target (each push risks the network walking away)
+  tvSignO(id) { const [sid, i] = String(id).split('|'), sh = showById(sid), o = sh?.tvO?.[+i]; if (!o) return;
+    const was = tvOf(sh).hrs; tvSign(sh, o); news(`📺 ${sh.name} signed with ${o.nw}: ${money(o.fee)} a week, ${tvSlotLbl(sh, o)}, ${o.hrs} hour${o.hrs > 1 ? 's' : ''}, target ${o.tgt}, for ${o.term} weeks.`, 'office');
+    for (const t of G.todos || []) if (!t.done && t.t.startsWith(`Pick a TV deal for ${sh.name} `)) t.done = true;
+    commit(`${sh.name} is on ${o.nw} from now on.${o.hrs < was ? ` It is a shorter show now: ${TV_LENS[o.hrs].seg} segments a week.` : o.hrs > was ? ` It is a longer show now: room for ${TV_LENS[o.hrs].seg} segments a week.` : ''}`); },
+  tvPush(id) { const [sid, i, k] = String(id).split('|'), sh = showById(sid), o = sh?.tvO?.[+i]; if (!o) return;
+    const walk = clamp(0.15 + 0.2 * (o.push || 0) - (tvRecent(sh) >= o.tgt + 5 ? 0.1 : 0) + (o.ren && tvOf(sh).str ? 0.1 : 0), 0.05, 0.8);
+    if (Math.random() < walk) { sh.tvO.splice(+i, 1); news(`📺 ${o.nw} walked away from talks for ${sh.name}.`, 'office'); return commit(`${o.nw} walked away. ${sh.tvO.length ? 'The other offers are still on the table.' : 'No offers left: when the deal ends the show goes to local TV, unless new offers come in.'}`); }
+    o.push = (o.push || 0) + 1;
+    if (k === 'tgt') { o.tgt = Math.max(35, o.tgt - 3); commit(`${o.nw} agreed to lower the target to ${o.tgt}.`); }
+    else { o.fee = r500(o.fee * 1.1); o.bon = r500(o.fee * .06); commit(`${o.nw} came up to ${money(o.fee)} a week.`); } },
   rankings() { openModal({ type: 'rankings' }); },
   ppvAddStory(id) {
     const st = G.stories.find(x => x.id === id), big = nextBig(); if (!st || !big || big === G.week) return;
@@ -13018,7 +13185,7 @@ const SU_EV = {
   su_localtv: { co: 'harbor', at: 10,
     when: () => G.fans >= 7000 && {}, title: '📺 Local TV calls', text: () => 'The local cable channel will put Harborline Live on TV on Saturday nights. No money up front, but people will finally see you.',
     choices: d => [['Take the TV slot', 'More fans, every week.'], ['Wait for something better', 'Maybe they come back.']],
-    pick(i, d) { if (i) return 'You turned down local TV.'; const f = suFans(.15); suPrest(4); if (MON()) G.tv = (+G.tv || 0) + 1500; return `Harborline Live is on TV. +${kfmt(f)} fans.`; } },
+    pick(i, d) { if (i) return 'You turned down local TV.'; const f = suFans(.15); suPrest(4); if (MON()) tvBump(1, 1500); return `Harborline Live is on TV. +${kfmt(f)} fans.`; } },
   su_danny: { co: 'harbor', at: 15,
     when: () => { const w = suHere('Danny Shore'); return w && !suGone(suRV('north')) && {}; },
     title: '⚓ Northern Lights wants Danny Shore', text: () => `Northern Lights wants to buy out Danny Shore's contract. It would pay your bills for months. Danny says ${suP('Danny Shore').they}'ll go wherever you think is best.`,
@@ -13027,7 +13194,7 @@ const SU_EV = {
   su_bidding: { co: '!apex', at: 20,
     when: () => G.fans >= 50000 && {}, title: '📡 A streaming service wants wrestling', text: () => 'A new streaming service wants a wrestling show and you are on their shortlist. They want an answer this week.',
     choices: d => [['Sign with them', 'More money and more viewers.'], ['Hold out for more', 'They might come back with a better offer, or not at all.']],
-    pick(i, d) { if (!i || Math.random() < .5) { const f = suFans(i ? .12 : .08); if (MON()) G.tv = Math.round((+G.tv || 0) * (i ? 1.35 : 1.2) + 2000); return `${i ? 'Holding out paid off. ' : ''}You signed the streaming deal. +${kfmt(f)} fans.`; } return 'They went with someone else.'; } },
+    pick(i, d) { if (!i || Math.random() < .5) { const f = suFans(i ? .12 : .08); if (MON()) tvBump(i ? 1.35 : 1.2, 2000); return `${i ? 'Holding out paid off. ' : ''}You signed the streaming deal. +${kfmt(f)} fans.`; } return 'They went with someone else.'; } },
   su_legend: { at: 24,
     when: () => { const w = suWho('Bruno Vale'); return w && !w.contract && W(w.id) && {}; },
     title: '🦁 Bruno Vale wants one more run', text: () => `Bruno Vale, the greatest Apex champion ever, called you ${suP('Bruno Vale').self}. Five years retired, and ${suP('Bruno Vale').they} want${suP('Bruno Vale').s} one more run. ${suP('Bruno Vale').They} chose your company.`,
@@ -13247,7 +13414,7 @@ function scrubGame(raw) {
     if (!g.promo || typeof g.promo !== 'object' || Array.isArray(g.promo)) g.promo = { name: 'Promotion', show: 'Weekly Show', prestige: 40 };
     const fixFut = f => { const o = {}; if (f && typeof f === 'object') for (const k of Object.keys(f)) if (/^\d{1,6}$/.test(k)) o[k] = fixCard(f[k]); return o; };
     g.shows = (Array.isArray(g.shows) ? g.shows : []).filter(x => x && typeof x === 'object' && !Array.isArray(x) && x.id).slice(0, MAX_SHOWS)
-      .map(x => ({ id: x.id, name: String(x.name || 'Weekly Show').slice(0, 40), day: clamp(Math.floor(+x.day) || 0, 0, 6), ...(x.nextDay != null && Number.isFinite(+x.nextDay) ? { nextDay: clamp(Math.floor(+x.nextDay), 0, 6) } : {}), ran: +x.ran || 0, auto: !!x.auto, ...(safeColor(x.col) ? { col: x.col } : {}), ...(x.card ? { card: fixCard(x.card) } : {}), ...(x.future ? { future: fixFut(x.future) } : {}), ...(x.wk != null ? { wk: +x.wk || 0 } : {}) }));
+      .map(x => ({ id: x.id, name: String(x.name || 'Weekly Show').slice(0, 40), day: clamp(Math.floor(+x.day) || 0, 0, 6), ...(x.nextDay != null && Number.isFinite(+x.nextDay) ? { nextDay: clamp(Math.floor(+x.nextDay), 0, 6) } : {}), ran: +x.ran || 0, auto: !!x.auto, ...(safeColor(x.col) ? { col: x.col } : {}), ...(x.card ? { card: fixCard(x.card) } : {}), ...(x.future ? { future: fixFut(x.future) } : {}), ...(x.wk != null ? { wk: +x.wk || 0 } : {}), ...(tvClean(x.tv) ? { tv: tvClean(x.tv) } : {}), ...(Array.isArray(x.tvO) && x.tvO.length ? { tvO: x.tvO.slice(0, 3).map(tvClean).filter(Boolean), tvOWk: Math.floor(+x.tvOWk) || 0 } : {}) }));
     if (!g.shows.length) delete g.shows;
     if (g.bigShow && typeof g.bigShow === 'object') { const b = g.bigShow; g.bigShow = { ran: +b.ran || 0, ...(b.card ? { card: fixCard(b.card) } : {}), ...(b.future ? { future: fixFut(b.future) } : {}), ...(b.wk != null ? { wk: +b.wk || 0 } : {}), name: String(b.name || 'Big Event').slice(0, 40), day: bigDayOf({ bigDay: b.day }) }; } else delete g.bigShow;
     g.split = !!g.split; if (g.ord != null) g.ord = +g.ord || 0;
@@ -16854,7 +17021,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.92';
+const VERSION = '1.9.93';
 const WHATS_NEW = [
   ['🎨 One workshop for every design', 'Wrestler looks, championship belts and trophies now share the same editor: a live preview on top, then Templates, Surprise me and Undo, then tabs. The pixel face and full body are one editor now, with game templates (Luchador, Rock star, Royalty and more), your own saved looks, a teammate\'s look to copy, Undo, and any colour at all for skin, hair, gear, masks, headwear, bottoms and boots. Every icon in the game is now a symbol you can use: on a belt\'s centre or side plates, on a trophy or on top of it, and on a wrestler\'s chest, trunks or forehead. Trophies also get the belts\' engravings, ornate detail, a ring of gems, any base colour, and strap colours for a belt on a stand. Existing designs look exactly the same.'],
   ['🧍 Pronouns for every wrestler', 'Pick any wrestler\'s pronouns in their editor: he/him, she/her, they/them, he/they, she/they, any pronouns, or your own custom set (like xe/xem). Pronouns are separate from the division, so anyone can be in any division. Backstage events, texts, news, the Dirt Sheet, contract talks, Story Mode and more now use each wrestler\'s own pronouns. Usual follows the division (Women\'s she/her, Men\'s he/him, Open they/them). Pronouns go with shares, worlds and imports (add a Pronouns column), and you can add yours to your Community profile.'],
