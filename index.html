@@ -952,6 +952,32 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .bf-cs .cs-mid { background: radial-gradient(ellipse at 50% 32%, rgba(255,40,55,.55), transparent 70%); }
 .bf-cs .cs-rec { color: #ff5a64; }
 .bf-cs .cs-line { border-left-color: #ff3b48; }
+.pd-strip { display: flex; gap: 4px; margin: 10px 0 6px; }
+.pd-strip > div { flex: 1; min-width: 0; border-radius: 8px; padding: 5px 3px; background: rgba(255,255,255,.07); font-size: 10.5px; text-align: center; line-height: 1.25; color: #ddd; overflow-wrap: anywhere; }
+.pd-strip > div b { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0; color: #aaa; margin-bottom: 2px; font-weight: 800; }
+.pd-strip > div.hot { background: rgba(255,180,70,.22); color: #fff; }
+.pd-strip > div.cold { background: rgba(90,140,255,.18); }
+.pd-strip.ed > div { background: var(--bg2); color: var(--ink); } .pd-strip.ed > div b { color: var(--faint); }
+.pd-strip.ed > div.hot { background: color-mix(in srgb, var(--accent) 22%, var(--bg2)); } .pd-strip.ed > div.cold { background: color-mix(in srgb, #4c8dff 18%, var(--bg2)); }
+.pd-meter { height: 34px; display: flex; align-items: flex-end; gap: 3px; margin: 4px 0 2px; }
+.pd-meter i { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(#ffcf6b, #ff6b70); opacity: 0; animation: lvIn .4s ease-out forwards; animation-delay: var(--d); }
+.cs-meter { height: 46px; margin-top: 12px; } .cs-meter i { opacity: 1; animation: none; }
+.pd-ml { display: flex; justify-content: space-between; font-size: 10.5px; color: #aaa; margin-bottom: 6px; }
+.pd-pbp { font-size: 13px; line-height: 1.45; color: #eee; margin: 6px 0; }
+.pd-l { display: flex; gap: 8px; margin-bottom: 4px; opacity: 0; animation: lvIn .45s ease-out forwards; animation-delay: var(--d); }
+.pd-l span { color: #aaa; min-width: 40px; font-variant-numeric: tabular-nums; }
+.live.skip .pd-l, .live.skip .pd-meter i { animation-delay: 0s !important; animation-duration: .01s !important; }
+.cut.call { background: linear-gradient(135deg, rgba(255,181,71,.2), rgba(20,14,10,.6)); border-color: rgba(255,181,71,.7); box-shadow: 0 10px 30px rgba(255,160,40,.14); }
+.cut.call .cut-b { background: #ffb547; color: #1a1306; --ic: #1a1306; }
+.cut.call .cut-top .tiny { color: #ccc; margin-left: auto; }
+.cs-call .cs-line { border-left-color: #ffb547; } .cs-hs { font-size: 12px; color: #ccc; display: flex; gap: 4px; align-items: center; margin-right: 8px; }
+.pd-tpl { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.pd-tpl button { border: 1px solid var(--line); background: var(--bg2); color: var(--ink); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 650; display: flex; gap: 6px; align-items: center; min-height: 36px; }
+.pd-tpl button.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; --ic: var(--accent-ink); }
+.pd-b { display: grid; grid-template-columns: 1fr; gap: 2px; margin-bottom: 8px; }
+.pd-b > span { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--faint); display: flex; gap: 6px; align-items: center; }
+.pd-fit { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0 12px; padding: 8px 10px; border-radius: 10px; background: var(--bg2); font-size: 13px; }
+.pd-fit b.good { color: var(--good, #3ecf8e); } .pd-fit b.bad { color: var(--bad, #ff5a5f); }
 .bf-stamp-w { text-align: center; margin: 6px 0 26px; }
 .bf-stamp { display: inline-block; font-family: var(--f-display); font-size: 52px; line-height: 1; color: #ff3b48; border: 5px solid #ff3b48; border-radius: 10px; padding: 6px 14px 2px; letter-spacing: .06em; text-shadow: 0 0 24px rgba(255,40,60,.6); box-shadow: 0 0 30px rgba(255,40,60,.35), inset 0 0 18px rgba(255,40,60,.3); transform: rotate(-8deg); animation: bfStamp .5s cubic-bezier(.2,1.5,.4,1) .1s both; }
 @keyframes bfStamp { from { opacity: 0; transform: rotate(-8deg) scale(2.4); } to { opacity: 1; transform: rotate(-8deg) scale(1); } }
@@ -1525,6 +1551,152 @@ const segTaped = s => !!SEG_PLACES[segPlace(s)]?.taped || s.kind === 'angle' && 
 const segLen = s => Object.hasOwn(SEG_LENS, s.span || '') ? s.span || '' : '';
 const segEnd = s => Object.hasOwn(SEG_ENDS, s.outro || '') ? s.outro || '' : '';
 const segSay = s => String(s.line || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 140);
+// ---------- match producer: plan a match beat by beat, then make live calls from the headset ----------
+// seg.prod = { t: template, len, pace, open, hold (who controls the heat), fire, spot, falls, live }. Key names stay clear of the save scrubber's number keys (heat, d, l). No seg.prod means the road agent lays it out (the old behavior).
+// The plan never changes who wins. It changes how good the match is, how tired and banged up they get, and what the live show plays.
+const PROD_LENS = { quick: { n: 'Quick', m: 6, desc: 'About 6 minutes. Short, safe and easy on the body.' }, std: { n: 'Standard', m: 12, desc: 'About 12 minutes.' },
+  long: { n: 'Long', m: 20, desc: 'About 20 minutes. Needs stamina. Great workers shine, tired ones fade.' }, epic: { n: 'Epic', m: 30, desc: 'Half an hour or more. Made for big nights and the very best workers. Very tiring.' } };
+const PROD_PACE = { slow: { n: 'Slow burn', desc: 'Rewards psychology and selling.' }, bal: { n: 'Balanced', desc: 'A bit of everything.' }, sprint: { n: 'Sprint', desc: 'Non-stop action. Suits high flyers with stamina.' } };
+const PROD_OPEN = { feel: ['Feeling out', 'Chain wrestling. Technicians shine.'], hot: ['Hot start', 'A brawl at the bell. Brawlers shine.'], jump: ['Jumped at the bell', 'The heel attacks before the bell. Best with a feud.'] };
+const PROD_HEAT = { heel: ['Heel in control', 'The heel beats down the face. Good sellers make fans care.'], even: ['Back and forth', 'Nobody stays on top for long.'], face: ['Face in control', 'The face stays on top. Fans have less to rally behind.'], win: ['Winner dominates', 'One-sided from start to finish.'] };
+const PROD_FIRE = { fiery: ['Fiery comeback', 'The face fires up. Charisma counts.'], slow: ['Slow fight back', 'Inch by inch. Psychology counts.'], none: ['No comeback', 'Whoever is on top stays there.'] };
+const PROD_SPOT = { '': ['No big spot', 'Keeps everyone safe.'], dive: ['Dive to the floor', 'High flyers wow the crowd. Some risk of injury.'], table: ['Through a table', 'Huge in a no-DQ match. In a normal match, the ref calls for the bell.'], top: ['Superplex off the top', 'A big power move. Some risk of injury.'] };
+const PROD_FALLS = ['None', 'One', 'Two', 'Three'];
+const PROD_TPL = {
+  classic: { n: 'Classic', ic: 'star', desc: 'Feeling out, the heel takes control, a fiery comeback, two near falls, then the finish.', p: { len: 'std', pace: 'bal', open: 'feel', hold: 'heel', fire: 'fiery', spot: '', falls: 2 } },
+  sprint: { n: 'Sprint', ic: 'bolt', desc: 'Hot start, back and forth, a dive to the floor and one near fall. Short and fast.', p: { len: 'quick', pace: 'sprint', open: 'hot', hold: 'even', fire: 'fiery', spot: 'dive', falls: 1 } },
+  epic: { n: 'Epic', ic: 'crown', desc: 'A long slow burn with a superplex and three near falls. For big nights and great workers.', p: { len: 'epic', pace: 'slow', open: 'feel', hold: 'heel', fire: 'slow', spot: 'top', falls: 3 } },
+  squash: { n: 'Squash', ic: 'bang', desc: 'Quick and one-sided. The winner looks unstoppable.', p: { len: 'quick', pace: 'sprint', open: 'hot', hold: 'win', fire: 'none', spot: '', falls: 0 } },
+  custom: { n: 'Custom', ic: 'pen', desc: 'Set every beat yourself.' }
+};
+const PROD_BEATS = [['open', 'Opening', 'bell', PROD_OPEN], ['hold', 'Heat', 'heel', PROD_HEAT], ['fire', 'Comeback', 'flame', PROD_FIRE], ['spot', 'Big spot', 'bolt', PROD_SPOT]];
+// the plan, cleaned: anything unknown falls back to the template's beat (or Classic's)
+function prodOf(s) {
+  const p = s && s.kind === 'match' && s.prod; if (!p || typeof p !== 'object' || isFFA(s)) return null;
+  const t = Object.hasOwn(PROD_TPL, p.t) ? p.t : 'custom', b = PROD_TPL[t].p || PROD_TPL.classic.p;
+  const k = (o, v, d) => Object.hasOwn(o, v ?? '') ? v ?? '' : d;
+  return { t, len: k(PROD_LENS, p.len, b.len), pace: k(PROD_PACE, p.pace, b.pace), open: k(PROD_OPEN, p.open, b.open), hold: k(PROD_HEAT, p.hold, b.hold), fire: k(PROD_FIRE, p.fire, b.fire), spot: k(PROD_SPOT, p.spot, b.spot),
+    falls: [0, 1, 2, 3].includes(p.falls) ? p.falls : b.falls, live: p.live !== false };
+}
+const prodSquash = p => !!p && p.hold === 'win' && p.fire === 'none' && p.falls === 0;
+// how well the plan fits the people in it. Deterministic, so the editor can show it before the show.
+function prodScore(seg, P, sides, wi, ctx, fk, stip, st) {
+  const items = [], add = (v, t) => { if (Math.abs(v) >= 0.5) items.push([v, t]); };
+  const ppl = sides.flat(), A = k => avg(ppl.map(w => k === 'stam' || k === 'ring' || k === 'cha' ? +w[k] || 50 : BR.stat(w, k)));
+  const fi = sides.findIndex(sd => sd[0].align === 'face'), hi = sides.findIndex(sd => sd[0].align === 'heel'), split = fi >= 0 && hi >= 0;
+  const S = A('stam'), R = A('ring'), big = ctx.big || ctx.main, two = sides.length === 2;
+  const ln = n => n.map(w => lastName(w)).join(' & ');
+  // length
+  if (P.len === 'quick') add(big ? -3 : 1, big ? 'Quick match in a big spot' : 'Quick and tight');
+  else if (P.len === 'long') { const v = (S - 62) * 0.12 + (R - 62) * 0.1 + (big ? 1 : 0); add(v, v >= 0 ? 'Long match: they had the gas tank' : 'Long match: they ran out of gas'); }
+  else if (P.len === 'epic') { const v = (S - 68) * 0.18 + (R - 66) * 0.15 + (ctx.big ? 3 : ctx.main ? 0 : -4); add(v, v >= 0 ? 'Epic: they held the crowd the whole way' : ctx.big || ctx.main ? 'Epic: too long for them' : 'Epic length on a regular spot dragged'); }
+  // pace
+  if (P.pace === 'slow') { const v = ((A('psych') + A('sell')) / 2 - 60) * 0.12; add(v, v >= 0 ? 'Slow burn: smart, patient work' : 'Slow burn: the crowd got restless'); }
+  else if (P.pace === 'sprint') { const v = ((Math.max(...ppl.map(w => BR.stat(w, 'air'))) + S) / 2 - 62) * 0.12; add(v, v >= 0 ? 'Sprint: non-stop action' : 'Sprint: sloppy and blown up'); }
+  // opening
+  if (P.open === 'feel') add((A('tech') - 58) * 0.06, 'Feeling out: chain wrestling');
+  else if (P.open === 'hot') add((A('brawl') - 58) * 0.06, 'Hot start: a brawl at the bell');
+  else if (P.open === 'jump') add(split ? (st ? 2 : 1) : -2, split ? 'Jumped at the bell' + (st ? ' to fuel the feud' : '') : 'Jumped at the bell, with no heel to do it');
+  // heat and comeback
+  if (P.hold === 'heel') { if (split && two) { const v = (avg(sides[fi].map(w => BR.stat(w, 'sell'))) - 55) * 0.08 + (avg(sides[hi].map(w => BR.stat(w, 'psych'))) - 55) * 0.05; add(v, v >= 0 ? `Heat: ${ln(sides[hi])} in control, ${ln(sides[fi])} sold it` : `Heat: ${ln(sides[fi])} couldn't make fans care`); } else add(-1, 'No clear heel to take control'); }
+  else if (P.hold === 'face') add(split ? -2 : 0, 'Face on top the whole way: no sympathy');
+  else if (P.hold === 'even') add(R >= 65 ? 1 : 0, 'Back and forth between good workers');
+  else if (P.hold === 'win' && two && wi >= 0) { const gap = avg(sides[wi].map(w => w.pop)) - avg(sides[1 - wi].map(w => w.pop)); add(gap > 15 ? 1 : -3, gap > 15 ? 'Dominant win made sense' : 'One-sided beating between equals felt wrong'); }
+  if (P.fire === 'fiery') { const fc = split ? sides[fi] : ppl; add((avg(fc.map(w => +w.cha || 50)) - 60) * 0.06 + (P.hold === 'heel' ? 1 : 0), P.hold === 'heel' ? 'Heat, then a fiery comeback' : 'Fiery comeback'); }
+  else if (P.fire === 'slow') add((A('psych') - 60) * 0.06, 'Slow fight back');
+  else if (P.hold !== 'win') { const heelWon = wi >= 0 && sides[wi][0].align === 'heel'; add(heelWon ? 1 : -2, heelWon ? 'The heel stayed on top' : 'No comeback: fans had nothing to cheer'); }
+  // big spot
+  if (P.spot === 'dive') { const v = (Math.max(...ppl.map(w => BR.stat(w, 'air'))) - 60) * 0.08 + 1; add(v, v >= 0 ? 'Dive to the floor' : 'The dive looked clumsy'); }
+  else if (P.spot === 'table') add(stip.noDQ ? 3 : fk === 'DQ' ? 2 : -2, stip.noDQ ? 'Through a table!' : fk === 'DQ' ? 'Table spot drew the DQ' : 'Table spot, but no DQ called. Fans noticed');
+  else if (P.spot === 'top') add((R - 62) * 0.06 + 1.5, 'Superplex off the top');
+  // near falls
+  if (P.falls) { add(P.falls * (big ? 1 : 0.6) + (A('cons') - 55) * 0.03 * P.falls, P.falls === 1 ? 'A near fall' : PROD_FALLS[P.falls] + ' near falls');
+    if (P.len === 'quick' && P.falls >= 2) add(-2, 'Too many near falls for a short match');
+    if (P.falls === 3 && !big) add(-1, 'Three near falls before the main event burned the crowd out'); }
+  else if (!prodSquash(P) && big) add(-1, 'No near falls: the finish came out of nowhere');
+  // keep it a nudge, not the whole match
+  let tot = sum(items.map(x => x[0])); const k = tot > 9 ? 9 / tot : tot < -8 ? -8 / tot : 1;
+  return { items: items.map(([v, t]) => [v * k, t]), fat: { quick: 0.7, std: 1, long: 1.25, epic: 1.55 }[P.len] + (P.pace === 'sprint' ? 0.1 : 0), risk: P.spot === 'dive' || P.spot === 'top' ? 0.015 : P.spot === 'table' ? 0.02 : 0 };
+}
+// ---- live calls: the agent asks you on the headset while a produced match is happening ----
+// Made when the show runs (h.calls), answered during the live show. Option 0 is always the plan as booked, and it's what an
+// unanswered call does; with a road agent hired, the agent picks the best option instead. A call changes the match's rating
+// (and the show's), fatigue and injury risk. It never changes the winner.
+function makeCalls(results, big) {
+  const n = results.length, out = [];
+  const order = results.map((r, i) => i).filter(i => { const r = results[i], P = prodOf(r.seg); return P && P.live && r.winners?.length && r.seg.sides.filter(sd => sd.length).length >= 2; })
+    .sort((a, b) => (b === n - 1) - (a === n - 1) || !!results[b].seg.title - !!results[a].seg.title || b - a);
+  for (const i of order) {
+    if (out.length >= 3) break;
+    const r = results[i], P = prodOf(r.seg), main = i === n - 1 && n > 1;
+    const kinds = main && big ? ['mid', 'late'] : [P.fire !== 'none' && P.hold !== 'even' ? 'mid' : 'late'];
+    for (const k of kinds) { const c = callMake(k, r, P, big, main); if (c && out.length < 3) out.push({ ...c, at: i, id: uid() }); }
+  }
+  return out.sort((a, b) => a.at - b.at || (a.k === 'late') - (b.k === 'late'));
+}
+function callMake(k, r, P, big, main) {
+  const sides = r.seg.sides.map(sd => sd.map(W).filter(Boolean)).filter(sd => sd.length); if (sides.length < 2) return null;
+  const ppl = sides.flat(), win = sides.find(sd => sd.some(w => r.winners.includes(w.id))) || sides[0], lose = sides.find(sd => sd !== win) || sides[1];
+  const face = sides.find(sd => sd[0].align === 'face'), heel = sides.find(sd => sd[0].align === 'heel');
+  const nm = sd => sd.map(w => lastName(w)).join(' & '), M = PROD_LENS[P.len].m, S = avg(ppl.map(w => +w.stam || 50));
+  const st = (sd, s) => avg(sd.map(w => s === 'cha' ? +w.cha || 50 : BR.stat(w, s))), j = () => rnd(-2.5, 2.5);
+  const ag = staffQ('agent'), o = [];
+  if (k === 'mid') {
+    const under = P.hold === 'heel' && face ? face : P.hold === 'face' && heel ? heel : lose, over = sides.find(sd => sd !== under) || win;
+    const flyer = ppl.slice().sort((a, b) => BR.stat(b, 'air') - BR.stat(a, 'air'))[0];
+    o.push({ lb: 'Stick to the plan', ds: P.fire === 'none' ? `${nm(over)} keeps control, just as you planned.` : `Let the heat run, then the comeback comes when it should.`, x: 0.5 + j() * .4 });
+    o.push({ lb: 'Start the comeback now', ds: `${nm(under)} fires up early. Good if they sell and connect with fans.`, x: (st(under, 'sell') + st(under, 'cha') - 118) * 0.07 + j() });
+    o.push({ lb: `Big spot: ${lastName(flyer)} flies`, ds: `A dive to wake the crowd up. ${lastName(flyer)} could get hurt.`, x: (BR.stat(flyer, 'air') - 58) * 0.09 + j() * 1.2, who: flyer.id, risk: 0.05, fat: 3 });
+    return { k, mn: Math.round(M * .45), head: 'YOUR CALL', crowd: P.hold === 'even' ? 'Warming up' : 'Cooling off', meter: [24, 32, 40, 32, 24, 24, 16, 16],
+      text: P.hold === 'even' ? `It's been back and forth for ${Math.round(M * .45)} minutes. The crowd wants something big.` : `${nm(over)} has been on top of ${nm(under)} for a while. The crowd is getting restless.`, o, def: ag ? null : 0 };
+  }
+  const mgr = corners(r.seg).find(c => c && sides.findIndex(sd => sd.some(w => r.seg.sides[c.side].includes(w.id))) >= 0 && win.some(w => r.seg.sides[c.side].includes(w.id)));
+  o.push({ lb: 'Go home now', ds: 'Hit the finish while the crowd is hot. Safe.', x: 0.5 + j() * .4 });
+  o.push({ lb: 'One more near fall', ds: `Bigger pop if they have the gas left. Stamina ${Math.round(S)}.`, x: (S - 60) * 0.1 + (st(ppl, 'cons') - 55) * 0.05 + (big ? 1 : 0) + j() * 1.2, fat: 5 });
+  if (mgr) o.push({ lb: `${lastName(mgr.m)} gets involved`, ds: `A distraction from ringside. ${mgr.m.align === 'heel' ? 'Heels get heat for it.' : 'Fans may boo a face cheating.'}`, x: (mgr.m.cha - 55) * 0.05 + (mgr.m.align === 'heel' ? 1 : -1.5) + j(), mgr: mgr.m.id });
+  else if (heel && win === heel) o.push({ lb: `${nm(heel)} goes to the eyes`, ds: 'A cheap shot to win it. The heel looks smart, fans get angry.', x: 1 + j() * .8, ht: 1 });
+  return { k, mn: Math.round(M * .85), head: 'NEAR FALL!', crowd: 'Red hot', meter: [24, 32, 40, 24, 32, 56, 64, 80, 88, 96, 96],
+    text: `${nm(win)} kicked out of ${nm(lose)}'s finisher at 2.9! The crowd is on its feet.`, o, def: ag ? null : 0 };
+}
+// play a call out: i is your pick, or the agent's call when nobody answers
+function callDo(h, j, i) {
+  const c = h?.calls?.[j]; if (!c || c.done) return;
+  if (i == null || !c.o[i]) i = c.def ?? c.o.reduce((b, x, k) => x.x > c.o[b].x ? k : b, 0);
+  const o = c.o[i], r = h.results[c.at]; c.done = 1; c.you = i; c.fx = [];
+  if (!r) return;
+  const old = BR.show(h.results.map(x => x.rating), h.results.map(x => x.seg), h.wk, false).overall;
+  const x = Math.round(o.x), r0 = r.rating; r.rating = clamp(r.rating + x, 5, 100);
+  const dO = BR.show(h.results.map(x => x.rating), h.results.map(x => x.seg), h.wk, false).overall - old;
+  c.d = r.rating - r0;
+  if (dO) { h.rating = clamp(h.rating + dO, 1, 100); h.why = [...(h.why || []), [dO, 'Your live calls']];
+    const fd = Math.round(G.fans * dO / (h.big ? 600 : 1100)); if (fd) { G.fans = Math.max(1000, G.fans + fd); h.fanDelta = (h.fanDelta || 0) + fd; } }
+  r.why = [...(r.why || []), ...(c.d ? [[c.d, (c.you === 0 ? 'Stuck to the plan' : o.lb) + (c.d > 0 ? ': it worked' : ': it fell flat')]] : [])];
+  c.fx.push(c.d > 0 ? `The crowd ate it up: +${c.d}` : c.d < 0 ? `It fell flat: ${c.d}` : 'Solid. No change.');
+  const ppl = segPeople(r.seg).map(W).filter(Boolean);
+  if (o.fat) ppl.forEach(w => w.fatigue = clamp(w.fatigue + o.fat, 0, 100));
+  const hw = o.who && W(o.who);
+  if (hw && o.risk && G.settings.injuries && Math.random() < o.risk * DF().inj) { const wks = rint(1, 4); hw.injury = Math.max(hw.injury || 0, wks); c.fx.push(`${hw.name} got hurt on the dive (${wks} wk)`); news(`🩹 ${hw.name} got hurt on a dive and will be out about ${wks} week${wks > 1 ? 's' : ''}.`, 'injury'); }
+  if (o.mgr && W(o.mgr)) { const st = storyBetween(r.winners, ppl.map(w => w.id).filter(id => !r.winners.includes(id))); if (st) { st.heat = clamp(st.heat + 3, 0, 100); c.fx.push(`${st.title} heat +3`); } }
+  if (o.ht) { const st = storyBetween(r.winners, ppl.map(w => w.id).filter(id => !r.winners.includes(id))); if (st) { st.heat = clamp(st.heat + 2, 0, 100); c.fx.push(`${st.title} heat +2`); } }
+  if (c.d >= 3 && c.k === 'late') ppl.filter(w => !r.winners.includes(w.id)).forEach(w => { w.momentum = clamp((w.momentum || 0) + 2, -50, 50); });
+}
+// the match as the live show tells it: a few timed calls and a crowd line
+function prodBeats(seg, P, sides, wi, rating) {
+  const M = PROD_LENS[P.len].m, fi = sides.findIndex(sd => sd[0].align === 'face'), hi = sides.findIndex(sd => sd[0].align === 'heel');
+  const nm = sd => sd.map(w => lastName(w)).join(' & '), W0 = wi >= 0 ? sides[wi] : sides[0], L0 = sides.find(sd => sd !== W0) || sides[1];
+  const F = fi >= 0 ? sides[fi] : sides[0], H = hi >= 0 ? sides[hi] : sides.find(sd => sd !== F) || sides[1];
+  const tm = f => { const s = Math.round(M * 60 * f); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const top = P.hold === 'win' ? W0 : P.hold === 'face' ? F : H, under = top === F ? H : F;
+  const out = [[tm(0), { feel: `${nm(sides[0])} and ${nm(sides[1])} feel each other out with some slick chain wrestling.`, hot: `The bell rings and they go right at it. Punches everywhere!`, jump: `${nm(H)} attacks ${nm(F)} before the bell even rings!` }[P.open]]];
+  if (P.hold === 'even') out.push([tm(.3), `Back and forth. Every time one gets going, the other cuts them off.`]);
+  else out.push([tm(.3), `${nm(top)} takes over and grinds down ${nm(under)}.${top === H ? ' The crowd boos every stomp.' : ''}`]);
+  if (P.spot) out.push([tm(.5), { dive: `${nm(W0)} flies over the top rope to the floor! The crowd is on its feet.`, table: `Somebody brings out a table... and ${nm(L0)} goes through it!`, top: `${nm(W0)} climbs up and superplexes ${nm(L0)} off the top! The ring shakes.` }[P.spot]]);
+  if (P.fire !== 'none') out.push([tm(.62), P.fire === 'fiery' ? `${nm(under)} fires up! The building comes alive.` : `${nm(under)} fights back, one move at a time.`]);
+  for (let i = 0; i < P.falls; i++) out.push([tm(.74 + i * .07), [`Finisher! 1, 2... KICK OUT!`, `A cradle out of nowhere! 1, 2... no!`, `They trade finishers. Nobody stays down!`][i]]);
+  // the crowd through the match: low in the heat, up for the spot and the comeback, peaking at the finish
+  const lv = clamp(rating / 100, .25, 1), shape = [.45, .55, .5, P.hold === 'even' ? .6 : .4, P.hold === 'even' ? .62 : .35, P.spot ? .8 : .45, P.fire === 'none' ? .5 : .75, P.fire === 'none' ? .55 : .82, ...Array.from({ length: P.falls }, (_, i) => .85 + i * .05), 1];
+  return { pbp: out, meter: shape.map(v => Math.round(clamp(v * lv * 100, 8, 100))) };
+}
 const NAMES = [
   ['Rex Calloway', 'The Prize', 'face', 'Showman'], ['Vanessa Vale', 'The Velvet Hammer', 'heel', 'Technician'],
   ['Brick Mason', '', 'face', 'Powerhouse'], ['Kai Tempest', 'The Storm', 'face', 'High Flyer'],
@@ -2471,7 +2643,7 @@ function momDo(m, i = 0) {
   m.done = 1; m.you = i; m.fx = fx.filter(Boolean);
 }
 // anything left unanswered when the show closes plays out as the producer sees fit
-function momSettle() { for (const h of G.history.slice(-6)) for (const m of h.moments || []) if (!m.done) momDo(m, 0); }
+function momSettle() { for (const h of G.history.slice(-6)) { for (const m of h.moments || []) if (!m.done) momDo(m, 0); (h.calls || []).forEach((c, j) => { if (!c.done) callDo(h, j); }); } }
 function storiesTouching(ids) { return G.stories.filter(s => s.status === 'active' && [...s.a, ...s.b].some(x => ids.includes(x))); }
 function recentlyFaced(ids) {
   // same opponents booked in the last 2 weeks
@@ -3570,9 +3742,12 @@ function simSegment(seg, ctx) {
     // squash check
     if (wi >= 0 && sides.length === 2) {
       const gap = avg(sides[wi].map(w => w.pop)) - avg(sides[1 - wi].map(w => w.pop));
-      if (gap > 30) r += ctx.main || ctx.big ? add(-6, 'One-sided squash') : add(-2, 'Quick squash: builds the winner, but no contest');
+      if (gap > 30) r += prodSquash(prodOf(seg)) ? (ctx.main || ctx.big ? add(-4, 'Planned squash in a big spot') : add(2, 'Planned squash: the winner looks unstoppable')) : ctx.main || ctx.big ? add(-6, 'One-sided squash') : add(-2, 'Quick squash: builds the winner, but no contest');
       if (gap < -20) r += add(4 + clamp((avg(sides[1 - wi].map(w => BR.stat(w, 'sell'))) - 50) / 12, -1, 2), 'Upset victory');
     }
+    // the booker's plan for the match, beat by beat
+    { const P = prodOf(seg); if (P && sides.length >= 2) { const ps = prodScore(seg, P, sides, wi, ctx, fk, stip, st); ps.items.forEach(([v, t]) => r += add(v, t));
+      out.prod = { fat: ps.fat, risk: ps.risk }; if (!ctx.proj) Object.assign(out.prod, prodBeats(seg, P, sides, wi, clamp(r, 20, 100))); } }
     out.winners = wi >= 0 ? sides[wi].map(w => w.id) : [];
     out.losers = sides.flat().map(w => w.id).filter(id => !out.winners.includes(id));
     // elimination: everyone on the losing sides goes out one by one, and maybe some of the winners too; one wrestler is left standing
@@ -3751,8 +3926,8 @@ function applySegment(seg, res, ctx) {
   if (seg.kind === 'match') {
     const stip = res.stip || {};
     for (const w of ws) {
-      w.fatigue = clamp(w.fatigue + (16 + (stip.fat || 0)) * (1.4 - w.stam / 100) * (res.ffa ? 0.5 : 1) * (res.elim ? 1.15 : 1), 0, 100);
-      if (G.settings.injuries && Math.random() < (0.012 + w.fatigue / 900 + (stip.inj || 0) + (w.injury > 0 ? 0.15 : 0)) * DF().inj * injMult(w, ws)) {
+      w.fatigue = clamp(w.fatigue + (16 + (stip.fat || 0)) * (1.4 - w.stam / 100) * (res.ffa ? 0.5 : 1) * (res.elim ? 1.15 : 1) * (res.prod?.fat || 1), 0, 100);
+      if (G.settings.injuries && Math.random() < (0.012 + w.fatigue / 900 + (stip.inj || 0) + (res.prod?.risk || 0) + (w.injury > 0 ? 0.15 : 0)) * DF().inj * injMult(w, ws)) {
         const weeks = rint(1, w.injury > 0 ? 8 : 6); w.injury = Math.max(w.injury, weeks);
         notes.push(`🩹 ${w.name} was injured (${weeks} wk).`); news(`🩹 ${w.name} got hurt and will be out about ${weeks} week${weeks > 1 ? 's' : ''}.`, 'injury');
       }
@@ -4135,7 +4310,7 @@ function runShow(opts = {}) {
     if (seg.tid) tResult(seg, res);
     if (seg.prz && seg.kind === 'match' && res.winners?.length) { const P = PZ(seg.prz); if (P && pzOpen(P)) { const msg = prizeWin(P, res.winners, 'match'); if (msg) res.notes = [...(res.notes || []), '🏆 ' + msg]; } }
     if (veto) res.notes = [veto, ...(res.notes || [])];
-    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue, ...(res.quote ? { quote: res.quote } : {}), ...(res.stTag ? { stTag: res.stTag } : {}), ...(res.ans ? { ans: res.ans } : {}), ...(res.inter ? { inter: res.inter } : {}) });
+    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue, ...(res.quote ? { quote: res.quote } : {}), ...(res.stTag ? { stTag: res.stTag } : {}), ...(res.ans ? { ans: res.ans } : {}), ...(res.inter ? { inter: res.inter } : {}), ...(res.prod?.pbp ? { pbp: res.prod.pbp, meter: res.prod.meter } : {}) });
     if (seg.kind === 'match') keys.push(segPeople(seg).slice().sort().join(','));
   });
   // overall show score
@@ -4201,6 +4376,7 @@ function runShow(opts = {}) {
   if (best && best.rating >= 80) news(`⭐ ${best.seg.kind === 'match' ? 'Match' : 'Segment'} of the night: ${best.text} (${starStr(best.rating)})`, 'show');
   const mark = G.news[0];
   organicStories(results, holdersBefore);
+  { const cl = makeCalls(results, big); if (cl.length) rec.calls = cl; }
   { const mo = showMoments(results, big); if (mo.length) rec.moments = mo; if (opts.quiet) momSettle(); }
   relShow(results, rec); personaShow(results, rec);
   // the week's upkeep (fatigue, contracts, injuries, rivals) happens once, after the company's last show
@@ -6118,7 +6294,10 @@ function liveScreen(m) {
   // and (on Lots) camera flashes for the one best segment of the night when it's 90+
   const fxTop = h.results.reduce((b, r, i) => i < n - 1 && r.rating >= 90 && (b < 0 || r.rating > h.results[b].rating) ? i : b, -1);
   const segs = h.results.map((r, i) => {
-    const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0), d1 = d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
+    const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0);
+    // a produced match plays out beat by beat, and stops for your live calls
+    const pr = r.seg.kind === 'match' && r.pbp?.length ? lvProd(h, r, i, d0 + 1.1) : null;
+    const d1 = pr ? Math.max(d0 + 1.6, pr.t + .3) : d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
     t = d1 + 1.3;
     const after = mo.map((m, j) => m.at === i ? (() => { const c = momCard(h, j, t); t += MOMENTS[m.k]?.big ? 1.2 : 1.8; return c; })() : '').join('');
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x)), hurt = (r.notes || []).find(x => /injured/i.test(x));
@@ -6126,7 +6305,7 @@ function liveScreen(m) {
     <div class="lv-seg ${main ? 'main' : ''} k-${r.seg.kind}" style="--d:${t0(d0)}" data-lv="${i}"${(k => k ? ` data-fx="${k}" data-fxd="${d1}"` : '')(champ && fxWorld(G.titles.find(x => x.id === r.seg.title)) ? 'champ' : main && h.big && r.rating >= 85 ? 'main' : i === fxTop ? 'big' : '')}>
       ${r.seg.kind === 'angle' ? '<i class="cam tl"></i><i class="cam tr"></i><i class="cam bl"></i><i class="cam br"></i>' : ''}
       <div class="lv-k lv-kh">${kindTag(r.seg)}<span>${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${r.seg.kind === 'match' ? segTitle(r.seg) : esc(r.seg.ptype || r.seg.atype)}</span>${r.seg.kind === 'angle' ? `<span class="rec"><b></b>REC${segPlace(r.seg) ? ' · ' + esc(SEG_PLACES[segPlace(r.seg)].n) : ''}</span>` : ''}</div>
-      ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${(P => P ? `<div class="lv-belt lv-cup">${prizeArt(P, 'lv-cup-art')}</div>` : '')(r.seg.prz && PZ(r.seg.prz))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>` : lvTalk(r, main)}
+      ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${(P => P ? `<div class="lv-belt lv-cup">${prizeArt(P, 'lv-cup-art')}</div>` : '')(r.seg.prz && PZ(r.seg.prz))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>${pr ? pr.html : ''}` : lvTalk(r, main)}
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -6156,6 +6335,55 @@ function liveScreen(m) {
     <div class="lv-body">${segs}${fin}</div></div>`;
 }
 const t0 = x => Math.round(x * 100) / 100 + 's';
+// the produced match on the live show: the plan as a strip, a crowd meter, the calls in order, and the agent's questions
+const prodStrip = (P, cls = '') => `<div class="pd-strip ${cls}">${[['Open', PROD_OPEN[P.open][0]], ['Heat', PROD_HEAT[P.hold][0], P.hold === 'heel' ? 'cold' : ''], ['Comeback', PROD_FIRE[P.fire][0], P.fire !== 'none' ? 'hot' : ''], ['Spot', PROD_SPOT[P.spot][0], P.spot ? 'hot' : ''], ['Falls', PROD_FALLS[P.falls], P.falls >= 2 ? 'hot' : '']].map(([k, v, c]) => `<div class="${c || ''}"><b>${k}</b>${esc(v)}</div>`).join('')}</div>`;
+const meterHtml = (m, d0, step, cls = '') => `<div class="pd-meter ${cls}" aria-hidden="true">${m.map((v, k) => `<i style="height:${clamp(v, 6, 100)}%;--d:${t0(d0 + k * step)}"></i>`).join('')}</div>`;
+function lvProd(h, r, i, d) {
+  const P = prodOf(r.seg); if (!P) return null;
+  const calls = (h.calls || []).map((c, j) => [c, j]).filter(([c]) => c.at === i), start = d, lines = [];
+  r.pbp.forEach(([tm, tx], k) => {
+    lines.push(`<div class="pd-l" style="--d:${t0(d)}"><span>${esc(tm)}</span>${esc(tx)}</div>`); d += .75;
+    const due = calls.filter(([c]) => c.k === 'mid' ? k === 1 : k === r.pbp.length - 1);
+    for (const [, j] of due) { lines.push(callCard(h, j, d)); d += 1.2; }
+  });
+  const m = r.meter || [];
+  return { t: d, html: `${prodStrip(P)}${m.length ? meterHtml(m, start, (d - start) / m.length) + `<div class="pd-ml"><span>Crowd</span><span>${PROD_LENS[P.len].m} min</span></div>` : ''}<div class="pd-pbp">${lines.join('')}</div>` };
+}
+function callCard(h, j, d) {
+  const c = h.calls[j]; if (!c) return '';
+  return `<div class="cut call" style="--d:${t0(d)}" data-call="${j}" data-cs="1"><div class="cut-top"><span class="cut-b">${ic('mic')} ${esc(c.head)}</span><span class="tiny">${c.mn} minutes in</span></div>
+    <div class="cut-d">${esc(c.text)}</div><div class="cut-r">${c.done ? callFx(c) : callBtns(c, j, 'cut-c')}</div></div>`;
+}
+const callBtns = (c, j, cls) => `<div class="${cls}">${c.o.map((o, i) => `<button class="btn ${i ? '' : 'pri'}" data-act="callPick" data-id="${j}:${i}"><b>${esc(o.lb)}</b><span>${esc(o.ds)}</span></button>`).join('')}</div>`;
+const callFx = c => `<div class="cut-x"><span>${ic('mic')} ${esc(c.o[c.you]?.lb || '')}</span>${(c.fx || []).map(x => `<span>${esc(x)}</span>`).join('')}</div>`;
+function callOpen(j) {
+  const live = document.querySelector('.live'), h = histFor(UI.modal?.wk), c = h?.calls?.[j];
+  if (!live || !c || c.done || live.classList.contains('skip') || live.querySelector('.cs')) return;
+  liveHold(true);
+  const el = document.createElement('div');
+  el.className = 'cs cs-call'; el.dataset.call = j; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Your call: ' + c.head);
+  el.innerHTML = `<div class="cs-bar"></div><div class="cs-mid"><div class="cs-top"><span class="cs-rec">● LIVE</span><span class="sp"></span><span class="cs-hs">${ic('mic')} Headset</span><button class="cs-skip" data-act="callGo">Agent's call ›</button></div>
+    <div class="cs-loc">${c.at === h.results.length - 1 && h.results.length > 1 ? 'Main event' : esc(segTitle(h.results[c.at].seg))} · ${c.mn} minutes in</div><div class="cs-t">${esc(c.head)}</div>
+    ${meterHtml(c.meter, 0, 0, 'cs-meter')}<div class="pd-ml"><span>Crowd</span><span>${esc(c.crowd)}</span></div>
+    <div class="cs-line">${esc(c.text)}</div><div class="cs-q">What do you tell the agent?</div>${callBtns(c, j, 'cs-c')}</div><div class="cs-bar"></div>`;
+  live.appendChild(el);
+  el.querySelector('.cs-c .btn')?.focus({ preventScroll: true });
+  SFX.crowd(c.k === 'late' ? 'ooh' : 'applause', .5, .2);
+}
+function callClose() {
+  const cs = document.querySelector('.live .cs-call'); if (!cs) return;
+  clearTimeout(LV.auto); const j = +cs.dataset.call, h = histFor(UI.modal?.wk);
+  if (h?.calls?.[j] && !h.calls[j].done) { callDo(h, j); save(); callRefresh(j); }
+  cs.remove(); liveHold(false);
+}
+// after a call: the card shows what happened, and the match's and the show's ratings move
+function callRefresh(j) {
+  const h = histFor(UI.modal?.wk), c = h?.calls?.[j]; if (!c) return;
+  const box = document.querySelector(`.cut[data-call="${j}"] .cut-r`); if (box) box.innerHTML = callFx(c);
+  const r = h.results[c.at], seg = document.querySelector(`.lv-seg[data-lv="${c.at}"]`);
+  if (seg && r) { const rr = seg.querySelector('.lv-r'), ss = seg.querySelector('.lv-st'); if (rr) rr.textContent = r.rating; if (ss) ss.textContent = starStr(r.rating); }
+  const fin = document.querySelector('.live .lv-fin'); if (fin) { fin.dataset.rating = h.rating; const sc = fin.querySelector('.lv-score'), st = fin.querySelector('.stars'); if (sc) sc.textContent = h.rating; if (st) st.textContent = starStr(h.rating); }
+}
 // a surprise moment in the live feed (and on the recap); a big one also opens as a cutscene when the show reaches it
 const momFace = (w, sz) => `<div class="lv-face">${av(w, sz, true)}<span>${esc(sz > 60 ? w.name : shortOf(w.id))}</span></div>`;
 const momFx = m => m.fx?.length ? `<div class="cut-x">${m.fx.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '';
@@ -6325,7 +6553,7 @@ function startLive() {
   FX.stop(); const live = box.closest('.live');
   box.querySelectorAll('.lv-seg[data-fx]').forEach(el => at(el, parseFloat(el.dataset.fxd) || 0, () => FX.moment(el.dataset.fx, live)));
   // the big surprise moments stop the show for a cutscene
-  box.querySelectorAll('.cut[data-cs]').forEach(el => at(el, dOf(el) + .7, () => cutOpen(+el.dataset.mom)));
+  box.querySelectorAll('.cut[data-cs]').forEach(el => at(el, dOf(el) + .7, () => el.dataset.call != null ? callOpen(+el.dataset.call) : cutOpen(+el.dataset.mom)));
 }
 
 // ---------- contracts ----------
@@ -7613,6 +7841,7 @@ function matchRow(s, i, n, o) {
     if (s.cash && !o.past) chips.push('💼 Cash-in');
     if (!o.past && finOf(s) !== 'Clean') chips.push(esc(finOf(s)));
     if (!o.past && s.turn && W(s.turn)) chips.push('🔄 turn');
+    { const P = !o.past && prodOf(s); if (P) chips.push(`${ic('wrestle')} ${esc(PROD_TPL[P.t].n)} · ${esc(PROD_LENS[P.len].n)}${P.live ? ' · ' + ic('mic') : ''}`); }
     const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat()); if (st) chips.push(`🔥 ${esc(st.title)}`);
     if (!o.past) chips.push(s.winner >= 0 && s.sides[s.winner]?.length ? `👑 ${esc(s.sides[s.winner].map(shortOf).join(' & '))}` : s.winner === -2 ? '🤝 draw' : '🎲 sim decides');
   } else {
@@ -8459,6 +8688,36 @@ function segPlanEditor(s) {
   if (en === 'inter') h += `<div class="side"><div class="lbl">Who interrupts</div>${chipsFor(s.inter || [], 'inter', 1)}<div class="tiny muted" style="margin-top:4px">They start a feud with ${sp.length ? esc(sp.map(w => shortOf(w.id)).join(' & ')) : 'the speaker'}, or heat up the one they have.</div></div>`;
   return h;
 }
+// the match editor's producer: a plan template (or every beat by hand), the length, and live calls on the headset
+function prodEditor(s) {
+  const P = prodOf(s), cur = P ? P.t : '';
+  let h = `<div class="sec">${ic('wrestle')} Produce the match</div><div class="pd-tpl" role="group" aria-label="Match plan">${[['', 'Agent calls it', 'dice'], ...Object.entries(PROD_TPL).map(([k, v]) => [k, v.n, v.ic])].map(([k, n, i]) => `<button class="${k === cur ? 'on' : ''}" aria-pressed="${k === cur}" data-act="prodTpl" data-id="${k || 'agent'}">${ic(i)} ${esc(n)}</button>`).join('')}</div>`;
+  if (!P) { const q = staffQ('agent');
+    return h + `<div class="tiny muted" style="margin:-2px 0 12px">Your road agent lays the match out. ${q ? `${esc(staffOf('agent').n)} (${q} star${q > 1 ? 's' : ''}) adds to every match.` : 'Hire a road agent in Office → Staff for better matches.'} Pick a plan to produce it yourself, beat by beat.</div>`; }
+  h += `<div class="tiny muted" style="margin:-2px 0 6px">${esc(PROD_TPL[P.t].desc)}${P.t !== 'custom' ? ' Tap Custom to change any beat.' : ''}</div>${prodStrip(P, 'ed')}`;
+  h += `<label class="f" style="margin-top:10px"><span>Length</span><div class="seg-ctl" role="group" aria-label="Length">${Object.entries(PROD_LENS).map(([k, v]) => `<button class="${k === P.len ? 'on' : ''}" aria-pressed="${k === P.len}" data-act="prodSet" data-id="len:${k}">${esc(v.n)}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">${esc(PROD_LENS[P.len].desc)}${P.len === 'long' || P.len === 'epic' ? ` Stamina: ${s.sides.flat().map(W).filter(Boolean).map(w => `${esc(lastName(w))} ${Math.round(w.stam)}`).join(', ')}.` : ''}</div></label>`;
+  if (P.t === 'custom') {
+    h += `<label class="f"><span>Pace</span><div class="seg-ctl" role="group" aria-label="Pace">${Object.entries(PROD_PACE).map(([k, v]) => `<button class="${k === P.pace ? 'on' : ''}" aria-pressed="${k === P.pace}" data-act="prodSet" data-id="pace:${k}">${esc(v.n)}</button>`).join('')}</div><div class="tiny muted" style="margin-top:4px">${esc(PROD_PACE[P.pace].desc)}</div></label>`;
+    h += `<div class="side"><div class="lbl">${ic('layers')} Beat by beat</div>${PROD_BEATS.map(([k, l, i, o]) => `<label class="pd-b"><span>${ic(i)} ${l}</span><select data-prod="${k}">${Object.entries(o).map(([v, x]) => `<option value="${v}" ${v === P[k] ? 'selected' : ''}>${esc(x[0])}</option>`).join('')}</select><span class="tiny muted" style="text-transform:none;font-weight:500">${esc(o[P[k]][1])}</span></label>`).join('')}
+      <div class="pd-b"><span>${ic('refresh')} Near falls</span><div class="seg-ctl" role="group" aria-label="Near falls">${PROD_FALLS.map((n, k) => `<button class="${k === P.falls ? 'on' : ''}" aria-pressed="${k === P.falls}" data-act="prodSet" data-id="falls:${k}">${n}</button>`).join('')}</div></div>
+      <div class="tiny muted">The finish is the one you picked above: ${esc(finOf(s))}.</div></div>`;
+  }
+  h += `<label class="todo" style="margin-bottom:10px"><input type="checkbox" data-act="prodLive" ${P.live ? 'checked' : ''}><span>${ic('mic')} Make live calls during the show<br><span class="tiny muted">The agent asks you what to do as it happens. Up to 3 calls a show, main events and title matches first. The winner you booked still wins.</span></span></label>`;
+  const fit = prodFit(s);
+  if (fit) h += `<div class="pd-fit">${ic('target')}<div><b class="${fit.tot >= 0 ? 'good' : 'bad'}">Plan fits them ${fit.tot >= 0 ? '+' : ''}${fit.tot}.</b> ${fit.lines.map(esc).join('. ')}${fit.lines.length ? '.' : ''}${staffQ('agent') ? ` <span class="muted">Your road agent adds to it.</span>` : ''}</div></div>`;
+  return h;
+}
+// the plan's effect before the show, with the booked winner (or the favourite when the sim decides)
+function prodFit(s) {
+  const P = prodOf(s); if (!P) return null;
+  const sides = s.sides.map(sd => sd.map(W).filter(Boolean)).filter(sd => sd.length); if (sides.length < 2) return null;
+  const wk = UI.selWeek ?? G.week, card = BK(), at = card.findIndex(x => x.id === s.id), ctx = { big: isBig(wk), main: at >= 0 && at === card.length - 1 && card.length > 1, proj: true };
+  let wi = s.winner >= 0 && s.winner < sides.length ? s.winner : -1;
+  if (wi < 0) { const pw = sides.map(sd => avg(sd.map(w => w.pop + (w.momentum || 0) * 0.3))); wi = pw.indexOf(Math.max(...pw)); }
+  const st = storyBetween(s.sides[0] || [], s.sides.slice(1).flat()), ps = prodScore(s, P, sides, wi, ctx, finOf(s), GM(s.stip), st);
+  const it = ps.items.slice().sort((a, b) => Math.abs(b[0]) - Math.abs(a[0]));
+  return { tot: Math.round(sum(it.map(x => x[0]))), lines: it.slice(0, 2).map(([v, t]) => `${t} (${v >= 0 ? '+' : ''}${Math.round(v)})`) };
+}
 function chipsFor(list, field, max) {
   return `<div class="chips">${list.map(id => `<span class="chip">${nm(id)}<button data-act="chipDel" data-f="${field}" data-id="${id}" aria-label="Remove">✕</button></span>`).join('')}${list.length < max ? `<button class="chip add" data-act="pickFor" data-f="${field}">+ ${list.length ? 'Add' : 'Choose'}</button>` : ''}</div>`;
 }
@@ -8524,6 +8783,7 @@ function modalSeg(m) {
     if (F.runin) body += `<div class="side"><div class="lbl">Who runs in</div>${chipsFor(s.runin || [], 'runin', 1)}<div class="tiny muted" style="margin-top:4px">${(s.runin || []).length ? 'They help whoever wins.' : 'Leave empty and the winner\'s manager runs in, or a mystery helper.'}</div></div>`;
     const tops = [...s.sides.flat(), ...(F.runin ? s.runin || [] : [])].map(W).filter(Boolean);
     if (tops.length) body += `<label class="f"><span>Turn during the match</span><select data-seg="turn"><option value="">No turn</option>${tops.map(w => `<option value="${w.id}" ${s.turn === w.id ? 'selected' : ''}>${esc(w.name)} turns ${w.align === 'face' ? 'heel' : 'face'}</option>`).join('')}</select>${s.turn && W(s.turn) && turnedSoon(W(s.turn)) ? '<div class="tiny muted" style="margin-top:4px">They turned recently. Fans may not buy it.</div>' : ''}</label>`;
+    if (!mt.ffa) body += prodEditor(s);
     body += `<label class="f"><span>Championship on the line</span><select data-seg="title"><option value="">None</option>${titleOpts.map(t => `<option value="${t.id}" ${s.title === t.id ? 'selected' : ''}>${esc(t.name)} (${t.holder.length ? esc(t.holder.map(nameOf).join(' & ')) : 'vacant'})</option>`).join('')}</select></label>`;
     if (s.title) { const t = G.titles.find(x => x.id === s.title); if (t && t.holder.length && !t.holder.some(h => s.sides.flat().includes(h))) body += `<div class="tiny muted" style="margin-top:-6px;margin-bottom:10px">The champion isn't in this match. Whoever wins takes the title.</div>`; }
     body += shotEditor(s, mt);
@@ -8811,6 +9071,7 @@ function modalRecap(m) {
   const body = `<div style="text-align:center;margin-bottom:12px"><div class="muted small">Week ${h.wk}${h.big ? ' · BIG EVENT' : ''}</div><div class="res-score">${h.rating}</div><div class="stars" style="font-size:22px">${starStr(h.rating)}</div><div class="muted">${grade(h.rating)} show</div>${h.why.length ? whyList(h.why) : ''}</div>
    <div class="grid3" style="margin-bottom:12px"><div class="stat"><div class="k">Crowd</div><div class="v" style="font-size:17px">${h.attendance.toLocaleString()}</div></div><div class="stat"><div class="k">Fans</div><div class="v" style="font-size:17px;color:${h.fanDelta >= 0 ? 'var(--good)' : 'var(--bad)'}">${h.fanDelta >= 0 ? '+' : ''}${kfmt(h.fanDelta)}</div></div>${MON() ? `<div class="stat"><div class="k">Profit</div><div class="v" style="font-size:17px;color:${h.net >= 0 ? 'var(--good)' : 'var(--bad)'}">${(h.net < 0 ? '-$' : '$') + kfmt(Math.abs(h.net))}</div></div>` : `<div class="stat"><div class="k">Rating</div><div class="v" style="font-size:17px">${h.rating}</div></div>`}</div>
    ${(h.headlines || []).length ? `<div class="heads"><div class="review-h">Headlines</div>${h.headlines.map(t => `<div>${esc(t)}</div>`).join('')}</div>` : ''}
+   ${(h.calls || []).length ? `<div class="heads"><div class="review-h">Your live calls</div>${h.calls.map(c => { const r = h.results[c.at]; return r ? `<div><b>${ic('mic')} ${esc(segTitle(r.seg))}, ${c.mn} min:</b> ${c.done ? esc(c.o[c.you]?.lb || '') : 'Not called yet'}${c.fx?.length ? `<br><span class="tiny muted">${c.fx.map(esc).join(' · ')}</span>` : ''}</div>` : ''; }).join('')}</div>` : ''}
    ${(h.moments || []).length ? `<div class="heads"><div class="review-h">Surprises on the show</div>${h.moments.map((m, j) => { const M = MOMENTS[m.k]; let t = ''; try { t = M ? M.text(m.d) : ''; } catch (e) { } return t ? `<div><b>⚡ ${esc(M.head)}</b>${lessBtn('mom', m.k, 'in-line')} ${esc(t)}${m.fx?.length ? `<br><span class="tiny muted">${m.fx.map(esc).join(' · ')}</span>` : ''}${momStoryBtn(h, j)}</div>` : ''; }).join('')}</div>` : ''}
    ${h.big ? monthReview(h) : ''}
    ${h.results.map((r, i) => `<details class="seg"><summary><div class="hd"><span class="no">${i === h.results.length - 1 && h.results.length > 1 ? '★ME' : '#' + (i + 1)}</span><span class="ttl">${segTitle(r.seg)}</span><span class="stars">${starStr(r.rating)}</span></div>
@@ -9596,6 +9857,17 @@ const A = {
   segSpan(k) { const d = UI.modal.draft; if (k === 'n' || !Object.hasOwn(SEG_LENS, k)) delete d.span; else d.span = k; render(); },
   shotUseNext(v) { UI.modal.shotUse = v === 'any' ? 'any' : 'event'; render(); },
   shotDel(id) { const s = SHOTS().find(x => x.id === id); if (!s) return; dropShot(s); commit(`${s.ids.map(nameOf).join(' & ')} no longer has a title shot.`); },
+  prodTpl(k) { const d = UI.modal.draft, was = prodOf(d);
+    if (k === 'agent' || !Object.hasOwn(PROD_TPL, k)) delete d.prod;
+    else if (k === 'custom') d.prod = { ...(was || { ...PROD_TPL.classic.p, live: true }), t: 'custom' };
+    else d.prod = { t: k, ...PROD_TPL[k].p, live: was ? was.live : true };
+    render(); },
+  prodSet(v) { const d = UI.modal.draft, P = prodOf(d); if (!P) return; const [k, x] = String(v).split(':');
+    if (k === 'len' && Object.hasOwn(PROD_LENS, x)) d.prod = { ...P, len: x };
+    else if (k === 'pace' && Object.hasOwn(PROD_PACE, x)) d.prod = { ...P, pace: x, t: 'custom' };
+    else if (k === 'falls' && [0, 1, 2, 3].includes(+x)) d.prod = { ...P, falls: +x, t: 'custom' };
+    render(); },
+  prodLive(v, el) { const d = UI.modal.draft, P = prodOf(d); if (P) d.prod = { ...P, live: !P.live }; render(); },
   segShot(v) { const d = UI.modal.draft; if (!+v) { d.shot = null; return render(); }
     const ts = G.titles.filter(t => titleFits(t, MT(d.mtype))), inM = d.sides.flat(), t = ts.find(x => !x.holder.some(h => inM.includes(h)) && x.id !== d.title) || ts[0];
     if (t) d.shot = { titleId: t.id, use: 'event', wk: bigsAfter(UI.selWeek ?? G.week, 1)[0] || 0 }; render(); },
@@ -9656,6 +9928,13 @@ const A = {
     const cs = document.querySelector('.live .cs'); if (cs) { cs.querySelector('.cs-c').outerHTML = `<div class="cs-c" style="animation-delay:0s">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`; cs.querySelector('.cs-skip').textContent = 'Continue ›'; cs.querySelector('.cs-q')?.remove(); cs.querySelector('.cs-c .btn')?.focus({ preventScroll: true }); LV.auto = setTimeout(() => cutClose(), 6000); }
   },
   cutGo() { cutClose(); },
+  callPick(v) {
+    const [j, i] = String(v).split(':').map(Number), h = histFor(UI.modal?.wk), c = h?.calls?.[j];
+    if (!c || c.done) return; callDo(h, j, i); save(); callRefresh(j);
+    const cs = document.querySelector('.live .cs-call'); if (cs) { cs.querySelector('.cs-c').outerHTML = `<div class="cs-c" style="animation-delay:0s">${callFx(c)}<button class="btn pri" data-act="callGo" style="align-items:center">Back to the show</button></div>`; cs.querySelector('.cs-skip').textContent = 'Continue ›'; cs.querySelector('.cs-q')?.remove(); cs.querySelector('.cs-c .btn')?.focus({ preventScroll: true }); LV.auto = setTimeout(() => callClose(), 6000); }
+    if (c.d > 0) SFX.crowd('cheer', .8, .2);
+  },
+  callGo() { callClose(); },
   lessOpen(v, el) { lessOpen(v, el); },
   lessSet(v) { lessSet(v); },
   lessShut() { lessClose(); },
@@ -15159,6 +15438,8 @@ document.addEventListener('change', e => {
   if (el.dataset.mt) { const d = UI.modal?.edit?.d; if (d) d[el.dataset.mt] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value; return; }
   if (el.dataset.sig) { const n = el.dataset.n ?? G.bigEvents[+el.dataset.i]; if (!n) return; const cur = { mt: '', gm: '', ...(sigFor(n) || {}) }; cur[el.dataset.sig] = el.value;
     G.ppvSig = (G.ppvSig || []).filter(x => x.name !== n); if (cur.mt || cur.gm) G.ppvSig.push({ name: n, mt: cur.mt, gm: cur.gm }); commit(cur.mt || cur.gm ? `${n}: the ${sigName(cur)} is its signature match.` : `${n} has no signature match.`); return; }
+  if (el.dataset.prod) { const d = UI.modal?.draft, P = d && prodOf(d), k = el.dataset.prod, B = PROD_BEATS.find(b => b[0] === k);
+    if (P && B && Object.hasOwn(B[3], el.value)) { d.prod = { ...P, [k]: el.value, t: 'custom' }; render(); } return; }
   if (el.dataset.seg) { const d = UI.modal.draft, k = el.dataset.seg;
     if (k === 'mtype') { if (el.value === 'Tag Team' && tagSizeOf(d.mtype)) return; d.mtype = el.value; const mt = MT(d.mtype), flat = [...new Set(d.sides.flat())]; if (!elimOK(mt)) delete d.elim;
       if (mt.ffa) { d.n = mt.def; d.sides = flat.slice(0, d.n).map(id => [id]); } else { delete d.n; d.sides = Array.from({ length: mt.sides }, (_, i) => (d.sides[i] || []).slice(0, sideSize(mt, i))); }
@@ -15416,8 +15697,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.78';
+const VERSION = '1.9.79';
 const WHATS_NEW = [
+  ['🤼 Produce your matches', 'The match editor has a new Produce the match section. Pick a plan (Classic, Sprint, Epic or Squash), or Custom to set the opening, the heat, the comeback, a big spot and the near falls yourself, plus the length. Plans that fit the wrestlers rate higher, and long matches and big spots take a toll. On the live show a produced match plays out beat by beat with a crowd meter, and your agent asks you on the headset what to do next: start the comeback, go for a big spot, one more near fall or go home. Leave it on Agent calls it and nothing changes.'],
   ['🏆 Awards & Prizes', 'Office → Titles has a new Awards & Prizes shelf for trophies: tournament cups, yearly matches, year-end awards and prizes you hand out. Design each one like a belt (9 shapes, handles, toppers, bases and every metal and centre icon) or use a photo. Champions and trophy holders now wear their belt and trophy on their photo everywhere. The belt designer adds any colour, side plates with icons or the champion\'s own initials, size sliders, your own templates, and new title rules: year established, past champions, big events only, open challenges and unifying two titles.'],
   ['🗞️ Universe headlines and paid stories', 'World news is now Universe headlines: a lead story, colour-coded kinds you can filter, and more news from around the world (big show results, best-ever shows, late paychecks, title reigns, retirements, new feuds and the show of the week). Buy up to two headlines a week to hype a wrestler, sell your show, talk up the company or dig at a rival. Each one has a small chance to backfire.'],
   ['💥 Backfires you can\'t miss', 'When something you chose blows up in your face (a walkout, a refused finish, a blown interview, a training injury, a social media blast, a paid story exposed and more), a full-screen BACKFIRE moment shows what happened and what it cost. Backfires are marked in red in the news, the headlines and the Dirt Sheet.'],
