@@ -3527,6 +3527,7 @@ function simSegment(seg, ctx) {
   r += BR.placement(seg, people, ctx, add);
   r += BR.soften(why, add, seg, r);
   if (staffQ('agent')) r += add(agentBonus(seg, ctx), 'Road agent: ' + staffOf('agent').n);
+  { const bb = badgeBonus(seg, ctx, people); if (bb) r += add(bb, 'Training badges: ' + people.filter(w => (w.badges || []).some(k => hasBadge(w, k))).map(w => shortOf(w.id)).join(', ')); }
   { const re = relEffort(people); if (re) r += add(re, re > 0 ? 'Working hard for you' : 'Coasting: unhappy with you'); }
   if (!ctx.proj) { const luck = BR.luck(people); r += add(luck, luck > 0 ? 'Crowd was hot' : 'Crowd was flat'); }
   out.rating = clamp(Math.round(r), 5, 100);
@@ -7454,6 +7455,7 @@ function renderModal() {
     case 'sit': return modalSit(UI.modal);
     case 'media': return modalMedia(m);
     case 'staff': return modalStaff(m);
+    case 'tgoal': return modalGoal(m);
     case 'trainee': return modalTrainee(m);
     case 'mentor': return modalMentor(m);
     case 'about': return modal('About', `<div class="help" style="text-align:center">${beltSVG('belt-art', verLabel())}
@@ -11992,7 +11994,7 @@ function textFrom(w, t, ask, x) {
 const phoneNew = () => Array.isArray(G.phone) ? G.phone.filter(m => !m.read).length : 0;
 // a message still waiting on you: an open ask from a wrestler, or a backstage moment you haven't decided
 const talksOpen = (m, w = W(m.wid)) => m.act === 'talks' && CON() && !!w?.contract && !w.loan && w.contract.weeks <= TALKS_OPEN;
-const msgOpen = m => m.from === 'asst' ? (m.feud ? feudMsgOpen(m) : evOpen(m)) : !!(m.ask && m.ans == null && W(m.wid)?.contract) || talksOpen(m) || !!(m.social && m.ans == null && W(m.wid) && G.week - m.wk < 2) || gigOpen(m);
+const msgOpen = m => m.coach ? coachOpen(m) : m.from === 'asst' ? (m.feud ? feudMsgOpen(m) : evOpen(m)) : !!(m.ask && m.ans == null && W(m.wid)?.contract) || talksOpen(m) || !!(m.social && m.ans == null && W(m.wid) && G.week - m.wk < 2) || gigOpen(m);
 const openAsk = w => (G.phone || []).some(m => m.wid === w.id && m.ask && m.ans == null) || (G.promises || []).some(p => p.wid === w.id);
 const mainedIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.length > 1 && segPeople(h.results.at(-1).seg).includes(w.id));
 const promoIn = (w, n) => G.history.filter(h => h.wk > G.week - n).some(h => h.results.some(r => r.seg.kind === 'promo' && (r.seg.who || []).includes(w.id)));
@@ -12234,6 +12236,7 @@ function msgStoryBtn(m) {
 }
 function phoneMsg(m) {
   const del = `<button class="ph-del" data-act="phoneDel" data-id="${m.id}" aria-label="Delete this message${m.ask && msgOpen(m) ? ' (counts as ignoring it)' : ''}">🗑</button>`;
+  if (m.coach) return coachMsg(m, del);
   if (m.from === 'asst' && m.feud) {
     const open = feudMsgOpen(m), ch = open ? feudChoices(m) : [];
     return `<div class="ph-m asst${m.read ? '' : ' new'}${open ? ' open' : ''}"><span class="ph-av ph-asst" aria-hidden="true">🎧</span><div class="sp">
@@ -12835,6 +12838,7 @@ function cleanSkills(w) {
   for (const k of SK_ALL) if (w[k] != null) { const v = +w[k]; if (isFinite(v)) w[k] = clamp(Math.round(v * 10) / 10, 1, 99); else delete w[k]; }
   if (w.train != null && !Object.hasOwn(FOCUS, w.train)) w.train = '';
   if (w.mentor != null && typeof w.mentor !== 'string') delete w.mentor; else if (w.mentor) w.mentor = w.mentor.slice(0, 20);
+  cleanGoal(w);
   if (w.gx != null) { const g = {}; if (typeof w.gx === 'object' && !Array.isArray(w.gx)) for (const k of [...SK_KEYS, 'ring', 'mic', 'cha', 'stam']) if (isFinite(+w.gx[k])) g[k] = clamp(+w.gx[k], -1, 1); w.gx = g; }
   return w;
 }
@@ -12876,7 +12880,8 @@ const menteesOf = id => [...G.wrestlers.filter(x => x.contract && x.mentor === i
 function growRate(w, school) {
   const t = staffQ('trainer'), m = mentorOf(w);
   let r = ageGrow(+w.age || 27) * (0.55 + t * 0.17) * (school ? 1.35 : 1);
-  if (m) r *= 1.25 + Math.max(0, (m.psych - (w.psych || 0))) / 100;
+  if (m) r *= (1.25 + Math.max(0, (m.psych - (w.psych || 0))) / 100) * (hasBadge(m, 'psych') ? 1.3 : 1);
+  r *= tbMult(w);
   if ((w.morale ?? 60) < 35) r *= 0.6;
   if (w.injury > 0) r *= 0.3;
   if (w.away) r *= 0.5;
@@ -12887,11 +12892,13 @@ function trainOne(w, school) {
   ensureSkills(w);
   const f = FOCUS[w.train || ''] || FOCUS[''], rate = growRate(w, school), got = {};
   const note = (k, n) => { if (n > 0) got[k] = (got[k] || 0) + n; };
-  if (w.train === 'rest') { w.fatigue = clamp((w.fatigue || 0) - 8, 0, 100); return got; }
+  if (w.train === 'rest' || (w.tb && w.tb.off === G.week)) { w.fatigue = clamp((w.fatigue || 0) - 8, 0, 100); return got; }
+  // a plateau: the goal stat barely moves
+  const wall = k => wallOn(w) && w.goal.sk === k ? .15 : 1;
   const keys = f[2] ? f[2].map(k => k === '$style' ? styleSkill(w) : k) : null;
-  if (keys) { keys.forEach((k, i) => note(k, grow(w, k, 0.22 * rate * (i ? 0.6 : 1)))); }
+  if (keys) { keys.forEach((k, i) => note(k, grow(w, k, 0.22 * rate * (i ? 0.6 : 1) * wall(k)))); }
   // everything else creeps up a little; balanced training spreads it wider
-  for (const k of ['ring', 'psych', 'sell', 'cons', styleSkill(w), 'mic']) if (!keys || !keys.includes(k)) note(k, grow(w, k, (keys ? 0.03 : 0.08) * rate));
+  for (const k of ['ring', 'psych', 'sell', 'cons', styleSkill(w), 'mic']) if (!keys || !keys.includes(k)) note(k, grow(w, k, (keys ? 0.03 : 0.08) * rate * wall(k)));
   // a mentor passes on what they know best
   const m = mentorOf(w);
   if (m) for (const k of ['psych', 'sell', 'cons']) if ((m[k] || 0) > (w[k] || 0) + 4) note(k, grow(w, k, 0.05 * rate * Math.min(2, (m[k] - w[k]) / 15)));
@@ -12913,7 +12920,7 @@ function learnFromMatch(ws) {
 function injMult(w, ws) {
   const others = (ws || []).filter(o => o && o !== w);
   const safe = others.length ? avg(others.map(o => +ensureSkills(o).safety || 50)) : 50;
-  return clamp(1.25 - safe / 200, 0.72, 1.25) * (1 - staffQ('doctor') * 0.06);
+  return clamp(1.25 - safe / 200, 0.72, 1.25) * (1 - staffQ('doctor') * 0.06) * (others.some(o => hasBadge(o, 'safety')) ? 0.8 : 1);
 }
 // the Road Agent lays out matches: a steady little lift, more in the main event (0 to +3)
 function agentBonus(seg, ctx) {
@@ -13011,9 +13018,221 @@ function trainWeek() {
     const seen = Object.entries(w.gt || {}).filter(([k]) => skillsShown() || !SK_KEYS.includes(k)), total = seen.reduce((s, x) => s + x[1], 0);
     if (total >= 4) { const best = seen.sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, n]) => `${statName(k)} +${n}`).join(', '); news(`📈 ${w.name} is improving in training: ${best}.`, 'office'); w.gt = {}; }
   }
+  try { goalsWeek(); } catch (e) { console.warn(e); }
   staffJobsWeek();
 }
 const statName = k => SKILLS[k] ? SKILLS[k][0] : { ring: 'In-ring', mic: 'Mic', cha: 'Charisma', stam: 'Stamina', pot: 'Potential' }[k] || k;
+// ---------- training goals, trainer calls and badges ----------
+// w.goal {sk, tgt, due, base, set, lv}: a target for one stat by a week. lv 0 easy, 1 stretch, 2 dream.
+// w.wall: the week a plateau ends (the goal stat barely moves until then). The Head Trainer texts you about it.
+// w.tb {x, from, until, risk, off, back}: a short training boost (push harder, guest coach, fresh after a week off)
+//   or, with back, a month on another focus before going back to the goal's focus.
+// w.badges: stats that hit 80 through training (BADGES). w.b80: the stats already at 80 when we last looked.
+const GOAL_STATS = ['ring', 'mic', 'cha', 'stam', 'psych', 'sell', 'tech', 'brawl', 'air', 'safety'];
+// the focus that trains a stat, and how much of the focus goes to it (1 = main stat)
+const GOAL_FOCUS = { ring: ['ring', 1], mic: ['mic', 1], cha: ['mic', .6], stam: ['stam', 1], psych: ['psych', 1], sell: ['sell', 1], tech: ['tech', 1], brawl: ['brawl', 1], air: ['air', 1], safety: ['safety', 1] };
+// [name, points, time allowed (more = easier), morale if hit, popularity if hit, XP if hit, morale if missed]
+const GOAL_LV = [['Easy', 2, 1.4, 5, 2, 5, -5], ['Stretch', 4, 1.1, 8, 4, 10, -3], ['Dream', 6, .9, 12, 6, 20, -2]];
+const BADGES = {
+  ring: ['🏅', 'Ring Ace', 'Their matches rate a little higher.'],
+  mic: ['🎙️', 'Silver Tongue', 'Their promos land better.'],
+  cha: ['⭐', 'Star Power', 'Their promos and angles rate higher.'],
+  stam: ['🫁', 'Iron Lungs', 'Shines in long, gruelling matches.'],
+  psych: ['🧠', 'Ring General', 'Main events rate higher, and their mentees learn faster.'],
+  sell: ['😵', 'Generous Worker', 'Makes everyone in their matches look better.'],
+  tech: ['🔒', 'Submission Ace', 'Shines in technical and submission matches.'],
+  brawl: ['🪑', 'Hardcore Icon', 'Shines in brawls and hardcore matches.'],
+  air: ['✈️', 'Daredevil', 'Shines in ladder matches and big spots.'],
+  safety: ['🛡️', 'Safe Hands', 'Opponents get hurt less often in their matches.']
+};
+const BADGE_AT = 80;
+const goalStatOk = k => GOAL_STATS.includes(k) && (skillsShown() || !SK_KEYS.includes(k));
+const hasBadge = (w, k) => Array.isArray(w?.badges) && w.badges.includes(k) && (skillsShown() || !SK_KEYS.includes(k));
+const statNow = (w, k) => (+w[k] || 0) + (SK_KEYS.includes(k) ? 0 : +(w.gx?.[k]) || 0);
+const goalCap = (w, k) => k === 'stam' ? 99 : Math.min(99, Math.max(+w.pot || 60, k === 'mic' || k === 'cha' ? (+w.pot || 60) + 6 : 0));
+const tbOn = w => !!(w.tb && G.week >= (w.tb.from || 0) && G.week < (w.tb.until || 0));
+const wallOn = w => !!(w.wall && G.week < w.wall && w.goal);
+// a boost from a trainer call multiplies all their growth this week
+const tbMult = w => tbOn(w) && w.tb.x ? clamp(+w.tb.x, .5, 2) : 1;
+// the plan for a goal: the target, and the week it's due by. null if it can't be done (too close to their ceiling, or too slow at their age)
+function goalPlan(w, k, lv) {
+  const L = GOAL_LV[lv], cur = Math.floor(statNow(w, k)), tgt = cur + L[1], cap = goalCap(w, k);
+  if (tgt > cap) return null;
+  const [, share] = GOAL_FOCUS[k] || ['', 1], mid = cur + L[1] / 2;
+  const per = .22 * share * growRate({ ...w, tb: null }, false) * clamp((cap - mid) / 25, .15, 1.4);
+  if (!(per > 0)) return null;
+  const wks = Math.ceil(L[1] / per * L[2]);
+  return wks > 36 ? null : { sk: k, tgt, due: G.week + Math.max(3, wks), base: cur, set: G.week, lv };
+}
+const goalPct = w => { const g = w.goal; return g ? clamp(Math.round((statNow(w, g.sk) - g.base) / Math.max(1, g.tgt - g.base) * 100), 0, 100) : 0; };
+const goalLine = w => { const g = w.goal; return g ? `${statName(g.sk)} ${g.tgt} by week ${g.due}` : ''; };
+// what they're working with right now, in a few words
+function tbWord(w) {
+  if (wallOn(w)) return '🧱 Hit a wall';
+  if (w.tb?.off === G.week) return '⏸️ Week off';
+  if (!tbOn(w) && !w.tb?.back) return '';
+  const t = w.tb;
+  return t.back != null ? `🔄 On ${FOCUS[w.train || '']?.[0] || 'another focus'} until week ${t.until}` : t.risk ? `💪 Pushing hard until week ${t.until}` : t.guest ? `🧑‍🏫 Guest coach until week ${t.until}` : `✨ Fresh until week ${t.until}`;
+}
+function cleanGoal(w) {
+  const g = w.goal;
+  if (g != null && (typeof g !== 'object' || !GOAL_STATS.includes(g.sk) || !isFinite(+g.tgt) || !isFinite(+g.due))) delete w.goal;
+  else if (g) { g.tgt = clamp(Math.round(+g.tgt), 1, 99); g.due = Math.round(+g.due); g.base = clamp(+g.base || 0, 0, 99); g.lv = clamp(Math.round(+g.lv) || 0, 0, 2); g.set = Math.round(+g.set) || 0; }
+  if (w.tb != null) { const t = w.tb; if (typeof t !== 'object' || !isFinite(+t.until)) delete w.tb; else { t.x = clamp(+t.x || 1, .5, 2); if (t.back != null && !Object.hasOwn(FOCUS, t.back)) delete t.back; } }
+  if (w.wall != null && !isFinite(+w.wall)) delete w.wall;
+  for (const k of ['badges', 'b80']) if (w[k] != null) { if (Array.isArray(w[k])) w[k] = [...new Set(w[k].filter(x => GOAL_STATS.includes(x)))]; else delete w[k]; }
+  return w;
+}
+// how many open trainer calls there are
+const coachOpen = m => { if (!m?.coach || m.ans != null || G.week - m.wk >= 2) return false; const w = W(m.cw); return !!(w?.contract && w.goal && wallOn(w)); };
+function coachCall(w) {
+  const tr = staffOf('trainer'), fn = firstName(w.short || w.name);
+  const t = pick([`${fn} has hit a wall on the ${statName(w.goal.sk).toLowerCase()} work. Nothing to show for it in the gym this week. What do you want to do?`,
+    `${fn} is stuck. The ${statName(w.goal.sk).toLowerCase()} isn't coming and they're getting frustrated. How do you want to handle it?`,
+    `Bit of a plateau with ${fn}. Same mistakes, every session. Want me to change something?`]);
+  ensurePhone();
+  G.phone.unshift({ id: uid(), wk: G.week, from: 'coach', by: tr ? `${tr.n} · Head Trainer` : 'The training ring', coach: 1, cw: w.id, title: `🎯 ${goalLine(w)}`, t, ans: null, read: false });
+  if (G.phone.length > 40) G.phone.length = 40;
+}
+const GUEST_COST = 3000;
+// another focus to try for a month: their style skill, or ring work
+const altFocus = w => { const f = GOAL_FOCUS[w.goal?.sk]?.[0] || 'ring', s = styleSkill(w); return f !== 'ring' ? 'ring' : skillsShown() && s !== f ? s : 'stam'; };
+function coachChoices(m) {
+  const w = W(m.cw); if (!w) return [];
+  return [['💪 Push harder', 'Grows 80% faster for 3 weeks, but they might get hurt'],
+    ['🔄 Switch it up for a month', `Train ${FOCUS[altFocus(w)][0].toLowerCase()} for 4 weeks, then back to it. The deadline moves back 4 weeks`],
+    ['🧑‍🏫 Bring in a guest coach', `${MON() ? money(GUEST_COST) + '. ' : ''}Grows 60% faster for 4 weeks, no risk`],
+    ['⏸️ Give them a week off', 'Rests this week, then 35% faster for 3 weeks. A happier wrestler']];
+}
+function coachAnswer(m, i) {
+  const w = W(m.cw); m.ans = i; m.read = true; if (!w?.goal) return 'They have moved on.';
+  const fn = firstName(w.short || w.name), f = GOAL_FOCUS[w.goal.sk][0];
+  delete w.wall;
+  if (i === 0) { w.tb = { x: 1.8, from: G.week, until: G.week + 3, risk: 1 }; m.you = 'Push harder'; return `${fn} is pushing hard for 3 weeks.`; }
+  if (i === 1) { const a = altFocus(w); w.tb = { x: 1, from: G.week, until: G.week + 4, back: f }; w.train = a; delete w.trainBy; delete w.restBy; delete w.restWas; w.goal.due += 4; m.you = 'Switch it up'; return `${fn} trains ${FOCUS[a][0].toLowerCase()} for a month. Goal moved to week ${w.goal.due}.`; }
+  if (i === 2) { if (MON()) G.money -= GUEST_COST; w.tb = { x: 1.6, from: G.week, until: G.week + 4, guest: 1 }; w.morale = clamp(w.morale + 2, 0, 100); m.you = 'Guest coach'; return `A guest coach is working with ${fn} for 4 weeks.`; }
+  w.tb = { x: 1.35, off: G.week, from: G.week + 1, until: G.week + 4 }; w.morale = clamp(w.morale + 4, 0, 100); w.fatigue = clamp((w.fatigue || 0) - 10, 0, 100); m.you = 'Week off';
+  return `${fn} takes the week off and comes back fresh.`;
+}
+function coachMsg(m, del) {
+  const open = coachOpen(m), ch = open ? coachChoices(m) : [], w = W(m.cw);
+  return `<div class="ph-m asst${m.read ? '' : ' new'}${open ? ' open' : ''}">${w ? `<button class="ph-av" data-act="openW" data-id="${w.id}" aria-label="${esc(w.name)}">${av(w, 36)}</button>` : '<span class="ph-av ph-asst" aria-hidden="true">🎓</span>'}<div class="sp">
+    <div class="ph-h"><b>🎓 ${esc(m.by || 'Head Trainer')}</b><span class="tiny muted">Week ${m.wk}</span>${del}</div>
+    <div class="ph-b">${m.title ? `<b class="ph-tt">${esc(m.title)}</b>` : ''}${esc(m.t)}</div>
+    ${open ? `<div class="bs-c">${ch.map(([l, d], i) => `<button class="btn ${i === 0 ? 'pri' : ''}" data-act="coachAns" data-id="${m.id}:${i}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>`
+      : `<div class="ph-you">${m.ans != null && m.ans >= 0 ? `You: ${esc(m.you || 'decided')}` : 'You let them work through it'}</div>`}
+  </div></div>`;
+}
+// once a week, after training
+function goalsWeek() {
+  const tq = staffQ('trainer'); let calls = (G.phone || []).filter(coachOpen).length;
+  for (const w of signed()) {
+    if (w.loan) continue;
+    // boosts run out; a month on another focus goes back to the goal's focus
+    if (w.tb && G.week >= (w.tb.until || 0) - 1) { if (w.tb.back != null && w.goal) w.train = w.tb.back; delete w.tb; }
+    if (w.wall && G.week >= w.wall - 1) delete w.wall;
+    // risky pushing can hurt them
+    if (w.tb?.risk && G.settings.injuries && !w.injury && Math.random() < .06) { const n = rint(1, 3); w.injury = n; news(`🤕 ${w.name} got hurt pushing too hard in training (${n} wk).`, 'injury'); delete w.tb; }
+    badgeCheck(w);
+    const g = w.goal; if (!g) continue;
+    const L = GOAL_LV[g.lv] || GOAL_LV[0], fn = firstName(w.short || w.name);
+    if (statNow(w, g.sk) >= g.tgt) {
+      w.morale = clamp(w.morale + L[3], 0, 100); addPop(w, L[4]); addXP(L[5]);
+      w.goalsHit = (+w.goalsHit || 0) + 1; delete w.goal; delete w.wall;
+      news(`🎯 ${w.name} hit their ${L[0].toLowerCase()} goal: ${statName(g.sk)} ${g.tgt}${g.due > G.week ? `, ${g.due - G.week} week${g.due - G.week > 1 ? 's' : ''} early` : ''}. Morale and popularity up.`, 'office');
+      continue;
+    }
+    if (G.week >= g.due) {
+      w.morale = clamp(w.morale + L[6], 0, 100); delete w.goal; delete w.wall;
+      news(`🎯 ${w.name} missed their goal (${statName(g.sk)} ${g.tgt}). They got to ${Math.floor(statNow(w, g.sk))}.`, 'office');
+      continue;
+    }
+    if (wallOn(w) || w.tb?.back != null || w.injury > 0) continue;
+    // a breakthrough now and then
+    if (Math.random() < .03 + tq * .004) {
+      const d = 1;
+      if (d > 0) { w[g.sk] = clamp((+w[g.sk] || 0) + d, 1, Math.max(+w[g.sk] || 0, goalCap(w, g.sk))); news(`💥 Breakthrough in training: ${w.name} gained ${d} ${statName(g.sk)}.`, 'office'); continue; }
+    }
+    // or a plateau: the Head Trainer asks what to do
+    if (!tbOn(w) && G.week - (g.set || 0) >= 2 && Math.random() < .08 - tq * .008) {
+      w.wall = G.week + rint(3, 5);
+      if (calls < 2) { coachCall(w); calls++; } else news(`🧱 ${w.name} has hit a wall in training.`, 'office');
+    }
+  }
+}
+// a stat that reaches 80 through training earns a badge
+function badgeCheck(w) {
+  const at = GOAL_STATS.filter(k => (+w[k] || 0) >= BADGE_AT);
+  if (!Array.isArray(w.b80)) { w.b80 = at; return; }
+  for (const k of at) if (!w.b80.includes(k)) {
+    w.b80.push(k);
+    if (!Array.isArray(w.badges)) w.badges = [];
+    if (!w.badges.includes(k) && (skillsShown() || !SK_KEYS.includes(k))) { w.badges.push(k); news(`${BADGES[k][0]} ${w.name} reached ${statName(k)} ${BADGE_AT} in training and earned the ${BADGES[k][1]} badge. ${BADGES[k][2]}`, 'office'); }
+  }
+}
+// what the badges add to a segment's rating (at most +4)
+function badgeBonus(seg, ctx, people) {
+  if (!people?.length) return 0;
+  const has = k => people.some(w => hasBadge(w, k)), st = seg.kind === 'match' ? GM(seg.stip) : {};
+  let b = 0;
+  if (seg.kind === 'match') {
+    if (has('ring')) b += 1;
+    if (has('sell')) b += 1;
+    if (has('psych') && (ctx.main || ctx.big)) b += 2;
+    if (has('air') && st.style === 'High Flyer') b += 2;
+    if (has('brawl') && st.style === 'Brawler') b += 2;
+    if (has('tech') && st.style === 'Technician') b += 2;
+    if (has('stam') && (st.stam || (st.fat || 0) >= 14)) b += 2;
+  } else {
+    if (seg.kind === 'promo' && has('mic')) b += 2;
+    if (has('cha')) b += 1.5;
+  }
+  return Math.min(4, b);
+}
+const badgeRow = w => (w.badges || []).filter(k => hasBadge(w, k)).map(k => `<span class="tag gold" title="${esc(BADGES[k][2])}">${BADGES[k][0]} ${esc(BADGES[k][1])}</span>`).join(' ');
+function trainGoalCard(w) {
+  const g = w.goal, tw = tbWord(w);
+  if (!g) return `<div class="row small" style="margin-top:6px"><span class="muted sp">🎯 Goal</span><button class="link" data-act="goalPick" data-id="${w.id}">Set a goal</button></div>${tw ? `<div class="tiny muted">${tw}</div>` : ''}`;
+  const L = GOAL_LV[g.lv] || GOAL_LV[0], now = Math.floor(statNow(w, g.sk)), left = g.due - G.week;
+  return `<div class="row small" style="margin-top:6px"><span class="muted sp">🎯 ${L[0]} goal</span><button class="link" data-act="goalPick" data-id="${w.id}">${esc(goalLine(w))}</button></div>
+    <div class="row small" style="gap:8px"><div class="bar sp" role="progressbar" aria-label="Goal progress" aria-valuenow="${goalPct(w)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${goalPct(w)}%"></i></div><b>${now}/${g.tgt}</b></div>
+    <div class="tiny muted">${left > 0 ? `${left} week${left > 1 ? 's' : ''} left` : 'Due this week'} · 🏆 Morale +${L[3]}, popularity +${L[4]}${tw ? ` · ${tw}` : ''}</div>`;
+}
+function modalGoal(m) {
+  const w = W(m.id); if (!w?.contract) return '';
+  ensureSkills(w);
+  const k = goalStatOk(m.sk) ? m.sk : w.goal?.sk || 'ring';
+  const stats = GOAL_STATS.filter(goalStatOk);
+  const plans = GOAL_LV.map((L, i) => [L, goalPlan(w, k, i), i]);
+  const fn = firstName(w.short || w.name);
+  const body = `<div class="small muted" style="margin-bottom:8px">Pick a stat and how big a goal. ${esc(fn)} starts training for it straight away. Hit it in time for a morale and popularity boost. Miss it and they lose a little heart.</div>
+    <div class="chips" style="margin-bottom:10px">${stats.map(s => `<button class="chip ${s === k ? 'on' : ''}" data-act="goalStat" data-id="${w.id}:${s}" aria-pressed="${s === k}" style="padding:6px 10px">${esc(statName(s))} ${Math.floor(statNow(w, s))}${hasBadge(w, s) ? ' ' + BADGES[s][0] : ''}</button>`).join('')}</div>
+    <div class="list">${plans.map(([L, p, i]) => p ? `<button class="item" data-act="goalSet" data-id="${w.id}:${k}:${i}"><div class="main"><div class="t">${L[0]}: ${esc(statName(k))} ${p.base} → <b>${p.tgt}</b></div><div class="d">By week ${p.due} (${p.due - G.week} weeks) · 🏆 Morale +${L[3]}, popularity +${L[4]}${p.tgt >= BADGE_AT && !hasBadge(w, k) ? ` · earns ${BADGES[k][0]} ${esc(BADGES[k][1])}` : ''}</div></div></button>`
+      : `<div class="item" style="opacity:.55"><div class="main"><div class="t">${L[0]}: +${L[1]} ${esc(statName(k))}</div><div class="d">${Math.floor(statNow(w, k)) + L[1] > goalCap(w, k) ? 'Beyond what they can reach' : 'Too slow at their age'}</div></div></div>`).join('')}</div>
+    ${w.goal ? `<button class="btn block" data-act="goalDrop" data-id="${w.id}" style="margin-top:10px">Drop the current goal (${esc(goalLine(w))})</button>` : ''}`;
+  return modal(`🎯 Goal for ${esc(fn)}`, body);
+}
+function goalsSection() {
+  const ws = signed().filter(w => w.goal).sort((a, b) => a.goal.due - b.goal.due);
+  const open = (G.phone || []).filter(coachOpen).length;
+  return `<div class="sec">🎯 Training goals</div>
+    <div class="small muted" style="margin-bottom:8px">Give a wrestler a goal from their profile. Your Head Trainer texts you when someone hits a wall. Stats that reach ${BADGE_AT} through training earn a badge.</div>
+    ${open ? `<button class="btn block" data-act="phone" style="margin-bottom:8px">📱 ${open} trainer call${open > 1 ? 's' : ''} waiting on you</button>` : ''}
+    <div class="list">${ws.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)} <span class="tiny muted">${GOAL_LV[w.goal.lv][0]}</span></div><div class="d">🎯 ${esc(goalLine(w))}${tbWord(w) ? ' · ' + tbWord(w) : ''}</div><div class="bar" style="margin-top:4px"><i style="width:${goalPct(w)}%"></i></div></div><b class="small">${Math.floor(statNow(w, w.goal.sk))}/${w.goal.tgt}</b></button>`).join('') || '<div class="empty">No goals yet. Open a wrestler and tap Set a goal.</div>'}</div>`;
+}
+Object.assign(A, {
+  goalPick(id) { if (W(id)?.contract) openModal({ type: 'tgoal', id }); },
+  goalStat(v) { const [id, k] = String(v).split(':'); if (UI.modal?.type === 'tgoal' && goalStatOk(k)) { UI.modal.sk = k; render(); } },
+  goalSet(v) {
+    const [id, k, lv] = String(v).split(':'), w = W(id); if (!w?.contract || !goalStatOk(k)) return;
+    const p = goalPlan(w, k, clamp(+lv || 0, 0, 2)); if (!p) return;
+    w.goal = p; delete w.wall; if (w.tb?.back != null) delete w.tb;
+    w.train = GOAL_FOCUS[k][0]; delete w.trainBy; delete w.restBy; delete w.restWas;
+    UI.modal = null; commit(`🎯 ${w.name}: ${goalLine(w)}. Training focus set to ${FOCUS[w.train][0].toLowerCase()}.`);
+  },
+  goalDrop(id) { const w = W(id); if (!w?.goal) return; delete w.goal; delete w.wall; if (w.tb?.back != null) { w.train = w.tb.back; delete w.tb; } UI.modal = null; commit(`${w.name} has no training goal now.`); },
+  coachAns(v) { const [id, i] = String(v).split(':'), m = (G.phone || []).find(x => x.id === id); if (!m || !coachOpen(m)) return; const msg = coachAnswer(m, clamp(+i || 0, 0, 3)); commit(msg); }
+});
 // ---------- jobs your staff handle ----------
 // Each hired staff member can take a job off your hands. The switches live in G.sjobs; what they did
 // this week goes in G.staffLog and shows in Office → Staff ("This week your staff…").
@@ -13169,6 +13388,7 @@ function staffView() {
   return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week, and can take a job off your hands.</div>
     <div class="list">${roles.map(sRow).join('')}</div>
     ${staffJobsView()}
+    ${goalsSection()}
     <div class="sec">🎓 Training school</div>${school}
     <div class="sec">📈 Training</div>
     <div class="small muted" style="margin-bottom:8px">Everyone trains every week. Young wrestlers grow fastest, up to their potential. Pick a focus or a mentor from their profile.</div>
@@ -13208,7 +13428,9 @@ function skillsBlock(w) {
   return h + `<div class="card" style="margin-top:8px">
     <div class="row small"><span class="muted sp">Training focus</span><select data-in="trainFocus" data-id="${w.id}" style="width:auto;padding:4px 8px">${focusOpts(w, true)}</select></div>
     <div class="tiny muted">${esc(FOCUS[w.train || ''][1])} Grows ${growWord(w)} at age ${w.age}.</div>
+    ${trainGoalCard(w)}
     <div class="row small" style="margin-top:6px"><span class="muted sp">Mentor</span><button class="link" data-act="mentorPick" data-id="${w.id}">${m ? esc(m.name) : 'Choose a veteran'}</button></div>
+    ${badgeRow(w) ? `<div class="chips" style="margin-top:8px">${badgeRow(w)}</div>` : ''}
     ${mine.length ? `<div class="row small"><span class="muted sp">Mentoring</span><b class="clip">${mine.map(x => esc(x.name)).join(', ')}</b></div>` : ''}</div>`;
 }
 const focusOpts = (w, rest) => Object.entries(FOCUS).filter(([k]) => (rest || k !== 'rest') && (skillsShown() || !DEEP_FOCUS.includes(k) || w.train === k)).map(([k, f]) => `<option value="${k}" ${(w.train || '') === k ? 'selected' : ''}>${esc(f[0])}</option>`).join('');
@@ -14250,7 +14472,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.68';
+const VERSION = '1.9.69';
 const WHATS_NEW = [
   ['🎤 Cheaper guest promos', 'Per-appearance stars now charge a tenth of their fee for a promo or angle. Their full fee is only for matches. Promos have a new Remote spot under Where: the promo is sent in by video, and a per-appearance star who likes you does it for free.'],
   ['📅 Calendar settings', 'Menu → Settings has a new Calendar section. Start weeks on Sunday, shrink the calendar to this week or hide it, show week numbers, and pick which shows appear. Choose which weekend of the month big events air on, turn off weekly shows on big event weeks, and book up to 26 weeks ahead. Planning helpers add a big event countdown, rival big events and holidays on your calendar, and when the "book the big event" reminder comes.'],
