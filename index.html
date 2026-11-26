@@ -402,6 +402,11 @@ button.mrow:active { background: var(--card2); }
 .hero-w .bm-hero { width: 132px; height: 264px; }
 .hc-facts { margin: 10px 0; display: grid; gap: 4px; }
 .hc-f { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; } .hc-f span { color: var(--dim); } .hc-f b { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rpk-odds { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 12px 0 4px; background: var(--line); }
+.rpk-odds i { display: block; height: 100%; }
+.rpk-odds .h { background: var(--good); } .rpk-odds .m { background: var(--dim); opacity: .55; } .rpk-odds .f { background: var(--bad); }
+.rpk-why { list-style: none; padding: 0; margin: 8px 0; font-size: 12.5px; }
+.rpk-why li { margin: 2px 0; color: var(--dim); } .rpk-why li.up { color: var(--good); } .rpk-why li.dn { color: var(--bad); }
 .tt-wrap { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin: 6px 0 8px; }
 .tt-side { display: grid; justify-items: center; gap: 2px; font-size: 12px; color: var(--dim); text-align: center; min-width: 0; flex: 1; }
 .tt-side b { font-size: 14px; color: var(--ink); }
@@ -4272,6 +4277,8 @@ function simSegment(seg, ctx) {
     if (at.brawl && tg.length) r += add(3, 'Wild brawl: fans love chaos');
     if (at.party) { const real = d.some(w => titlesOf(w.id).length || formOf(w)[0] === 'W' || (w.streak || 0) >= 3); r += real ? add(4, 'Celebrating something real') : add(-5, 'Celebrating nothing in particular');
       if (tg.length && tg.every(w => w.align === 'heel') && d.some(w => w.align === 'face')) r += add(3, 'Heels crashed the party'); }
+    // a freshly repackaged wrestler's debut: the vignettes pay off (or the flop follows them out)
+    if (seg.atype === 'Debut / Return') { const nd = d.filter(w => w.rpkNew); if (nd.length) r += nd.some(w => w.rpkNew.r === 'flop') ? add(-3, 'Debut of a character fans don\'t buy') : add(nd.some(w => w.rpkNew.r === 'hit') ? 9 : 5, 'Debut of a brand new character'); }
     const st = tg.length ? storyBetween(d.map(w => w.id), tg.map(w => w.id)) : storiesTouching(d.map(w => w.id))[0];
     if (st) r += add(st.heat * 0.15, 'Storyline: ' + st.title);
     // tale of the tape: the rivals sized up side by side. Dead without a hot feud, a big hype piece on a special or go-home show
@@ -4435,6 +4442,7 @@ function applySegment(seg, res, ctx) {
       news(`🔄 ${w.name} turned ${at.turn}!`, 'story'); notes.push(`🔄 ${w.name} is now a ${at.turn}.`);
     }
     if (at.pop) res.doers.forEach(w => addPop(w, at.pop));
+    if (seg.atype === 'Debut / Return') for (const w of res.doers) if (w.rpkNew) { if (w.rpkNew.r !== 'flop') { addPop(w, 2); w.momentum = clamp(w.momentum + 4, -50, 50); } notes.push(`🎭 ${w.name}'s new character made ${pn(w).their} debut`); delete w.rpkNew; }
     if (at.morale) res.doers.forEach(w => w.morale = clamp(w.morale + at.morale, 0, 100));
     if (seg.atype === 'Sneak Attack') res.targets.forEach(w => { w.fatigue = clamp(w.fatigue + 12, 0, 100); w.momentum = clamp(w.momentum - 3, -50, 50); });
     if (at.brawl) [...res.doers, ...res.targets].forEach(w => w.fatigue = clamp(w.fatigue + 10, 0, 100));
@@ -4863,7 +4871,7 @@ function endOfWeek(card, world = true) {
   }
   feudAdvice();
   // contracts (frozen when contracts are off: nobody's deal runs down and nobody walks out)
-  endLoans(); mediaWeek();
+  endLoans(); mediaWeek(); rpkWeek();
   trainWeek();
   houseWeek(booked); // house shows and tours: after the week's rest, so the road's fatigue carries into next week
   for (const w of CON() ? signed().filter(w => !w.loan) : []) {
@@ -6291,8 +6299,10 @@ const EVENTS = {
   gimmick: {
     when() { const w = pick(healthy().filter(w => w.pop < 55)); return w && { a: w.id }; },
     title: '🎭 Gimmick pitch', text: d => vary(d, `${nameOf(d.a)} pitched a bold new character. It could be huge, or it could flop.`, `${nameOf(d.a)} walked in with a notebook full of ideas for a brand new character. It's a big swing.`, `${nameOf(d.a)} wants to reinvent ${pn(d.a).self} with a totally new character. Bold idea, uncertain payoff.`),
-    choices: d => [['Go for it', 'Big risk, big reward'], ['Stick with what works', 'Play it safe']],
-    pick(i, d) { const w = W(d.a); if (i) { w.morale = clamp(w.morale - 2, 0, 100); return `${w.name} is a bit disappointed.`; }
+    choices: d => [['Go for it', 'Big risk, big reward'], ['Stick with what works', 'Play it safe'], ['Plan a full repackage', 'New name, look and debut. You build it']],
+    pick(i, d) { const w = W(d.a);
+      if (i === 2) { w.morale = clamp(w.morale + 3, 0, 100); G.todos.unshift({ t: `Repackage ${w.name}: open ${pn(w).their} profile and tap Repackage`, done: false }); return `${w.name} is thrilled. Open ${pn(w).their} profile and tap Repackage to build the new character.`; }
+      if (i) { w.morale = clamp(w.morale - 2, 0, 100); return `${w.name} is a bit disappointed.`; }
       if (Math.random() < .6) { addPop(w, 7); w.momentum += 12; return `The fans love it. ${w.name} is suddenly over!`; }
       w.pop = clamp(w.pop - 3, 1, 100); w.momentum -= 6; return `It flopped. ${w.name} loses some steam.`; }
   },
@@ -9979,6 +9989,7 @@ function modalWrestler(m) {
      ${CON() ? `<div class="row small"><span class="muted sp">Contract</span><b>${w.contract ? `${money(w.contract.salary)}/wk · ${lenLabel(w.contract.weeks)} left` : 'Indie star'}</b></div>
      <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Indie star'}</b></div>`}
    </div>
+   ${w.retired ? '' : gimBlock(w)}
    ${w.retired ? '' : skillsBlock(w)}
    ${w.retired ? '' : medBlock(w)}
    ${w.contract ? relBlock(w) + personaBlock(w) : ''}${indieBlock(w)}${datesBlock(w)}
@@ -11985,7 +11996,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body', 'pro', 'lc', 'sym', 'merch'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body', 'pro', 'lc', 'sym', 'merch', 'gimK', 'gims'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 // true when a canvas has see-through pixels (a PNG with its background already cut out)
@@ -12035,6 +12046,8 @@ function cleanW(o) {
   if (bodyOK(o.body)) w.body = o.body;
   { const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) w.lc = lc; if (sy) w.sym = sy; }
   const pr = proClean(o.pro ?? o.pronouns); if (pr) w.pro = pr;
+  if (typeof o.gimK === 'string' && o.gimK && Object.hasOwn(RPK_CHARS, o.gimK)) w.gimK = o.gimK;
+  { const gs = gimsClean(o.gims); if (gs.length) w.gims = gs; }
   { const mz = merchClean(o.merch); if (mz.length) w.merch = mz.map(x => ({ ...x, wk: G?.week || 1, sold: 0, earned: 0, lw: 0 })); }
   return w;
 }
@@ -12464,8 +12477,8 @@ function modalBuilder(m) {
   const sl = (k, l, hint) => { const v = clamp(Math.round(+d[k] || 1), 1, 100), f = (v - 1) / 99;
     return `<div class="sl"><div class="sl-top"><label for="ew-${k}">${l}</label>${hint ? `<small>${hint}</small>` : ''}<output id="ewv-${k}" for="ew-${k}">${v}</output></div><div class="sl-ctl"><button type="button" class="sl-st" data-sl-step="-1" tabindex="-1" aria-label="Lower ${esc(l)}">−</button><div class="sl-trk" style="--p:${(f * 100).toFixed(2)}%;--f:${f.toFixed(4)}"><input type="range" id="ew-${k}" min="1" max="100" step="1" data-ew="${k}" value="${v}"><span class="sl-bub" aria-hidden="true">${v}</span></div><button type="button" class="sl-st" data-sl-step="1" tabindex="-1" aria-label="Raise ${esc(l)}">+</button></div></div>`; };
   const txt = (k, l, ph, max) => `<label class="f"><span>${l}</span><input type="text" data-ew="${k}" value="${esc(d[k] || '')}" placeholder="${esc(ph || '')}" maxlength="${max || 40}"></label>`;
-  const pv = { ...d };
-  const body = `
+  const pv = { ...d }, rp = !!m.rpk;
+  const body = `${rp ? rpkPanel(m) : ''}
    <div class="bld-hero">
      <button class="bld-photo" data-act="bPhoto" aria-label="Add a photo">${av(pv, 84)}<span>${d.photo ? 'Change' : '📷 Photo'}</span></button>
      <div class="sp" style="min-width:0">
@@ -12481,22 +12494,23 @@ function modalBuilder(m) {
 
    <div class="sec">Character</div>
    <label class="f"><span>Alignment</span><div class="seg-ctl">${['face', 'heel'].map(a => `<button class="${d.align === a ? 'on' : ''}" data-act="bSet" data-f="align" data-id="${a}">${a === 'face' ? '😇 Face' : '😈 Heel'}</button>`).join('')}</div></label>
-   <label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${(d.division || 'Open') === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
+   ${rp ? '' : `<label class="f"><span>Division</span><div class="seg-ctl">${DIVISIONS.map(a => `<button class="${(d.division || 'Open') === a ? 'on' : ''}" data-act="bSet" data-f="division" data-id="${a}">${a}</button>`).join('')}</div></label>
    ${proPicker(d)}
-   <label class="f"><span>Job</span><select data-ew="role">${Object.entries(ROLES).map(([k, x]) => `<option value="${k}" ${roleOf(d) === k ? 'selected' : ''}>${x.n}${k === 'wrestler' ? '' : ' (doesn\'t wrestle)'}</option>`).join('')}</select>${isNW(d) ? `<div class="tiny muted" style="margin-top:4px">${esc(ROLES[roleOf(d)].d)}</div>` : ''}</label>
-   <label class="f"><span>Style</span><select data-ew="style">${STYLES.map(s => `<option ${s === d.style ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+   <label class="f"><span>Job</span><select data-ew="role">${Object.entries(ROLES).map(([k, x]) => `<option value="${k}" ${roleOf(d) === k ? 'selected' : ''}>${x.n}${k === 'wrestler' ? '' : ' (doesn\'t wrestle)'}</option>`).join('')}</select>${isNW(d) ? `<div class="tiny muted" style="margin-top:4px">${esc(ROLES[roleOf(d)].d)}</div>` : ''}</label>`}
+   ${rp ? '' : `<label class="f"><span>Style</span><select data-ew="style">${STYLES.map(s => `<option ${s === d.style ? 'selected' : ''}>${s}</option>`).join('')}</select></label>`}
    <label class="f"><span>Short name <span class="muted">· optional, used where only one name fits</span></span><input type="text" data-ew="short" value="${esc(d.short || '')}" maxlength="20" placeholder="${esc(String(d.name || '').trim().split(' ').pop() || 'e.g. Moxley')}"></label>
-   <div class="grid2">${txt('hometown', 'Hometown', 'e.g. Detroit, MI')}${txt('age', 'Age', '', 2)}${txt('height', 'Height', `6'2"`, 12)}${txt('weight', 'Weight', '240 lbs', 12)}</div>
+   ${rp ? txt('hometown', 'Hometown', 'e.g. Detroit, MI') : `<div class="grid2">${txt('hometown', 'Hometown', 'e.g. Detroit, MI')}${txt('age', 'Age', '', 2)}${txt('height', 'Height', `6'2"`, 12)}${txt('weight', 'Weight', '240 lbs', 12)}</div>`}
    ${txt('finisher', 'Finisher', 'e.g. The Last Call')}${txt('signature', 'Signature move', 'optional')}${txt('theme', 'Entrance theme', 'optional', 60)}
    <label class="f"><span>Bio / gimmick</span><textarea data-ew="bio" maxlength="400" style="min-height:80px" placeholder="Who are they? What do they want?">${esc(d.bio || '')}</textarea></label>
-
+   ${rp ? '' : `
    <div class="sec">Ratings</div>
    <div class="chips" style="margin-bottom:10px">${Object.entries(ARCHETYPES).map(([k, a]) => `<button class="chip" data-act="bArch" data-id="${k}">${a.label}</button>`).join('')}<button class="chip" data-act="bArch" data-id="random">🎲 Random</button></div>
    ${sl('pop', 'Popularity', 'How much fans care')}${sl('ring', 'In-ring', 'Match quality')}${sl('mic', 'Mic', 'Promo quality')}${sl('cha', 'Charisma', 'Star power, angles')}${sl('stam', 'Stamina', 'Slows fatigue')}
    ${skillsShown() ? `<div class="sec">Skills <span class="muted tiny">· Deep sim</span></div>${SK_KEYS.map(k => sl(k, SKILLS[k][0], SKILLS[k][1])).join('')}${sl('pot', 'Potential', 'How good they can become')}` : ''}
    ${m.isNew ? '' : `<div class="sec">Status</div><div class="grid2"><label class="f"><span>Morale</span><input type="number" min="0" max="100" data-ew="morale" value="${Math.round(d.morale)}"></label><label class="f"><span>Injury (weeks)</span><input type="number" min="0" max="52" data-ew="injury" value="${d.injury}"></label></div>`}
    ${G && CON() && !m.rid ? askBlock(d, m) : ''}
-   ${m.isNew && !(G && CON() && !m.rid) ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now${CON() ? ` (${lenLabel(prefLen(d))} at ${pn(d).their} asking price)` : ''}</span></label>` : ''}`;
+   ${m.isNew && !(G && CON() && !m.rid) ? `<label class="todo"><input type="checkbox" data-ew="signNow" ${d.signNow ? 'checked' : ''}><span>Sign to my roster now${CON() ? ` (${lenLabel(prefLen(d))} at ${pn(d).their} asking price)` : ''}</span></label>` : ''}`}`;
+  if (rp) return modal('Repackage ' + esc(W(d.id)?.name || d.name), body, `<button class="btn" data-act="ewClose">Cancel</button><button class="btn pri" data-act="rpkGo">🎭 Repackage</button>`, { closeAct: 'ewClose' });
   return modal(m.isNew ? 'Character builder' : 'Edit ' + esc(d.name), body, `${m.isNew ? '' : '<button class="btn bad" data-act="deleteW">Delete</button>'}<button class="btn" data-act="bShare">Share</button><button class="btn pri" data-act="saveW">Save</button>`, { closeAct: 'ewClose' });
 }
 
@@ -13046,14 +13060,14 @@ const WORLD_TITLES = 20, WORLD_TEAMS = 80, WORLD_FACS = 40; // the most belts, t
 const titleRules = t => ({ ...(t.cl && t.tier ? { tier: titleTier(t) } : TLEVELS.some(x => x[0] === t.tier) ? { tier: t.tier } : {}), ...(titleEvery(t) ? { every: titleEvery(t) } : {}), ...(t.dq ? { dq: true } : {}), ...tExtra(t), ...(Number.isInteger(t.bi) ? { bi: t.bi } : {}) });
 // things in progress, or stamped with a week of the sharer's calendar (a world starts at week 1): sit-downs, training goals
 // and pushes, staff moves, indie title reigns, relationship drift, leaks and the like. Skills, badges, personality and records stay.
-const WORLD_DROP = ['contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem',
+const WORLD_DROP = ['rpk', 'rpkNew', 'contract', 'courted', 'loan', 'loanUntil', 'creative', 'poachWk', 'cutBy', 'cutWk', 'away', 'form', 'brand', '_ask', 'photoLocal', 'trust', 'promises', 'texts', 'mem',
   'sitWk', 'refusedWk', 'raidWk', 'mediaWk', 'tripWk', 'blastWk', 'turnWk', 'payGap', 'praisedWk', 'dinWk', 'lawTill', 'leak', 'relWas', 'relWarn', 'trainBy', 'trTry', 'restBy', 'restWas', 'goal', 'wall', 'tb', 'gt', 'lastLoss', 'gigClash', 'xt', 'farewell', 'cb', 'cbNo', 'stay', 'injRet'];
 function worldW(w) {
   const x = JSON.parse(JSON.stringify(w));
   for (const k of WORLD_DROP) delete x[k];
   if (x.bi == null || !x.both) delete x.both; // bi: which of the company's weekly shows they work (0 is the main show)
   if (!safePhoto(x.photo)) x.photo = ''; // photos move to photo slots when the world is shared
-  x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; medReset(x); x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
+  x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; medReset(x); x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0; if (x.gimWk != null) x.gimWk = 1;
   return x;
 }
 // a company's Awards & Prizes in a world: the trophies themselves, who holds them now, and past winners by name (all at week 1)
@@ -13861,6 +13875,12 @@ function sanitizeGame(g) {
     if (w.role !== undefined && (!Object.hasOwn(ROLES, w.role) || w.role === 'wrestler')) delete w.role;
     if (w.away) { const a = w.away; w.away = a && typeof a === 'object' && Object.hasOwn(MEDIA, a.k) && (MEDIA[a.k].long || a.k === 'gig') ? { k: a.k, until: clamp(Math.floor(+a.until) || g.week, g.week, g.week + 20), from: Math.floor(+a.from) || g.week, m: clamp(+a.m || 1, .5, 3), ...(a.staff ? { staff: 1 } : {}) } : undefined; if (!w.away) delete w.away; }
     if (w.mediaWk != null) w.mediaWk = Math.floor(+w.mediaWk) || 0;
+    if (w.gimWk != null) { w.gimWk = Math.floor(+w.gimWk); if (!(w.gimWk >= 1)) delete w.gimWk; }
+    if (w.gimK != null && !(typeof w.gimK === 'string' && w.gimK && Object.hasOwn(RPK_CHARS, w.gimK))) delete w.gimK;
+    if (w.gims != null) { const gs = gimsClean(w.gims); if (gs.length) w.gims = gs; else delete w.gims; }
+    if (w.rpk != null) { const r = rpkClean(w.rpk); if (r) w.rpk = r; else delete w.rpk; }
+    if (w.away?.k === 'rpk' && !w.rpk) delete w.away;
+    if (w.rpkNew != null) { const n = w.rpkNew; if (n && typeof n === 'object' && Object.hasOwn(RPK_RES, n.r) && +n.wk >= 1) w.rpkNew = { wk: Math.floor(+n.wk), r: n.r }; else delete w.rpkNew; }
     if (w.askSet != null) { if (+w.askSet > 0) w.askSet = clamp(Math.round(+w.askSet), 100, 10000000); else delete w.askSet; }
     for (const k of ['blastWk', 'payGap']) if (w[k] != null) { w[k] = Math.floor(+w[k]); if (!isFinite(w[k])) delete w[k]; }
     BR.clean(w);
@@ -15643,7 +15663,9 @@ const MEDIA = {
   tour: { ic: '🌐', n: 'Media tour', d: 'Travel doing press. Your company gains fans too.', long: true, wks: 3, pop: 9, mo: 8, fans: .03, cost: true },
   indies: { ic: '🤼', n: 'Work the indies', d: 'Wrestle on indie shows. Sharpens their ring work.', long: true, wks: 4, pop: 8, mo: 10, ring: 3, fit: true },
   // one outside booking from an indie dates clause (indieClash); never picked from the Media screen
-  gig: { ic: '🤼', n: 'Indie date', d: 'An outside booking on the same night as your show.', long: true, wks: 1, pop: 0, mo: 0, hide: true }
+  gig: { ic: '🤼', n: 'Indie date', d: 'An outside booking on the same night as your show.', long: true, wks: 1, pop: 0, mo: 0, hide: true },
+  // off TV while vignettes hype a new character (rpkWeek); never picked from the Media screen
+  rpk: { ic: '🎭', n: 'Repackaging', d: 'Off TV while vignettes hype a new character.', long: true, wks: 2, pop: 0, mo: 0, hide: true }
 };
 const MEDIA_SLOTS = 3;
 const mText = (w, t) => { if (PER()) { ensurePers(); textFrom(w, t); } };
@@ -15747,6 +15769,7 @@ function mediaWeek() {
     if (!w.away) continue;
     const M = MEDIA[w.away.k];
     if (!w.contract || !M) { delete w.away; continue; }
+    if (w.away.k === 'rpk') continue; // rpkWeek brings them back with the new character
     if (G.week + 1 < w.away.until) continue;
     if (w.away.k === 'gig') {
       const gm = (G.phone || []).find(m => m.gig && m.wid === w.id && m.gig.wk === w.away.from);
@@ -15767,6 +15790,210 @@ function mediaWeek() {
     mText(w, pick(['I\'m back. Put me on the show, the fans are waiting.', 'Good to be home. Let\'s use this buzz while it lasts.', 'Back and ready. Give me something big.']));
   }
 }
+// =====================================================================
+//  Repackaging: give a stale wrestler a new name, character and look
+//  w.gimK (character type), w.gimWk (week this character started), w.gims (past characters),
+//  w.rpk (a repackage in progress), w.rpkNew ({wk, r}: just debuted, for the Debut / Return angle)
+// =====================================================================
+const RPK_CHARS = {
+  '': { n: 'Keep it open', d: 'No set type. A new name and look, and they find the character as they go.' },
+  monster: { n: 'Monster', d: 'Scary and unstoppable. Suits powerhouses and brawlers.', fit: (w, d) => ['Powerhouse', 'Brawler'].includes(w.style) ? 8 : -8 },
+  fighter: { n: 'Legit fighter', d: 'No jokes, just fights. Suits strong ring workers who don\'t talk much.', fit: (w, d) => (w.ring >= 65 ? 6 : -4) + (['Technician', 'Brawler'].includes(w.style) ? 3 : 0) },
+  flyer: { n: 'Daredevil', d: 'Takes huge risks every night. Only works for high flyers.', fit: (w, d) => w.style === 'High Flyer' ? 10 : -10 },
+  rock: { n: 'Rock star', d: 'Loud, flashy entrances. Needs charisma.', fit: (w, d) => (w.style === 'Showman' ? 5 : 0) + (w.cha >= 65 ? 5 : -5) },
+  comedy: { n: 'Comedy act', d: 'Can get very over, or become a joke. Charisma decides it.', fit: (w, d) => w.cha >= 68 ? 9 : -9, swing: 6 },
+  cult: { n: 'Cult leader', d: 'Dark, creepy and a great talker. Best as a heel.', fit: (w, d) => (w.mic >= 65 ? 7 : -6) + (d.align === 'heel' ? 3 : -5) },
+  hero: { n: 'People\'s hero', d: 'Stands up for the fans. Best as a face.', fit: (w, d) => (d.align === 'face' ? 5 : -8) + (w.cha >= 60 ? 3 : 0) },
+  snob: { n: 'Rich snob', d: 'Looks down on everyone. Best as a heel who can talk.', fit: (w, d) => (d.align === 'heel' ? 5 : -6) + (w.mic >= 60 ? 3 : -2) },
+  vet: { n: 'Grizzled veteran', d: 'Been there, done that. Needs some years behind them.', fit: (w, d) => w.age >= 34 ? 8 : w.age < 28 ? -10 : 0 },
+  mystery: { n: 'Masked mystery', d: 'Nobody knows who they are. Hides a weak talker.', fit: (w, d) => (w.mic < 55 ? 5 : 0) + (FACE_MASKS.has(parseInt(faceCode(d)[4], 36)) ? 4 : -3) }
+};
+// how the new character debuts: overnight, or off TV for a few weeks while vignettes hype it
+const RPK_BUILD = {
+  0: { n: 'Overnight', d: 'The new character is on this week\'s show. No build-up, so it is a gamble.', hit: -4, flop: 10 },
+  2: { n: '2 weeks', d: 'Off TV for 2 weeks while vignettes hype the new character.', hit: 5, flop: -3 },
+  4: { n: '4 weeks', d: 'A proper build. Off TV for 4 weeks of vignettes.', hit: 10, flop: -7 },
+  6: { n: '6 weeks', d: 'The full treatment. Safest, but they are gone for 6 weeks.', hit: 13, flop: -10 }
+};
+const RPK_VIG_COST = 500; // per vignette week, when finances are on
+const RPK_FIELDS = ['name', 'nick', 'short', 'align', 'hometown', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'look', 'body', 'lc', 'sym'];
+const RPK_RES = { hit: 'Hit', ok: 'Mixed', flop: 'Flop' };
+const gimWk = w => Math.max(1, Math.floor(+w.gimWk || +w.joined || 1));
+const gimAge = w => Math.max(0, (G?.week || 1) - gimWk(w));
+// 0 = fresh, 1 = very stale: how long they've been this character, how cold they are, how flat the crowd is
+function gimStale(w) {
+  const age = clamp((gimAge(w) - 16) / 60, 0, 1), cold = clamp(-(+w.momentum || 0) / 25, 0, 1), flat = w.pop < 40 ? 1 : w.pop < 55 ? .5 : 0;
+  return clamp(age * .45 + cold * .35 + flat * .2, 0, 1);
+}
+const gimHot = w => w.pop >= 65 && (+w.momentum || 0) > 5;
+const staleLabel = w => { const s = gimStale(w); return s >= .6 ? 'Stale' : s >= .35 ? 'Getting stale' : 'Fresh'; };
+const rpkSoon = w => !!(w.gims?.length && +w.gimWk && G.week - w.gimWk < 26);
+// the odds of a hit, a mixed reaction or a flop, and why. d is the new character (the builder's draft).
+function rpkOdds(w, d, wks) {
+  const why = [], s = gimStale(w), talk = ((+w.mic || 50) + (+w.cha || 50)) / 2, C = RPK_CHARS[d.gimK || ''] || RPK_CHARS[''], B = RPK_BUILD[wks] || RPK_BUILD[0];
+  let hit = 28 + s * 32, flop = 30 - s * 14;
+  why.push(s >= .6 ? [1, 'Stale character: fans are ready for something new'] : s >= .35 ? [1, 'Getting stale: a change could help'] : [0, 'Still fresh: there is less to gain']);
+  if (gimHot(w)) { hit -= 18; flop += 22; why.push([-1, `Fans love ${pn(w).them} as ${pn(w).they} ${pn(w).are} right now`]); }
+  const t = (talk - 55) * .45; hit += t; flop -= t * .6;
+  why.push(t >= 4 ? [1, 'Good talker: can sell a new character'] : t <= -4 ? [-1, 'Weak on the mic and charisma: hard to sell a new character'] : [0, 'Average on the mic']);
+  const f = C.fit ? C.fit(w, d) : 0;
+  if (f) { hit += f; flop -= f * .5; why.push([f > 0 ? 1 : -1, f > 0 ? `${C.n} suits ${pn(w).them}` : `${C.n} is a stretch for ${pn(w).them}`]); }
+  if (C.swing) { flop += C.swing; why.push([-1, `${C.n}: a bigger swing either way`]); }
+  hit += B.hit; flop += B.flop; why.push([B.hit > 0 ? 1 : -1, wks ? `${wks} weeks of vignettes build it up` : 'Overnight: no build-up']);
+  if (d.align && d.align !== w.align) { if (turnedSoon(w)) { flop += 8; why.push([-1, 'Turned too recently to switch sides again']); } else { hit += 4; why.push([1, `New character as a ${d.align}: a fresh start`]); } }
+  if (rpkSoon(w)) { hit -= 15; flop += 15; why.push([-1, 'Repackaged again too soon']); }
+  const cr = staffQ('writer'); if (cr) { hit += cr * 1.5; why.push([1, 'Your Writer helps sell it']); }
+  hit = clamp(Math.round(hit), 5, 85); flop = clamp(Math.round(flop), 5, 75); if (hit + flop > 95) flop = 95 - hit;
+  return { hit, flop, ok: 100 - hit - flop, s, hot: gimHot(w), why };
+}
+function rpkWhyNot(w) {
+  if (!w?.contract) return 'Only wrestlers on your roster can be repackaged.';
+  if (w.retired) return 'Retired wrestlers can\'t be repackaged.';
+  if (w.rpk) return `${w.name} is already being repackaged.`;
+  if (w.away) return `${w.name} is away right now. Wait until ${pn(w).re} back.`;
+  return '';
+}
+// the parts of the builder draft that make up the character, cleaned like a save
+function rpkTake(d) {
+  const o = {};
+  for (const k of RPK_FIELDS) if (d[k] !== undefined) o[k] = d[k];
+  o.name = String(o.name || '').trim().slice(0, 40);
+  o.short = String(o.short || '').replace(/[<>&"'`]/g, '').trim().slice(0, 20); if (!o.short) delete o.short;
+  for (const k of ['nick', 'hometown', 'finisher', 'signature']) o[k] = String(o[k] || '').trim().slice(0, 40);
+  o.theme = String(o.theme || '').trim().slice(0, 60); o.bio = String(o.bio || '').trim().slice(0, 400);
+  o.photo = safePhoto(o.photo); o.color = safeColor(o.color); o.align = o.align === 'heel' ? 'heel' : 'face';
+  if (!o.photo && !faceOK(o.look)) o.look = faceCode(d);
+  if (o.look != null && !faceOK(o.look)) delete o.look; if (o.body != null && !bodyOK(o.body)) delete o.body;
+  { const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) o.lc = lc; else delete o.lc; if (sy) o.sym = sy; else delete o.sym; }
+  return o;
+}
+const rpkSame = (w, o, k) => RPK_FIELDS.every(f => JSON.stringify(w[f] ?? '') === JSON.stringify(o[f] ?? '')) && (w.gimK || '') === (k || '');
+const gimsClean = a => (Array.isArray(a) ? a : []).filter(x => x && typeof x === 'object' && typeof x.n === 'string' && x.n.trim()).slice(-8).map(x => ({ n: x.n.trim().slice(0, 40), ...(typeof x.nick === 'string' && x.nick.trim() ? { nick: x.nick.trim().slice(0, 40) } : {}), ...(Object.hasOwn(RPK_CHARS, x.k) && x.k ? { k: x.k } : {}), ...(Object.hasOwn(RPK_RES, x.r) ? { r: x.r } : {}), ...(+x.from >= 1 ? { from: Math.floor(+x.from) } : {}), ...(+x.to >= 1 ? { to: Math.floor(+x.to) } : {}) }));
+function rpkClean(r) {
+  if (!r || typeof r !== 'object') return null;
+  const nw = cleanW(r.nw); if (!nw) return null;
+  const o = {}; for (const k of RPK_FIELDS) if (nw[k] !== undefined && nw[k] !== '') o[k] = nw[k];
+  const wks = Object.hasOwn(RPK_BUILD, r.wks) ? +r.wks : 0, num = (v, a, b) => clamp(Math.round(+v) || 0, a, b);
+  return { wk: Math.max(1, Math.floor(+r.wk) || 1), wks, ...(r.until != null ? { until: Math.floor(+r.until) || 1 } : {}), k: Object.hasOwn(RPK_CHARS, r.k) ? r.k : '', nw: o,
+    old: { n: String(r.old?.n || '').slice(0, 40), ...(typeof r.old?.nick === 'string' && r.old.nick ? { nick: r.old.nick.slice(0, 40) } : {}), k: Object.hasOwn(RPK_CHARS, r.old?.k) ? r.old.k : '', from: Math.max(1, Math.floor(+r.old?.from) || 1) },
+    o: { hit: num(r.o?.hit, 5, 85), flop: num(r.o?.flop, 5, 75), s: clamp(+r.o?.s || 0, 0, 1), hot: !!r.o?.hot }, vig: num(r.vig, 0, 6) };
+}
+// put the new character on them (the old one goes into their history)
+function rpkApply(w) {
+  const r = w.rpk; if (!r) return;
+  (w.gims ||= []).push({ n: w.name, ...(w.nick ? { nick: w.nick } : {}), ...(w.gimK ? { k: w.gimK } : {}), from: gimWk(w), to: G.week });
+  if (w.gims.length > 8) w.gims.splice(0, w.gims.length - 8);
+  const oldAlign = w.align, oldPhoto = w.photo || '';
+  for (const k of RPK_FIELDS) if (k !== 'name') { if (r.nw[k] === undefined) delete w[k]; else w[k] = r.nw[k]; }
+  if ((w.photo || '') !== oldPhoto) { delete w.photoGen; delete w.photoLocal; }
+  if (w.align !== oldAlign) w.turnWk = G.week;
+  w.name = r.nw.name || w.name;
+  if (r.k) w.gimK = r.k; else delete w.gimK;
+  w.gimWk = G.week;
+}
+function rpkStart(w, nw, wks, k) {
+  const o = rpkOdds(w, { ...nw, gimK: k }, wks);
+  w.rpk = { wk: G.week, wks, k, nw, old: { n: w.name, ...(w.nick ? { nick: w.nick } : {}), k: w.gimK || '', from: gimWk(w) }, o: { hit: o.hit, flop: o.flop, s: o.s, hot: o.hot }, vig: 0 };
+  let mood = '';
+  if (PER() && ['ego', 'hot'].includes(w.pers) && (w.trust ?? 50) < 50) { w.morale = clamp(w.morale - 8, 0, 100); mood = ` ${pn(w).They} ${pn(w).dont} like being told who to be.`; mText(w, pick(['A new character? I liked who I was. Fine. I\'ll try it.', 'You\'re changing my name? This better work, boss.', 'I don\'t love this. But I\'ll give it a shot.'])); }
+  else { w.morale = clamp(w.morale + 3, 0, 100); mText(w, pick(['A fresh start. I\'m excited, let\'s make it work.', 'New character, new me. I\'ve got ideas already.', 'Thanks for believing in a new direction. I won\'t let you down.'])); }
+  if (!wks) {
+    w.rpk.until = G.week; rpkApply(w);
+    news(`🎭 ${w.rpk.old.n} has been repackaged as ${w.name}${RPK_CHARS[k]?.fit ? `, a ${RPK_CHARS[k].n.toLowerCase()}` : ''}. The new character is on this week's show.`, 'story');
+    return `${w.rpk.old.n} is now ${w.name}. Fans react after this week's show.${mood}`;
+  }
+  const pulled = pullFromCards(w);
+  w.away = { k: 'rpk', until: G.week + wks, from: G.week, m: 1 };
+  news(`🎭 ${w.name} is off TV for ${wks} weeks. Vignettes will hype a brand new character.`, 'story');
+  return `${w.name} is off TV until week ${w.away.until} while vignettes air.${pulled ? ` Taken off ${pulled} booked segment${pulled === 1 ? '' : 's'}.` : ''}${mood}`;
+}
+// how the fans take it: a hit, a mixed reaction or a flop
+function rpkRoll(w) {
+  const r = w.rpk; if (!r) return;
+  const x = Math.random() * 100, res = x < r.o.hit ? 'hit' : x < 100 - r.o.flop ? 'ok' : 'flop';
+  const big = r.old.n !== w.name, s = r.o.s, before = w.pop, C = RPK_CHARS[r.k];
+  if (res === 'hit') { addPop(w, 6 + s * 10 + (big ? 3 : 0)); w.momentum = clamp(Math.max(0, w.momentum) + 18, -50, 50); w.morale = clamp(w.morale + 6, 0, 100); }
+  else if (res === 'ok') { addPop(w, 2); w.momentum = clamp(w.momentum + 5, -50, 50); }
+  else { w.pop = clamp(w.pop - (5 + (r.o.hot ? 8 : 0) + (big ? 3 : 0)), 1, 100); w.momentum = clamp(Math.min(0, w.momentum) - 14, -50, 50); w.morale = clamp(w.morale - 6, 0, 100); }
+  const last = w.gims?.[w.gims.length - 1]; if (last && last.to === r.until) last.r = res; else if (last && !last.r) last.r = res;
+  w.rpkNew = { wk: G.week, r: res };
+  const pp = `Pop ${Math.round(before)} → ${Math.round(w.pop)}`;
+  if (res === 'hit') { news(`🎭 ${big ? `${r.old.n} as ${w.name}` : `${w.name}'s new look`} is a hit! The fans have bought in. ${pp}.`, 'story'); mText(w, pick(['Did you hear that crowd? This character is working!', 'They love it. Best call you ever made.', 'I feel like a whole new star. Thank you.'])); }
+  else if (res === 'ok') news(`🎭 Mixed reaction to ${big ? `${r.old.n} as ${w.name}` : `${w.name}'s new look`}. Some fans are into it, some aren't sure yet. ${pp}.`, 'story');
+  else {
+    backfire({ src: 'Repackaging', h: `Fans aren't buying ${w.name}`, d: `${big ? `${r.old.n}'s new character` : `${w.name}'s new look`}${C?.fit ? ` as a ${C.n.toLowerCase()}` : ''} fell flat. The crowd is laughing at it, not with it.`, ids: [w.id], cost: [pp, 'Momentum down', 'Mood down'], cat: 'story' });
+    mText(w, pick(['That was rough out there. They hate it.', 'I knew this was a bad idea.', 'Can we fix this? The crowd isn\'t buying it.']));
+  }
+  delete w.rpk;
+  return res;
+}
+// end of the week: vignettes air, the new character debuts, and the fans react
+function rpkWeek() {
+  for (const w of G.wrestlers) {
+    const r = w.rpk; if (!r) continue;
+    if (!w.contract) { delete w.rpk; if (w.away?.k === 'rpk') delete w.away; continue; }
+    if (w.away?.k === 'rpk') {
+      r.vig = (r.vig || 0) + 1;
+      if (MON()) G.money -= RPK_VIG_COST;
+      const hint = r.nw.nick || r.nw.name;
+      news(pick([`📺 A mysterious vignette aired: "${hint}" is coming.`, `📺 Another strange video package hit the screen. Fans are guessing who "${hint}" is.`, `📺 The lights went out for a vignette: "${hint}". The crowd is buzzing.`]), 'story');
+      if (G.week + 1 < w.away.until) continue;
+      delete w.away; r.until = G.week; rpkApply(w); w.lastBooked = G.week + 1;
+      G.todos.unshift({ t: `${w.name} debuts: book a Debut / Return angle`, done: false });
+      rpkRoll(w);
+    } else if (r.until != null && G.week >= r.until) rpkRoll(w);
+  }
+  for (const w of G.wrestlers) if (w.rpkNew && G.week - w.rpkNew.wk > 4) delete w.rpkNew;
+}
+// on the profile: how fresh their character is, any repackage in progress, and who they used to be
+function gimBlock(w) {
+  const r = w.rpk, C = RPK_CHARS[w.gimK], st = staleLabel(w), col = st === 'Stale' ? 'var(--bad)' : st === 'Fresh' ? 'var(--good)' : 'var(--warn)';
+  const past = (w.gims || []).slice().reverse();
+  return `<div class="sec">Character</div><div class="card">
+    <div class="row small"><span class="muted sp">Character</span><b>${C?.fit ? esc(C.n) + ' · ' : ''}${gimAge(w)} wk</b></div>
+    <div class="row small"><span class="muted sp">Freshness</span><b style="color:${col}">${st}</b></div>
+    ${r ? `<div class="alert" style="margin-top:8px"><span class="ic">🎭</span><div class="sp small">${w.away?.k === 'rpk' ? `<b>Repackaging.</b> Vignettes air until week ${w.away.until}, then ${pn(w).they} debut${pn(w).s} as <b>${esc(r.nw.name)}</b>.` : `<b>New character this week.</b> Fans react after the show.`}<div class="tiny muted">Odds: ${r.o.hit}% hit · ${100 - r.o.hit - r.o.flop}% mixed · ${r.o.flop}% flop</div></div>${w.away?.k === 'rpk' ? `<button class="btn sm" data-act="rpkStop" data-id="${w.id}">Call it off</button>` : ''}</div>`
+      : w.rpkNew ? `<div class="tiny muted" style="margin-top:6px">New character reaction: <b>${RPK_RES[w.rpkNew.r]}</b>. A Debut / Return angle in the next few weeks gets a boost.</div>` : ''}
+    ${past.length ? `<div class="tiny muted" style="margin-top:8px">Used to be: ${past.map(x => `<b>${esc(x.n)}</b>${x.k ? ` (${esc(RPK_CHARS[x.k]?.n || '')})` : ''}${x.r ? ` · ${RPK_RES[x.r]}` : ''}`).join(', ')}</div>` : ''}
+    ${w.contract && !w.retired && !r ? `<button class="btn block" style="margin-top:8px" data-act="rpkOpen" data-id="${w.id}">🎭 Repackage ${esc(lastName(w))}</button>` : ''}
+  </div>`;
+}
+// the builder in repackage mode: plan, character type and odds at the top
+function rpkPanel(m) {
+  const d = m.draft, w = W(d.id); if (!w) return '';
+  const wks = m.rpk.wks, o = rpkOdds(w, d, wks), champ = isChamp(w);
+  const chips = Object.entries(RPK_CHARS).map(([k, C]) => `<button class="chip ${((d.gimK || '') === k) ? 'on' : ''}" data-act="rpkChar" data-id="${k}" aria-pressed="${(d.gimK || '') === k}">${esc(C.n)}</button>`).join('');
+  const C = RPK_CHARS[d.gimK || ''] || RPK_CHARS[''];
+  return `<div class="card rpk-plan" style="margin-bottom:12px">
+    <div class="small" style="margin-bottom:6px">Give ${esc(w.name)} a new name, character and look. Stats stay the same. It is a risk: a fresh character can make a stale star, or it can flop.</div>
+    <div class="small muted">Right now: <b>${esc(staleLabel(w))}</b> · ${gimAge(w)} weeks as this character · Pop ${Math.round(w.pop)} · Momentum ${Math.round(w.momentum)}</div>
+    <div class="bd-lab" style="margin-top:10px">Character type</div><div class="chips">${chips}</div><div class="tiny muted" style="margin-top:4px">${esc(C.d)}</div>
+    <div class="bd-lab" style="margin-top:10px">Debut</div><div class="seg-ctl">${Object.entries(RPK_BUILD).map(([k, B]) => { const dis = champ && +k > 0; return `<button class="${wks === +k ? 'on' : ''}" data-act="rpkWks" data-id="${k}" aria-pressed="${wks === +k}" ${dis ? 'disabled' : ''}>${esc(B.n)}</button>`; }).join('')}</div>
+    <div class="tiny muted" style="margin-top:4px">${esc(RPK_BUILD[wks].d)}${wks && MON() ? ` Vignettes cost ${money(RPK_VIG_COST)} a week.` : ''}${champ ? ' Champions can only change overnight, so the title stays on TV.' : ''}</div>
+    <div class="rpk-odds" role="img" aria-label="Odds: ${o.hit}% hit, ${o.ok}% mixed, ${o.flop}% flop"><i class="h" style="width:${o.hit}%"></i><i class="m" style="width:${o.ok}%"></i><i class="f" style="width:${o.flop}%"></i></div>
+    <div class="row tiny" style="justify-content:space-between"><span style="color:var(--good)">${o.hit}% hit</span><span class="muted">${o.ok}% mixed</span><span style="color:var(--bad)">${o.flop}% flop</span></div>
+    <ul class="rpk-why">${o.why.map(([s, t]) => `<li class="${s > 0 ? 'up' : s < 0 ? 'dn' : ''}">${s > 0 ? '+' : s < 0 ? '−' : '·'} ${esc(t)}</li>`).join('')}</ul>
+    <div class="tiny muted">A hit gives a big jump in popularity and momentum. A flop costs both${o.hot ? ', and a lot more for a star the fans already love' : ''}. A new name makes the swing bigger either way.</div>
+  </div>`;
+}
+Object.assign(A, {
+  rpkOpen(id) { const w = W(id); const no = rpkWhyNot(w); if (no) return toast(no); const d = JSON.parse(JSON.stringify(w)); openModal({ type: 'editW', draft: d, rpk: { wks: isChamp(w) ? 0 : 2 } }); },
+  rpkChar(k) { const m = UI.modal; if (!m?.rpk || !Object.hasOwn(RPK_CHARS, k)) return; if (k) m.draft.gimK = k; else delete m.draft.gimK; render(); },
+  rpkWks(k) { const m = UI.modal; if (!m?.rpk || !Object.hasOwn(RPK_BUILD, k)) return; const w = W(m.draft.id); if (+k && w && isChamp(w)) return toast('Champions can only change overnight.'); m.rpk.wks = +k; render(); },
+  rpkGo() {
+    const m = UI.modal, d = m?.draft, w = d && W(d.id); if (!w || !m.rpk) return;
+    const no = rpkWhyNot(w); if (no) return toast(no);
+    const nw = rpkTake(d); if (!nw.name) return toast('Give them a name.');
+    { const where = wNameTaken(nw.name, d.id); if (where) return toast(`There's already a wrestler called ${nw.name} (${where}). Pick another name.`); }
+    if (nw.name !== w.name && nw.short && nw.short === w.short) delete nw.short; // the old short name goes with the old name
+    if (rpkSame(w, nw, d.gimK)) return toast('Change something first: the name, the look or the character.');
+    const wks = isChamp(w) ? 0 : m.rpk.wks, msg = rpkStart(w, nw, wks, Object.hasOwn(RPK_CHARS, d.gimK) ? d.gimK || '' : '');
+    dropDraft(); UI.modal = { type: 'wrestler', id: w.id }; commit(msg);
+  },
+  rpkStop(id) { const w = W(id); if (!w?.rpk || w.away?.k !== 'rpk') return;
+    confirmBox('Call off the repackage?', `${w.name} stays the character ${pn(w).they} ${pn(w).were}. The vignettes already aired are wasted, and ${pn(w).they} won't be happy about it.`, 'Call it off', () => {
+      delete w.rpk; delete w.away; w.morale = clamp(w.morale - 4, 0, 100); w.lastBooked = G.week; news(`🎭 The ${w.name} repackage was called off. ${pn(w).They} ${pn(w).are} back as before.`, 'story'); UI.modal = { type: 'wrestler', id: w.id }; commit('Repackage called off.'); }); }
+});
 function mediaView() {
   const used = mediaUsed(), away = signed().filter(w => w.away), log = mediaLog().slice(0, 8);
   const item = (k, M, full) => `<button class="item" data-act="mediaType" data-id="${k}" ${full ? 'disabled aria-disabled="true" style="opacity:.55"' : ''}><span class="mile-i">${M.ic}</span><div class="main"><div class="t">${M.n}</div><div class="d">${M.d}</div>
@@ -18029,9 +18256,10 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.98';
+const VERSION = '1.9.99';
 const WHATS_NEW = [
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
+  ['🎭 Repackage a wrestler', 'Is someone stale? Open their profile and tap Repackage to give them a new name, character and look in the same workshop. Pick a character type (Monster, Cult leader, Rock star and more), then debut it overnight or take them off TV for 2 to 6 weeks of vignettes. You see the odds of a hit, a mixed reaction or a flop before you commit: stale characters, good talkers, a good fit and a longer build help, and changing a star the fans already love is a big risk. Past characters show on the profile, and a Debut / Return angle gets a boost for the new character.'],
   ['👕 Wrestler merch', 'Office → Merch shows your hot sellers. Design shirts, caps, posters, foam signs, action figures and replica titles for any wrestler in the workshop, with their face, a game icon and a slogan. New designs sell best and stars and champions sell most. You set each price and order print runs: sell out and you miss sales, and leftovers go to the bargain bin. Contract talks now include a merch cut that helps you sign people for less.'],
   ['📖 The record book', 'Office → Titles → Record book is the history of your company: every title\'s lineage, all-time records (most wins, longest streak, longest reign and more), head to head records for every pair who have met, the greatest matches you ever booked, every show\'s rating year by year, the year-end awards and your legends. Wrestler profiles now show who they\'ve faced most. Records kept from today on go back as far as your saved shows do.'],
   ['🎟️ House shows and tours', 'Tap the On the road line under the calendar to run up to 3 untelevised house shows a week, or plan a named tour of 3 to 5 shows a week. Cards book themselves from your crew rule (Develop, Mix or Draw). They earn some money, give newer wrestlers experience, build chemistry between pairs and keep people off TV happy. The cost is fatigue and a small injury risk, so watch your TV stars.'],
