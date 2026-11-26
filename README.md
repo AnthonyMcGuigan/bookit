@@ -271,3 +271,7 @@ Three tracks by Kevin MacLeod rotate in the menus. They are CC BY 3.0, so the cr
 Music never starts before the player taps or presses a key. It follows the main Sound switch, has its own on/off and volume in Menu → Settings, fades out for the live show (the bell and crowd take over) and pauses when the app is in the background.
 
 The bell is still made in code. The crowd reacts once per show, when the final rating comes in: a big cheer for a great show, applause for a good one, and quiet for a weak one. The crowd line under each result ("Huge pop", "Loud boos for X") still follows what actually happened.
+
+### Sound library
+
+Sound plays through [howler.js](https://howlerjs.com) 2.2.4 (`lib/howler.core.min.js`, MIT License, © James Simpson of GoldFire Studios). It is bundled in the repo, not loaded from a CDN, so sound works offline and in the app builds. Howler unlocks audio on the first tap, owns the one audio context (the bell is drawn into its master output), loads the crowd clips, and streams the menu music.
