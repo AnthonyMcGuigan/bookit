@@ -395,7 +395,20 @@ button.mrow:active { background: var(--card2); }
 .fm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 8px; }
 .fm-tile { display: grid; justify-items: center; gap: 4px; padding: 6px 4px 5px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); color: var(--dim); font-family: var(--f-cond); font-weight: 700; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; line-height: 1.1; }
 .fm-tile img { width: 52px; height: 52px; border-radius: 8px; display: block; }
+.hero-w { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
+.hero-body { padding: 0; border: 0; background: none; border-radius: 14px; flex: none; box-shadow: 0 0 0 2px var(--line); }
+.hero-w .bm-hero { width: 132px; height: 264px; }
+.hc-facts { margin: 10px 0; display: grid; gap: 4px; }
+.hc-f { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; } .hc-f span { color: var(--dim); } .hc-f b { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-wrap { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin: 6px 0 8px; }
+.tt-side { display: grid; justify-items: center; gap: 2px; font-size: 12px; color: var(--dim); text-align: center; min-width: 0; flex: 1; }
+.tt-side b { font-size: 14px; color: var(--ink); }
+.tt-body { width: 84px; height: 168px; border-radius: 10px; box-shadow: 0 0 0 2px var(--line); }
+.tt-mid { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--f-cond); font-weight: 800; letter-spacing: 2px; color: var(--accent); font-size: 13px; align-self: center; }
 .fm-tabs { margin-top: 10px; }
+.bm-big { width: 36px; height: 72px; border-radius: 8px; flex: none; box-shadow: 0 0 0 2px var(--line); }
+.bm-tiles .fm-tile img { width: 40px; height: 80px; }
+.bm-hero { width: 150px; height: 300px; border-radius: 14px; flex: none; display: block; }
 .fm-tile.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--ink); }
 .fm .sw.mine { background: conic-gradient(#c8102e 0 25%, #1f4fbf 0 50%, #f2b705 0 75%, #1f8a3b 0) !important; }
 .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); }
@@ -1606,7 +1619,8 @@ const ANGLE_TYPES = {
   'Backstage Skit': { desc: 'Comedy or character bit. Low stakes, raises morale.', morale: 4 },
   'Brawl': { desc: 'A wild fight that security can barely break up. Big heat, but both sides get tired.', heat: 12, needT: true, brawl: true },
   'Hype Video': { desc: 'A pre-taped video package. Safe, and builds popularity.', pop: 3, taped: true },
-  'Celebration': { desc: 'Party in the ring. Great for a new champion or a big win. Heels love to crash it.', pop: 2, morale: 3, party: true }
+  'Celebration': { desc: 'Party in the ring. Great for a new champion or a big win. Heels love to crash it.', pop: 2, morale: 3, party: true },
+  'Tale of the Tape': { desc: 'Both rivals side by side, sized up for the fans. Only works for a really hot feud. Bigger on a TV special or a go-home show.', heat: 8, needT: true, tape: true }
 };
 // where a promo or angle happens, how long it runs and how it ends. Empty = the old behavior.
 const SEG_PLACES = {
@@ -3730,6 +3744,9 @@ function segQuote(seg, sp, tg, first) {
     'Open Challenge': [`Anybody. Anytime. Come and take your shot!`], 'Sit-down Debate': [`Let's settle this like adults${T ? ', ' + T : ''}. Then I'll beat you like a child.`] }[seg.ptype];
   const arr = L || tone || gen || [`You'll see.`]; return first ? arr[0] : pick(arr);
 }
+// tale of the tape: a feud needs this much heat
+const TAPE_HOT = 60;
+const tapeStat = w => { const f = [w.height, w.weight].filter(Boolean).join(', '); return f ? ` (${f})` : ''; };
 function simSegment(seg, ctx) {
   const why = []; const add = (v, t) => { if (Math.abs(v) >= 1) why.push([Math.round(v), t]); return v; };
   const people = segPeople(seg).map(W).filter(Boolean);
@@ -3959,6 +3976,17 @@ function simSegment(seg, ctx) {
       if (tg.length && tg.every(w => w.align === 'heel') && d.some(w => w.align === 'face')) r += add(3, 'Heels crashed the party'); }
     const st = tg.length ? storyBetween(d.map(w => w.id), tg.map(w => w.id)) : storiesTouching(d.map(w => w.id))[0];
     if (st) r += add(st.heat * 0.15, 'Storyline: ' + st.title);
+    // tale of the tape: the rivals sized up side by side. Dead without a hot feud, a big hype piece on a special or go-home show
+    if (at.tape && tg.length) {
+      if (!st) r += add(-14, 'No feud between them to hype');
+      else if (st.heat < TAPE_HOT) r += add(-(TAPE_HOT - st.heat) * 0.3, `Feud is not hot enough yet (needs ${TAPE_HOT} heat)`);
+      else r += add(3 + (st.heat - TAPE_HOT) * 0.25, 'Red-hot feud: everyone wants to see this fight');
+      const wk = ctx.wk ?? G.week, when = isSpecial(wk) ? 'TV special' : isGoHome(wk) ? 'Go-home show' : '';
+      if (st && st.heat >= TAPE_HOT && when) { r += add(8, when + ': the perfect place to sell the fight'); out.tapeHeat = 5; }
+      const facts = [...d, ...tg].every(w => w.height && w.weight);
+      if (facts) r += add(2, 'Real heights and weights on screen');
+      out.tape = true;
+    }
     { const b = storyBeat(st, d, tg, add); r += b.x || 0; out.stTag = b.tag; }
     out.story = st; out.at = at; out.doers = d; out.targets = tg;
     out.text = {
@@ -3970,7 +3998,8 @@ function simSegment(seg, ctx) {
       'Backstage Skit': `${d.map(w => w.name).join(' & ')} had a fun backstage moment.`,
       'Brawl': `${d.map(w => w.name).join(' & ')} and ${tg.map(w => w.name).join(' & ') || 'nobody'} brawled all over the building!`,
       'Hype Video': `A hype video for ${d.map(w => w.name).join(' & ')} played on the big screen.`,
-      'Celebration': `${d.map(w => w.name).join(' & ')} threw a party in the ring${tg.length ? ', until ' + tg.map(w => w.name).join(' & ') + ' crashed it' : ''}.`
+      'Celebration': `${d.map(w => w.name).join(' & ')} threw a party in the ring${tg.length ? ', until ' + tg.map(w => w.name).join(' & ') + ' crashed it' : ''}.`,
+      'Tale of the Tape': `The tale of the tape: ${d.map(w => w.name + tapeStat(w)).join(' & ')} against ${tg.map(w => w.name + tapeStat(w)).join(' & ') || 'nobody'}.`
     }[seg.atype] || 'Something happened.';
   }
   // promos and angles: where it happens, how long it runs, how it ends
@@ -3978,7 +4007,7 @@ function simSegment(seg, ctx) {
   // promos and angles with a target: someone gets the upper hand (the booker can choose)
   if (seg.kind !== 'match') {
     const a = (seg.who || []).map(W).filter(Boolean), b = out.tg || (seg.target || []).map(W).filter(Boolean);
-    if (a.length && b.length) {
+    if (a.length && b.length && !out.tape) {
       let e = seg.edge;
       if (e == null || e < 0) { const sc = s2 => avg(s2.map(w => w.pop * .4 + w.mic * .3 + w.cha * .2 + (w.momentum || 0) * .3 + (ctx.proj ? 0 : rnd(0, 30)))); e = seg.kind === 'angle' && seg.atype === 'Sneak Attack' && !ctx.proj && Math.random() < .7 ? 0 : sc(a) >= sc(b) ? 0 : 1; }
       if (e === 0 || e === 1) {
@@ -4132,7 +4161,7 @@ function applySegment(seg, res, ctx) {
   // storyline heat
   const st = res.story;
   if (st) {
-    let gain = (seg.kind === 'match' ? 6 : (seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) + (res.xHeat || 0)) * (res.heatMul || 1) * (0.6 + res.rating / 100);
+    let gain = (seg.kind === 'match' ? 6 : (seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) + (res.xHeat || 0) + (res.tapeHeat || 0)) * (res.heatMul || 1) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
     gain = Math.round(gain * (1 + staffQ('writer') * 0.04));
     // one side winning every time kills the drama: the third straight win for the same side barely adds heat
@@ -6581,6 +6610,11 @@ function lvTalk(r, main) {
       ${tg.length ? `<div class="tgt">${r.ans ? '🙋 Answered by' : '📣 ' + esc(segVerb(s).replace(/^./, c => c.toUpperCase()))} ${tg.slice(0, 3).map(w => av(w, 24, true)).join('')} ${names(tg)}</div>` : ''}${intr}`;
   }
   const headline = `${names(sp) || 'Someone'}${tg.length ? ` ${esc(segVerb(s))} ${names(tg)}` : ''}`;
+  if (s.atype === 'Tale of the Tape' && sp.length && tg.length && facesOn()) {
+    const col = w => `<div class="tt-side"><img class="px tt-body" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"><b class="n-${w.align}">${esc(w.name)}</b>${[w.height, w.weight, w.hometown].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}<span>${w.record ? `${w.record.w}-${w.record.l}` : ''}</span></div>`;
+    return `<div class="tt-wrap">${col(sp[0])}<div class="tt-mid">TALE OF THE TAPE</div>${col(tg[0])}</div>
+    <div class="l3"><span>${esc(s.atype)}${r.stTag ? ' · ' + esc(r.stTag) : ''}</span>${headline}</div>${intr}`;
+  }
   return `${sp.length ? `<div class="act-faces"><div class="lv-side">${sp.slice(0, 3).map(w => face(w, sz)).join('')}</div>${tg.length ? `<span class="verb">${esc(segVerb(s))}</span><div class="lv-side">${tg.slice(0, 3).map(w => face(w, sz)).join('')}</div>` : ''}</div>` : ''}
     <div class="l3"><span>${esc(s.atype)}${r.stTag ? ' · ' + esc(r.stTag) : ''}</span>${headline}</div>${r.quote ? `<div class="bub a-bub">“${esc(r.quote)}”</div>` : ''}${intr}`;
 }
@@ -6864,6 +6898,8 @@ const sameDiv = (a, b) => !a || !b || !a.division || !b.division || a.division =
 // a TV special (company level 8): one weekly show turned into a one-off special. G.special is its week, G.specialSid its show.
 const SPECIAL_NAMES = ['Prime Time Special', 'Holiday Spectacular', 'Saturday Night Special', 'Throwback Night', 'Championship Night', 'Fan Appreciation Night', 'Super Showdown Special', 'Battle of the Brands', 'Ladies of the Ring', 'New Blood Night'];
 const SPECIAL_GAP = 8;
+// a go-home show: a weekly show in a big event week, or the week before one when big weeks have no weekly show
+const isGoHome = wk => !!G && !onEv() && (bigWk(wk) || !goHomeOn() && bigWk(wk + 1));
 const isSpecial = wk => !!G && G.special === wk && !isBig(wk) && !onEv() && (!G.specialSid || G.specialSid === G.showId);
 const specialName = () => G.specialName || 'TV special';
 // the network's target for a special: a bit above your recent shows. Miss it and your reputation takes the hit.
@@ -7519,7 +7555,8 @@ function faceRandom(seed, women, full) {
 const looksWomen = w => isWomen(w) || FEM_NAMES.has(String(w.name || '').split(' ')[0]);
 const faceCode = w => (faceOK(w.look) ? w.look : faceRandom(w.id || w.name || '?', looksWomen(w))).padEnd(FACE_LEN, '0');
 function faceShade(hex, f) { const n = parseInt(hex.slice(1), 16), m = v => Math.max(0, Math.min(255, Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f))); return '#' + [n >> 16, n >> 8 & 255, n & 255].map(v => m(v).toString(16).padStart(2, '0')).join(''); }
-function faceSVG(code, align, wcol, women, tight) {
+// the face drawn on a 32x32 grid of colours (null = empty); the body maker reuses the head from it
+function faceGrid(code, align, wcol, women) {
   const [S, H, HC, B, F, GR, GC, X, M1, M2, E, BR, MO, HW, HWC, MU] = faceDigits(code), N = 32;
   const g = Array.from({ length: N }, () => Array(N).fill(null));
   const set = (x, y, c) => { if (x >= 0 && x < N && y >= 0 && y < N && c) g[y][x] = c; };
@@ -7682,13 +7719,24 @@ function faceSVG(code, align, wcol, women, tight) {
   if (X === 7) { for (let x = 11; x < 21; x++) { const y = 24 + (x >= 12 && x <= 19 ? 1 : 0) + (x >= 13 && x <= 18 ? 1 : 0) + (x >= 15 && x <= 16 ? 1 : 0); set(x, y, x % 2 ? gold : goldD); } rect(15, 28, 2, 2, gold); set(16, 29, goldD); }
   if (X === 8) for (const [x, y] of [[10, 11], [11, 12], [12, 13], [12, 16], [13, 17], [13, 18]]) set(x, y, '#9c3b34');
   if (X === 9) { rect(18, 17, 4, 2, '#efe3c8'); set(19, 17, '#d6c7a6'); set(20, 18, '#d6c7a6'); }
-  // dark outline, then the ropes behind
-  const out = g.map(r => r.slice());
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!g[y][x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => g[y + b]?.[x + a])) out[y][x] = '#0b0b0f';
+  g.pal = { sk, sd, hc, hd, gc, women };
+  return g;
+}
+// an outline around everything drawn, then one row of rects at a time
+function pixOutline(g) {
+  const H = g.length, Wd = g[0].length, out = g.map(r => r.slice());
+  for (let y = 0; y < H; y++) for (let x = 0; x < Wd; x++) if (!g[y][x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => g[y + b]?.[x + a])) out[y][x] = '#0b0b0f';
+  return out;
+}
+function pixRects(out) {
+  let s = '';
+  for (let y = 0; y < out.length; y++) for (let x = 0, N = out[y].length; x < N;) { const c = out[y][x]; if (!c) { x++; continue; } let e = x; while (e < N && out[y][e] === c) e++; s += `<rect x="${x}" y="${y}" width="${e - x}" height="1" fill="${c}"/>`; x = e; }
+  return s;
+}
+function faceSVG(code, align, wcol, women, tight) {
+  const out = pixOutline(faceGrid(code, align, wcol, women));
   const bg = align === 'heel' ? '#4a0d14' : '#0d2a5c', bl = faceShade(bg, .25);
-  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}`;
-  for (let y = 0; y < N; y++) for (let x = 0; x < N;) { const c = out[y][x]; if (!c) { x++; continue; } let e = x; while (e < N && out[y][e] === c) e++; s += `<rect x="${x}" y="${y}" width="${e - x}" height="1" fill="${c}"/>`; x = e; }
-  return s + '</svg>';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}` + pixRects(out) + '</svg>';
 }
 const FACE_CACHE = new Map();
 // tight: a closer crop for small round avatars, so the face fills the circle
@@ -7696,6 +7744,144 @@ function faceURL(w, tight) {
   const k = faceCode(w) + (w.align === 'heel' ? 'h' : 'f') + (looksWomen(w) ? 'w' : 'm') + (tight ? 't' : '') + (safeColor(w.color) || '');
   let u = FACE_CACHE.get(k);
   if (!u) { if (FACE_CACHE.size > 1500) FACE_CACHE.clear(); u = 'data:image/svg+xml,' + encodeURIComponent(faceSVG(faceCode(w), w.align, w.color, looksWomen(w), tight)); FACE_CACHE.set(k, u); }
+  return u;
+}
+// ---- pixel bodies: the full wrestler on the wrestler page, 48x96, with the pixel face's head on top ----
+// w.body code (one base-36 character each): build, stance, bottoms, bottoms colour (0 = their colour), boots, boots colour (0 = black),
+// pads, hands, title belt (0 = shown when they hold a title, 1 = never). The top half of their gear comes from the face's gear.
+const BODY = {
+  build: ['Lean', 'Athletic', 'Muscular', 'Heavy', 'Giant'],
+  stance: ['Ready', 'Relaxed', 'Flex', 'Arms crossed', 'Hands on hips', 'Point', 'Victory'],
+  bottoms: ['Trunks', 'Tights', 'Shorts', 'Pants'],
+  boots: ['Boots', 'Kick pads', 'Short boots', 'Sneakers', 'Barefoot'],
+  pads: ['None', 'Knee pads', 'Elbow pads', 'Both'],
+  hands: ['Bare', 'Wrist tape', 'Gloves', 'Wristbands'],
+  belt: ['When champion', 'Never'],
+};
+const BODY_LEN = 9;
+const BODY_MAX = [BODY.build, BODY.stance, BODY.bottoms, FACE.col, BODY.boots, FACE.col, BODY.pads, BODY.hands, BODY.belt].map(a => a.length);
+// [shoulder half-width, waist half-width, arm thickness, leg half-width, belly]
+const BODY_BUILD = [[9, 6, 3, 3, 0], [11, 7, 4, 4, 0], [13, 7, 5, 4, 0], [12, 10, 5, 5, 3], [15, 11, 6, 5, 1]];
+const bodyOK = c => typeof c === 'string' && c.length === BODY_LEN && /^[0-9a-z]+$/.test(c) && [...c].every((d, i) => parseInt(d, 36) < BODY_MAX[i]);
+// no body made yet: a steady one from their id, sized from their weight and style
+function bodyRandom(w, seed) {
+  let h = 2166136261; for (const ch of String(seed ?? (w.id || w.name || '?'))) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const r = () => { h += 0x6D2B79F5; let t = h; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const p = a => a[Math.floor(r() * a.length)];
+  const lb = (m => m ? (/kg/i.test(w.weight) ? +m[0] * 2.2 : +m[0]) : 0)(String(w.weight || '').match(/\d{2,3}/));
+  const women = looksWomen(w);
+  const build = lb >= 330 ? p([3, 4]) : lb >= 270 ? p([2, 3, 4]) : lb && lb < 190 ? p([0, 1]) : w.style === 'Powerhouse' ? p([2, 3, 4]) : w.style === 'High Flyer' ? p([0, 1, 1]) : women ? p([0, 1, 1, 2]) : p([1, 1, 2, 2, 3]);
+  const stance = w.align === 'heel' ? p([0, 2, 3, 3, 4, 5]) : p([0, 0, 1, 2, 4, 5, 6]);
+  const bottoms = women ? p([0, 0, 1, 1, 2, 3]) : w.style === 'Brawler' ? p([1, 2, 3, 3]) : p([0, 0, 0, 1, 1, 2, 3]);
+  return [build, stance, bottoms, p([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]), p([0, 0, 0, 1, 1, 2, 3, 4]), p([0, 0, 0, 3, 3, 7, 1, 2, 4]), p([0, 0, 1, 1, 2, 3]), p([0, 0, 1, 1, 2, 3]), 0].map(n => n.toString(36)).join('');
+}
+const bodyCode = w => bodyOK(w.body) ? w.body : bodyRandom(w);
+function bodySVG(w, holds) {
+  const [BU, ST, BO, BC, BT, BTC, PD, HA, BE] = [...bodyCode(w)].map(d => parseInt(d, 36));
+  const fc = faceCode(w), women = looksWomen(w), Wd = 48, H = 96;
+  const head = faceGrid(fc, w.align, w.color, women), { sk, sd, hc, hd, gc } = head.pal;
+  const GR = parseInt(fc[5], 36);
+  const g = Array.from({ length: H }, () => Array(Wd).fill(null));
+  const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < Wd && y >= 0 && y < H && c) g[y][x] = c; };
+  const rect = (x, y, w2, h2, c) => { for (let j = y; j < y + h2; j++) for (let i = x; i < x + w2; i++) set(i, j, c); };
+  const span = (y, hw, c) => rect(24 - hw, y, hw * 2, 1, c);
+  const bc = BC ? FACE.col[BC] : safeColor(w.color) || '#c8102e', bcd = faceShade(bc, -.3);
+  const bt = BTC ? FACE.col[BTC] : '#1b1b20', btd = faceShade(bt, -.3), btl = faceShade(bt, .45);
+  const gd = faceShade(gc, -.3);
+  let [sw, ww, at, lt, belly] = BODY_BUILD[BU];
+  if (women) sw = Math.max(8, sw - 1);
+  const hipW = ww + (women ? 2 : 1);
+  const spread = [2, 0, 2, 1, 2, 1, 2][ST] ?? 1;
+  // the torso's half-width at each row
+  const tw = y => y < 30 ? 0 : y === 30 ? sw - 3 : y === 31 ? sw - 1 : y < 52 ? Math.round(sw + (ww - sw) * Math.min(1, (y - 32) / 18) + (belly && y > 40 ? belly * Math.sin(Math.PI * (y - 40) / 13) : 0)) : hipW;
+  const legX = side => side < 0 ? 24 - 1 - spread - lt * 2 : 24 + 1 + spread;
+  // legs
+  for (const s of [-1, 1]) { const x0 = legX(s); rect(x0, 58, lt * 2, 30, sk); for (let y = 58; y < 88; y++) set(s < 0 ? x0 : x0 + lt * 2 - 1, y, sd); rect(x0 + 1, 72, lt * 2 - 2, 1, sd); }
+  // bottoms
+  const legPaint = (y0, y1, c, extra) => { for (const s of [-1, 1]) { const x0 = legX(s) - (extra || 0); rect(x0, y0, lt * 2 + (extra || 0) * 2, y1 - y0, c); for (let y = y0; y < y1; y++) set(s < 0 ? x0 : x0 + lt * 2 + (extra || 0) * 2 - 1, y, faceShade(c, -.25)); } };
+  for (let y = 52; y < 60; y++) span(y, Math.min(hipW, 24 - legX(-1) + (y > 57 ? 0 : 0)), sk);
+  if (BO === 0) { for (let y = 52; y < 61; y++) span(y, y > 58 ? Math.max(hipW - 1, 4) : hipW, bc); span(52, hipW, faceShade(bc, .35)); rect(23, 58, 2, 3, bcd); }
+  if (BO === 1) { for (let y = 52; y < 60; y++) span(y, hipW, bc); legPaint(58, 86, bc); span(52, hipW, faceShade(bc, .35)); for (const s of [-1, 1]) for (let y = 56; y < 86; y++) set(s < 0 ? legX(s) : legX(s) + lt * 2 - 1, y, '#f2c94c'); }
+  if (BO === 2) { for (let y = 52; y < 60; y++) span(y, hipW + 1, bc); legPaint(58, 70, bc, 1); span(52, hipW + 1, '#111'); for (const s of [-1, 1]) rect(s < 0 ? legX(s) - 1 : legX(s) + lt * 2 - 1, 62, 1, 8, faceShade(bc, .4)); }
+  if (BO === 3) { for (let y = 52; y < 60; y++) span(y, hipW + 1, bc); legPaint(58, 86, bc, 1); span(52, hipW + 1, '#2a2a2a'); set(22, 52, '#c9a227'); for (const s of [-1, 1]) for (let y = 62; y < 86; y += 3) set(legX(s) + lt, y, bcd); }
+  // pads and boots
+  if (PD === 1 || PD === 3) for (const s of [-1, 1]) { rect(legX(s) - 1, 69, lt * 2 + 2, 5, bt); rect(legX(s) - 1, 69, lt * 2 + 2, 1, btl); }
+  if (BT === 0 || BT === 1) for (const s of [-1, 1]) { const x0 = legX(s); rect(x0, 76, lt * 2, 12, bt); for (let y = 77; y < 87; y += 2) set(x0 + lt, y, btl); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 2, bt); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, '#e8e8e8'); }
+  if (BT === 1) for (const s of [-1, 1]) { const x0 = legX(s) - 1; rect(x0, 66, lt * 2 + 2, 14, bt); rect(x0, 66, lt * 2 + 2, 1, btl); rect(x0 + 1, 70, lt * 2, 1, faceShade(bt, .25)); rect(x0 + 1, 74, lt * 2, 1, faceShade(bt, .25)); }
+  if (BT === 2) for (const s of [-1, 1]) { const x0 = legX(s); rect(x0, 82, lt * 2, 6, bt); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 2, bt); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, '#e8e8e8'); }
+  if (BT === 3) for (const s of [-1, 1]) { const x0 = legX(s); rect(s < 0 ? x0 - 2 : x0, 85, lt * 2 + 2, 4, bt); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, '#f4f4f4'); rect(s < 0 ? x0 - 1 : x0 + 1, 86, 3, 1, '#f4f4f4'); }
+  if (BT === 4) for (const s of [-1, 1]) { const x0 = legX(s); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 3, sk); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, sd); }
+  // torso
+  for (let y = 30; y < 52; y++) span(y, tw(y), sk);
+  for (let y = 32; y < 52; y++) set(23 + tw(y), y, sd);
+  const bareChest = !women && [0, 3, 6].includes(GR);
+  if (bareChest) {
+    for (let x = 24 - sw + 3; x < 22; x++) set(x, 40, sd); for (let x = 26; x < 24 + sw - 3; x++) set(x, 40, sd); set(23, 39, sd); set(24, 39, sd);
+    if (BU === 2 || BU === 4) for (const y of [43, 46, 49]) { set(21, y, sd); set(22, y, sd); set(25, y, sd); set(26, y, sd); }
+    for (let y = 41; y < 51; y++) if (BU === 2) { set(23, y, sd); set(24, y, sd); }
+    if (belly) { set(23, 48, sd); set(24, 48, sd); }
+  }
+  // neck, then the head from the pixel face (and their hair and beard below the chin)
+  rect(19, 26, 10, 6, sk); rect(27, 26, 2, 6, sd);
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) { const c = head[y][x]; if (!c) continue; if (y <= 22 || c === hc || c === hd) set(x + 8, y + 6, c); }
+  // upper gear on the torso
+  const fullTop = c => { for (let y = 30; y < 53; y++) span(y, tw(y), c); for (let y = 32; y < 53; y++) set(23 + tw(y), y, faceShade(c, -.3)); };
+  let sleeve = 0;
+  if (GR === 0 && women) { for (let y = 36; y < 44; y++) span(y, tw(y), gc); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); span(43, tw(43), gd); }
+  if (GR === 1) { for (let y = 38; y < 61; y++) span(y, y > 51 ? hipW : tw(y), gc); rect(24 - sw + 3, 30, 3, 8, gc); rect(21 + sw - 3, 30, 3, 8, gc); for (const s of [-1, 1]) rect(s < 0 ? 24 - hipW : 24 + hipW - 2, 38, 2, 22, gd); }
+  if (GR === 2) { fullTop(gc); rect(21, 30, 6, 2, sk); rect(22, 32, 4, 1, sk); sleeve = .35; }
+  if (GR === 3) { for (let y = 30; y < 53; y++) { const hw = tw(y); rect(24 - hw, y, hw - 3, 1, gc); rect(27, y, hw - 3, 1, gc); set(20, y, gd); set(27, y, gd); } rect(18, 30, 3, 4, gd); rect(27, 30, 3, 4, gd); sleeve = 1; }
+  if (GR === 4) { fullTop(gc); rect(20, 44, 8, 5, gd); rect(21, 45, 6, 3, gc); rect(23, 30, 2, 8, gd); sleeve = 1; }
+  if (GR === 5) { for (let y = 32; y < 53; y++) span(y, tw(y) - 2, gc); rect(24 - sw + 4, 30, 2, 3, gc); rect(22 + sw - 4, 30, 2, 3, gc); rect(21, 32, 6, 2, sk); }
+  if (GR === 6) { for (let y = 30; y < 51; y++) { const hw = tw(y); rect(24 - hw, y, hw - 4, 1, gc); rect(28, y, hw - 4, 1, gc); } for (const [x, y] of [[18, 36], [18, 42], [29, 36], [29, 42]]) set(x, y, '#dcdcdc'); }
+  if (GR === 7) { fullTop(gc); for (let y = 30; y < 44; y++) { const hw = Math.max(0, 5 - Math.floor((y - 30) / 3)); if (hw) span(y, hw, '#f4f4f4'); } rect(23, 31, 2, 12, '#c8102e'); set(23, 43, '#8a0b1f'); set(24, 43, '#8a0b1f'); for (let y = 30; y < 40; y++) { set(23 - Math.max(1, 6 - Math.floor((y - 30) / 2)), y, gd); set(24 + Math.max(1, 6 - Math.floor((y - 30) / 2)), y, gd); } sleeve = 1; }
+  if (GR === 8) { for (let y = 36; y < 43; y++) span(y, tw(y), gc); span(42, tw(42), gd); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); }
+  if (GR === 9) { const gl = faceShade(gc, .4); for (let y = 30; y < 82; y++) { const hw = y < 52 ? tw(y) + 1 : hipW + 2 + Math.floor((y - 52) / 6); rect(24 - hw, y, hw - 4, 1, (y + 24 - hw) % 5 ? gc : gl); rect(28, y, hw - 4, 1, (y + 28) % 5 ? gc : gl); } for (let y = 28; y < 36; y++) { rect(24 - sw - 1 + (y - 28) / 2, y, 4, 1, '#f4f4f4'); rect(20 + sw - (y - 28) / 2, y, 4, 1, '#f4f4f4'); } sleeve = 1; }
+  // arms: shoulder to elbow to hand, with a fist; sleeves recolour the arm up to their length
+  const L = [24 - sw + 1, 33], R = [23 + sw - 1, 33];
+  const lim = (a, b) => [Math.max(2, Math.min(45, a)), Math.max(1, b)];
+  const pose = {
+    0: s => [[s[0] - 3 * (s === L ? 1 : -1), 45], [s === L ? 18 : 29, 33]],
+    1: s => [[s[0] - 2 * (s === L ? 1 : -1), 45], [s[0] - 2 * (s === L ? 1 : -1), 56]],
+    2: s => [[s[0] - 8 * (s === L ? 1 : -1), 33], [s[0] - 8 * (s === L ? 1 : -1), 22]],
+    3: s => s === L ? [[s[0] - 1, 45], [29, 41]] : [[s[0] + 1, 45], [18, 43]],
+    4: s => [[s[0] - 7 * (s === L ? 1 : -1), 43], [s === L ? 24 - hipW : 23 + hipW, 52]],
+    5: s => s === L ? [[s[0] - 2, 45], [s[0] - 2, 56]] : [[s[0] + 5, 25], [s[0] + 8, 13]],
+    6: s => [[s[0] - 5 * (s === L ? 1 : -1), 21], [s[0] - 4 * (s === L ? 1 : -1), 8]],
+  }[ST] || (s => [[s[0], 45], [s[0], 56]]);
+  const arms = [[L, ...pose(L)], [R, ...pose(R)]].map(([s, e, hnd]) => [s, lim(...e), lim(...hnd)]);
+  const drawArm = ([s, e, hnd]) => {
+    const r = at / 2, segs = [[s, e, 0], [e, hnd, .5]];
+    for (const [a, b, t0] of segs) { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2) || 1; for (let k = 0; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, tt = t0 + t / 2; const c = tt < sleeve ? gc : sk, cd = tt < sleeve ? gd : sd; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r + .5) set(x + i, y + j, j >= r - .5 || i >= r - .5 ? cd : c); } }
+    const [hx, hy] = hnd, f = Math.max(2, Math.round(at * .8));
+    const hc2 = HA === 2 ? '#1b1b20' : sk;
+    rect(Math.round(hx - f / 2), Math.round(hy - f / 2), f + 1, f + 1, hc2); set(hx + f / 2, hy + f / 2, HA === 2 ? '#000' : sd);
+    if (HA === 1 || HA === 3) { const wy = Math.round(hy + (e[1] < hy ? -1 : 1) * (f / 2 + 1)); rect(Math.round(hx - at / 2), wy, at + 1, 2, HA === 1 ? '#f1ece0' : bc); }
+    if (PD >= 2) rect(Math.round(e[0] - at / 2), Math.round(e[1] - 1), at + 1, 3, bt);
+    if (ST === 5 && s === R) rect(Math.round(hx), Math.round(hy - f / 2 - 3), 1, 3, HA === 2 ? '#1b1b20' : sk);
+  };
+  // crossed arms: the left arm goes in front
+  if (ST === 3) { drawArm(arms[1]); drawArm(arms[0]); } else arms.forEach(drawArm);
+  // their title: round the waist, or held up high in the Victory stance
+  if (holds && !BE) {
+    const gold = '#f2c94c', gl = '#fff2a8', gk = '#a87b12';
+    if (ST === 6) { const y = Math.min(arms[0][2][1], arms[1][2][1]) - 3, x0 = arms[0][2][0] + 2, x1 = arms[1][2][0] - 2; rect(x0, y, x1 - x0 + 1, 3, '#1b1b20'); rect(19, y - 2, 10, 7, gold); rect(20, y - 1, 8, 5, gl); rect(22, y, 4, 3, gk); }
+    else { const hw = 24 - (24 - hipW) + 1; span(51, hw, '#1b1b20'); span(52, hw, '#1b1b20'); span(53, hw, '#1b1b20'); rect(18, 48, 12, 8, gold); rect(19, 49, 10, 6, gl); rect(21, 50, 6, 4, gold); rect(22, 51, 4, 2, gk); rect(15, 51, 2, 3, gold); rect(31, 51, 2, 3, gold); }
+  }
+  // ring: ropes behind, mat below
+  const out = pixOutline(g);
+  const bg = w.align === 'heel' ? '#4a0d14' : '#0d2a5c', rope = w.align === 'heel' ? '#b0303c' : '#3b6fd6';
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wd} ${H}" shape-rendering="crispEdges"><rect width="${Wd}" height="${H}" fill="${bg}"/>`;
+  s += [38, 50, 62].map(y => `<rect y="${y}" width="${Wd}" height="2" fill="${rope}"/><rect y="${y + 2}" width="${Wd}" height="1" fill="${faceShade(rope, -.45)}"/>`).join('');
+  s += `<rect y="90" width="${Wd}" height="6" fill="#c9ccd6"/><rect y="90" width="${Wd}" height="1" fill="#e9ebf1"/><rect x="10" y="90" width="28" height="2" fill="#9ea3b2"/>`;
+  return s + pixRects(out) + '</svg>';
+}
+const BODY_CACHE = new Map();
+function bodyURL(w) {
+  const holds = !!(G?.titles && titlesOf(w.id).length);
+  const k = faceCode(w) + bodyCode(w) + w.align + (looksWomen(w) ? 'w' : 'm') + (safeColor(w.color) || '') + (holds ? 'c' : '');
+  let u = BODY_CACHE.get(k);
+  if (!u) { if (BODY_CACHE.size > 300) BODY_CACHE.clear(); u = 'data:image/svg+xml,' + encodeURIComponent(bodySVG(w, holds)); BODY_CACHE.set(k, u); }
   return u;
 }
 const facesOn = () => meta.faces !== 'initials';
@@ -9311,10 +9497,18 @@ function modalWrestler(m) {
   const w = W(m.id); if (!w) return '';
   const sts = storiesOf(w.id);
   const recent = G.history.slice(-8).reverse().flatMap(h => h.results.filter(r => segPeople(r.seg).includes(w.id)).map(r => ({ wk: h.wk, r })));
-  const body = `<div class="row" style="margin-bottom:10px">${av(w, 56)}<div class="sp"><div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag">Age ${w.age}</span><span class="tag gold">OVR ${overall(w)}</span></div></div></div>
+  const nameTags = `<div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag">Age ${w.age}</span><span class="tag gold">OVR ${overall(w)}</span></div>`;
+  // the hero card: their full pixel body beside the name and the facts people check first
+  const hero = facesOn() && w.name;
+  const fact = (l, v) => v ? `<div class="hc-f"><span>${l}</span><b>${esc(String(v))}</b></div>` : '';
+  const top = hero ? `<div class="hero-w"><button class="hero-body" data-act="editBody" data-id="${w.id}" aria-label="Edit ${esc(w.name)}'s full body"><img class="bm-hero px" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"></button><div class="sp" style="min-width:0">${safePhoto(w.photo) ? `<div style="margin-bottom:6px">${av(w, 48)}</div>` : ''}${nameTags}
+      <div class="hc-facts">${fact('Height', w.height)}${fact('Weight', w.weight)}${fact('From', w.hometown)}${fact('Popularity', Math.round(w.pop))}${fact('In-ring', Math.round(w.ring))}${fact('Mic', Math.round(w.mic))}</div>
+      <button class="btn sm" data-act="editBody" data-id="${w.id}">${ic('user')} Edit look</button></div></div>`
+    : `<div class="row" style="margin-bottom:10px">${av(w, 56)}<div class="sp">${nameTags}</div></div>`;
+  const body = `${top}
    ${titlesOf(w.id).map(t => `<button class="champ-card" data-act="editTitle" data-id="${t.id}" aria-label="${esc(t.name)}">${titleArt(t, 'champ-belt')}<div class="cc-t"><span class="cc-k">🏆 ${t.holder.length > 1 ? 'Co-champion' : 'Champion'}</span><b>${esc(t.name)}</b><span class="tiny muted">Since week ${t.since || 1} · ${t.defenses || 0} defense${t.defenses === 1 ? '' : 's'}${t.holder.length > 1 ? ' · with ' + esc(t.holder.filter(id => id !== w.id).map(nameOf).join(' & ')) : ''}</span></div></button>`).join('')}
    ${wPrizes(w)}
-   ${[w.hometown && '📍 ' + esc(w.hometown), (w.height || w.weight) && '📏 ' + esc([w.height, w.weight].filter(Boolean).join(' · ')), w.finisher && '💥 Finisher: <b>' + esc(w.finisher) + '</b>', w.signature && '✨ Signature: ' + esc(w.signature), w.theme && '🎵 ' + esc(w.theme)].filter(Boolean).map(x => `<div class="small" style="margin:2px 0">${x}</div>`).join('')}
+   ${[!hero && w.hometown && '📍 ' + esc(w.hometown), !hero && (w.height || w.weight) && '📏 ' + esc([w.height, w.weight].filter(Boolean).join(' · ')), w.finisher && '💥 Finisher: <b>' + esc(w.finisher) + '</b>', w.signature && '✨ Signature: ' + esc(w.signature), w.theme && '🎵 ' + esc(w.theme)].filter(Boolean).map(x => `<div class="small" style="margin:2px 0">${x}</div>`).join('')}
    ${w.bio ? `<p class="small muted" style="margin:6px 0 10px">${esc(w.bio)}</p>` : ''}
    <div class="card">
      ${statLine('Popularity', w.pop)}${statLine('In-ring', w.ring)}${statLine('Mic', w.mic)}${statLine('Charisma', w.cha)}${statLine('Stamina', w.stam)}
@@ -9475,7 +9669,7 @@ function modalEditStory(m) {
 // what a promo or angle does to its target, in place of VS
 function segVerb(s) {
   if (s.kind === 'promo') return { 'Call-out': 'calls out', 'Face-off': 'face to face', Interview: 'with', 'Hype Promo': 'hypes up', 'Open Challenge': 'answered by', 'Sit-down Debate': 'debates' }[s.ptype] || 'with';
-  return { 'Sneak Attack': 'attacks', 'Contract Signing': 'signs with', Brawl: 'brawls with', Celebration: 'crashed by', 'Turn Heel': 'turns on', 'Turn Face': 'stands with', 'Hype Video': 'featuring' }[s.atype] || 'with';
+  return { 'Sneak Attack': 'attacks', 'Contract Signing': 'signs with', Brawl: 'brawls with', Celebration: 'crashed by', 'Tale of the Tape': 'vs', 'Turn Heel': 'turns on', 'Turn Face': 'stands with', 'Hype Video': 'featuring' }[s.atype] || 'with';
 }
 const KIND_TAG = { match: ['m', 'Match'], promo: ['p', '🎤 Promo'], angle: ['a', '🎬 Angle'] };
 const kindTag = s => { const [c, n] = KIND_TAG[s.kind] || KIND_TAG.match; return `<span class="kp ${c}">${n}</span>`; };
@@ -10618,6 +10812,7 @@ const A = {
   bAskAuto() { const d = UI.modal?.draft; if (!d) return; delete d.askSet; render(); },
   shareOneComm() { const id = UI.modal.draftBack.draft.id; UI.modal = { type: 'community', tab: 'share', what: 'pick', sel: [id], title: W(id)?.name || '' }; render(); },
   editW(id) { const w = W(id); openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); },
+  editBody(id) { const w = W(id); if (!w) return; UI.bmOpen = true; UI.fmOpen = false; openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); setTimeout(() => document.querySelector('.fm-body')?.scrollIntoView({ block: 'start' }), 60); },
   // closing the editor with changes asks first, instead of quietly throwing them away
   ewClose() { const m = UI.modal; if (!ewDirty(m)) { dropDraft(); return closeModal(); } UI.modal = { type: 'ewLeave', back: m }; render(); },
   ewKeep() { UI.modal = UI.modal?.back || null; render(); },
@@ -11056,7 +11251,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 // true when a canvas has see-through pixels (a PNG with its background already cut out)
@@ -11103,6 +11298,7 @@ function cleanW(o) {
   const age = num(o.age, 16, 70); if (age !== undefined) w.age = age;
   const rl = roleFromText(o.role); if (rl && rl !== 'wrestler') w.role = rl;
   if (faceOK(o.look)) w.look = o.look;
+  if (bodyOK(o.body)) w.body = o.body;
   return w;
 }
 // "Manager", "GM", "commentary", "on hiatus"... from a spreadsheet or pasted list
@@ -11455,6 +11651,28 @@ function faceMaker(d) {
     <div role="tabpanel">${panes[tab]()}</div>
   </details>`;
 }
+// the body maker in the wrestler editor: the full wrestler shown on their wrestler page
+const BM_TABS = [['pose', 'Build & stance'], ['gear', 'Gear']];
+function bodyMaker(d) {
+  const c = bodyCode(d), at = i => parseInt(c[i], 36), tab = BM_TABS.some(([k]) => k === UI.bmTab) ? UI.bmTab : 'pose';
+  const peek = (i, j) => bodyURL({ ...d, body: c.slice(0, i) + j.toString(36) + c.slice(i + 1) });
+  const chips = (i, list) => `<div class="fm-tiles bm-tiles">${list.map((l, j) => `<button class="fm-tile ${at(i) === j ? 'on' : ''}" data-act="bBody" data-f="${i}" data-id="${j}" aria-pressed="${at(i) === j}"><img class="px" alt="" src="${peek(i, j)}"><span>${l}</span></button>`).join('')}</div>`;
+  const sws = (i, label, none) => `<div class="swatches">${FACE.col.map((col, j) => `<button class="sw ${at(i) === j ? 'on' : ''}${col || none ? '' : ' mine'}" style="background:${col || none || safeColor(d.color) || '#c8102e'}" data-act="bBody" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : none ? 'black' : 'their colour'}" aria-pressed="${at(i) === j}"></button>`).join('')}</div>`;
+  const row = (l, h) => `<div class="fm-row"><span>${l}</span>${h}</div>`;
+  const panes = {
+    pose: () => row('Build', chips(0, BODY.build)) + row('Stance', chips(1, BODY.stance)),
+    gear: () => row('Bottoms', chips(2, BODY.bottoms)) + row('Bottoms colour', sws(3, 'Bottoms'))
+      + row('Boots', chips(4, BODY.boots)) + (at(4) === 4 ? '' : row('Boots colour', sws(5, 'Boots', '#1b1b20')))
+      + row('Pads', chips(6, BODY.pads)) + row('Hands', chips(7, BODY.hands))
+      + row('Title belt', `<div class="seg-ctl">${BODY.belt.map((l, j) => `<button class="${at(8) === j ? 'on' : ''}" data-act="bBody" data-f="8" data-id="${j}" aria-pressed="${at(8) === j}">${l}</button>`).join('')}</div>`)
+      + '<p class="tiny muted fm-row">The top half wears the gear from the pixel face.</p>',
+  };
+  return `<details class="fm fm-body" ${UI.bmOpen ? 'open' : ''}><summary data-act="bmTog"><img class="bm-big px av-${d.align === 'heel' ? 'heel' : 'face'}" alt="Full body preview" src="${bodyURL(d)}"><span>Full body<span class="tiny muted" style="display:block;font-weight:500">Shown on their wrestler page</span></span></summary>
+    <div class="fm-row"><button class="btn" data-act="bBodyRand">${ic('dice')} Random body</button></div>
+    <div class="seg-ctl fm-tabs" role="tablist" aria-label="Body maker">${BM_TABS.map(([k, l]) => `<button role="tab" class="${tab === k ? 'on' : ''}" data-act="bmTab" data-id="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
+    <div role="tabpanel">${panes[tab]()}</div>
+  </details>`;
+}
 // ---- the builder screen ----
 function modalBuilder(m) {
   const d = m.draft;
@@ -11475,6 +11693,7 @@ function modalBuilder(m) {
    ${d.photo ? `<div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPhotoDel">Remove photo${facesOn() ? ' and use a pixel face' : ''}</button></div>` : ''}
    ${pxPanel(d)}
    ${!d.photo && facesOn() ? faceMaker(d) : ''}
+   ${facesOn() ? bodyMaker(d) : ''}
    <div class="swatches">${SWATCHES.map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bColor" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div>
 
    <div class="sec">Character</div>
@@ -12826,6 +13045,7 @@ function sanitizeGame(g) {
     w.id = String(w.id || uid()); w.name = String(w.name || 'Unknown').slice(0, 40); w.nick = String(w.nick || '').slice(0, 40);
     w.photo = safePhoto(w.photo); w.color = safeColor(w.color); w.align = w.align === 'heel' ? 'heel' : 'face';
     if (w.look != null && !faceOK(w.look)) delete w.look;
+    if (w.body != null && !bodyOK(w.body)) delete w.body;
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
     if (w.contract) w.contract = { salary: Math.max(0, +w.contract.salary || 0), weeks: clamp(Math.floor(+w.contract.weeks) || 1, 1, 520), ...(w.contract.indie === true ? { indie: true } : {}), ...(+w.contract.dates >= 1 ? { dates: clamp(Math.floor(+w.contract.dates), 1, DATES_MAX) } : {}) };
@@ -13407,6 +13627,10 @@ const CREATOR_ACTIONS = {
   bFace(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < FACE_LEN) || !(n >= 0 && n < FACE_MAX[i])) return; const c = [...faceCode(d)]; c[i] = n.toString(36); if (i === 4 && FACE_HOOD.has(n) && !['2', '3', '7'].includes(c[7])) c[7] = '0'; d.look = c.join(''); UI.fmOpen = true; render(); },
   bFaceRand() { const d = UI.modal.draft; d.look = faceRandom(Math.random(), looksWomen(d), true); UI.fmOpen = true; render(); },
   fmTab(v) { UI.fmTab = v; UI.fmOpen = true; render(); },
+  bBody(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < BODY_LEN) || !(n >= 0 && n < BODY_MAX[i])) return; const c = [...bodyCode(d)]; c[i] = n.toString(36); d.body = c.join(''); UI.bmOpen = true; render(); },
+  bBodyRand() { const d = UI.modal.draft; d.body = bodyRandom(d, Math.random()); UI.bmOpen = true; render(); },
+  bmTab(v) { UI.bmTab = v; UI.bmOpen = true; render(); },
+  bmTog(v, el) { UI.bmOpen = !el.parentElement.open; },
   fmTog(v, el) { UI.fmOpen = !el.parentElement.open; },
   bPx(v, el) { pxSet(PX, el.dataset.f, v); applyPX(); render(); },
   bColor(c) { UI.modal.draft.color = c; if (PX?.bg === 'color') applyPX(); render(); },
@@ -16373,7 +16597,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.86';
+const VERSION = '1.9.88';
 const WHATS_NEW = [
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
