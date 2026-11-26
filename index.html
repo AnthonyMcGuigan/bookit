@@ -4000,7 +4000,7 @@ function endOfWeek(card, world = true) {
     if (!w.contract) { if (!booked.has(w.id)) w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
     if (!booked.has(w.id) && w.injury === 0 && !w.away && inRing(w) && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
     if (CON() && w.contract.salary < asking(w) * 0.75) w.morale = clamp(w.morale - 1, 0, 100);
-    w.morale += (65 + room + (PER() ? ((w.trust ?? 50) - 50) / 5 : 0) - w.morale) * 0.02;
+    w.morale += (65 + room + staffQ('talent') * 0.8 + (PER() ? ((w.trust ?? 50) - 50) / 5 : 0) - w.morale) * 0.02;
   }
   // champions gain from holding gold
   for (const t of G.titles) for (const id of t.holder) { const w = W(id); if (w) addPop(w, t.prestige / 400); }
@@ -5042,7 +5042,7 @@ const bookerLvl = () => lvlOf(CAR().xp);
 const CO_MAX = 25, coXpAt = L => L <= 1 ? 0 : Math.round(14 * (L - 1) ** 1.8);
 const coLvlOf = xp => { let L = 1; while (L < CO_MAX && xp >= coXpAt(L + 1)) L++; return L; };
 const coLvl = () => G && G.booker ? coLvlOf(G.booker.cxp || 0) : 1;
-const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [3, '💼', 'More staff', 'Hire a PR Agent, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'TV specials', 'Turn a weekly show into a one-off special every 8 weeks. Book it from the show\'s card. Miss the network\'s target and your reputation suffers.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
+const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [2, '👥', 'Talent Relations', 'Hire someone in Office → Staff to keep the locker room happy and re-sign contracts for you.'], [3, '💼', 'More staff', 'Hire a Media Manager, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'TV specials', 'Turn a weekly show into a one-off special every 8 weeks. Book it from the show\'s card. Miss the network\'s target and your reputation suffers.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
 const PERKS = {
   deals: ['💼', 'Contract discount', 'Wrestlers ask 10% less.'],
   tv: ['📺', 'Network friends', 'TV deals renew 10% bigger.'],
@@ -10845,7 +10845,8 @@ function scrubGame(raw) {
   const clean = (v, k, depth, inId) => {
     if (--budget < 0 || depth > 14) return undefined;
     if (v === null || typeof v === 'boolean') return v;
-    if (NUM_KEYS.has(k) && !inId && typeof v !== 'object') { const n = +v; return isFinite(n) ? n : 0; }
+    // 'n' is a count in most places but a name on staff and sponsors: keep a name a name
+    if (NUM_KEYS.has(k) && !inId && typeof v !== 'object' && !(k === 'n' && typeof v === 'string' && v.trim() && !isFinite(+v))) { const n = +v; return isFinite(n) ? n : 0; }
     if (typeof v === 'number') return isFinite(v) ? v : 0;
     if (typeof v === 'string') {
       if (inId) return fixId(v);
@@ -12332,7 +12333,7 @@ function mediaView() {
   return `<div class="small muted" style="margin-bottom:8px">Short spots use no fatigue and keep them on your shows. Long ones take them away for a while, then they come back much more popular.</div>
     ${away.length ? `<div class="sec" style="margin-top:4px">Away now</div><div class="list">${away.map(w => wItem(w, 'openW', `${MEDIA[w.away.k]?.n || 'Away'} · back week ${w.away.until}`)).join('')}</div>` : ''}
     <div class="sec">Short appearances <span class="cnt">${used}/${MEDIA_SLOTS} this week</span></div>
-    ${staffQ('pr') ? `<div class="tiny muted" style="margin:-4px 0 8px">${G.staff.pr.off ? `Your PR Agent, ${esc(G.staff.pr.n)}, is paused. Turn them back on in Office → Staff.` : `Your PR Agent, ${esc(G.staff.pr.n)}, fills any short spots you leave open at the end of the week.`}</div>` : ''}
+    ${staffQ('pr') ? `<div class="tiny muted" style="margin:-4px 0 8px">${!sjobs().media ? `Your Media Manager, ${esc(G.staff.pr.n)}, isn't booking media right now. Turn it back on in Office → Staff.` : `Your Media Manager, ${esc(G.staff.pr.n)}, fills any short spots you leave open at the end of the week${staffQ('pr') >= 2 && sjobs().trips ? ', and sends wrestlers who are off TV on trips' : ''}.`}</div>` : ''}
     <div class="list">${Object.entries(MEDIA).filter(([, M]) => !M.long).map(([k, M]) => item(k, M, used >= MEDIA_SLOTS)).join('')}</div>
     ${used >= MEDIA_SLOTS ? '<div class="tiny muted" style="margin-top:6px">All media spots are used this week. More open next week.</div>' : ''}
     <div class="sec">Long appearances</div>
@@ -12524,7 +12525,8 @@ const STAFF_ROLES = {
   trainer: ['🎓', 'Head Trainer', 'Everyone grows faster in training and at the school.', 1],
   agent: ['🤼', 'Road Agent', 'Lays out matches: better ratings, and wrestlers learn more from each match.', 1],
   doctor: ['🩹', 'Doctor', 'Fewer injuries, and injured wrestlers come back sooner.', 1],
-  pr: ['📣', 'PR Agent', 'Books short media spots each week by themselves, with fewer slip-ups.', 3],
+  talent: ['👥', 'Talent Relations', 'A happier locker room. Can re-sign cheaper contracts for you.', 2],
+  pr: ['📣', 'Media Manager', 'Books media every week: short spots, plus tours and indie trips for wrestlers who are off TV. Fewer slip-ups.', 3],
   scout: ['🎯', 'Scout', 'Finds better rookies at tryouts. With Deep sim on, shows exact potential.', 3],
   writer: ['✍️', 'Writer', 'Storylines heat up faster.', 3]
 };
@@ -12543,6 +12545,11 @@ function staffPool() {
       list.push({ id: uid(), role, n: randomName(), q, pay: Math.round(STAFF_PAY[q] * rnd(0.85, 1.15) / 100) * 100, bio: pick(STAFF_BIO) });
     }
     G.staffPool = { wk: G.week, list };
+  }
+  // a job added in an update gets its own candidates straight away
+  for (const role of Object.keys(STAFF_ROLES)) if (!G.staffPool.list.some(c => c.role === role)) for (let i = 0; i < 3; i++) {
+    const q = clamp(Math.round(rnd(0.6, 3.2) + (i === 2 ? 1.4 : 0) + (G.promo.prestige - 50) / 60), 1, 5);
+    G.staffPool.list.push({ id: uid(), role, n: randomName(), q, pay: Math.round(STAFF_PAY[q] * rnd(0.85, 1.15) / 100) * 100, bio: pick(STAFF_BIO) });
   }
   return G.staffPool.list;
 }
@@ -12603,15 +12610,55 @@ function trainWeek() {
     const seen = Object.entries(w.gt || {}).filter(([k]) => skillsShown() || !SK_KEYS.includes(k)), total = seen.reduce((s, x) => s + x[1], 0);
     if (total >= 4) { const best = seen.sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, n]) => `${statName(k)} +${n}`).join(', '); news(`📈 ${w.name} is improving in training: ${best}.`, 'office'); w.gt = {}; }
   }
-  prAuto();
+  staffJobsWeek();
 }
 const statName = k => SKILLS[k] ? SKILLS[k][0] : { ring: 'In-ring', mic: 'Mic', cha: 'Charisma', stam: 'Stamina', pot: 'Potential' }[k] || k;
-// the PR Agent fills the short media spots that are left this week
+// ---------- jobs your staff handle ----------
+// Each hired staff member can take a job off your hands. The switches live in G.sjobs; what they did
+// this week goes in G.staffLog and shows in Office → Staff ("This week your staff…").
+const STAFF_JOBS = {
+  media: ['pr', '📣', 'Book media every week'],
+  rest: ['doctor', '🩹', 'Rest worn-out wrestlers'],
+  resign: ['talent', '👥', 'Re-sign contracts'],
+  focus: ['trainer', '🎓', 'Set training focus']
+};
+const SJ_PUSH = { rising: 'Push rising stars', top: 'Top stars', all: 'Everyone' };
+const SJ_CAPS = [1000, 2500, 5000, 0];
+const SJ_DEF = { media: true, rest: true, resign: false, focus: false, push: 'rising', trips: true, cap: 2500 };
+const sjobs = () => { if (!G.sjobs || typeof G.sjobs !== 'object') G.sjobs = { ...SJ_DEF }; return G.sjobs; };
+// the job is switched on and somebody is hired to do it
+const jobOn = k => !!(G && sjobs()[k] && staffQ(STAFF_JOBS[k][0]) && (k !== 'resign' || CON()));
+const firstName = n => String(n || '').split(' ')[0];
+const staffName = role => firstName(staffOf(role)?.n || '');
+function sLog(role, t, d) {
+  if (!Array.isArray(G.staffLog)) G.staffLog = [];
+  G.staffLog.unshift({ wk: G.week, r: role, hd: t, bd: d });
+  if (G.staffLog.length > 24) G.staffLog.length = 24;
+}
+// every card that could still be run: this week's and the ones booked ahead
+function allCards() {
+  const cards = [G.card, ...Object.values(G.future || {})];
+  for (const s of G.shows || []) { if (Array.isArray(s.card)) cards.push(s.card); for (const c of Object.values(s.future || {})) cards.push(c); }
+  return [...new Set(cards)].filter(Array.isArray);
+}
+const bookedAhead = w => allCards().some(c => c.some(seg => segPeople(seg).includes(w.id)));
+const inFeud = w => (G.stories || []).some(st => st.status === 'active' && [...(st.a || []), ...(st.b || []), ...(st.who || [])].includes(w.id));
+function staffJobsWeek() {
+  if (!G) return;
+  try { docRest(); } catch (e) { console.warn(e); }
+  try { trainerFocus(); } catch (e) { console.warn(e); }
+  try { prAuto(); } catch (e) { console.warn(e); }
+  try { prTrips(); } catch (e) { console.warn(e); }
+  try { talentResign(); } catch (e) { console.warn(e); }
+}
+// the Media Manager fills the short media spots that are left this week
 function prAuto() {
-  const q = staffQ('pr'); if (!q || G.staff.pr.off) return;
+  const q = staffQ('pr'); if (!q || !jobOn('media')) return;
   let n = Math.min(q >= 5 ? 3 : q >= 3 ? 2 : 1, MEDIA_SLOTS - mediaUsed());
-  const short = Object.keys(MEDIA).filter(k => !MEDIA[k].long);
-  const cand = signed().filter(w => !w.away && !w.loan && w.injury === 0 && !mediaIn(w, 4) && !mediaWhyNot(w, 'press')).sort((a, b) => (b.mic + b.cha + (b.pop < 75 ? 30 : 0)) - (a.mic + a.cha + (a.pop < 75 ? 30 : 0)));
+  const short = Object.keys(MEDIA).filter(k => !MEDIA[k].long && !MEDIA[k].hide);
+  const push = sjobs().push, lastM = w => { const e = mediaLog().find(x => x.wid === w.id); return e ? G.week - e.wk : 99; };
+  const score = w => push === 'top' ? w.pop * 2 + w.mic * 0.5 : push === 'all' ? lastM(w) * 3 + rnd(0, 20) : w.mic + w.cha + (w.pop < 75 ? 30 : 0) + ((w.age || 30) <= 27 ? 15 : 0) + Math.max(0, w.momentum || 0);
+  const cand = signed().filter(w => inRing(w) && !w.away && !w.loan && w.injury === 0 && !mediaIn(w, 4) && !mediaWhyNot(w, 'press')).sort((a, b) => score(b) - score(a));
   const done = []; let used = '';
   for (const w of cand) {
     if (n <= 0) break;
@@ -12620,7 +12667,87 @@ function prAuto() {
     const k = short.slice().sort((a, b) => val(b) - val(a))[0];
     doMedia(w, k); done.push(`${w.name} (${MEDIA[k].n.replace(/^TV t/, 't').replace(/^P/, 'p').replace(/^F/, 'f')})`); used = k; n--;
   }
-  if (done.length) news(`📣 ${G.staff.pr.n} booked media spots: ${done.join(', ')}.`, 'office');
+  if (done.length) { news(`📣 ${G.staff.pr.n} booked media spots: ${done.join(', ')}.`, 'office'); sLog('pr', `${staffName('pr')} booked ${done.length} media spot${done.length > 1 ? 's' : ''}`, done.join(', ') + '.'); }
+}
+// ...and, with trips on, sends someone who is off TV on a media tour or to the indies
+function prTrips() {
+  const q = staffQ('pr'); if (q < 2 || !jobOn('media') || !sjobs().trips) return;
+  const pool = ringers();
+  if (pool.length < 14) return; // a small roster needs everyone at home
+  const out = G.wrestlers.filter(w => w.away && w.away.staff).length;
+  if (out >= (q >= 4 ? 2 : 1) || Math.random() > 0.15 + q * 0.05) return;
+  const cand = pool.filter(w => w.contract && !w.away && !w.loan && w.injury === 0 && !isChamp(w) && w.mediaWk !== G.week && G.week - (w.lastBooked || 0) >= 4 && G.week - (w.tripWk || -99) >= 16 && !bookedAhead(w) && !inFeud(w))
+    .sort((a, b) => (G.week - (b.lastBooked || 0)) - (G.week - (a.lastBooked || 0)));
+  for (const w of cand) {
+    const indies = w.ring < 60 && (w.age || 30) <= 30;
+    let k = indies ? 'indies' : 'tour';
+    if (k === 'tour' && MON() && G.money < tourCost(MEDIA.tour.wks) * 4) k = 'indies';
+    if (mediaWhyNot(w, k)) continue;
+    const msg = sendAway(w, k); w.away.staff = 1; w.tripWk = G.week;
+    sLog('pr', `${staffName('pr')} sent ${w.name} ${k === 'tour' ? 'on a media tour' : 'to work the indies'}`, `They were off TV. ${msg}`);
+    return;
+  }
+}
+// the Doctor puts worn-out wrestlers on rest until they recover
+const REST_AT = 80, REST_OFF = 35;
+function docRest() {
+  const back = [], rest = [], warn = [];
+  for (const w of signed()) {
+    if (w.restBy && (w.fatigue || 0) <= REST_OFF) { w.train = w.restWas || ''; delete w.restBy; delete w.restWas; back.push(w.name); }
+  }
+  if (jobOn('rest')) for (const w of signed()) {
+    if (w.loan || w.away || w.train === 'rest' || (w.fatigue || 0) < REST_AT) continue;
+    w.restWas = w.train || ''; w.train = 'rest'; w.restBy = G.week; rest.push(w.name);
+    if (bookedAhead(w)) warn.push(w.name);
+  }
+  const dn = staffName('doctor') || 'The doctor';
+  if (rest.length) {
+    sLog('doctor', `${dn} rested ${rest.join(', ')}`, `Over ${REST_AT}% tired, so they're on rest training until they recover.${warn.length ? ` ${warn.join(', ')} ${warn.length > 1 ? 'are' : 'is'} still booked: think about a lighter spot.` : ''}`);
+    if (warn.length) news(`🩹 ${dn} says ${warn.join(', ')} ${warn.length > 1 ? 'are' : 'is'} worn out but still booked. A lighter night would help.`, 'injury');
+  }
+  if (back.length) sLog('doctor', `${back.join(', ')} ${back.length > 1 ? 'are' : 'is'} rested and back in training`, '');
+}
+// the Head Trainer picks a focus for anyone you haven't set one for, and rethinks it every 8 weeks
+function focusFor(w) {
+  ensureSkills(w);
+  const deep = skillsShown(), talk = (w.mic + w.cha) / 2;
+  if (deep && (w.age || 0) >= 32 && w.psych < 70) return 'psych';
+  if (talk < w.ring - 8) return 'mic';
+  if (deep && w.safety < 42) return 'safety';
+  if (deep && w.sell < 50) return 'sell';
+  if (w.stam < 55) return 'stam';
+  return 'ring';
+}
+function trainerFocus() {
+  if (!jobOn('focus')) return;
+  const set = [];
+  for (const w of [...ringers().filter(w => w.contract && !w.loan), ...trainees()]) {
+    if (w.restBy || w.train === 'rest') continue;
+    if (w.train && !w.trainBy) continue; // you picked this one yourself
+    if (w.trainBy && G.week - w.trainBy < 8) continue;
+    const f = focusFor(w); w.trainBy = G.week;
+    if (f !== (w.train || '')) { w.train = f; set.push(`${w.name}: ${FOCUS[f][0].toLowerCase()}`); }
+  }
+  if (set.length) sLog('trainer', `${staffName('trainer')} set training for ${set.length} wrestler${set.length > 1 ? 's' : ''}`, set.slice(0, 6).join(', ') + (set.length > 6 ? ` and ${set.length - 6} more` : '') + '.');
+}
+// Talent Relations re-signs cheaper wrestlers before their deals run out
+function talentResign() {
+  if (!jobOn('resign')) return;
+  const q = staffQ('talent'), cap = +sjobs().cap || 0, tn = staffName('talent');
+  for (const w of signed()) {
+    const c = w.contract; if (!c || w.loan || c.weeks > 5 || c.weeks <= 0) continue;
+    if (G.week - (w.trTry || -99) < 6) continue;
+    const len = prefLen(w), ask = askFor(w, len);
+    if (cap && ask > cap) continue;
+    w.trTry = G.week;
+    const ch = clamp(offerChance(w, ask, len) + q * 0.04, 0, 0.97);
+    if (Math.random() < ch) {
+      const was = c.salary; c.salary = ask; c.weeks = len; delete w.courted;
+      w.morale = clamp(w.morale + 3, 0, 100);
+      news(`✍️ ${w.name} re-signed: ${money(ask)}/wk for ${lenLabel(len)} (talks by ${staffOf('talent').n}).`, 'contract');
+      sLog('talent', `${tn} re-signed ${w.name}`, `${money(ask)}/wk for ${lenLabel(len)}${was ? ` (was ${money(was)})` : ''}.`);
+    } else sLog('talent', `${w.name} turned down ${tn}'s offer`, `${money(ask)}/wk for ${lenLabel(len)}. Talk to them yourself in Office → Contracts.`);
+  }
 }
 
 // ---------- screens ----------
@@ -12629,7 +12756,7 @@ function staffView() {
   const sRow = ([role, [ic, n, d, lv]]) => {
     const s = staffOf(role), open = roleOpen(role);
     return `<button class="item" data-act="${open ? 'staffRole' : 'staffLocked'}" data-id="${role}" ${open ? '' : 'style="opacity:.6"'}><span class="mile-i">${ic}</span><div class="main"><div class="t">${n}${s ? ` <span class="tiny">${starRow(s.q)}</span>` : ''}</div>
-      <div class="d">${s ? `<b>${esc(s.n)}</b>${MON() ? ` · ${money(s.pay)}/wk` : ''}${role === 'pr' && s.off ? ' · paused' : ''}` : open ? 'Nobody hired · tap to hire' : `🔒 Company level ${lv}`}</div><div class="d">${d}</div></div></button>`;
+      <div class="d">${s ? `<b>${esc(s.n)}</b>${MON() ? ` · ${money(s.pay)}/wk` : ''}${staffJobFor(role) && !sjobs()[staffJobFor(role)] ? ' · job off' : ''}` : open ? 'Nobody hired · tap to hire' : `🔒 Company level ${lv}`}</div><div class="d">${d}</div></div></button>`;
   };
   const S = G.school, cap = schoolCap();
   const school = coLvl() < SCHOOL_OPEN && !schoolOpen() ? `<div class="card small">🔒 The training school opens at company level ${SCHOOL_OPEN}. Run a show or two.</div>`
@@ -12638,12 +12765,33 @@ function staffView() {
       <div class="list">${S.trainees.map(w => tItem(w, 'trainee')).join('') || '<div class="empty">No trainees yet. Pick from the tryouts.</div>'}</div>
       ${(S.tryouts || []).length ? `<div class="sec">Tryouts</div><div class="list">${S.tryouts.map(w => tItem(w, 'tryout')).join('')}</div>` : ''}`;
   const kids = ringers().filter(w => w.age <= 26 || w.train || w.mentor).sort((a, b) => a.age - b.age).slice(0, 12);
-  return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week.</div>
+  return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week, and can take a job off your hands.</div>
     <div class="list">${roles.map(sRow).join('')}</div>
+    ${staffJobsView()}
     <div class="sec">🎓 Training school</div>${school}
     <div class="sec">📈 Training</div>
     <div class="small muted" style="margin-bottom:8px">Everyone trains every week. Young wrestlers grow fastest, up to their potential. Pick a focus or a mentor from their profile.</div>
     <div class="list">${kids.map(w => wItem(w, 'openW', `Age ${w.age} · ${esc(FOCUS[w.train || ''][0])}${mentorOf(w) ? ' · mentor ' + esc(mentorOf(w).name) : ''}${potShown(w) ? ' · ' + starRow(potStars(w)) : ''}`)).join('') || '<div class="empty">Nobody young on the roster.</div>'}</div>`;
+}
+const staffJobFor = role => Object.keys(STAFF_JOBS).find(k => STAFF_JOBS[k][0] === role);
+function staffJobsView() {
+  const J = sjobs(), chip = (k, v, lbl) => `<button class="chip ${J[k] === v ? 'on' : ''}" data-act="sjobOpt" data-id="${k}:${v}" aria-pressed="${J[k] === v}">${lbl}</button>`;
+  const desc = {
+    media: n => `${n} fills the short spots${J.trips ? ', and sends wrestlers who are off TV on tours or indie trips' : ''}. Champions and anyone in a feud stay home.`,
+    rest: n => `${n} puts anyone over ${REST_AT}% tired on rest until they recover, and warns you if they're still booked.`,
+    resign: n => `${n} re-signs ${J.cap ? `anyone asking up to ${money(J.cap)}/wk` : 'anyone'} when their deal has 5 weeks left. Bigger deals stay with you.`,
+    focus: n => `${n} picks a focus for anyone you haven't set one for, and rethinks it every 8 weeks. Pick one yourself and they leave it alone.`
+  };
+  const rows = Object.entries(STAFF_JOBS).map(([k, [role, ic, t]]) => {
+    const s = staffOf(role), R = STAFF_ROLES[role], off = !s || (k === 'resign' && !CON());
+    const why = !s ? `🔒 Hire a ${R[1]}.${roleOpen(role) ? '' : ` Unlocks at company level ${R[3]}.`}` : k === 'resign' && !CON() ? 'Contracts are off in Settings.' : desc[k](esc(firstName(s.n)));
+    const opts = k === 'media' && s && J.media ? `<div class="chips" style="margin:2px 0 8px 34px">${Object.entries(SJ_PUSH).map(([v, l]) => chip('push', v, l)).join('')}</div>${staffQ('pr') >= 2 ? `<div class="chips" style="margin:0 0 8px 34px">${chip('trips', false, 'Short spots only')}${chip('trips', true, 'Trips too')}</div>` : ''}`
+      : k === 'resign' && s && J.resign && CON() ? `<div class="chips" style="margin:2px 0 8px 34px">${SJ_CAPS.map(v => chip('cap', v, v ? `Up to ${money(v)}` : 'Any price')).join('')}</div>` : '';
+    return `<label class="todo" ${off ? 'style="opacity:.55"' : ''}><input type="checkbox" data-in="sjob" data-id="${k}" ${J[k] && !off ? 'checked' : ''} ${off ? 'disabled' : ''}><span><b>${ic} ${t}</b><div class="tiny muted">${why}</div></span></label>${opts}`;
+  }).join('');
+  const log = Array.isArray(G.staffLog) ? G.staffLog : [], last = log.length ? log[0].wk : 0, recent = log.filter(x => x.wk === last);
+  const rep = recent.length ? `<div class="sec">📅 ${last >= G.week - 1 ? 'This week' : `Week ${last}:`} your staff…</div><div class="list">${recent.map(x => `<div class="item"><span class="mile-i">${STAFF_ROLES[x.r]?.[0] || '💼'}</span><div class="main"><div class="t">${esc(x.hd)}</div>${x.bd ? `<div class="d">${esc(x.bd)}</div>` : ''}</div></div>`).join('')}</div>` : '';
+  return `<div class="sec">🧠 Jobs your staff handle</div><div class="card">${rows}</div>${rep}`;
 }
 function tItem(w, kind) {
   return `<button class="item" data-act="${kind === 'tryout' ? 'tryoutOpen' : 'traineeOpen'}" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)} <span class="muted small">${esc(w.style)} · ${w.age}</span>${kind === 'trainee' && traineeReady(w) ? ' <span class="tag good">Ready</span>' : ''}</div>
@@ -12669,7 +12817,7 @@ function modalStaff(m) {
   const cur = staffOf(role), pool = staffPool().filter(c => c.role === role);
   const body = `<div class="row" style="gap:8px;margin-bottom:10px"><span class="mile-i">${R[0]}</span><div class="sp small muted">${R[2]}</div></div>
     ${cur ? `<div class="card"><div class="row"><div class="sp"><b>${esc(cur.n)}</b> <span class="tiny">${starRow(cur.q)}</span><div class="tiny muted">${esc(cur.bio || '')} · since week ${cur.wk}${MON() ? ` · ${money(cur.pay)}/wk` : ''}</div></div><button class="btn sm bad" data-act="staffFire">Let go</button></div>
-      ${role === 'pr' ? `<label class="todo" style="margin-top:8px"><input type="checkbox" data-in="prOn" ${cur.off ? '' : 'checked'}><span>Book media spots for me every week</span></label>` : ''}</div>` : ''}
+      ${staffJobFor(role) && (role !== 'talent' || CON()) ? `<label class="todo" style="margin-top:8px"><input type="checkbox" data-in="sjob" data-id="${staffJobFor(role)}" ${sjobs()[staffJobFor(role)] ? 'checked' : ''}><span>${STAFF_JOBS[staffJobFor(role)][2]} for me</span></label>` : ''}</div>` : ''}
     <div class="sec">${cur ? 'Replace with' : 'Candidates'}</div>
     <div class="list">${pool.map(c => `<button class="item" data-act="staffHire" data-id="${c.id}"><div class="main"><div class="t">${esc(c.n)} <span class="tiny">${starRow(c.q)}</span></div><div class="d">${esc(c.bio)}${MON() ? ` · <b>${money(c.pay)}</b>/wk` : ''}</div></div></button>`).join('')}</div>
     <div class="tiny muted" style="margin-top:8px">New candidates every 12 weeks. ${MON() ? 'Salaries come out of each show\'s money.' : 'Money is off, so staff are free.'}</div>`;
@@ -12699,6 +12847,14 @@ function modalMentor(m) {
   return modal('Choose a mentor', body);
 }
 Object.assign(A, {
+  sjobOpt(v) {
+    const [k, x] = String(v).split(':'), J = sjobs();
+    if (k === 'push' && Object.hasOwn(SJ_PUSH, x)) J.push = x;
+    else if (k === 'trips') J.trips = x === 'true';
+    else if (k === 'cap' && SJ_CAPS.includes(+x)) J.cap = +x;
+    else return;
+    commit();
+  },
   staffLocked(r) { toast(`${STAFF_ROLES[r]?.[1] || 'This role'} unlocks at company level ${STAFF_ROLES[r]?.[3]}.`); },
   staffRole(r) { if (STAFF_ROLES[r] && roleOpen(r)) openModal({ type: 'staff', role: r }); },
   staffHire(id) {
@@ -12740,6 +12896,13 @@ function cleanTraining(g, shared) {
   const st = {};
   if (g.staff && typeof g.staff === 'object') for (const r of Object.keys(STAFF_ROLES)) { const s = g.staff[r]; if (s && typeof s === 'object') st[r] = { n: txt(s.n, 40) || 'Staff', q: clamp(Math.round(+s.q) || 1, 1, 5), pay: clamp(+s.pay || 0, 0, 1e5), bio: txt(s.bio, 60), wk: Math.floor(+s.wk) || 1, ...(s.off ? { off: true } : {}) }; }
   g.staff = st;
+  // jobs your staff handle (older saves: a paused PR Agent means the media job is off)
+  const J = g.sjobs && typeof g.sjobs === 'object' ? g.sjobs : {}, nj = {};
+  for (const k of ['media', 'rest', 'resign', 'focus', 'trips']) nj[k] = typeof J[k] === 'boolean' ? J[k] : SJ_DEF[k];
+  if (!g.sjobs && st.pr && st.pr.off) nj.media = false;
+  nj.push = Object.hasOwn(SJ_PUSH, J.push) ? J.push : SJ_DEF.push; nj.cap = SJ_CAPS.includes(+J.cap) ? +J.cap : SJ_DEF.cap;
+  g.sjobs = nj; if (st.pr) delete st.pr.off;
+  g.staffLog = (Array.isArray(g.staffLog) ? g.staffLog : []).filter(x => x && typeof x === 'object' && Object.hasOwn(STAFF_ROLES, x.r)).slice(0, 24).map(x => ({ wk: Math.floor(+x.wk) || 0, r: x.r, hd: String(x.hd || '').replace(/[\u0000-\u001f]/g, '').slice(0, 120), bd: String(x.bd || '').replace(/[\u0000-\u001f]/g, '').slice(0, 300) }));
   if (shared || !g.staffPool || !Array.isArray(g.staffPool.list)) delete g.staffPool;
   const S = g.school;
   if (S && typeof S === 'object' && S.open) {
@@ -13473,8 +13636,8 @@ document.addEventListener('change', e => {
     else if (k === 'moments') { G.settings.moments = clamp(+el.value || 0, 0, 2); commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
     else if (k === 'deep') { G.settings.deep = el.checked; if (el.checked) { G.settings.finances = true; if (G.settings.contracts === false) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40); G.settings.contracts = true; } else { G.settings.finances = false; G.settings.contracts = false; } commit(el.checked ? 'Deep sim on, with money and contracts. Open any wrestler to see their skills.' : 'Deep sim off. Money and contracts are off too.'); }
-    else if (k === 'trainFocus') { const w = W(el.dataset.id) || trainees().find(x => x.id === el.dataset.id); if (w && Object.hasOwn(FOCUS, el.value)) { w.train = el.value; commit(`${w.name}: ${FOCUS[w.train][0].toLowerCase()} training.`); } }
-    else if (k === 'prOn') { const s = staffOf('pr'); if (s) { if (el.checked) delete s.off; else s.off = true; commit(); } }
+    else if (k === 'trainFocus') { const w = W(el.dataset.id) || trainees().find(x => x.id === el.dataset.id); if (w && Object.hasOwn(FOCUS, el.value)) { w.train = el.value; delete w.trainBy; delete w.restBy; delete w.restWas; commit(`${w.name}: ${FOCUS[w.train][0].toLowerCase()} training.`); } }
+    else if (k === 'prOn' || k === 'sjob') { const j = k === 'prOn' ? 'media' : el.dataset.id; if (Object.hasOwn(STAFF_JOBS, j)) { sjobs()[j] = el.checked; if (!el.checked && j === 'rest') for (const w of signed()) if (w.restBy) { w.train = w.restWas || ''; delete w.restBy; delete w.restWas; } commit(`${STAFF_JOBS[j][2]}: ${el.checked ? 'your staff will handle it' : 'you\'ll do it yourself'}.`); } }
     else if (k === 'persona') { G.settings.persona = el.checked; if (el.checked) ensurePers(); commit(el.checked ? 'Personalities on. Check 📱 for texts from your wrestlers.' : 'Personalities off.'); }
     else if (k === 'wPers') { const w = W(el.dataset.id); if (w && Object.hasOwn(PERS, el.value)) { w.pers = el.value; commit(`${w.name} is now a ${PERS[w.pers].n.toLowerCase()}.`); } }
     else if (k === 'difficulty') { G.settings.difficulty = Object.hasOwn(DIFF, el.value) ? el.value : 'normal'; commit('Challenge set to ' + CHALLENGES.find(c => c[0] === G.settings.difficulty)[1] + '.'); }
@@ -13682,8 +13845,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.64';
+const VERSION = '1.9.65';
 const WHATS_NEW = [
+  ['🧠 Hand jobs to your staff', 'Office → Staff has a new Jobs your staff handle card. Switch on the jobs you want done for you: your Media Manager (the PR Agent\'s new name) books media every week and can send wrestlers who are off TV on tours or indie trips, your Doctor rests worn-out wrestlers, the new Talent Relations hire re-signs cheaper contracts, and your Head Trainer sets training focus. A This week your staff list shows what they did.'],
   ['🎖️ Your booker career in the cloud', 'Your booker level, achievements and milestones now go up with every cloud save. Sign in on another phone or computer and your level comes with you. If you play on two devices, each one adds its progress to the total, so nothing is lost or counted twice.'],
   ['💾 Clearer saves', 'A save holds your whole world, and now it says so. Backup files are named after every company you run, with the week and date (like BookIt_WWE+AEW_week-12_2026-11-25.json), and Backup & transfer lists what the file holds. Save slots and cloud saves show every company. Cloud saves tell you how much of the cloud limit your game uses and warn you from 80%, before it stops fitting.'],
   ['🔁 Take over a rival', 'With Sandbox on, open any AI company in Office → Companies and tap Take over to run it yourself, as one of up to 4 companies in your world. Its roster, contracts, titles and title history, teams, factions, feuds, photos and big events come with it. It keeps its name and show, and you can add more weekly shows and a brand split as you take it over.'],
@@ -13718,7 +13882,7 @@ const WHATS_NEW = [
   ['🏅 Booker and company levels', 'Your booker level follows you into every save and unlocks Community symbols and flairs. Each company levels up too, for cash bonuses, sponsors, perks and bigger event cards.'],
   ['📱 Personalities', 'Wrestlers can text you, make demands and remember how you treat them. Switch it on or off in Menu → Settings.'],
   ['📖 Guided first show', 'A short tutorial walks you through booking and running your first show. Replay it from Menu → How to play.'],
-  ['🎓 Training school and staff', 'Office → Staff: hire a Head Trainer, Road Agent, Doctor, PR Agent, Scout and Writer, open a school and train your own rookies, and give anyone a training focus or a veteran mentor. Young wrestlers grow every week, and they learn from better workers in the ring.'],
+  ['🎓 Training school and staff', 'Office → Staff: hire a Head Trainer, Road Agent, Doctor, Talent Relations, Media Manager, Scout and Writer, hand them jobs (media, resting tired wrestlers, re-signing, training focus), open a school and train your own rookies, and give anyone a training focus or a veteran mentor. Young wrestlers grow every week, and they learn from better workers in the ring.'],
   ['🧠 Deep sim', 'Menu → Settings → Deep sim shows every wrestler\'s psychology, selling, consistency, safety, technical, brawling and aerial skills, plus their potential.'],
   ['✏️ Short names', 'Give anyone a short name (Moxley instead of Jon) in their Edit screen. It is used wherever only one name fits.'],
   ['📣 Media appearances', 'Office → Media: send wrestlers on talk shows, podcasts and fan signings for a popularity boost (with a small chance of a slip-up), or away on movies, media tours and indie runs to come back much bigger. Big offers come as backstage events, and some wrestlers will ask.'],
