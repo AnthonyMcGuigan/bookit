@@ -1152,6 +1152,52 @@ body { --ic: var(--gold); }
 .ppv-note { font-size: 13px; padding: 10px 12px; margin: 0 0 12px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--gold, #d4a72c) 55%, var(--line)); }
 .road-hot { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px; border-radius: 10px; background: color-mix(in srgb, var(--bad) 10%, transparent); }
 
+/* ----- main menu tabs (Play, Community, Career, Account) ----- */
+.hm-who { display: flex; align-items: center; gap: 9px; margin: 4px auto 14px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); max-width: 100%; }
+.hm-who b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.hm-who .hm-bar { width: 64px; }
+.hm-star { color: var(--accent-t); display: inline-flex; } .hm-star .i { width: 16px; height: 16px; }
+.hm-av { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center; background: linear-gradient(135deg, #6c5ce7, #3a2f7a); color: #fff; font-family: var(--f-display); font-size: 15px; }
+.hm-av .i { width: 60%; height: 60%; }
+.hm-av.big { width: 64px; height: 64px; font-size: 30px; }
+.hm-lv { font-family: var(--f-display); font-size: 13px; letter-spacing: .04em; padding: 2px 8px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); white-space: nowrap; }
+.hm-bar { display: block; height: 6px; border-radius: 99px; background: var(--card2); overflow: hidden; }
+.hm-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #fff)); }
+.hm .hs-cont { margin: 0 0 8px; }
+.hm-list { display: flex; flex-direction: column; gap: 8px; }
+.hm-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-align: left; }
+.hm-row .hm-ic { width: 38px; height: 38px; flex: none; border-radius: 11px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, var(--card2)); color: var(--accent-t); }
+.hm-row .hm-ic .i { width: 21px; height: 21px; }
+.hm-row .hm-m { flex: 1; min-width: 0; }
+.hm-row .hm-m b { display: block; font-size: 15px; }
+.hm-row .hm-m span { display: block; font-size: 12.5px; color: var(--dim); line-height: 1.35; }
+.hm-row .hm-n { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 99px; background: var(--card2); color: var(--dim); }
+.hm-row .hm-ch { color: var(--faint); font-size: 22px; line-height: 1; }
+.hm-row.gold { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--card)), var(--card)); }
+.hm-head { padding: calc(env(safe-area-inset-top) + 22px) 96px 4px 0; }
+.hm-head h1, .hm-prof h1 { font-family: var(--f-display); font-weight: 400; text-transform: uppercase; letter-spacing: .02em; font-size: 34px; line-height: 1; }
+.hm-head p { margin: 6px 0 0; color: var(--dim); font-size: 14px; }
+.hm-prof { display: flex; align-items: center; gap: 14px; padding: calc(env(safe-area-inset-top) + 70px) 0 4px; }
+.hm-prof h1 { font-size: clamp(22px, 7.5vw, 30px); overflow-wrap: anywhere; }
+@media (max-width: 360px) { .hm-av.big { width: 52px; height: 52px; font-size: 24px; } }
+.hm-mail { font-size: 13px; color: var(--dim); overflow-wrap: anywhere; }
+.hm-st { font-size: 13px; color: var(--dim); display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+.hm-st.ok { color: var(--good); } .hm-st .i { width: 15px; height: 15px; }
+.hm-prof .flair { margin-top: 6px; }
+.hm-sign { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.hm-sub { margin: 18px 2px 8px; font-family: var(--f-cond); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--dim); }
+.hm-lvcard { margin: 14px 0 12px; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(160deg, var(--card2), var(--card)); }
+.hm-lvt { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.hm-big { font-family: var(--f-display); font-size: 30px; line-height: 1; }
+.hm-lvcard .hm-bar { height: 8px; }
+.hm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; text-align: center; }
+.hm-stats div { background: var(--bg2); border-radius: 10px; padding: 8px 4px; }
+.hm-stats b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 20px; }
+.hm-stats span { font-size: 11px; color: var(--dim); }
+.hm-next { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--dim); }
+.hm-next .i { width: 16px; height: 16px; flex: none; }
+.hm-tabs button .ic .i { width: 22px; height: 22px; }
+.hm-tabs button .ic { opacity: .7; }
 /* ----- home screen ----- */
 .home .hero { padding: 26px 6px 6px; }
 .home .hero svg { max-width: 96px; height: auto; }
@@ -7696,37 +7742,91 @@ addEventListener('pointerdown', () => { kbdNav = false; }, { capture: true, pass
 addEventListener('touchstart', () => { kbdNav = false; }, { capture: true, passive: true });
 
 // ---------- start screen ----------
+// four tabs along the bottom: Play, Community, Career (booker level) and Account (sign-in, cloud, Supporter, settings, help)
+const HOME_TABS = [['play', 'wrestle', 'Play'], ['comm', 'users', 'Community'], ['career', 'trophy', 'Career'], ['acct', 'user', 'Account']];
+function homeMe() {
+  const pr = COMM.profiles[COMM.me] || null, u = sbOn() ? (sbSess ||= sbLoad())?.user : null, c = CAR(), xp = c.xp, L = lvlOf(xp);
+  const name = pr?.name || COMM.names[COMM.me] || '';
+  return { pr, name, email: u?.email || '', signed: !!u?.email, sup: isSup(), c, xp, L, rank: RANKS[rankIx(xp)][1], pct: L >= MAX_LVL ? 100 : Math.round((xp - xpAt(L)) / (xpAt(L + 1) - xpAt(L)) * 100), color: pr?.color || '' };
+}
+const homeAv = (me, cls = '') => `<span class="hm-av ${cls}" aria-hidden="true"${me.color ? ` style="background:${me.color}"` : ''}>${me.name ? esc(me.name[0].toUpperCase()) : ic('user')}</span>`;
+const homeRow = (act, icon, t, d, o = {}) => `<button class="hm-row ${o.gold ? 'gold' : ''}" data-act="${act}"${o.id != null ? ` data-id="${esc(o.id)}"` : ''}><span class="hm-ic">${ic(icon)}</span><span class="hm-m"><b>${t}</b>${d ? `<span>${d}</span>` : ''}</span>${o.n ? `<span class="hm-n">${o.n}</span>` : ''}<span class="hm-ch" aria-hidden="true">›</span></button>`;
+const homeBar = (pct, lbl) => `<span class="hm-bar" role="progressbar" aria-label="${lbl}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></span>`;
+const supShown = () => sbOn() && (!PLAY || isSup());
 function viewStart() {
   setTimeout(commInit);
+  const t = HOME_TABS.some(x => x[0] === UI.homeTab) ? UI.homeTab : 'play', me = homeMe();
+  const body = { play: homePlay, comm: homeComm, career: homeCareer, acct: homeAcct }[t](me);
+  return `<div class="app home hm hm-${t}"><div class="home-menu">${musicBtn()}<button class="iconbtn" data-act="menu" aria-label="Menu">${ic('menu')}</button></div>${body}</div>
+  <nav class="tabs hm-tabs" aria-label="Main menu"><div class="in">${HOME_TABS.map(([k, i, l]) => `<button class="${t === k ? 'on' : ''}" data-act="homeTab" data-id="${k}" ${t === k ? 'aria-current="page"' : ''}><span class="ic">${ic(i)}</span>${l}</button>`).join('')}</div></nav>`;
+}
+function homePlay(me) {
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) })).filter(s => s.info).sort((a, b) => (b.info.savedAt || 0) - (a.info.savedAt || 0));
-  const top = slots[0], rest = slots.slice(1);
+  const top = slots[0], rest = slots.slice(1), when = s => new Date(s.info.savedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const nStory = SU_COS.reduce((n, c) => n + c.roster.split('\n').length, SU_FA.split('\n').length);
+  return `<div class="hero">${logoSVG()}<h1>Book<em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div></div>
+  <button class="hm-who" data-act="homeTab" data-id="${me.name || me.signed ? 'career' : 'acct'}" aria-label="${me.name ? esc(me.name) + ', ' : ''}booker level ${me.L}, ${me.rank}">${homeAv(me)}<b>${me.name ? esc(me.name) : 'Booker'}</b><span class="hm-lv">LV ${me.L}</span>${homeBar(me.pct, 'Progress to the next level')}${me.sup ? `<span class="hm-star">${ic('star')}</span>` : ''}</button>
+  ${top ? `<button class="hs-cont" data-act="loadSlot" data-id="${top.n}"><span class="hs-k">Continue</span><span class="hs-ct">${esc(top.info.name)}</span><span class="hs-cd">Week ${top.info.week} · saved ${when(top)}</span><span class="hs-arrow">›</span></button>` : ''}
+  <div class="hm-list">
+    ${homeRow('story', 'book', 'Story Mode', `The BookIt Universe: six companies and ${nStory} original wrestlers. Take one over.`, { gold: true })}
+    ${homeRow('wzStart', 'home', 'New company', 'Name it, draft a roster, crown champions')}
+    ${rest.map(s => homeRow('loadSlot', 'save', esc(s.info.name), `Slot ${s.n} · week ${s.info.week} · saved ${when(s)}`, { id: s.n })).join('')}
+    ${homeRow('import', 'upload', 'Restore a backup', 'Load a save file or a pasted save')}
+  </div>`;
+}
+function homeComm() {
   const st = COMM.status, saves = COMM.items.filter(i => i.kind === 'world' && !isHidden(i)).sort((a, b) => popScore(b) - popScore(a) || b.created - a.created).slice(0, 8);
   const shelf = st === 'off' || st === 'error'
     ? `<div class="hs-off"><div class="small"><b>${hosted() ? 'Community worlds are loading or offline.' : 'Community worlds aren\'t in this version.'}</b> Got a save someone shared with you? Paste it in.</div><button class="btn sm" data-act="import">Paste a save</button></div>`
     : st === 'ready' && !saves.length ? `<div class="hs-off"><div class="small">No shared worlds yet. Be the first: build your world, then share it from Office → Companies.</div></div>`
-    : `<div class="hs-shelf">${saves.length ? saves.map(i => { const u = i.sum || {}, key = esc(i.author + '|' + i.id), champs = Array.isArray(u.champs) ? u.champs.length : 0;
+    : `<div class="hs-shelf">${saves.length ? saves.map(i => { const u = i.sum || {}, key = esc(i.author + '|' + i.id);
         return `<button class="hs-card ${i.author === 'featured' ? 'feat' : ''}" data-act="cOpen" data-id="${key}">
-          <span class="hs-by">${i.author === 'featured' ? '⭐ Featured' : 'by ' + esc(authorName(i.author))}</span>
+          <span class="hs-by">${i.author === 'featured' ? `${ic('star')} Featured` : 'by ' + esc(authorName(i.author))}</span>
           <span class="hs-t">${esc(i.title)}</span>
           <span class="hs-d">${esc(i.desc || String(u.promo || ''))}</span>
-          <span class="hs-m">${Array.isArray(u.cos) ? u.cos.length : 0} companies · ${+u.n || i.count || 0} wrestlers${i.nLikes ? ` · ❤️ ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} playing` : ''}</span>
+          <span class="hs-m">${Array.isArray(u.cos) ? u.cos.length : 0} companies · ${+u.n || i.count || 0} wrestlers${i.nLikes ? ` · ${ic('heart')} ${i.nLikes}` : ''}${i.nUses ? ` · ${i.nUses} playing` : ''}</span>
           ${Array.isArray(u.cos) && u.cos.length ? `<span class="hs-s">${u.cos.slice(0, 3).map(c => esc(String(c[0] || ''))).join(' · ')}</span>` : ''}
           <span class="hs-go">Play this ›</span></button>`; }).join('')
       : [0, 1].map(() => '<div class="hs-card skel"><span></span><span></span><span></span></div>').join('')}</div>`;
-  return `<div class="app home"><div class="home-menu">${musicBtn()}<button class="iconbtn" data-act="menu" aria-label="Menu">☰</button></div><div class="hero">${logoSVG()}<h1>Book<em>It</em></h1><div class="hero-sub">Wrestling Booking Sim</div>
-  <p class="muted">Book the shows. Write the stories. Sign the talent.</p></div>
-  ${top ? `<button class="hs-cont" data-act="loadSlot" data-id="${top.n}"><span class="hs-k">Continue</span><span class="hs-ct">${esc(top.info.name)}</span><span class="hs-cd">Week ${top.info.week} · saved ${new Date(top.info.savedAt).toLocaleDateString()}</span><span class="hs-arrow">›</span></button>
-    ${rest.length ? `<div class="list" style="margin-top:8px">${rest.map(s => `<button class="item" data-act="loadSlot" data-id="${s.n}"><div class="av" style="background:var(--card2);color:var(--accent-t)">${s.n}</div><div class="main"><div class="t">${esc(s.info.name)}</div><div class="d">Week ${s.info.week} · saved ${new Date(s.info.savedAt).toLocaleDateString()}</div></div></button>`).join('')}</div>` : ''}` : ''}
-  <button class="su-hero" data-act="story"><span class="su-hero-ic">📖</span><span class="sp"><span class="hs-k">Story Mode</span><b>The BookIt Universe</b><span class="tiny muted">Six companies and ${SU_COS.reduce((n, c) => n + c.roster.split('\n').length, SU_FA.split('\n').length)} original wrestlers. Take one over and write what happens next.</span></span><span class="hs-arrow">›</span></button>
-  <div class="hs-sec"><div><b>Jump into a universe</b><div class="tiny muted">Worlds from the community. Run your own company or take one over, starting the month before its big one.</div></div>${st === 'ready' && saves.length ? '<button class="link" data-act="homeComm">See all</button>' : ''}</div>
+  return `<div class="hm-head"><h1>Community</h1><p>Worlds, rosters and wrestlers made by other players.</p></div>
+  <div class="hs-sec"><div><b>Jump into a universe</b><div class="tiny muted">Run your own company or take one over, starting the month before its big one.</div></div>${st === 'ready' && saves.length ? '<button class="link" data-act="homeComm">See all</button>' : ''}</div>
   ${shelf}
-  <div class="hs-sec"><div><b>Or start your own</b></div></div>
-  <div class="hs-two">
-    <button class="hs-opt" data-act="wzStart"><span class="hs-ic">🏟️</span><b>New company</b><span class="tiny muted">Name it, draft a roster, crown champions.</span></button>
-    <button class="hs-opt" data-act="import"><span class="hs-ic">⬆</span><b>Restore a backup</b><span class="tiny muted">Load a save file or a pasted save.</span></button>
+  <div class="hm-list" style="margin-top:14px">
+    ${homeRow('community', 'users', 'Browse Community', 'Shared worlds, rosters, wrestlers and creators')}
+    ${homeRow(lib().length ? 'library' : 'community', 'notebook', 'Wrestler library', 'Wrestlers you kept from Community, ready for any save', { n: lib().length || '' })}
+    ${st === 'off' || st === 'error' ? '' : homeRow('import', 'clipboard', 'Paste a save', 'Load a world someone shared with you')}
+  </div>`;
+}
+function homeCareer(me) {
+  const c = me.c, got = Object.keys(c.ach).length, nx = [...FLAIRS.map(f => [f[2], 'Community flair', f[1]]), ...BELTS.map(b => [b[2], 'Profile symbol', b[1]])].filter(x => x[0] > me.L).sort((a, b) => a[0] - b[0])[0];
+  const stat = (v, l) => `<div><b>${v}</b><span>${l}</span></div>`;
+  return `<div class="hm-head"><h1>Career</h1><p>Your booker level carries across every save${sbOn() ? ' and syncs with cloud saves' : ''}.</p></div>
+  <div class="hm-lvcard"><div class="hm-lvt"><span class="hm-big">LV ${me.L}</span><b>${esc(me.rank)}</b><span class="sp"></span><span class="tiny muted">${me.L >= MAX_LVL ? 'Top level' : `${me.pct}% to LV ${me.L + 1}`}</span></div>${homeBar(me.pct, 'Progress to the next level')}
+    <div class="hm-stats">${stat(`${got}/${ACH.length}`, 'Achievements')}${stat(kfmt(c.st.shows || 0), 'Shows run')}${stat(kfmt(c.st.ppv || 0), 'Big events')}</div>
+    ${nx ? `<div class="hm-next">${ic('lock')}<span>Next unlock at LV ${nx[0]}: ${nx[1]} <b>${esc(nx[2])}</b></span></div>` : ''}</div>
+  <div class="hm-list">
+    ${homeRow('homeCar', 'medal', 'Achievements', `${got} of ${ACH.length} earned`, { id: 'ach' })}
+    ${homeRow('homeCar', 'trend', 'Milestones', 'Shows, crowds, title changes and more', { id: 'miles' })}
+    ${homeRow('homeCar', 'sparkles', 'Unlocks', 'Flairs and belt symbols for your Community profile', { id: 'lvl' })}
+  </div>`;
+}
+function homeAcct(me) {
+  const sb = sbOn();
+  const status = !sb ? 'Playing on this device' : me.signed ? `${ic('globe')} Signed in · cloud saves on` : 'Guest · your games stay on this device';
+  return `<div class="hm-prof">${homeAv(me, 'big')}<div class="sp"><h1>${me.name ? esc(me.name) : me.signed ? 'Your account' : 'Guest booker'}</h1>${me.email ? `<div class="hm-mail">${esc(me.email)}</div>` : ''}<div class="hm-st ${me.signed ? 'ok' : ''}">${status}</div>${me.sup ? `<span class="flair sup-badge">${ic('star')} Supporter</span>` : ''}</div></div>
+  ${sb && !me.signed ? `<button class="btn pri block hm-sign" data-act="cloud">${ic('user')} Sign in or create an account</button><div class="tiny muted" style="margin:6px 2px 0">Back up your games to the cloud and play them on any phone.</div>` : ''}
+  <div class="hm-list" style="margin-top:14px">
+    ${supShown() ? homeRow('support', 'star', me.sup ? 'You\'re a BookIt Supporter' : 'Become a BookIt Supporter', me.sup ? 'Thank you! See your plan and perks.' : '6 cloud slots, a Supporter badge, and you keep the game running', { gold: !me.sup }) : ''}
+    ${sb ? homeRow('cloud', 'globe', 'Cloud saves', me.signed ? 'Upload or load your games on any phone' : 'Sign in to keep your games safe') : ''}
+    ${homeRow('homeProfile', 'pen', 'Community profile', 'Name, bio, colour, flair and belt symbol')}
+    ${homeRow('settings', 'grid', 'Settings', 'Look, sound, motion and privacy')}
   </div>
-  <button class="hs-lib" data-act="${lib().length ? 'library' : 'community'}"><span class="hs-ic">📚</span><span class="sp"><b>Wrestler library${lib().length ? ` · ${lib().length}` : ''}</b><span class="tiny muted" style="display:block">Grab wrestlers from Community and keep them for any save, now or later.</span></span><span class="muted">›</span></button>
-  <div style="text-align:center;margin:18px 0 8px"><button class="link" data-act="help">How to play</button> · <button class="link" data-act="support">❤️ Support the game</button><br><button class="link tiny" data-act="privacy">Privacy &amp; terms</button> · <button class="link tiny" data-act="feedback">Send feedback</button></div>
+  <div class="hm-sub">Help</div>
+  <div class="hm-list">
+    ${homeRow('help', 'info', 'How to play', '')}
+    ${homeRow('whatsNew', 'sparkles', 'What\'s new', '')}
+    ${homeRow('feedback', 'message', 'Send feedback', '')}
+    ${homeRow('privacy', 'lock', 'Privacy & terms', '')}
   </div>`;
 }
 
@@ -10179,6 +10279,9 @@ const A = {
   liveSkip() { FX.stop(); document.querySelector('.live .cs')?.remove(); clearTimeout(LV.auto); LV.at = 0; document.querySelector('.live')?.classList.remove('hold'); liveTimers.forEach(clearTimeout); const l = document.querySelector('.live'); if (l) { l.classList.add('skip'); l.querySelector('.lv-fin')?.scrollIntoView({ block: 'start' }); } },
   liveRecap() { liveTimers.forEach(clearTimeout); clearTimeout(LV.auto); momSettle(); openModal({ type: 'recap', wk: UI.modal.wk }); },
   trophies() { openModal({ type: 'trophies' }); },
+  homeTab(t) { UI.homeTab = t; render(); scrollTo(0, 0); root.querySelector('.hm-tabs button.on')?.focus({ preventScroll: true }); },
+  homeCar(t) { UI.carTab = t; openModal({ type: 'trophies' }); },
+  homeProfile() { commInit(); openModal({ type: 'community', tab: 'mine' }); },
   carTab(t) { UI.carTab = t; render(); },
   coPerk() { UI.carTab = 'co'; openModal({ type: 'trophies' }); },
   evPick(i) {
@@ -16129,8 +16232,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.84';
+const VERSION = '1.9.85';
 const WHATS_NEW = [
+  ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
   ['📅 Limited dates for veterans', 'Older wrestlers (and a few big part-time stars) can ask for a limited dates clause in contract talks: a set number of shows a month. Give them what they ask for and they are easier to sign. Once their month is used up, the picker and Auto-fill skip them, and booking them anyway upsets them. Their profile shows the dates left this month.'],
   ['🤼 Produce your matches', 'The match editor has a new Produce the match section. Pick a plan (Classic, Sprint, Epic or Squash), or Custom to set the opening, the heat, the comeback, a big spot and the near falls yourself, plus the length. Plans that fit the wrestlers rate higher, and long matches and big spots take a toll. On the live show a produced match plays out beat by beat with a crowd meter, and your agent asks you on the headset what to do next: start the comeback, go for a big spot, one more near fall or go home. Leave it on Agent calls it and nothing changes.'],
