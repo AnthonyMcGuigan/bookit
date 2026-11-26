@@ -5203,7 +5203,7 @@ const bookerLvl = () => lvlOf(CAR().xp);
 const CO_MAX = 25, coXpAt = L => L <= 1 ? 0 : Math.round(14 * (L - 1) ** 1.8);
 const coLvlOf = xp => { let L = 1; while (L < CO_MAX && xp >= coXpAt(L + 1)) L++; return L; };
 const coLvl = () => G && G.booker ? coLvlOf(G.booker.cxp || 0) : 1;
-const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Staff and train your own rookies.'], [2, '👥', 'Talent Relations', 'Hire someone in Office → Staff to keep the locker room happy and re-sign contracts for you.'], [3, '💼', 'More staff', 'Hire a Media Manager, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'TV specials', 'Turn a weekly show into a one-off special every 8 weeks. Book it from the show\'s card. Miss the network\'s target and your reputation suffers.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
+const CO_UNLOCKS = [[2, '🎓', 'Training school', 'Open a school in Office → Training and train your own rookies.'], [2, '👥', 'Talent Relations', 'Hire someone in Office → Staff to keep the locker room happy and re-sign contracts for you.'], [3, '💼', 'More staff', 'Hire a Media Manager, Scout and Writer in Office → Staff.'], [3, '💼', 'Sponsorship offers', 'Sponsors pay weekly while your shows hit their mark.'], [4, '🎆', 'Bigger big events', 'Big event cards hold 11 segments.'], [5, '⭐', 'Promotion perk', 'Pick a perk for this company.'], [6, '📱', 'Viral moments', 'A great segment can blow up online.'], [8, '📺', 'TV specials', 'Turn a weekly show into a one-off special every 8 weeks. Book it from the show\'s card. Miss the network\'s target and your reputation suffers.'], [10, '🎆', 'Bigger big events', 'Big event cards hold 12 segments.'], [10, '⭐', 'Promotion perk', 'Pick a second perk.'], [15, '⭐', 'Promotion perk', 'Pick a third perk.'], [16, '🎆', 'Bigger big events', 'Big event cards hold 13 segments.'], [20, '⭐', 'Promotion perk', 'Pick a fourth perk.'], [25, '⭐', 'Promotion perk', 'Pick a fifth perk.']];
 const PERKS = {
   deals: ['💼', 'Contract discount', 'Wrestlers ask 10% less.'],
   tv: ['📺', 'Network friends', 'TV deals renew 10% bigger.'],
@@ -7519,13 +7519,14 @@ function viewOffice() {
   const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop);
   return `
-  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Indie Stars${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Companies</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'locker' ? 'on' : ''}" data-act="faTab" data-id="locker">Locker room${(() => { const n = signed().filter(w => relMine(w) && (w.trust < 20 || w.relWarn)).length; return n ? ` <span class="cnt">${n}</span>` : ''; })()}</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Indie Stars${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Companies</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'training' ? 'on' : ''}" data-act="faTab" data-id="training">Training${(G.phone || []).some(coachOpen) ? ' <span class="cnt">!</span>' : ''}</button><button class="${t === 'locker' ? 'on' : ''}" data-act="faTab" data-id="locker">Locker room${(() => { const n = signed().filter(w => relMine(w) && (w.trust < 20 || w.relWarn)).length; return n ? ` <span class="cnt">${n}</span>` : ''; })()}</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
   ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'brands' ? brandsView() : ''}
   ${t === 'teams' ? teamsView() : ''}
   ${t === 'setup' ? setupView() : ''}
   ${t === 'media' ? mediaView() : ''}
   ${t === 'staff' ? staffView() : ''}
+  ${t === 'training' ? trainingView() : ''}
   ${t === 'locker' ? lockerView() : ''}
   ${t === 'rivals' ? rivalsView() : ''}
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
@@ -8004,7 +8005,7 @@ function helpHTML() {
   <h3>Each week</h3>
   <p>1. Tap a week on the calendar.<br>2. Add matches, promos and angles, or tap Auto-fill.<br>3. Tap <b>Run</b> and watch the results.<br>4. Check the <b>Briefing</b> and the <b>Office</b>.</p>
   <h3>Training and staff</h3>
-  <p>Everyone trains every week. Young wrestlers grow fastest, up to their potential, and they learn from better workers they wrestle. Pick a training focus or a veteran mentor on a wrestler's profile. In <b>Office → Staff</b>, hire staff and, from company level 2, open a training school for your own rookies. Turn on <b>Deep sim</b> in Settings to see every skill.</p>
+  <p>Everyone trains every week. Young wrestlers grow fastest, up to their potential, and they learn from better workers they wrestle. Pick a training focus, a goal or a veteran mentor on a wrestler's profile. <b>Office → Training</b> shows everyone's goals, your Head Trainer's calls when someone hits a wall, and, from company level 2, a training school for your own rookies. Hire staff in <b>Office → Staff</b>. Turn on <b>Deep sim</b> in Settings to see every skill.</p>
   <h3>Big events</h3>
   <p><b>Plan the big event first.</b> Tap its week on the calendar and book its main matches before the weekly shows. Those matches are announced, and every weekly show that puts both sides together builds hype. More hype means better ratings and more buys.</p>
   <p>Plans can change. If a story gets hotter than expected, the Road to card offers to add it, or you can edit the big event's card any time before the show.</p>
@@ -13237,7 +13238,7 @@ function trainWeek() {
   // the school: train, pay, and hold tryouts
   if (schoolOpen()) {
     const S = G.school;
-    for (const w of S.trainees) { w.trainee = (w.trainee || 0) + 1; const before = traineeReady(w); trainOne(w, true); if (!before && traineeReady(w)) news(`🎓 ${w.name} is ready to debut. Sign them from Office → Staff.`, 'office'); if (w.mentor && !mentorOf(w)) delete w.mentor; }
+    for (const w of S.trainees) { w.trainee = (w.trainee || 0) + 1; const before = traineeReady(w); trainOne(w, true); if (!before && traineeReady(w)) news(`🎓 ${w.name} is ready to debut. Sign them from Office → Training.`, 'office'); if (w.mentor && !mentorOf(w)) delete w.mentor; }
     if (G.week >= (S.next || 0)) { schoolTryouts(); news(`🎓 Tryouts at the school: ${S.tryouts.length} hopefuls want a spot.`, 'office'); }
   }
   // a nice jump gets a news line, so growth is visible without opening every profile
@@ -13606,16 +13607,20 @@ function staffView() {
     return `<button class="item" data-act="${open ? 'staffRole' : 'staffLocked'}" data-id="${role}" ${open ? '' : 'style="opacity:.6"'}><span class="mile-i">${ic}</span><div class="main"><div class="t">${n}${s ? ` <span class="tiny">${starRow(s.q)}</span>` : ''}</div>
       <div class="d">${s ? `<b>${esc(s.n)}</b>${MON() ? ` · ${money(s.pay)}/wk` : ''}${staffJobFor(role) && !sjobs()[staffJobFor(role)] ? ' · job off' : ''}` : open ? 'Nobody hired · tap to hire' : `🔒 Company level ${lv}`}</div><div class="d">${d}</div></div></button>`;
   };
-  const S = G.school, cap = schoolCap();
+  return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week, and can take a job off your hands. Goals, the school and training are in the <button class="link" data-act="faTab" data-id="training">Training</button> tab.</div>
+    <div class="list">${roles.map(sRow).join('')}</div>
+    ${staffJobsView()}`;
+}
+// Office → Training: goals and trainer calls, the school, and who is training what
+function trainingView() {
+  const S = G.school, cap = schoolCap(), tr = staffOf('trainer');
   const school = coLvl() < SCHOOL_OPEN && !schoolOpen() ? `<div class="card small">🔒 The training school opens at company level ${SCHOOL_OPEN}. Run a show or two.</div>`
     : !schoolOpen() ? `<div class="card"><div class="small">Train your own rookies. Tryouts every ${TRYOUT_EVERY} weeks, room for ${cap}, and they debut on cheap 2-year deals.${MON() ? ` Opening costs <b>${money(SCHOOL_COST)}</b>, then about <b>${money(SCHOOL_WEEKLY)}</b>/wk plus ${money(TRAINEE_WEEKLY)} per trainee.` : ''}</div><button class="btn pri block" style="margin-top:10px" data-act="schoolOpen">🎓 Open the school</button></div>`
     : `<div class="small muted" style="margin-bottom:8px">${S.trainees.length}/${cap} trainees · next tryouts week ${S.next}${MON() ? ` · ${money(schoolCost())}/wk` : ''}</div>
       <div class="list">${S.trainees.map(w => tItem(w, 'trainee')).join('') || '<div class="empty">No trainees yet. Pick from the tryouts.</div>'}</div>
       ${(S.tryouts || []).length ? `<div class="sec">Tryouts</div><div class="list">${S.tryouts.map(w => tItem(w, 'tryout')).join('')}</div>` : ''}`;
   const kids = ringers().filter(w => w.age <= 26 || w.train || w.mentor).sort((a, b) => a.age - b.age).slice(0, 12);
-  return `<div class="small muted" style="margin-bottom:8px">Staff are optional. Each one helps in the background every week, and can take a job off your hands.</div>
-    <div class="list">${roles.map(sRow).join('')}</div>
-    ${staffJobsView()}
+  return `<button class="item" data-act="${roleOpen('trainer') ? 'staffRole' : 'staffLocked'}" data-id="trainer" style="margin-bottom:8px"><span class="mile-i">🎓</span><div class="main"><div class="t">Head Trainer${tr ? ` <span class="tiny">${starRow(tr.q)}</span>` : ''}</div><div class="d">${tr ? `<b>${esc(tr.n)}</b> · everyone grows faster${jobOn('focus') ? ' · sets focus for you' : ''}` : 'Nobody hired · tap to hire. Everyone grows faster with one.'}</div></div></button>
     ${goalsSection()}
     <div class="sec">🎓 Training school</div>${school}
     <div class="sec">📈 Training</div>
@@ -14703,8 +14708,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.71';
+const VERSION = '1.9.72';
 const WHATS_NEW = [
+  ['🎯 Training goals and a Training tab', 'Office has a new Training tab with goals, the school and who is training what. Give a wrestler an Easy, Stretch or Dream goal from their profile. Hit it for a morale and popularity boost. Your Head Trainer texts you when someone hits a wall, and stats that reach 80 through training earn badges.'],
   ['🎆 Big moment effects', 'The biggest moments on the live show now light up: confetti falls when a world title (or the top women\'s title) changes hands, and pyro goes off when a big event\'s main event rates 85 or more. Set it to Lots for camera flashes on a 90+ segment too, or turn it off. Find it in Menu → Big moment effects. Less motion turns it off as well.'],
   ['🎤 Cheaper guest promos', 'Per-appearance stars now charge a tenth of their fee for a promo or angle. Their full fee is only for matches. Promos have a new Remote spot under Where: the promo is sent in by video, and a per-appearance star who likes you does it for free.'],
   ['📅 Calendar settings', 'Menu → Settings has a new Calendar section. Start weeks on Sunday, shrink the calendar to this week or hide it, show week numbers, and pick which shows appear. Choose which weekend of the month big events air on, turn off weekly shows on big event weeks, and book up to 26 weeks ahead. Planning helpers add a big event countdown, rival big events and holidays on your calendar, and when the "book the big event" reminder comes.'],
