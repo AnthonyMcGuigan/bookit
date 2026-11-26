@@ -667,6 +667,21 @@ img.belt-ph.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 img.tr-big { object-fit: contain; }
 .tr-mini { width: 100%; height: 70px; display: block; }
 .bd-grid.tr-grid { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
+/* the game's icon pack as symbols, in every editor */
+.bd-grid.sym-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+.sym-t { padding: 8px 2px 6px; font-size: 10.5px; line-height: 1.15; text-align: center; }
+.sym-t .i { width: 26px; height: 26px; --ic: var(--ink); }
+.sym-t.on .i { --ic: var(--accent-t); }
+/* the wrestler's look: the same workshop as belts and trophies */
+.lk > summary { position: static; box-shadow: none; }
+.lk[open] > summary img { display: none; }
+.lk-prev { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin-top: 8px; }
+.lk-face { width: 128px; height: 128px; border-radius: 14px; display: block; box-shadow: 0 8px 18px rgba(0,0,0,.35); }
+.lk-body { width: 72px; height: 144px; border-radius: 10px; display: block; box-shadow: 0 8px 18px rgba(0,0,0,.35); }
+.bd-grid.lk-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+.lk-grid .bd-tile img { width: 54px; height: 54px; border-radius: 8px; display: block; }
+.lk-grid.lk-tall .bd-tile img { width: 40px; height: 80px; }
+.lk-grid .bd-tile img.lk-tpl { width: 64px; height: 64px; }
 .bd-tw { position: relative; display: flex; } .bd-tw .bd-tile { flex: 1; }
 .bd-x { position: absolute; top: -6px; right: -6px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; padding: 0; }
 .bd-x .i { width: 16px; height: 16px; }
@@ -1439,7 +1454,7 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 </style>
 </head>
 <body>
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><symbol id="i-eye" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 5c5 0 8.6 3.6 10 7-1.4 3.4-5 7-10 7S3.4 15.4 2 12c1.4-3.4 5-7 10-7zM12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6zM12 10.3a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4z"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2l8.5 3.2v6.3c0 5.2-3.6 9.2-8.5 10.6-4.9-1.4-8.5-5.4-8.5-10.6V5.2zM12 5.6l-5 1.9v4c0 3.4 2.1 6.2 5 7.3z"/></symbol><symbol id="i-coffee" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 9h13v4.5A6.5 6.5 0 0 1 10.5 20A6.5 6.5 0 0 1 4 13.5zM17 10h1.5a3.2 3.2 0 0 1 0 6.4H16.6l.4-2h1.5a1.2 1.2 0 0 0 0-2.4H17zM3 21h15v1.6H3zM7.5 2.5h1.7v4.5H7.5zM11.3 2.5H13v4.5h-1.7z"/></symbol><symbol id="i-map" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.8 5.6L8.2 3.3v15.4l-5.4 2.3zM9.8 3.3l4.4 1.9v15.5l-4.4-1.9zM15.8 5.2L21.2 3v15.4l-5.4 2.3z"/></symbol><symbol id="i-mute" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4.5v15l-5.5-4.5H3V9h3.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M21.5 9l-5.5 6M16 9l5.5 6"/></symbol><symbol id="i-sound" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4.5v15l-5.5-4.5H3V9h3.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.8a4.5 4.5 0 0 1 0 6.4M18.5 5.8a8.8 8.8 0 0 1 0 12.4"/></symbol><symbol id="i-bug" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 6.5c3 0 5.2 2.4 5.2 5.5v3a5.2 5.2 0 0 1-10.4 0v-3c0-3.1 2.2-5.5 5.2-5.5zM12 9v10"/><path fill-rule="evenodd" d="M9 6.8a3 3 0 0 1 6 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12.5h3.5M17.5 12.5H21M4 19l3-1.8M20 19l-3-1.8M4 6l3 2M20 6l-3 2M9.5 3.5l1 2M14.5 3.5l-1 2"/></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2c1.4 3.8 6.5 6 6.5 11.5a6.5 6.5 0 0 1-13 0c0-3 1.7-4.9 3-6 0 2.3 1 3.6 2.2 3.8C10.5 8 10.3 5 12 2zM12 21a3 3 0 0 1-3-3c0-2 2-3 2.5-5 1.5 1.5 3.5 2.8 3.5 5a3 3 0 0 1-3 3z"/></symbol><symbol id="i-trophy" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7 3h10v6.5a5 5 0 0 1-10 0zM10.3 6.2l.6 1.6h1.7l-1.3 1 .5 1.7-1.5-1-1.5 1 .5-1.7-1.3-1h1.7z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 5.5H4.5a3 3 0 0 0 3.3 4.4M17 5.5h2.5a3 3 0 0 1-3.3 4.4"/><path fill-rule="evenodd" d="M10.8 14h2.4v3.5h-2.4zM8 17.5h8a1 1 0 0 1 1 1V21H7v-2.5a1 1 0 0 1 1-1z"/></symbol><symbol id="i-heart" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 21s-8.2-4.9-10-10C.6 7.1 3.1 3.3 7 3.3c2.2 0 3.8 1.2 5 2.9 1.2-1.7 2.8-2.9 5-2.9 3.9 0 6.4 3.8 5 7.7-1.8 5.1-10 10-10 10z"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.3l2.9 6 6.6.9-4.8 4.6 1.2 6.6L12 17.2l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9z"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.3 3.6a2 2 0 0 1 3.4 0l8.4 14.6a2 2 0 0 1-1.7 3H3.6a2 2 0 0 1-1.7-3zM11 9h2l-.3 5.5h-1.4zM12 16.3a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z"/></symbol><symbol id="i-checkc" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM6.9 12.4l1.8-1.8 2.1 2.1 4.5-5.1 1.9 1.7-6.3 7.1z"/></symbol><symbol id="i-xc" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM8.6 7l3.4 3.4L15.4 7 17 8.6 13.6 12l3.4 3.4-1.6 1.6-3.4-3.4L8.6 17 7 15.4l3.4-3.4L7 8.6z"/></symbol><symbol id="i-pen" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M15.6 3.6a2 2 0 0 1 2.8 0l2 2a2 2 0 0 1 0 2.8L9 19.8 3.5 21 4.7 15.5zM14 7.2l2.8 2.8 1-1L15 6.2z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 2.5h6a1 1 0 0 1 1 1V5h4a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2h4V3.5a1 1 0 0 1 1-1zM5.5 8.5h13l-1 11.5a1.6 1.6 0 0 1-1.6 1.5H8.1a1.6 1.6 0 0 1-1.6-1.5zM9.3 11v7.5h1.4V11zM13.3 11v7.5h1.4V11z"/></symbol><symbol id="i-dice" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM8 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM16 14.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></symbol><symbol id="i-trend" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 21h18v-1.8H3z"/><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 16l5.5-5.5 4 4 7.5-7.5"/><path fill-rule="evenodd" d="M14.5 5.5H22V13z"/></symbol><symbol id="i-down" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 21h18v-1.8H3z"/><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 5l5.5 5.5 4-4 7.5 7.5"/><path fill-rule="evenodd" d="M14.5 16.5H22V9z"/></symbol><symbol id="i-snow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M12 2.5v19M3.8 7.2l16.4 9.6M3.8 16.8l16.4-9.6M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5A7.8 7.8 0 0 0 5.2 7.2M4.5 13.5a7.8 7.8 0 0 0 14.3 3.3"/><path fill-rule="evenodd" d="M3 3v7h7zM21 21v-7h-7z"/></symbol><symbol id="i-news" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 4.5h14v13.5a2.5 2.5 0 0 0 2.5 2.5H5.5A2.5 2.5 0 0 1 3 18zM6 7.5v3.5h8V7.5zM6 13v1.6h8V13zM6 16.2v1.6h5.5v-1.6z"/><path fill-rule="evenodd" d="M18 9h3v9.5a1.5 1.5 0 0 1-3 0z"/></symbol><symbol id="i-medal" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 13.5l-1.8 8 6.3-3 6.3 3-1.8-8z"/><path fill-rule="evenodd" d="M12 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM12 5l1.1 2.3 2.5.3-1.8 1.7.5 2.5L12 10.6l-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></symbol><symbol id="i-equal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 9h14M5 15h14"/></symbol><symbol id="i-box" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.3l9 4.2-9 4.3-9-4.3z"/><path fill-rule="evenodd" d="M2.5 8.2l8.7 4.1v9.4L2.5 17.6z"/><path fill-rule="evenodd" d="M21.5 8.2l-8.7 4.1v9.4l8.7-4.1z"/></symbol><symbol id="i-tv" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 6.5h16a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2zM5 9.5v7.5h14V9.5z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5l4 4 4-4"/></symbol><symbol id="i-frown" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM15 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.8 16.6a1 1 0 0 0 1.6 1.1 3.3 3.3 0 0 1 5.2 0 1 1 0 0 0 1.6-1.1 5.3 5.3 0 0 0-8.4 0z"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM15 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.4 13.2a4.8 4.8 0 0 0 9.2 0z"/></symbol><symbol id="i-heel" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM7 8.2l4 1.7-.5 1.6-4-1.3zM17 8.2l-4 1.7.5 1.6 4-1.3zM7.8 16.8a1 1 0 0 0 1.6 1.1 3.3 3.3 0 0 1 5.2 0 1 1 0 0 0 1.6-1.1 5.3 5.3 0 0 0-8.4 0z"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 2.5h2v19H4z"/><path fill-rule="evenodd" d="M6.5 3.5H19l-2.5 4.5 2.5 4.5H6.5z"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a1.5 1.5 0 0 1 1.5 1.5v.6A6.5 6.5 0 0 1 18.5 11v4.5l2 2.5v1H3.5v-1l2-2.5V11a6.5 6.5 0 0 1 5-6.4V4A1.5 1.5 0 0 1 12 2.5zM9.5 20h5a2.5 2.5 0 0 1-5 0z"/></symbol><symbol id="i-target" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 4.5h14a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2zM5 9.5V19h14V9.5zM7 11.5h2.5V14H7zM10.8 11.5h2.5V14h-2.5zM14.5 11.5H17V14h-2.5zM7 15.5h2.5V18H7zM10.8 15.5h2.5V18h-2.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5v4M16 2.5v4"/></symbol><symbol id="i-crown" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 7.5l5 4.5L12 4.5l4.5 7.5 5-4.5-1.8 10H4.3z"/><path fill-rule="evenodd" d="M4.5 19h15v2.5h-15z"/></symbol><symbol id="i-megaphone" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M16 3.5v17l-8-4.3H5A2.5 2.5 0 0 1 2.5 13.7v-3.4A2.5 2.5 0 0 1 5 7.8h3z"/><path fill-rule="evenodd" d="M5.5 17.5h3l1.3 4H7z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 9a4 4 0 0 1 0 6"/></symbol><symbol id="i-briefcase" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3h6a1.5 1.5 0 0 1 1.5 1.5V7H20a2 2 0 0 1 2 2v3.5h-8.5v-1h-3v1H2V9a2 2 0 0 1 2-2h3.5V4.5A1.5 1.5 0 0 1 9 3zM9.3 4.8V7h5.4V4.8zM2 14h8.5v1.5h3V14H22v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a4.5 4.5 0 0 1 4.5 4.5v3h.5a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2h.5V7A4.5 4.5 0 0 1 12 2.5zM12 4.5A2.5 2.5 0 0 0 9.5 7v3h5V7A2.5 2.5 0 0 0 12 4.5zM12 13.5a1.8 1.8 0 0 0-1 3.3V19h2v-2.2a1.8 1.8 0 0 0-1-3.3z"/></symbol><symbol id="i-tired" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 7h13a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM4.2 9.2v5.6h4V9.2z"/><path fill-rule="evenodd" d="M20 10h1.5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5H20z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 2.5h8l5.5 5.5v8L16 21.5H8L2.5 16V8zM7 10.8v2.4h10v-2.4z"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM1.5 20.5a7.5 7.5 0 0 1 15 0v1h-15z"/><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M19.5 7.5v7M16 11h7"/></symbol><symbol id="i-coin" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12.9 5.8h-1.8v1.4c-1.7.4-2.8 1.6-2.8 3.1 0 1.9 1.6 2.6 3.3 3 1.3.3 1.9.6 1.9 1.3 0 .6-.6 1-1.6 1-1 0-1.8-.4-2.2-1.2l-1.7.8c.5 1.2 1.6 2 3.1 2.2v1.3h1.8v-1.4c1.8-.4 2.8-1.5 2.8-3 0-2-1.6-2.7-3.4-3.1-1.2-.3-1.8-.6-1.8-1.2 0-.5.5-.9 1.4-.9.8 0 1.5.3 1.9 1l1.6-.9c-.6-1-1.4-1.6-2.5-1.9z"/></symbol><symbol id="i-bang" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM10.7 6.4h2.6l-.4 8.2h-1.8zM12 15.6a1.45 1.45 0 1 1 0 2.9 1.45 1.45 0 0 1 0-2.9z"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM10.8 10.5h2.4V17h-2.4zM12 6.3a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z"/></symbol><symbol id="i-book" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6.5 2.5H19v15H7a1.5 1.5 0 0 0 0 3h12v1.5H6.8A2.8 2.8 0 0 1 4 19.2V5a2.5 2.5 0 0 1 2.5-2.5zM8.5 6v1.6h7V6zM8.5 9.2v1.6h5V9.2z"/></symbol><symbol id="i-door" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 2.5h12v18H6zM14 11a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/><path fill-rule="evenodd" d="M3 20h18v2H3z"/></symbol><symbol id="i-ticket" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4zM13.3 7.5v1.8h1.4V7.5zM13.3 11.1v1.8h1.4v-1.8zM13.3 14.7v1.8h1.4v-1.8z"/></symbol><symbol id="i-bulb" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a6.8 6.8 0 0 1 4 12.3V16.5H8v-2.2A6.8 6.8 0 0 1 12 2z"/><path fill-rule="evenodd" d="M8.5 17.8h7v1.7h-7zM9.8 20.5h4.4a2.2 2.2 0 0 1-4.4 0z"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3a4.2 4.2 0 1 1 0 8.4A4.2 4.2 0 0 1 9 3zM1.5 21a7.5 7.5 0 0 1 15 0v.5h-15z"/><path fill-rule="evenodd" d="M15.8 3.2a4.2 4.2 0 0 1 0 8 6 6 0 0 0 0-8zM18 13.6A7.5 7.5 0 0 1 22.5 21v.5h-4.2V21a9 9 0 0 0-2.8-6.6 7 7 0 0 1 2.5-.8z"/></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13.5 1.5L3.5 14H11l-1.2 8.5L20.5 10H13z"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M15 4a3 3 0 0 0-6 0v7a3 3 0 0 0 6 0z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol><symbol id="i-film" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 9.5h18V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path fill-rule="evenodd" d="M3.2 8.2l1.6-4.5a1 1 0 0 1 1-.7h14.4a.8.8 0 0 1 .7 1.1L19.4 8.2zM8.6 4.2L7.3 7.2h2.3l1.3-3zM14.4 4.2L13.1 7.2h2.3l1.3-3z"/></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11 2.5l2.1 6.4 6.4 2.1-6.4 2.1L11 19.5l-2.1-6.4-6.4-2.1 6.4-2.1z"/><path fill-rule="evenodd" d="M19 14.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 4h6l1.8 2.5H20a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2h3.2zM12 8.5a4.3 4.3 0 1 0 0 8.6 4.3 4.3 0 0 0 0-8.6zM12 10.5a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6z"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 1.5h8a2 2 0 0 1 2 2v17a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-17a2 2 0 0 1 2-2zM8.2 4v13h7.6V4zM12 18.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3.5h14a2.5 2.5 0 0 1 2.5 2.5v8.5A2.5 2.5 0 0 1 19 17h-9l-5.5 4.5V17H5a2.5 2.5 0 0 1-2.5-2.5V6A2.5 2.5 0 0 1 5 3.5zM7 8v1.8h10V8zM7 11.3v1.8h6.5v-1.8z"/></symbol><symbol id="i-cap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3l11 5.5L12 14 1 8.5z"/><path fill-rule="evenodd" d="M5.5 11.5l6.5 3.3 6.5-3.3v4.8c-3.5 2.8-9.5 2.8-13 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21.5 9.5v6"/></symbol><symbol id="i-mask" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 5c3.2 1.3 6.3 1.3 9.5 0 3.2 1.3 6.3 1.3 9.5 0v6a9.5 9.5 0 0 1-19 0zM6.8 9.3v1.8h3.5V9.3zM13.7 9.3v1.8h3.5V9.3zM8.3 14.5a4.7 4.7 0 0 0 7.4 0z"/></symbol><symbol id="i-skip" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.5 4.5l9 7.5-9 7.5zM12.5 4.5l9 7.5-9 7.5z"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M4 6.5h16M4 12h16M4 17.5h16"/></symbol><symbol id="i-notebook" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6.5 2.5H18a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H6.5zM9.5 6.5v1.8h7V6.5zM9.5 10v1.8h5V10z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 7h3.5M3 12h3.5M3 17h3.5"/></symbol><symbol id="i-swap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 2.5v4h12v3.5h-12v4L2 8.3z"/><path fill-rule="evenodd" d="M16.5 9.5v4h-12V17h12v4.5L22 15.8z"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5l10 8-1.3 1.6-1.2-1V20.5a1 1 0 0 1-1 1H14.5v-6h-5v6H5.5a1 1 0 0 1-1-1V11.1l-1.2 1L2 10.5z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 1.5a7.5 7.5 0 0 1 7.5 7.5c0 5.8-7.5 13-7.5 13S4.5 14.8 4.5 9A7.5 7.5 0 0 1 12 1.5zM12 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M16.6 2.2l5.2 5.2L7.4 21.8l-5.2-5.2zM15.3 6.3l-1.2 1.2 2 2 1.2-1.2zM12.1 9.5l-1.2 1.2 2 2 1.2-1.2zM8.9 12.7l-1.2 1.2 2 2 1.2-1.2z"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 5.5L21 3v13.5a3.2 3.2 0 1 1-2-3V7.4L10 9.2v9.3a3.2 3.2 0 1 1-2-3z"/></symbol><symbol id="i-musicoff" viewBox="0 0 24 24"><path fill-rule="evenodd" opacity=".45" d="M8 5.5L21 3v13.5a3.2 3.2 0 1 1-2-3V7.4L10 9.2v9.3a3.2 3.2 0 1 1-2-3z"/><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M3 3l18 18"/></symbol><symbol id="i-grid" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 2h8.5L19 6.5V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM13.5 3.5V7.5h4zM7.5 11v1.8h9V11zM7.5 14.6v1.8h6v-1.8z"/></symbol><symbol id="i-medical" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3h6a1.5 1.5 0 0 1 1.5 1.5V7H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3.5V4.5A1.5 1.5 0 0 1 9 3zM9.3 4.8V7h5.4V4.8zM10.8 10v2.8H8v2.4h2.8V18h2.4v-2.8H16v-2.4h-2.8V10z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 3.5v10"/><path fill-rule="evenodd" d="M6.5 10.5h11L12 17z"/><path fill-rule="evenodd" d="M3.5 19h17v2.5h-17z"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 20.5v-10"/><path fill-rule="evenodd" d="M6.5 13.5h11L12 7z"/><path fill-rule="evenodd" d="M3.5 2.5h17V5h-17z"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12 4.5c-1.2 1.5-2.1 3.8-2.3 6.5h4.6c-.2-2.7-1.1-5-2.3-6.5zM14.4 13h-4.8c.2 2.7 1.1 5 2.4 6.5 1.3-1.5 2.2-3.8 2.4-6.5zM4.6 11h3.1c.1-2.4.8-4.6 1.8-6.1A7.6 7.6 0 0 0 4.6 11zM16.3 11h3.1a7.6 7.6 0 0 0-4.9-6.1c1 1.5 1.7 3.7 1.8 6.1zM4.6 13a7.6 7.6 0 0 0 4.9 6.1c-1-1.5-1.7-3.7-1.8-6.1zM16.3 13c-.1 2.4-.8 4.6-1.8 6.1a7.6 7.6 0 0 0 4.9-6.1z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 2.5h11.5l4 4V19.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2zM7 4.5v4.5h8V4.5zM7 13.5v6h10v-6z"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 2h6a1 1 0 0 1 1 1v1h3a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 19 22H5a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 5 4h3V3a1 1 0 0 1 1-1zM9.5 3.8v2.4h5V3.8zM7.5 10.5v1.8h9v-1.8zM7.5 14.5v1.8h6v-1.8z"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zM4 21.5a8 8 0 0 1 16 0z"/></symbol><symbol id="i-wrestle" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4zM16.5 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4z"/><path fill-rule="evenodd" d="M2.5 21.5l1.8-8.5 3.4-3.6L12 12.3l4.3-2.9 3.4 3.6 1.8 8.5h-3.2l-1.4-6-1.4 1.1V21.5H8.5v-4.9l-1.4-1.1-1.4 6z"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5l10 5-10 5-10-5z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 12l9 4.5 9-4.5M3 16.5l9 4.5 9-4.5"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13.5 1.5L3.5 14H11l-1.2 8.5L20.5 10H13z"/></symbol></svg>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><symbol id="i-eye" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 5c5 0 8.6 3.6 10 7-1.4 3.4-5 7-10 7S3.4 15.4 2 12c1.4-3.4 5-7 10-7zM12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6zM12 10.3a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4z"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2l8.5 3.2v6.3c0 5.2-3.6 9.2-8.5 10.6-4.9-1.4-8.5-5.4-8.5-10.6V5.2zM12 5.6l-5 1.9v4c0 3.4 2.1 6.2 5 7.3z"/></symbol><symbol id="i-coffee" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 9h13v4.5A6.5 6.5 0 0 1 10.5 20A6.5 6.5 0 0 1 4 13.5zM17 10h1.5a3.2 3.2 0 0 1 0 6.4H16.6l.4-2h1.5a1.2 1.2 0 0 0 0-2.4H17zM3 21h15v1.6H3zM7.5 2.5h1.7v4.5H7.5zM11.3 2.5H13v4.5h-1.7z"/></symbol><symbol id="i-map" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.8 5.6L8.2 3.3v15.4l-5.4 2.3zM9.8 3.3l4.4 1.9v15.5l-4.4-1.9zM15.8 5.2L21.2 3v15.4l-5.4 2.3z"/></symbol><symbol id="i-mute" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4.5v15l-5.5-4.5H3V9h3.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M21.5 9l-5.5 6M16 9l5.5 6"/></symbol><symbol id="i-sound" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4.5v15l-5.5-4.5H3V9h3.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.8a4.5 4.5 0 0 1 0 6.4M18.5 5.8a8.8 8.8 0 0 1 0 12.4"/></symbol><symbol id="i-bug" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 6.5c3 0 5.2 2.4 5.2 5.5v3a5.2 5.2 0 0 1-10.4 0v-3c0-3.1 2.2-5.5 5.2-5.5zM12 9v10"/><path fill-rule="evenodd" d="M9 6.8a3 3 0 0 1 6 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12.5h3.5M17.5 12.5H21M4 19l3-1.8M20 19l-3-1.8M4 6l3 2M20 6l-3 2M9.5 3.5l1 2M14.5 3.5l-1 2"/></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2c1.4 3.8 6.5 6 6.5 11.5a6.5 6.5 0 0 1-13 0c0-3 1.7-4.9 3-6 0 2.3 1 3.6 2.2 3.8C10.5 8 10.3 5 12 2zM12 21a3 3 0 0 1-3-3c0-2 2-3 2.5-5 1.5 1.5 3.5 2.8 3.5 5a3 3 0 0 1-3 3z"/></symbol><symbol id="i-trophy" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7 3h10v6.5a5 5 0 0 1-10 0zM10.3 6.2l.6 1.6h1.7l-1.3 1 .5 1.7-1.5-1-1.5 1 .5-1.7-1.3-1h1.7z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 5.5H4.5a3 3 0 0 0 3.3 4.4M17 5.5h2.5a3 3 0 0 1-3.3 4.4"/><path fill-rule="evenodd" d="M10.8 14h2.4v3.5h-2.4zM8 17.5h8a1 1 0 0 1 1 1V21H7v-2.5a1 1 0 0 1 1-1z"/></symbol><symbol id="i-heart" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 21s-8.2-4.9-10-10C.6 7.1 3.1 3.3 7 3.3c2.2 0 3.8 1.2 5 2.9 1.2-1.7 2.8-2.9 5-2.9 3.9 0 6.4 3.8 5 7.7-1.8 5.1-10 10-10 10z"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.3l2.9 6 6.6.9-4.8 4.6 1.2 6.6L12 17.2l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9z"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.3 3.6a2 2 0 0 1 3.4 0l8.4 14.6a2 2 0 0 1-1.7 3H3.6a2 2 0 0 1-1.7-3zM11 9h2l-.3 5.5h-1.4zM12 16.3a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z"/></symbol><symbol id="i-checkc" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM6.9 12.4l1.8-1.8 2.1 2.1 4.5-5.1 1.9 1.7-6.3 7.1z"/></symbol><symbol id="i-xc" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM8.6 7l3.4 3.4L15.4 7 17 8.6 13.6 12l3.4 3.4-1.6 1.6-3.4-3.4L8.6 17 7 15.4l3.4-3.4L7 8.6z"/></symbol><symbol id="i-pen" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M15.6 3.6a2 2 0 0 1 2.8 0l2 2a2 2 0 0 1 0 2.8L9 19.8 3.5 21 4.7 15.5zM14 7.2l2.8 2.8 1-1L15 6.2z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 2.5h6a1 1 0 0 1 1 1V5h4a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2h4V3.5a1 1 0 0 1 1-1zM5.5 8.5h13l-1 11.5a1.6 1.6 0 0 1-1.6 1.5H8.1a1.6 1.6 0 0 1-1.6-1.5zM9.3 11v7.5h1.4V11zM13.3 11v7.5h1.4V11z"/></symbol><symbol id="i-dice" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM8 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM16 14.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></symbol><symbol id="i-trend" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 21h18v-1.8H3z"/><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 16l5.5-5.5 4 4 7.5-7.5"/><path fill-rule="evenodd" d="M14.5 5.5H22V13z"/></symbol><symbol id="i-down" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 21h18v-1.8H3z"/><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 5l5.5 5.5 4-4 7.5 7.5"/><path fill-rule="evenodd" d="M14.5 16.5H22V9z"/></symbol><symbol id="i-snow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M12 2.5v19M3.8 7.2l16.4 9.6M3.8 16.8l16.4-9.6M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5A7.8 7.8 0 0 0 5.2 7.2M4.5 13.5a7.8 7.8 0 0 0 14.3 3.3"/><path fill-rule="evenodd" d="M3 3v7h7zM21 21v-7h-7z"/></symbol><symbol id="i-news" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 4.5h14v13.5a2.5 2.5 0 0 0 2.5 2.5H5.5A2.5 2.5 0 0 1 3 18zM6 7.5v3.5h8V7.5zM6 13v1.6h8V13zM6 16.2v1.6h5.5v-1.6z"/><path fill-rule="evenodd" d="M18 9h3v9.5a1.5 1.5 0 0 1-3 0z"/></symbol><symbol id="i-medal" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 13.5l-1.8 8 6.3-3 6.3 3-1.8-8z"/><path fill-rule="evenodd" d="M12 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM12 5l1.1 2.3 2.5.3-1.8 1.7.5 2.5L12 10.6l-2.3 1.2.5-2.5-1.8-1.7 2.5-.3z"/></symbol><symbol id="i-equal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 9h14M5 15h14"/></symbol><symbol id="i-box" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.3l9 4.2-9 4.3-9-4.3z"/><path fill-rule="evenodd" d="M2.5 8.2l8.7 4.1v9.4L2.5 17.6z"/><path fill-rule="evenodd" d="M21.5 8.2l-8.7 4.1v9.4l8.7-4.1z"/></symbol><symbol id="i-tv" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 6.5h16a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2zM5 9.5v7.5h14V9.5z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5l4 4 4-4"/></symbol><symbol id="i-frown" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM15 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.8 16.6a1 1 0 0 0 1.6 1.1 3.3 3.3 0 0 1 5.2 0 1 1 0 0 0 1.6-1.1 5.3 5.3 0 0 0-8.4 0z"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM15 8.3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.4 13.2a4.8 4.8 0 0 0 9.2 0z"/></symbol><symbol id="i-heel" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM7 8.2l4 1.7-.5 1.6-4-1.3zM17 8.2l-4 1.7.5 1.6 4-1.3zM7.8 16.8a1 1 0 0 0 1.6 1.1 3.3 3.3 0 0 1 5.2 0 1 1 0 0 0 1.6-1.1 5.3 5.3 0 0 0-8.4 0z"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 2.5h2v19H4z"/><path fill-rule="evenodd" d="M6.5 3.5H19l-2.5 4.5 2.5 4.5H6.5z"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a1.5 1.5 0 0 1 1.5 1.5v.6A6.5 6.5 0 0 1 18.5 11v4.5l2 2.5v1H3.5v-1l2-2.5V11a6.5 6.5 0 0 1 5-6.4V4A1.5 1.5 0 0 1 12 2.5zM9.5 20h5a2.5 2.5 0 0 1-5 0z"/></symbol><symbol id="i-target" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 4.5h14a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2zM5 9.5V19h14V9.5zM7 11.5h2.5V14H7zM10.8 11.5h2.5V14h-2.5zM14.5 11.5H17V14h-2.5zM7 15.5h2.5V18H7zM10.8 15.5h2.5V18h-2.5z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5v4M16 2.5v4"/></symbol><symbol id="i-crown" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 7.5l5 4.5L12 4.5l4.5 7.5 5-4.5-1.8 10H4.3z"/><path fill-rule="evenodd" d="M4.5 19h15v2.5h-15z"/></symbol><symbol id="i-megaphone" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M16 3.5v17l-8-4.3H5A2.5 2.5 0 0 1 2.5 13.7v-3.4A2.5 2.5 0 0 1 5 7.8h3z"/><path fill-rule="evenodd" d="M5.5 17.5h3l1.3 4H7z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M19 9a4 4 0 0 1 0 6"/></symbol><symbol id="i-briefcase" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3h6a1.5 1.5 0 0 1 1.5 1.5V7H20a2 2 0 0 1 2 2v3.5h-8.5v-1h-3v1H2V9a2 2 0 0 1 2-2h3.5V4.5A1.5 1.5 0 0 1 9 3zM9.3 4.8V7h5.4V4.8zM2 14h8.5v1.5h3V14H22v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a4.5 4.5 0 0 1 4.5 4.5v3h.5a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2h.5V7A4.5 4.5 0 0 1 12 2.5zM12 4.5A2.5 2.5 0 0 0 9.5 7v3h5V7A2.5 2.5 0 0 0 12 4.5zM12 13.5a1.8 1.8 0 0 0-1 3.3V19h2v-2.2a1.8 1.8 0 0 0-1-3.3z"/></symbol><symbol id="i-tired" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 7h13a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM4.2 9.2v5.6h4V9.2z"/><path fill-rule="evenodd" d="M20 10h1.5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5H20z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 2.5h8l5.5 5.5v8L16 21.5H8L2.5 16V8zM7 10.8v2.4h10v-2.4z"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM1.5 20.5a7.5 7.5 0 0 1 15 0v1h-15z"/><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M19.5 7.5v7M16 11h7"/></symbol><symbol id="i-coin" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12.9 5.8h-1.8v1.4c-1.7.4-2.8 1.6-2.8 3.1 0 1.9 1.6 2.6 3.3 3 1.3.3 1.9.6 1.9 1.3 0 .6-.6 1-1.6 1-1 0-1.8-.4-2.2-1.2l-1.7.8c.5 1.2 1.6 2 3.1 2.2v1.3h1.8v-1.4c1.8-.4 2.8-1.5 2.8-3 0-2-1.6-2.7-3.4-3.1-1.2-.3-1.8-.6-1.8-1.2 0-.5.5-.9 1.4-.9.8 0 1.5.3 1.9 1l1.6-.9c-.6-1-1.4-1.6-2.5-1.9z"/></symbol><symbol id="i-bang" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM10.7 6.4h2.6l-.4 8.2h-1.8zM12 15.6a1.45 1.45 0 1 1 0 2.9 1.45 1.45 0 0 1 0-2.9z"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM10.8 10.5h2.4V17h-2.4zM12 6.3a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z"/></symbol><symbol id="i-book" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6.5 2.5H19v15H7a1.5 1.5 0 0 0 0 3h12v1.5H6.8A2.8 2.8 0 0 1 4 19.2V5a2.5 2.5 0 0 1 2.5-2.5zM8.5 6v1.6h7V6zM8.5 9.2v1.6h5V9.2z"/></symbol><symbol id="i-door" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 2.5h12v18H6zM14 11a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/><path fill-rule="evenodd" d="M3 20h18v2H3z"/></symbol><symbol id="i-ticket" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4zM13.3 7.5v1.8h1.4V7.5zM13.3 11.1v1.8h1.4v-1.8zM13.3 14.7v1.8h1.4v-1.8z"/></symbol><symbol id="i-bulb" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a6.8 6.8 0 0 1 4 12.3V16.5H8v-2.2A6.8 6.8 0 0 1 12 2z"/><path fill-rule="evenodd" d="M8.5 17.8h7v1.7h-7zM9.8 20.5h4.4a2.2 2.2 0 0 1-4.4 0z"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3a4.2 4.2 0 1 1 0 8.4A4.2 4.2 0 0 1 9 3zM1.5 21a7.5 7.5 0 0 1 15 0v.5h-15z"/><path fill-rule="evenodd" d="M15.8 3.2a4.2 4.2 0 0 1 0 8 6 6 0 0 0 0-8zM18 13.6A7.5 7.5 0 0 1 22.5 21v.5h-4.2V21a9 9 0 0 0-2.8-6.6 7 7 0 0 1 2.5-.8z"/></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13.5 1.5L3.5 14H11l-1.2 8.5L20.5 10H13z"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M15 4a3 3 0 0 0-6 0v7a3 3 0 0 0 6 0z"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol><symbol id="i-film" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 9.5h18V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path fill-rule="evenodd" d="M3.2 8.2l1.6-4.5a1 1 0 0 1 1-.7h14.4a.8.8 0 0 1 .7 1.1L19.4 8.2zM8.6 4.2L7.3 7.2h2.3l1.3-3zM14.4 4.2L13.1 7.2h2.3l1.3-3z"/></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11 2.5l2.1 6.4 6.4 2.1-6.4 2.1L11 19.5l-2.1-6.4-6.4-2.1 6.4-2.1z"/><path fill-rule="evenodd" d="M19 14.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 4h6l1.8 2.5H20a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2h3.2zM12 8.5a4.3 4.3 0 1 0 0 8.6 4.3 4.3 0 0 0 0-8.6zM12 10.5a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6z"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 1.5h8a2 2 0 0 1 2 2v17a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-17a2 2 0 0 1 2-2zM8.2 4v13h7.6V4zM12 18.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3.5h14a2.5 2.5 0 0 1 2.5 2.5v8.5A2.5 2.5 0 0 1 19 17h-9l-5.5 4.5V17H5a2.5 2.5 0 0 1-2.5-2.5V6A2.5 2.5 0 0 1 5 3.5zM7 8v1.8h10V8zM7 11.3v1.8h6.5v-1.8z"/></symbol><symbol id="i-cap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3l11 5.5L12 14 1 8.5z"/><path fill-rule="evenodd" d="M5.5 11.5l6.5 3.3 6.5-3.3v4.8c-3.5 2.8-9.5 2.8-13 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21.5 9.5v6"/></symbol><symbol id="i-mask" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 5c3.2 1.3 6.3 1.3 9.5 0 3.2 1.3 6.3 1.3 9.5 0v6a9.5 9.5 0 0 1-19 0zM6.8 9.3v1.8h3.5V9.3zM13.7 9.3v1.8h3.5V9.3zM8.3 14.5a4.7 4.7 0 0 0 7.4 0z"/></symbol><symbol id="i-skip" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3.5 4.5l9 7.5-9 7.5zM12.5 4.5l9 7.5-9 7.5z"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M4 6.5h16M4 12h16M4 17.5h16"/></symbol><symbol id="i-notebook" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6.5 2.5H18a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H6.5zM9.5 6.5v1.8h7V6.5zM9.5 10v1.8h5V10z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 7h3.5M3 12h3.5M3 17h3.5"/></symbol><symbol id="i-swap" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 2.5v4h12v3.5h-12v4L2 8.3z"/><path fill-rule="evenodd" d="M16.5 9.5v4h-12V17h12v4.5L22 15.8z"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5l10 8-1.3 1.6-1.2-1V20.5a1 1 0 0 1-1 1H14.5v-6h-5v6H5.5a1 1 0 0 1-1-1V11.1l-1.2 1L2 10.5z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 1.5a7.5 7.5 0 0 1 7.5 7.5c0 5.8-7.5 13-7.5 13S4.5 14.8 4.5 9A7.5 7.5 0 0 1 12 1.5zM12 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M16.6 2.2l5.2 5.2L7.4 21.8l-5.2-5.2zM15.3 6.3l-1.2 1.2 2 2 1.2-1.2zM12.1 9.5l-1.2 1.2 2 2 1.2-1.2zM8.9 12.7l-1.2 1.2 2 2 1.2-1.2z"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 5.5L21 3v13.5a3.2 3.2 0 1 1-2-3V7.4L10 9.2v9.3a3.2 3.2 0 1 1-2-3z"/></symbol><symbol id="i-musicoff" viewBox="0 0 24 24"><path fill-rule="evenodd" opacity=".45" d="M8 5.5L21 3v13.5a3.2 3.2 0 1 1-2-3V7.4L10 9.2v9.3a3.2 3.2 0 1 1-2-3z"/><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M3 3l18 18"/></symbol><symbol id="i-grid" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 2h8.5L19 6.5V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM13.5 3.5V7.5h4zM7.5 11v1.8h9V11zM7.5 14.6v1.8h6v-1.8z"/></symbol><symbol id="i-medical" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3h6a1.5 1.5 0 0 1 1.5 1.5V7H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3.5V4.5A1.5 1.5 0 0 1 9 3zM9.3 4.8V7h5.4V4.8zM10.8 10v2.8H8v2.4h2.8V18h2.4v-2.8H16v-2.4h-2.8V10z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 3.5v10"/><path fill-rule="evenodd" d="M6.5 10.5h11L12 17z"/><path fill-rule="evenodd" d="M3.5 19h17v2.5h-17z"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 20.5v-10"/><path fill-rule="evenodd" d="M6.5 13.5h11L12 7z"/><path fill-rule="evenodd" d="M3.5 2.5h17V5h-17z"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM12 4.5c-1.2 1.5-2.1 3.8-2.3 6.5h4.6c-.2-2.7-1.1-5-2.3-6.5zM14.4 13h-4.8c.2 2.7 1.1 5 2.4 6.5 1.3-1.5 2.2-3.8 2.4-6.5zM4.6 11h3.1c.1-2.4.8-4.6 1.8-6.1A7.6 7.6 0 0 0 4.6 11zM16.3 11h3.1a7.6 7.6 0 0 0-4.9-6.1c1 1.5 1.7 3.7 1.8 6.1zM4.6 13a7.6 7.6 0 0 0 4.9 6.1c-1-1.5-1.7-3.7-1.8-6.1zM16.3 13c-.1 2.4-.8 4.6-1.8 6.1a7.6 7.6 0 0 0 4.9-6.1z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 2.5h11.5l4 4V19.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2zM7 4.5v4.5h8V4.5zM7 13.5v6h10v-6z"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 2h6a1 1 0 0 1 1 1v1h3a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 19 22H5a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 5 4h3V3a1 1 0 0 1 1-1zM9.5 3.8v2.4h5V3.8zM7.5 10.5v1.8h9v-1.8zM7.5 14.5v1.8h6v-1.8z"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zM4 21.5a8 8 0 0 1 16 0z"/></symbol><symbol id="i-wrestle" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M7.5 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4zM16.5 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4z"/><path fill-rule="evenodd" d="M2.5 21.5l1.8-8.5 3.4-3.6L12 12.3l4.3-2.9 3.4 3.6 1.8 8.5h-3.2l-1.4-6-1.4 1.1V21.5H8.5v-4.9l-1.4-1.1-1.4 6z"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5l10 5-10 5-10-5z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 12l9 4.5 9-4.5M3 16.5l9 4.5 9-4.5"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13.5 1.5L3.5 14H11l-1.2 8.5L20.5 10H13z"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M8 9.5h7.5a5 5 0 0 1 0 10H9"/><path fill-rule="evenodd" d="M2.5 9.5L9 4v11z"/></symbol></svg>
 <div id="root"></div>
 <div id="modals"></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -7306,7 +7321,7 @@ function beltClean(b, t) {
   const col = (v, f) => /^#[0-9a-f]{6}$/i.test(String(v)) ? String(v) : f;
   const one = (v, m, f) => Object.hasOwn(m, String(v)) ? String(v) : f;
   return { plate: one(o.plate, BPLATE, d.plate), metal: one(o.metal, BMETAL, d.metal), trim: o.trim && Object.hasOwn(BMETAL, o.trim) ? o.trim : '', strap: col(o.strap, d.strap), tex: one(o.tex, BSTRAP, d.tex),
-    sides: [0, 2, 4, 6].includes(+o.sides) ? +o.sides : d.sides, side: ['rect', 'round', 'shield'].includes(o.side) ? o.side : 'rect', emblem: one(o.emblem, BEMBLEM, d.emblem), gem: col(o.gem, d.gem),
+    sides: [0, 2, 4, 6].includes(+o.sides) ? +o.sides : d.sides, side: ['rect', 'round', 'shield'].includes(o.side) ? o.side : 'rect', emblem: symOK(o.emblem) ? o.emblem : one(o.emblem, BEMBLEM, d.emblem), gem: col(o.gem, d.gem),
     ring: o.ring ? 1 : 0, carve: one(o.carve, BCARVE, d.carve), top: String(o.top ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 30), line: String(o.line ?? d.line).replace(/[<>`"]/g, '').toUpperCase().slice(0, 30),
     font: one(o.font, BFONT, 'block'), enamel: col(o.enamel, d.enamel), banner: o.banner == null ? d.banner : o.banner ? 1 : 0, sub: String(o.sub ?? '').replace(/[<>`"]/g, '').toUpperCase().slice(0, 4), orn: o.orn == null ? d.orn : o.orn ? 1 : 0,
     // side plate look, centre plate size, strap width and side plate size (in %)
@@ -7315,7 +7330,7 @@ function beltClean(b, t) {
 // a size in %: 100 unless set inside its range
 function pctIn(v, lo, hi) { const n = Math.round(+v); return isFinite(n) && n ? clamp(n, lo, hi) : 100; }
 // what a side plate can show: a gem, the company's initials, the champion's initials, or any centre icon
-const BSIDE_LOOK = k => k === 'gem' || k === 'co' || k === 'champ' || (Object.hasOwn(BEMBLEM, k) && !['none', 'logo', 'gem'].includes(k));
+const BSIDE_LOOK = k => k === 'gem' || k === 'co' || k === 'champ' || symOK(k) || (Object.hasOwn(BEMBLEM, k) && !['none', 'logo', 'gem'].includes(k));
 // text that always fits: shrink to a floor, then squeeze the letters to the width
 function beltTxt(s, maxW, size, F, attrs) {
   const n = s.length; if (!n) return { fs: size, a: '' };
@@ -7328,6 +7343,7 @@ const beltGem = (cx, cy, r, id, e) => `<circle cx="${cx}" cy="${cy}" r="${r + 1.
 // the centre piece, centred on (cx, cy) at radius r, sitting in a raised bezel
 function beltEmblem(b, cx, cy, r, M, T, id, abbrTxt) {
   const e = M[4], g = `url(#${id}g)`, m = `url(#${id}m)`, bez = `<circle cx="${cx}" cy="${cy}" r="${r + 5}" fill="url(#${id}t)" stroke="${e}" stroke-width="1.2"/><circle cx="${cx}" cy="${cy}" r="${r + 2.4}" fill="url(#${id}d)"/>`;
+  if (symOK(b.emblem)) return `${bez}${symDraw(b.emblem, cx, cy, r * .78, m, e)}`;
   const ic = BICON[b.emblem]; if (ic) return ic[1]({ cx, cy, r, id, e, g, m, M, bez, p: d => beltPath(d, cx, cy, r), x: v => +(cx + v * r).toFixed(1), y: v => +(cy + v * r).toFixed(1) });
   switch (b.emblem) {
     case 'gem': return `${bez}${beltGem(cx, cy, r, id, e)}`;
@@ -7461,6 +7477,50 @@ const BICON = {
 // the new icons join the centre list, with None kept last
 delete BEMBLEM.none; for (const [k, v] of Object.entries(BICON)) BEMBLEM[k] = v[0]; BEMBLEM.none = 'None';
 
+// ---------- the game's own icon pack as symbols: every editor (belts, trophies, wrestler looks) can use any of them ----------
+// a symbol is stored as 'ic-' + the icon's name. Labels for the ones whose name doesn't say what they show.
+const SYM_NAME = { checkc: 'Tick', xc: 'Cross', bang: 'Exclaim', trend: 'Rising', down: 'Falling', heel: 'Villain', smile: 'Smile', frown: 'Frown', tired: 'Battery', userplus: 'New signing', musicoff: 'Music off', medical: 'Medic kit',
+  wrestle: 'Wrestlers', cap: 'Grad cap', zap: 'Zap', bolt: 'Bolt', grid: 'Pixels', file: 'Paper', notebook: 'Notebook', clipboard: 'Clipboard', swap: 'Arrows', equal: 'Equals', box: 'Crate', door: 'Door', pin: 'Pin', ruler: 'Ruler',
+  refresh: 'Cycle', skip: 'Fast forward', menu: 'Lines', save: 'Disk', mute: 'Speaker off', sound: 'Speaker', news: 'Newspaper', tv: 'TV', bulb: 'Light bulb', users: 'Group', user: 'Person', mic: 'Microphone', alert: 'Warning',
+  info: 'Info', coin: 'Coin', dice: 'Dice', target: 'Target', calendar: 'Calendar', ticket: 'Ticket', film: 'Clapper', sparkles: 'Sparkles', layers: 'Layers', undo: 'Undo' };
+let SYM_LIST = null;
+// every icon in the sprite at the top of the page, in sprite order
+const symList = () => SYM_LIST ||= [...document.querySelectorAll('svg symbol[id^="i-"]')].map(s => s.id.slice(2));
+const symOK = k => typeof k === 'string' && k.startsWith('ic-') && symList().includes(k.slice(3));
+const symName = k => { const n = String(k).replace(/^ic-/, ''); return SYM_NAME[n] || n.charAt(0).toUpperCase() + n.slice(1); };
+const SYM_SRC = new Map();
+const symInner = k => { const n = String(k).replace(/^ic-/, ''); if (!SYM_SRC.has(n)) SYM_SRC.set(n, document.getElementById('i-' + n)?.innerHTML || ''); return SYM_SRC.get(n); };
+// a symbol drawn in metal (or any colour) on a 24 x 24 box centred on (cx, cy) with radius r, with a dark edge below it for relief
+function symDraw(k, cx, cy, r, fill, edge) {
+  const s = symInner(k); if (!s) return '';
+  const sc = r * 2 / 24, at = (dy = 0) => `translate(${(cx - 12 * sc).toFixed(2)} ${(cy - 12 * sc + dy).toFixed(2)}) scale(${sc.toFixed(3)})`;
+  const sw = (1.4 / sc).toFixed(2);
+  return `<g transform="${at(Math.max(.8, r * .08))}" fill="${edge}" stroke="${edge}" stroke-width="${sw}" stroke-linejoin="round" opacity=".75">${s.replace(/stroke="currentColor"/g, `stroke="${edge}"`)}</g>`
+    + `<g transform="${at()}" fill="${edge}" stroke="${edge}" stroke-width="${sw}" stroke-linejoin="round">${s.replace(/stroke="currentColor"/g, `stroke="${edge}"`)}</g>`
+    + `<g transform="${at()}" fill="${fill}">${s.replace(/stroke="currentColor"/g, `stroke="${fill}"`)}</g>`;
+}
+// a symbol as an n x n grid of on/off pixels for the pixel faces and bodies (drawn once on a small canvas, then cached)
+const SYM_PIX = new Map();
+function symPix(k, n) {
+  const key = k + n; if (SYM_PIX.has(key)) return SYM_PIX.get(key);
+  let out = null;
+  try {
+    const el = document.getElementById('i-' + String(k).replace(/^ic-/, '')), S = n * 8, cv = document.createElement('canvas'); cv.width = cv.height = S;
+    const x = cv.getContext('2d'); x.scale(S / 24, S / 24); x.fillStyle = x.strokeStyle = '#000'; x.lineCap = x.lineJoin = 'round';
+    for (const c of el ? el.children : []) {
+      const a = q => c.getAttribute(q);
+      if (c.tagName === 'circle') { x.beginPath(); x.arc(+a('cx'), +a('cy'), +a('r'), 0, Math.PI * 2); x.fill(); continue; }
+      if (c.tagName !== 'path') continue;
+      const p = new Path2D(a('d') || '');
+      if (a('fill') !== 'none') x.fill(p, a('fill-rule') === 'evenodd' ? 'evenodd' : 'nonzero');
+      if (a('stroke') && a('stroke') !== 'none') { x.lineWidth = +a('stroke-width') || 2; x.stroke(p); }
+    }
+    const d = x.getImageData(0, 0, S, S).data; out = [];
+    for (let j = 0; j < n; j++) { const row = []; for (let i = 0; i < n; i++) { let t = 0; for (let y = 0; y < 8; y++) for (let z = 0; z < 8; z++) t += d[((j * 8 + y) * S + i * 8 + z) * 4 + 3]; row.push(t / 64 > 96); } out.push(row); }
+  } catch (e) { out = null; }
+  SYM_PIX.set(key, out); return out;
+}
+
 // finished belts to start from; the designer's Templates row and the quick-add titles use them
 const BTPL = [
   ['World', { plate: 'classic', metal: 'gold', strap: '#1a1a1f', emblem: 'globe', gem: '#d62839', carve: 'sunburst', sides: 2, enamel: '#9b1020' }],
@@ -7482,7 +7542,7 @@ const BTPL = [
 const beltFromTpl = (i, cur) => { const c = beltClean(cur), x = BTPL[i]?.[1] || {}; return beltClean({ ...beltDefault(), trim: '', tex: 'leather', side: 'rect', ring: 0, font: 'block', banner: 1, ...x, top: c.top, line: c.line, sub: c.sub, orn: c.orn, sp: c.sp, ps: c.ps, sw: c.sw, ss: c.ss }); };
 function beltSurprise(cur) {
   const c = beltClean(cur), p = a => a[Math.floor(Math.random() * a.length)], k = o => p(Object.keys(o));
-  return beltClean({ plate: k(BPLATE), metal: k(BMETAL), trim: Math.random() < .3 ? k(BMETAL) : '', strap: p(BSTRAPS), tex: k(BSTRAP), sides: p([0, 2, 2, 4, 4, 6]), side: p(['rect', 'round', 'shield']), emblem: p(Object.keys(BEMBLEM).filter(x => x !== 'none')),
+  return beltClean({ plate: k(BPLATE), metal: k(BMETAL), trim: Math.random() < .3 ? k(BMETAL) : '', strap: p(BSTRAPS), tex: k(BSTRAP), sides: p([0, 2, 2, 4, 4, 6]), side: p(['rect', 'round', 'shield']), emblem: Math.random() < .15 ? 'ic-' + p(symList()) : p(Object.keys(BEMBLEM).filter(x => x !== 'none')),
     gem: p(BGEMS), ring: Math.random() < .35 ? 1 : 0, carve: k(BCARVE), font: k(BFONT), enamel: p(BENAMEL), banner: Math.random() < .8 ? 1 : 0, top: c.top, line: c.line, sub: c.sub, orn: c.orn, sp: Math.random() < .3 ? p(['co', 'star', 'crown', 'globe', ...Object.keys(BICON)]) : 'gem', ps: c.ps, sw: c.sw, ss: c.ss });
 }
 // a title's belt as drawn everywhere in the game (titles with no design keep the classic gold belt)
@@ -7601,14 +7661,14 @@ const looksWomen = w => isWomen(w) || FEM_NAMES.has(String(w.name || '').split('
 const faceCode = w => (faceOK(w.look) ? w.look : faceRandom(w.id || w.name || '?', looksWomen(w))).padEnd(FACE_LEN, '0');
 function faceShade(hex, f) { const n = parseInt(hex.slice(1), 16), m = v => Math.max(0, Math.min(255, Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f))); return '#' + [n >> 16, n >> 8 & 255, n & 255].map(v => m(v).toString(16).padStart(2, '0')).join(''); }
 // the face drawn on a 32x32 grid of colours (null = empty); the body maker reuses the head from it
-function faceGrid(code, align, wcol, women) {
-  const [S, H, HC, B, F, GR, GC, X, M1, M2, E, BR, MO, HW, HWC, MU] = faceDigits(code), N = 32;
+function faceGrid(code, align, wcol, women, lx) {
+  const [S, H, HC, B, F, GR, GC, X, M1, M2, E, BR, MO, HW, HWC, MU] = faceDigits(code), N = 32, L = lx?.lc || {}, SY = lx?.sym;
   const g = Array.from({ length: N }, () => Array(N).fill(null));
   const set = (x, y, c) => { if (x >= 0 && x < N && y >= 0 && y < N && c) g[y][x] = c; };
   const rect = (x, y, w, h, c) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) set(i, j, c); };
   const ell = (cx, cy, rx, ry, c, alt) => { for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) if ((x - cx) ** 2 / rx ** 2 + (y - cy) ** 2 / ry ** 2 < 1) set(x, y, alt && (x + y) % 3 === 0 ? alt : c); };
-  const [sk, sd] = FACE.skin[S], hc = FACE.hairC[HC], hd = faceShade(hc, -.35), lip = faceShade(sk, -.45);
-  const gc = GC ? FACE.col[GC] : safeColor(wcol) || '#c8102e', gd = faceShade(gc, -.3);
+  const [sk, sd] = L.f0 ? [L.f0, faceShade(L.f0, -.18)] : FACE.skin[S], hc = L.f2 || FACE.hairC[HC], hd = faceShade(hc, -.35), lip = faceShade(sk, -.45);
+  const gc = L.f6 || (GC ? FACE.col[GC] : safeColor(wcol) || '#c8102e'), gd = faceShade(gc, -.3);
   const isSk = (x, y) => g[y][x] === sk || g[y][x] === sd;
   const sh = y => Math.min(14, 6 + (y - 24) * 2);
   const mask = FACE_HOOD.has(F), hair = !mask && H;
@@ -7675,7 +7735,7 @@ function faceGrid(code, align, wcol, women) {
     else { rect(14, 19, 4, 1, lipC); if (align === 'heel') set(17, 18, lipC); else { set(13, 18, lipC); set(18, 18, lipC); } }
   }
   // paint
-  const pc = GC ? gc : '#c8102e';
+  const pc = GC || L.f6 ? gc : '#c8102e';
   if (F === 1) { rect(11, 16, 3, 1, '#111'); rect(18, 16, 3, 1, '#111'); }
   if (F === 2) { for (const x of [10, 12, 19, 21]) rect(x, 16, 1, 4, pc); rect(15, 7, 2, 5, pc); }
   if (F === 3) { for (let y = 7; y < 23; y++) for (let x = 16; x < 23; x++) if (isSk(x, y)) set(x, y, y % 4 ? '#f4f4f4' : '#dddddd'); rect(18, 13, 4, 4, '#111'); rect(19, 14, 2, 2, '#fff'); set(19, 14, '#c00'); }
@@ -7697,7 +7757,7 @@ function faceGrid(code, align, wcol, women) {
   if (!mask && B === 9) { for (let y = 24; y < 30; y++) rect(15, y, 2, 1, y % 2 ? hc : hd); rect(14, 30, 4, 1, gold); rect(15, 31, 2, 1, hc); }
   if (!mask && B === 8) rect(15, 21, 2, 1, hc);
   // masks
-  const m1 = FACE.col[M1] || '#f2b705', m2 = FACE.col[M2] || '#c8102e', md = faceShade(m1, -.3);
+  const m1 = L.f8 || FACE.col[M1] || '#f2b705', m2 = L.f9 || FACE.col[M2] || '#c8102e', md = faceShade(m1, -.3);
   if (F === 5) {
     for (let y = 5; y < 23; y++) for (let x = 7; x < 25; x++) if (isSk(x, y) || (y < 8 && x > 9 && x < 22)) set(x, y, x > 20 ? md : m1);
     for (let y = 5; y < 20; y++) { set(15, y, m2); set(16, y, m2); }
@@ -7744,15 +7804,17 @@ function faceGrid(code, align, wcol, women) {
   if (hair === 16) { top(8, 13, 8, 10); top(8, 13, 22, 24); for (let x = 11; x < 21; x += 2) set(x, 6, hd); rect(12, 7, 3, 1, faceShade(sk, .35)); }
   if (hair === 17) { top(2, 9, 13, 19); for (const x of [13, 15, 17]) set(x + 1, 1, hd); top(6, 9, 9, 23); rect(9, 9, 1, 2, hc); rect(22, 9, 1, 2, hd); }
   if (!mask && !H) { rect(12, 7, 2, 1, faceShade(sk, .35)); set(11, 8, faceShade(sk, .35)); }
+  // a symbol on the forehead goes under any headwear
+  if (SY?.at === 'head') symStamp(set, SY, 5, 14, 7);
   // headwear
-  const hw = HWC ? FACE.col[HWC] : safeColor(wcol) || '#c8102e', hwd = faceShade(hw, -.3);
+  const hw = L.f14 || (HWC ? FACE.col[HWC] : safeColor(wcol) || '#c8102e'), hwd = faceShade(hw, -.3), HWX = HWC || L.f14;
   if (HW === 1) { rect(10, 4, 12, 1, hw); rect(9, 5, 14, 5, hw); rect(21, 5, 2, 5, hwd); for (let y = 5; y < 10; y++) for (let x = 9; x < 23; x++) if ((x + y * 2) % 5 === 0) set(x, y, faceShade(hw, .5)); rect(23, 8, 2, 2, hw); set(25, 10, hw); set(24, 11, hwd); }
   if (HW === 2) { rect(10, 1, 12, 6, hw); g[1][15] = g[1][16] = null; rect(15, 2, 2, 1, hwd); rect(20, 1, 2, 6, hwd); rect(10, 6, 12, 1, '#111'); rect(4, 7, 24, 2, hw); rect(4, 8, 3, 1, hwd); rect(25, 8, 3, 1, hwd); set(3, 6, hw); set(28, 6, hw); }
   if (HW === 3) { for (let y = 2; y < 8; y++) { const i = y < 4 ? 4 - y : 0; rect(9 + i, y, 14 - i * 2, 1, hw); } for (let y = 2; y < 8; y++) for (let x = 9; x < 23; x += 2) if (g[y][x] === hw) set(x, y, hwd); rect(8, 7, 16, 3, faceShade(hw, -.15)); for (let x = 8; x < 24; x += 2) set(x, 8, hwd); rect(14, 0, 4, 2, '#f4f4f4'); }
   if (HW === 4) { for (let y = 3; y < 9; y++) { const i = y < 5 ? 5 - y : 0; rect(9 + i, y, 14 - i * 2, 1, hw); } rect(20, 4, 3, 5, hwd); set(16, 3, hwd); rect(7, 9, 18, 1, hwd); rect(8, 10, 16, 1, faceShade(hw, -.5)); rect(13, 5, 6, 3, faceShade(hw, .4)); }
-  if (HW === 5) { rect(10, 5, 12, 3, gold); rect(10, 7, 12, 1, goldD); for (const x of [10, 13, 18, 21]) { rect(x, 3, 1, 2, gold); } rect(15, 2, 2, 3, gold); set(15, 1, gold); set(16, 1, gold); for (const x of [12, 16, 19]) set(x, 6, HWC ? hw : '#c8102e'); set(11, 6, '#fff7c2'); }
+  if (HW === 5) { rect(10, 5, 12, 3, gold); rect(10, 7, 12, 1, goldD); for (const x of [10, 13, 18, 21]) { rect(x, 3, 1, 2, gold); } rect(15, 2, 2, 3, gold); set(15, 1, gold); set(16, 1, gold); for (const x of [12, 16, 19]) set(x, 6, HWX ? hw : '#c8102e'); set(11, 6, '#fff7c2'); }
   if (HW === 6) { const tc = '#151515', tl = '#2a2a2a'; rect(10, 0, 12, 7, tc); rect(19, 0, 3, 7, tl); rect(10, 5, 12, 1, hw); rect(6, 7, 20, 2, tc); rect(6, 7, 20, 1, tl); }
-  if (HW === 7) { rect(11, 8, 10, 1, gold); rect(13, 7, 6, 1, gold); rect(15, 5, 2, 2, gold); set(15, 6, HWC ? hw : '#e23a8a'); set(16, 6, HWC ? hw : '#e23a8a'); set(12, 7, goldD); set(19, 7, goldD); }
+  if (HW === 7) { rect(11, 8, 10, 1, gold); rect(13, 7, 6, 1, gold); rect(15, 5, 2, 2, gold); set(15, 6, HWX ? hw : '#e23a8a'); set(16, 6, HWX ? hw : '#e23a8a'); set(12, 7, goldD); set(19, 7, goldD); }
   if (HW === 8) { for (let y = 3; y < 10; y++) { const i = y < 6 ? 6 - y : 0; rect(9 + i, y, 14 - i * 2, 1, '#8d939b'); } rect(19, 4, 3, 6, '#6b7178'); rect(8, 9, 16, 2, hw); for (let x = 9; x < 23; x += 3) set(x, 10, '#dcdcdc'); for (const [x, y] of [[8, 7], [7, 6], [6, 5], [6, 4], [6, 3], [7, 2], [23, 7], [24, 6], [25, 5], [25, 4], [25, 3], [24, 2]]) set(x, y, '#f1e6c8'); set(7, 1, '#d8c9a0'); set(24, 1, '#d8c9a0'); }
   // extras
   if (X === 1) rect(9, 10, 14, 2, pc);
@@ -7764,6 +7826,7 @@ function faceGrid(code, align, wcol, women) {
   if (X === 7) { for (let x = 11; x < 21; x++) { const y = 24 + (x >= 12 && x <= 19 ? 1 : 0) + (x >= 13 && x <= 18 ? 1 : 0) + (x >= 15 && x <= 16 ? 1 : 0); set(x, y, x % 2 ? gold : goldD); } rect(15, 28, 2, 2, gold); set(16, 29, goldD); }
   if (X === 8) for (const [x, y] of [[10, 11], [11, 12], [12, 13], [12, 16], [13, 17], [13, 18]]) set(x, y, '#9c3b34');
   if (X === 9) { rect(18, 17, 4, 2, '#efe3c8'); set(19, 17, '#d6c7a6'); set(20, 18, '#d6c7a6'); }
+  if (SY?.at === 'chest') symStamp(set, SY, 6, 13, 26);
   g.pal = { sk, sd, hc, hd, gc, women };
   return g;
 }
@@ -7778,17 +7841,17 @@ function pixRects(out) {
   for (let y = 0; y < out.length; y++) for (let x = 0, N = out[y].length; x < N;) { const c = out[y][x]; if (!c) { x++; continue; } let e = x; while (e < N && out[y][e] === c) e++; s += `<rect x="${x}" y="${y}" width="${e - x}" height="1" fill="${c}"/>`; x = e; }
   return s;
 }
-function faceSVG(code, align, wcol, women, tight) {
-  const out = pixOutline(faceGrid(code, align, wcol, women));
+function faceSVG(code, align, wcol, women, tight, lx) {
+  const out = pixOutline(faceGrid(code, align, wcol, women, lx));
   const bg = align === 'heel' ? '#4a0d14' : '#0d2a5c', bl = faceShade(bg, .25);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}` + pixRects(out) + '</svg>';
 }
 const FACE_CACHE = new Map();
 // tight: a closer crop for small round avatars, so the face fills the circle
 function faceURL(w, tight) {
-  const k = faceCode(w) + (w.align === 'heel' ? 'h' : 'f') + (looksWomen(w) ? 'w' : 'm') + (tight ? 't' : '') + (safeColor(w.color) || '');
+  const k = faceCode(w) + (w.align === 'heel' ? 'h' : 'f') + (looksWomen(w) ? 'w' : 'm') + (tight ? 't' : '') + (safeColor(w.color) || '') + lookKey(w);
   let u = FACE_CACHE.get(k);
-  if (!u) { if (FACE_CACHE.size > 1500) FACE_CACHE.clear(); u = 'data:image/svg+xml,' + encodeURIComponent(faceSVG(faceCode(w), w.align, w.color, looksWomen(w), tight)); FACE_CACHE.set(k, u); }
+  if (!u) { if (FACE_CACHE.size > 1500) FACE_CACHE.clear(); u = 'data:image/svg+xml,' + encodeURIComponent(faceSVG(faceCode(w), w.align, w.color, looksWomen(w), tight, { lc: lcClean(w.lc), sym: symClean(w.sym) })); FACE_CACHE.set(k, u); }
   return u;
 }
 // ---- pixel bodies: the full wrestler on the wrestler page, 48x96, with the pixel face's head on top ----
@@ -7824,17 +7887,32 @@ function bodyRandom(w, seed) {
   return [build, stance, bottoms, p([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]), p([0, 0, 0, 1, 1, 2, 3, 4]), p([0, 0, 0, 3, 3, 7, 1, 2, 4]), p([0, 0, 1, 1, 2, 3]), p([0, 0, 1, 1, 2, 3]), 0].map(n => n.toString(36)).join('');
 }
 const bodyCode = w => (bodyOK(w.body) ? w.body : bodyRandom(w)).padEnd(BODY_LEN, '0');
+// any colour at all for a colour place of the look: w.lc = { f0: skin, f2: hair, f6: gear and paint, f8: mask, f9: mask trim, f14: headwear, b3: bottoms, b5: boots }.
+// A place with no entry uses the colour picked from the swatches in the look code, so older looks draw exactly as before.
+const LC_KEYS = ['f0', 'f2', 'f6', 'f8', 'f9', 'f14', 'b3', 'b5'];
+const isHex = v => /^#[0-9a-f]{6}$/i.test(String(v));
+function lcClean(o) { if (!o || typeof o !== 'object') return undefined; const x = {}; for (const k of LC_KEYS) if (isHex(o[k])) x[k] = String(o[k]).toLowerCase(); return Object.keys(x).length ? x : undefined; }
+// a symbol from the game's icon pack on the wrestler: w.sym = { k: 'ic-star', at: chest | trunks | head, c: colour }
+const SYM_AT = [['chest', 'Chest'], ['trunks', 'Trunks'], ['head', 'Forehead']];
+const SYM_COLS = ['#f2c94c', '#f4f4f4', '#111111', '#c8102e', '#1f4fbf', '#1f8a3b', '#7b2cbf', '#ff6b00', '#0891b2', '#e23a8a'];
+function symClean(o) { if (!o || typeof o !== 'object' || !symOK(o.k)) return undefined; return { k: o.k, at: SYM_AT.some(([a]) => a === o.at) ? o.at : 'chest', c: isHex(o.c) ? String(o.c).toLowerCase() : '#f2c94c' }; }
+// a whole pixel look (a saved look template): face code, body code, colours and symbol
+function lookClean(o) { o = o && typeof o === 'object' ? o : {}; const x = {}; if (faceOK(o.look)) x.look = o.look; if (bodyOK(o.body)) x.body = o.body; const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) x.lc = lc; if (sy) x.sym = sy; return x; }
+// stamp a symbol's pixels onto a grid at (x0, y0), n wide
+function symStamp(set, sym, n, x0, y0) { const m = sym && symPix(sym.k, n); if (!m) return; for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (m[j][i]) set(x0 + i, y0 + j, sym.c); }
+const lookKey = w => (w.lc ? JSON.stringify(w.lc) : '') + (w.sym ? w.sym.k + w.sym.at + w.sym.c : '');
 function bodySVG(w, holds) {
   const [BU, ST, BO, BC, BT, BTC, PD, HA, BE, SH, CH] = [...bodyCode(w)].map(d => parseInt(d, 36));
   const fc = faceCode(w), women = looksWomen(w), Wd = 48, H = 96;
-  const head = faceGrid(fc, w.align, w.color, women), { sk, sd, hc, hd, gc } = head.pal;
+  const LC = lcClean(w.lc) || {}, SY = symClean(w.sym);
+  const head = faceGrid(fc, w.align, w.color, women, { lc: LC, sym: SY?.at === 'head' ? SY : null }), { sk, sd, hc, hd, gc } = head.pal;
   const GR = parseInt(fc[5], 36);
   const g = Array.from({ length: H }, () => Array(Wd).fill(null));
   const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < Wd && y >= 0 && y < H && c) g[y][x] = c; };
   const rect = (x, y, w2, h2, c) => { for (let j = y; j < y + h2; j++) for (let i = x; i < x + w2; i++) set(i, j, c); };
   const span = (y, hw, c) => rect(24 - hw, y, hw * 2, 1, c);
-  const bc = BC ? FACE.col[BC] : safeColor(w.color) || '#c8102e', bcd = faceShade(bc, -.3);
-  const bt = BTC ? FACE.col[BTC] : '#1b1b20', btd = faceShade(bt, -.3), btl = faceShade(bt, .45);
+  const bc = LC.b3 || (BC ? FACE.col[BC] : safeColor(w.color) || '#c8102e'), bcd = faceShade(bc, -.3);
+  const bt = LC.b5 || (BTC ? FACE.col[BTC] : '#1b1b20'), btd = faceShade(bt, -.3), btl = faceShade(bt, .45);
   const gd = faceShade(gc, -.3);
   let [sw, ww, at, lt, belly] = BODY_BUILD[BU];
   const curvy = SH ? SH === 2 : women;
@@ -7887,6 +7965,9 @@ function bodySVG(w, holds) {
   if (GR === 7) { fullTop(gc); for (let y = 30; y < 44; y++) { const hw = Math.max(0, 5 - Math.floor((y - 30) / 3)); if (hw) span(y, hw, '#f4f4f4'); } rect(23, 31, 2, 12, '#c8102e'); set(23, 43, '#8a0b1f'); set(24, 43, '#8a0b1f'); for (let y = 30; y < 40; y++) { set(23 - Math.max(1, 6 - Math.floor((y - 30) / 2)), y, gd); set(24 + Math.max(1, 6 - Math.floor((y - 30) / 2)), y, gd); } sleeve = 1; }
   if (GR === 8) { for (let y = 36; y < 43; y++) span(y, tw(y), gc); span(42, tw(42), gd); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); }
   if (GR === 9) { const gl = faceShade(gc, .4); for (let y = 30; y < 82; y++) { const hw = y < 52 ? tw(y) + 1 : hipW + 2 + Math.floor((y - 52) / 6); rect(24 - hw, y, hw - 4, 1, (y + 24 - hw) % 5 ? gc : gl); rect(28, y, hw - 4, 1, (y + 28) % 5 ? gc : gl); } for (let y = 28; y < 36; y++) { rect(24 - sw - 1 + (y - 28) / 2, y, 4, 1, '#f4f4f4'); rect(20 + sw - (y - 28) / 2, y, 4, 1, '#f4f4f4'); } sleeve = 1; }
+  // a symbol on the chest or the trunks, under the arms
+  if (SY?.at === 'chest') symStamp(set, SY, 7, 21, 36);
+  if (SY?.at === 'trunks') symStamp(set, SY, 5, 22, 53);
   // arms: shoulder to elbow to hand, with a fist; sleeves recolour the arm up to their length
   const L = [24 - sw + 1, 33], R = [23 + sw - 1, 33];
   const lim = (a, b) => [Math.max(2, Math.min(45, a)), Math.max(1, b)];
@@ -7929,7 +8010,7 @@ function bodySVG(w, holds) {
 const BODY_CACHE = new Map();
 function bodyURL(w) {
   const holds = !!(G?.titles && titlesOf(w.id).length);
-  const k = faceCode(w) + bodyCode(w) + w.align + (looksWomen(w) ? 'w' : 'm') + (safeColor(w.color) || '') + (holds ? 'c' : '');
+  const k = faceCode(w) + bodyCode(w) + w.align + (looksWomen(w) ? 'w' : 'm') + (safeColor(w.color) || '') + (holds ? 'c' : '') + lookKey(w);
   let u = BODY_CACHE.get(k);
   if (!u) { if (BODY_CACHE.size > 300) BODY_CACHE.clear(); u = 'data:image/svg+xml,' + encodeURIComponent(bodySVG(w, holds)); BODY_CACHE.set(k, u); }
   return u;
@@ -9940,12 +10021,25 @@ const TBODY = {
   globe: ['Globe', () => ({ globe: [100, 74, 46], stem: 'M94 118H106L104 150H96Z', foot: 'M74 166Q76 150 100 146Q124 150 126 166Z', top: 25 })],
   belt: ['Belt on a stand', () => ({ beltOn: 1, stem: 'M94 112H106V158H94Z', foot: 'M70 166Q72 154 100 150Q128 154 130 166Z', noTop: 1 })]
 };
-function trophyDefault(t) { return { body: 'cup', metal: 'gold', trim: '', handle: 'loop', top: 'star', base: 'plinth', bcol: 'wood', emblem: 'trophy', gem: '#d62839', enamel: '#9b1020', line: String(t?.short || t?.name || 'Trophy').toUpperCase().slice(0, 22), sub: '', eng: '', font: 'block', banner: 1, plate: 'classic' }; }
+function trophyDefault(t) { return { body: 'cup', metal: 'gold', trim: '', handle: 'loop', top: 'star', base: 'plinth', bcol: 'wood', emblem: 'trophy', gem: '#d62839', enamel: '#9b1020', line: String(t?.short || t?.name || 'Trophy').toUpperCase().slice(0, 22), sub: '', eng: '', font: 'block', banner: 1, plate: 'classic', carve: '', ring: 0, orn: 0, strap: '#1a1a1f', tex: 'leather' }; }
+// the base: one of the base colours, or any colour at all
+const tBaseCol = v => /^#[0-9a-f]{6}$/i.test(String(v)) ? [String(v), faceShade(String(v), -.4), faceShade(String(v), -.7)] : null;
 function trophyClean(o, t) {
   const d = trophyDefault(t); o = o && typeof o === 'object' ? o : {};
   const col = (v, f) => /^#[0-9a-f]{6}$/i.test(String(v)) ? String(v) : f, one = (v, m, f) => Object.hasOwn(m, String(v)) ? String(v) : f, txt = (v, f, n) => String(v ?? f).replace(/[<>`"]/g, '').toUpperCase().slice(0, n);
-  return { body: one(o.body, TBODY, d.body), metal: one(o.metal, BMETAL, d.metal), trim: o.trim && Object.hasOwn(BMETAL, o.trim) ? o.trim : '', handle: one(o.handle, THANDLE, d.handle), top: one(o.top, TTOP, d.top), base: one(o.base, TBASE, d.base), bcol: one(o.bcol, TBASECOL, d.bcol),
-    emblem: one(o.emblem, BEMBLEM, d.emblem), gem: col(o.gem, d.gem), enamel: col(o.enamel, d.enamel), line: txt(o.line, d.line, 26), sub: txt(o.sub, '', 26), eng: txt(o.eng, '', 20), font: one(o.font, BFONT, 'block'), banner: o.banner == null ? 1 : o.banner ? 1 : 0, plate: one(o.plate, BPLATE, 'classic') };
+  return { body: one(o.body, TBODY, d.body), metal: one(o.metal, BMETAL, d.metal), trim: o.trim && Object.hasOwn(BMETAL, o.trim) ? o.trim : '', handle: one(o.handle, THANDLE, d.handle), top: symOK(o.top) ? o.top : one(o.top, TTOP, d.top), base: one(o.base, TBASE, d.base), bcol: tBaseCol(o.bcol) ? String(o.bcol).toLowerCase() : one(o.bcol, TBASECOL, d.bcol),
+    emblem: symOK(o.emblem) ? o.emblem : one(o.emblem, BEMBLEM, d.emblem), gem: col(o.gem, d.gem), enamel: col(o.enamel, d.enamel), line: txt(o.line, d.line, 26), sub: txt(o.sub, '', 26), eng: txt(o.eng, '', 20), font: one(o.font, BFONT, 'block'), banner: o.banner == null ? 1 : o.banner ? 1 : 0, plate: one(o.plate, BPLATE, 'classic'),
+    // the same finishes as the belts: engraving ('' is the shape's usual one), a ring of gems, ornate detail, and the strap of a belt on a stand
+    carve: o.carve && Object.hasOwn(BCARVE, String(o.carve)) ? String(o.carve) : '', ring: o.ring ? 1 : 0, orn: o.orn ? 1 : 0, strap: col(o.strap, d.strap), tex: one(o.tex, BSTRAP, d.tex) };
+}
+const tCarve = b => b.carve || (b.body === 'belt' ? 'sunburst' : 'none');
+// the belt engravings, cut into a trophy's body (clipped to its outline)
+function trophyCarve(k, G2, M) {
+  const cy = G2.em?.[1] || 80;
+  return { lines: `<g stroke="${M[3]}" stroke-opacity=".3" stroke-width=".9">${Array.from({ length: 56 }, (_, i) => `<path d="M0 ${i * 4}H200"/>`).join('')}</g>`,
+    sunburst: `<g stroke="${M[1]}" stroke-opacity=".5" stroke-width="2.2">${Array.from({ length: 48 }, (_, i) => { const a = i * Math.PI / 24; return `<path d="M100 ${cy}L${(100 + 200 * Math.cos(a)).toFixed(0)} ${(cy + 200 * Math.sin(a)).toFixed(0)}"/>`; }).join('')}</g>`,
+    scroll: `<g fill="none" stroke="${M[3]}" stroke-opacity=".55" stroke-width="1.3">${Array.from({ length: 42 }, (_, i) => { const x = 10 + (i % 7) * 28, y = 8 + Math.floor(i / 7) * 26; return `<path d="M${x} ${y}c5-9 15-9 15 0s-10 7-10 2 5-4 5 0M${x + 14} ${y}c5 9 15 9 15 0s-10-7-10-2 5 4 5 0"/>`; }).join('')}</g>`,
+    dots: `<g fill="${M[3]}" fill-opacity=".32">${Array.from({ length: 300 }, (_, i) => `<circle cx="${(i % 20) * 9.6 + (Math.floor(i / 20) % 2) * 4.8 + 4}" cy="${4 + Math.floor(i / 20) * 11}" r="1.3"/>`).join('')}</g>` }[k] || '';
 }
 function trophyRender(raw, opt = {}) {
   const b = trophyClean(raw, opt.title), id = 'tz' + (++beltN), M = BMETAL[b.metal], T = BMETAL[b.trim || b.metal], F = BFONT[b.font], G2 = TBODY[b.body][1](), e = M[4];
@@ -9958,7 +10052,7 @@ function trophyRender(raw, opt = {}) {
       return `<path d="M${x} ${y1 + 6}C${x + o * .6} ${y1 - 14} ${x + o * 1.2} ${y1 - 10} ${x + o * 1.3} ${y1 - 6}C${x + o * .95} ${y1 + 2} ${x + o * 1.15} ${y1 + 8} ${x + o * .95} ${y1 + 12}C${x + o * .75} ${y1 + 16} ${x + o * .9} ${y1 + 22} ${x + o * .7} ${y1 + 26}C${x + o * .4} ${y1 + 32} ${x + o * .2} ${y1 + h * .55} ${x} ${y1 + h * .6}Z" fill="${t}" stroke="${e}" stroke-width="1.4" stroke-linejoin="round"/><path d="M${x + o * .2} ${y1 + 6}L${x + o * 1.05} ${y1 - 4}M${x + o * .2} ${y1 + 14}L${x + o * .85} ${y1 + 12}M${x + o * .2} ${y1 + 22}L${x + o * .7} ${y1 + 24}" stroke="${e}" stroke-opacity=".5"/>`; };
     return one(-1) + one(1); })();
   // the base, with the nameplate on its front
-  const bc = b.bcol === 'metal' ? [T[1], T[2], T[3]] : TBASECOL[b.bcol].slice(1), bEdge = b.bcol === 'marble' ? '#5d574f' : '#000', baseY = 166;
+  const bc = b.bcol === 'metal' ? [T[1], T[2], T[3]] : tBaseCol(b.bcol) || TBASECOL[b.bcol].slice(1), bEdge = b.bcol === 'marble' ? '#5d574f' : '#000', baseY = 166;
   const baseD = { plinth: `<path d="M38 ${baseY + 8}H162V${baseY + 44}H38Z" fill="url(#${id}b)" stroke="${bEdge}" stroke-width="1.4"/><path d="M54 ${baseY}H146V${baseY + 8}H54Z" fill="url(#${id}b)" stroke="${bEdge}" stroke-width="1.2"/><path d="M38 ${baseY + 8}H162" stroke="#fff" stroke-opacity=".35"/><rect x="38" y="${baseY + 40}" width="124" height="4" fill="#000" opacity=".25"/>`,
     round: `<ellipse cx="100" cy="${baseY + 40}" rx="64" ry="9" fill="#000" opacity=".3"/><path d="M36 ${baseY + 10}V${baseY + 38}A64 9 0 0 0 164 ${baseY + 38}V${baseY + 10}Z" fill="url(#${id}b)" stroke="${bEdge}" stroke-width="1.2"/><ellipse cx="100" cy="${baseY + 10}" rx="64" ry="9" fill="${bc[0]}" stroke="${bEdge}" stroke-width="1.2"/><path d="M50 ${baseY + 2}V${baseY + 8}A50 6 0 0 0 150 ${baseY + 8}V${baseY + 2}Z" fill="url(#${id}b)"/><ellipse cx="100" cy="${baseY + 2}" rx="50" ry="6" fill="${bc[0]}" stroke="${bEdge}" stroke-width="1"/>`,
     block: `<path d="M50 ${baseY}H150L156 ${baseY + 6}V${baseY + 46}H44V${baseY + 6}Z" fill="url(#${id}b)" stroke="${bEdge}" stroke-width="1.4"/><path d="M44 ${baseY + 6}H156" stroke="#fff" stroke-opacity=".35"/><path d="M44 ${baseY + 40}H156" stroke="#000" stroke-opacity=".3"/>`, none: '' }[b.base];
@@ -9969,7 +10063,7 @@ function trophyRender(raw, opt = {}) {
     <text x="${cx}" y="${py + (b.sub ? -1.5 : 0) + lf.fs * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${lf.fs}" letter-spacing="${F[2] * .7}" font-weight="700" ${lf.a} fill="${ink}">${esc(b.line)}</text>
     ${b.sub ? `<text x="${cx}" y="${py + 6.5 + sf.fs * .3}" text-anchor="middle" font-family="${F[1]}" font-size="${sf.fs}" letter-spacing="${F[2] * .5}" font-weight="700" ${sf.a} fill="${ink}" opacity=".85">${esc(b.sub)}</text>` : ''}`;
   // the topper sits on the rim, the lid or the top of the column
-  const ty = G2.top, top = G2.noTop ? '' : (() => { switch (b.top) {
+  const ty = G2.top, top = G2.noTop ? '' : symOK(b.top) ? `<path d="M95 ${ty}H105L102 ${ty - 5}H98Z" fill="${t}" stroke="${e}"/>${symDraw(b.top, cx, ty - 17, 13, m, e)}` : (() => { switch (b.top) {
     case 'star': { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 6 : 14; p.push(`${(cx + q * Math.cos(a)).toFixed(1)} ${(ty - 14 + q * Math.sin(a)).toFixed(1)}`); } return `<path d="M96 ${ty}H104L102 ${ty - 4}H98Z" fill="${t}" stroke="${e}"/><path d="M${p.join('L')}Z" fill="${m}" stroke="${e}" stroke-width="1.3" stroke-linejoin="round"/>`; }
     case 'crown': return `<path d="M84 ${ty}L82 ${ty - 20}L91 ${ty - 11}L100 ${ty - 24}L109 ${ty - 11}L118 ${ty - 20}L116 ${ty}Z" fill="${m}" stroke="${e}" stroke-width="1.3" stroke-linejoin="round"/>${beltGem(cx, ty - 6, 3, id, e)}${beltGem(88, ty - 5, 2, id, e)}${beltGem(112, ty - 5, 2, id, e)}`;
     case 'ball': return `<path d="M95 ${ty}H105L102 ${ty - 5}H98Z" fill="${t}" stroke="${e}"/>${beltGem(cx, ty - 13, 9, id, e)}`;
@@ -9979,14 +10073,16 @@ function trophyRender(raw, opt = {}) {
   } return ''; })();
   let body = '';
   if (G2.globe) { const [gx, gy, gr] = G2.globe; body = `<circle cx="${gx}" cy="${gy}" r="${gr}" fill="${m}" stroke="${e}" stroke-width="1.6"/><g fill="none" stroke="${M[3]}" stroke-opacity=".7" stroke-width="1.4"><ellipse cx="${gx}" cy="${gy}" rx="${gr * .45}" ry="${gr}"/><path d="M${gx - gr} ${gy}H${gx + gr}M${gx - gr * .87} ${gy - gr * .5}H${gx + gr * .87}M${gx - gr * .87} ${gy + gr * .5}H${gx + gr * .87}M${gx} ${gy - gr}V${gy + gr}"/></g><ellipse cx="${gx}" cy="${gy}" rx="${gr + 8}" ry="${gr * .3}" transform="rotate(-18 ${gx} ${gy})" fill="none" stroke="${t}" stroke-width="5"/><ellipse cx="${gx}" cy="${gy}" rx="${gr + 8}" ry="${gr * .3}" transform="rotate(-18 ${gx} ${gy})" fill="none" stroke="${e}" stroke-width=".8"/><circle cx="${gx - gr * .4}" cy="${gy - gr * .45}" r="${gr * .16}" fill="#fff" opacity=".45"/>`; }
-  else if (G2.beltOn) body = `<g transform="translate(10 32) scale(.5)">${beltRender({ plate: b.plate, metal: b.metal, trim: b.trim, gem: b.gem, enamel: b.enamel, emblem: b.emblem, font: b.font, banner: 1, carve: 'sunburst', sides: 2, strap: '#1a1a1f', line: b.eng || b.line, top: '' }, { cls: '' }).replace(/^<svg[^>]*>|<\/svg>\s*$/g, '')}</g>`;
+  else if (G2.beltOn) body = `<g transform="translate(10 32) scale(.5)">${beltRender({ plate: b.plate, metal: b.metal, trim: b.trim, gem: b.gem, enamel: b.enamel, emblem: b.emblem, font: b.font, banner: 1, carve: tCarve(b), sides: 2, strap: b.strap, tex: b.tex, ring: b.ring, orn: b.orn, line: b.eng || b.line, top: '' }, { cls: '' }).replace(/^<svg[^>]*>|<\/svg>\s*$/g, '')}</g>`;
   else body = `${G2.lid ? `<path d="${G2.lid}" fill="${m}" stroke="${e}" stroke-width="1.4"/>` : ''}<path d="${G2.body}" fill="#000" opacity=".25" transform="translate(2 3)"/><path d="${G2.body}" fill="${m}" stroke="${e}" stroke-width="1.6" stroke-linejoin="round"/>
-      <clipPath id="${id}c"><path d="${G2.body}"/></clipPath><g clip-path="url(#${id}c)"><rect x="0" y="0" width="200" height="220" fill="url(#${id}h)"/>${G2.flute ? [86, 94, 106, 114].map(x => `<path d="M${x} 90V160" stroke="${M[3]}" stroke-opacity=".6" stroke-width="2"/>`).join('') : ''}</g>
+      <clipPath id="${id}c"><path d="${G2.body}"/></clipPath><g clip-path="url(#${id}c)">${trophyCarve(tCarve(b), G2, M)}<rect x="0" y="0" width="200" height="220" fill="url(#${id}h)"/>${G2.flute ? [86, 94, 106, 114].map(x => `<path d="M${x} 90V160" stroke="${M[3]}" stroke-opacity=".6" stroke-width="2"/>`).join('') : ''}</g>
       ${G2.flat ? `<path d="${G2.body}" fill="none" stroke="${M[1]}" stroke-opacity=".6" stroke-width="1.2" transform="translate(100 ${G2.em[1]}) scale(.9) translate(-100 -${G2.em[1]})"/>` : ''}
+      ${b.orn ? `<path d="${G2.body}" fill="none" stroke="${T[1]}" stroke-width="2.8" stroke-dasharray="0 5.5" stroke-linecap="round" transform="translate(100 ${G2.em?.[1] || 80}) scale(.92) translate(-100 -${G2.em?.[1] || 80})"/><path d="${G2.body}" fill="none" stroke="${T[3]}" stroke-width="1.1" stroke-dasharray="0 5.5" stroke-dashoffset="2.75" stroke-linecap="round" opacity=".6" transform="translate(100 ${G2.em?.[1] || 80}) scale(.92) translate(-100 -${G2.em?.[1] || 80})"/>` : ''}
       ${G2.cap ? `<path d="${G2.cap}" fill="${t}" stroke="${e}" stroke-width="1.4"/>` : ''}
       ${G2.rim ? `<ellipse cx="${G2.rim[0]}" cy="${G2.rim[1]}" rx="${G2.rim[2]}" ry="${G2.rim[3]}" fill="${t}" stroke="${e}" stroke-width="1.4"/><ellipse cx="${G2.rim[0]}" cy="${G2.rim[1] + 1}" rx="${G2.rim[2] - 5}" ry="${G2.rim[3] - 2.5}" fill="url(#${id}d)"/>` : ''}`;
   const eng = G2.eng && b.eng ? (() => { const f = beltTxt(b.eng, G2.eng[1], 8, F); return `<text x="${cx}" y="${G2.eng[0] + f.fs * .36}" text-anchor="middle" font-family="${F[1]}" font-size="${f.fs}" letter-spacing="${F[2] * .6}" font-weight="700" ${f.a} fill="${M[5]}" opacity=".85">${esc(b.eng)}</text>`; })() : '';
-  const em = G2.em && b.emblem !== 'none' ? beltEmblem({ ...b, sub: '', ring: 0 }, G2.em[0], G2.em[1], G2.em[2], M, T, id, opt.abbr) : '';
+  const em = G2.em && b.emblem !== 'none' ? beltEmblem({ ...b, sub: '', ring: 0 }, G2.em[0], G2.em[1], G2.em[2], M, T, id, opt.abbr)
+    + (b.ring ? Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6, R = G2.em[2] + 9; return beltGem(+(G2.em[0] + R * Math.cos(a)).toFixed(1), +(G2.em[1] + R * Math.sin(a)).toFixed(1), 2.2, id, e); }).join('') : '') : '';
   return `<svg class="${opt.cls || 'trophy-art'}" viewBox="${opt.vb || '0 -34 200 248'}" role="img" aria-label="${esc(opt.label || 'Trophy')}">
   <defs><linearGradient id="${id}m" x1="0" y1="0" x2="1" y2=".25"><stop offset="0" stop-color="${M[3]}"/><stop offset=".22" stop-color="${M[1]}"/><stop offset=".5" stop-color="${M[2]}"/><stop offset=".85" stop-color="${M[3]}"/><stop offset="1" stop-color="${M[2]}"/></linearGradient>
   <linearGradient id="${id}t" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="${T[3]}"/><stop offset=".3" stop-color="${T[1]}"/><stop offset=".6" stop-color="${T[2]}"/><stop offset="1" stop-color="${T[3]}"/></linearGradient>
@@ -10015,7 +10111,8 @@ const TTPL = [
 const trophyFromTpl = (i, cur) => { const c = trophyClean(cur), x = TTPL[i]?.[1] || {}; return trophyClean({ ...trophyDefault(), trim: '', handle: 'none', top: 'none', ...x, line: c.line, sub: c.sub, eng: c.eng }); };
 function trophySurprise(cur) {
   const c = trophyClean(cur), p = a => a[Math.floor(Math.random() * a.length)], k = o => p(Object.keys(o));
-  return trophyClean({ body: k(TBODY), metal: k(BMETAL), trim: Math.random() < .3 ? k(BMETAL) : '', handle: k(THANDLE), top: k(TTOP), base: p(['plinth', 'plinth', 'round', 'block']), bcol: k(TBASECOL), emblem: p(Object.keys(BEMBLEM).filter(x => x !== 'none')), gem: p(BGEMS), enamel: p(BENAMEL), font: k(BFONT), banner: Math.random() < .8 ? 1 : 0, plate: k(BPLATE), line: c.line, sub: c.sub, eng: c.eng });
+  return trophyClean({ body: k(TBODY), metal: k(BMETAL), trim: Math.random() < .3 ? k(BMETAL) : '', handle: k(THANDLE), top: k(TTOP), base: p(['plinth', 'plinth', 'round', 'block']), bcol: k(TBASECOL), emblem: p(Object.keys(BEMBLEM).filter(x => x !== 'none')), gem: p(BGEMS), enamel: p(BENAMEL), font: k(BFONT), banner: Math.random() < .8 ? 1 : 0, plate: k(BPLATE), line: c.line, sub: c.sub, eng: c.eng,
+    carve: Math.random() < .5 ? '' : k(BCARVE), ring: Math.random() < .25 ? 1 : 0, orn: Math.random() < .3 ? 1 : 0, strap: p(BSTRAPS), tex: k(BSTRAP), ...(Math.random() < .15 ? { emblem: 'ic-' + p(symList()) } : {}) });
 }
 
 // ---------- the prizes themselves ----------
@@ -10088,7 +10185,7 @@ function avBadges(w, s) {
 const BD_TABS = [['shape', 'Shape'], ['metal', 'Metal'], ['strap', 'Strap'], ['plates', 'Plates'], ['centre', 'Centre'], ['text', 'Text'], ['photo', 'Photo'], ['rules', 'Rules']];
 function bdOpt(f, v, label, inner, cls) { const b = UI.modal.draft.belt, on = String(b[f]) === String(v); return `<button class="${cls || 'bd-tile'} ${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}" aria-label="${esc(label)}">${inner || ''}${cls === 'sw' ? '' : `<span>${esc(label)}</span>`}</button>`; }
 const bdSeg = (f, list) => `<div class="seg-ctl ${list.length > 4 ? 'bd-many' : ''}">${list.map(([v, l]) => { const on = String(UI.modal.draft.belt[f]) === String(v); return `<button class="${on ? 'on' : ''}" data-act="bdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`; }).join('')}</div>`;
-const bdSw = (f, list) => `<div class="swatches">${list.map(c => bdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}${anyColour(f, UI.modal.draft.belt[f], 'data-bt')}</div>`;
+const bdSw = (f, list) => `<div class="swatches">${list.map(c => bdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}${anyColour(f, UI.modal.draft.belt[f], 'data-bt', !list.includes(UI.modal.draft.belt[f]))}</div>`;
 // a size slider for the belt designer
 const bdSlide = (f, lab, lo, hi) => { const v = UI.modal.draft.belt[f] || 100; return `<label class="f bd-sl"><span>${lab} <b id="bdv-${f}">${v}%</b></span><input type="range" data-bt="${f}" min="${lo}" max="${hi}" step="5" value="${v}" aria-label="${esc(lab)}"></label>`; };
 function bdPane(m) {
@@ -10104,12 +10201,14 @@ function bdPane(m) {
       ${b.sides ? `<div class="bd-lab">Side plate shape</div>${bdSeg('side', [['rect', 'Square'], ['round', 'Round'], ['shield', 'Shield']])}
       <div class="bd-lab">On the side plates</div><div class="bd-grid bd-sides">${[['gem', 'Gem'], ['co', 'Company initials'], ['champ', "Champion's own"], ...Object.entries(BEMBLEM).filter(([k]) => BSIDE_LOOK(k) && k !== 'gem')].map(([k, l]) => bdOpt('sp', k, l, beltRender({ ...b, sp: k, sides: 2, plate: b.plate, top: '', line: '' }, { cls: 'bd-mini', vb: '28 33 60 84', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK'), champ: champInit(d) || 'RC' }))).join('')}</div>
       ${b.sp === 'champ' ? '<div class="tiny muted" style="margin-top:4px">The champion\'s initials, or their team\'s. They change when the belt changes hands.</div>' : ''}
+      <div class="bd-lab">Game icons on the side plates</div>${wsSyms(b.sp, 'bdSet', 'sp')}
       ${bdSlide('ss', 'Side plate size', 80, 125)}` : ''}
       <div class="bd-lab">Gem colour</div>${bdSw('gem', BGEMS)}<div class="tiny muted">Used on the side plates and the centre piece.</div>`;
     case 'centre': return `<div class="bd-lab">Centre piece</div><div class="bd-grid">${Object.entries(BEMBLEM).map(([k, l]) => bdOpt('emblem', k, l, beltRender({ ...b, emblem: k, ring: 0, top: '' }, { cls: 'bd-mini', vb: '130 24 100 88', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BK') }))).join('')}</div>
       ${b.emblem === 'logo' ? `<label class="f" style="margin-top:10px"><span>Initials <span class="muted">(blank uses the company's)</span></span><input type="text" data-bt="sub" value="${esc(b.sub)}" maxlength="4" placeholder="${esc(abbr(UI.wiz?.name || G?.promo?.name || 'BK'))}"></label>` : ''}
       <div class="bd-lab">Gem colour</div>${bdSw('gem', BGEMS)}
-      <label class="todo" style="margin-top:8px"><input type="checkbox" data-bt="ring" ${b.ring ? 'checked' : ''}><span>Ring of gems around the centre</span></label>`;
+      <label class="todo" style="margin-top:8px"><input type="checkbox" data-bt="ring" ${b.ring ? 'checked' : ''}><span>Ring of gems around the centre</span></label>
+      <div class="bd-lab">Game icons</div>${wsSyms(b.emblem, 'bdSet', 'emblem')}`;
     case 'text': return `<label class="f"><span>Top line <span class="muted">(optional)</span></span><input type="text" data-bt="top" value="${esc(b.top)}" maxlength="28" placeholder="e.g. ${esc(String(UI.wiz?.name || G?.promo?.name || 'Thunder Valley').toUpperCase().slice(0, 28))}"></label>
       <label class="f"><span>Nameplate</span><input type="text" data-bt="line" value="${esc(b.line)}" maxlength="28" placeholder="e.g. WORLD CHAMPION"></label>
       <div class="bd-lab">Nameplate style</div>${bdSeg('banner', [[1, 'Enamel banner'], [0, 'Engraved']])}
@@ -10119,7 +10218,7 @@ function bdPane(m) {
   if (m.tab === 'photo') {
     const ph = safePhoto(d.photo), live = BPX && BPX.draft === d;
     return `<p class="small muted" style="margin-top:4px">Use a photo of a belt instead of the drawn one: a real belt, or one you made in another app. It shows on the live show, the champion's card and everywhere the title appears.</p>
-      <div class="row" style="gap:8px;margin-bottom:8px"><button class="btn ${ph ? '' : 'pri'}" data-act="bdPhoto">📷 ${ph ? 'Replace photo' : 'Upload a photo'}</button>${ph ? '<button class="btn bad" data-act="bdPhotoDel">Remove photo</button>' : ''}</div>
+      <div class="row" style="gap:8px;margin-bottom:8px"><button class="btn ${ph ? '' : 'pri'}" data-act="bdPhoto">${ic('camera')} ${ph ? 'Replace photo' : 'Upload a photo'}</button>${ph ? '<button class="btn bad" data-act="bdPhotoDel">Remove photo</button>' : ''}</div>
       ${live ? `<div class="px-panel">${bpxRow('mode')}${bpxRow('zoom')}${BPX.mode === 'pixel' ? `${bpxRow('detail')}${bpxRow('colors')}${bpxRow('bg')}<div class="tiny muted" style="margin:-4px 0 6px">Made on this device. Only this version is saved, never your photo. Plain backgrounds cut out best.</div>` : ''}</div>`
         : ph ? `<div class="tiny muted">${isPixPng(ph, 160) ? 'Pixel version' : 'Real photo'}. Upload it again to change the look.</div>` : `<div class="tiny muted">The same looks as wrestler photos: a pixel version with the background cut out, or the real photo.</div>`}`;
   }
@@ -10155,29 +10254,49 @@ function shotBlock(d, m) {
     <div class="seg-ctl" style="margin:6px 0 8px"><button class="${any ? '' : 'on'}" data-act="shotUseNext" data-id="event" aria-pressed="${!any}">${ic('calendar')} ${nx ? esc(bigName(nx)) : 'Next big event'}</button><button class="${any ? 'on' : ''}" data-act="shotUseNext" data-id="any" aria-pressed="${any}">${ic('briefcase')} Cash in any time</button></div>
     <div class="chips"><button class="chip add" data-act="pickFor" data-f="shot">+ Give a title shot</button></div></div>`;
 }
+// ---------- one workshop for every designer: belts, trophies and wrestler looks share the layout, tools, tabs, tiles and colour pickers ----------
+const wsTools = (pre, tpl, undo) => `<div class="row bd-tools"><button class="chip ${tpl ? 'on' : ''}" data-act="${pre}Tpl" data-id="open" aria-expanded="${!!tpl}">${ic('layers')} Templates</button><button class="chip" data-act="${pre}Rand">${ic('dice')} Surprise me</button><button class="chip" data-act="${pre}Undo" ${undo?.length ? '' : 'disabled'}>${ic('undo')} Undo</button></div>`;
+const wsTabs = (tabs, cur, act, label) => `<div class="bd-tabs" role="tablist" aria-label="${esc(label)}">${tabs.map(([k, l]) => `<button role="tab" class="${cur === k ? 'on' : ''}" aria-selected="${cur === k}" data-act="${act}" data-id="${k}">${l}</button>`).join('')}</div>`;
+// the game's whole icon pack as a picker (one colour, like every icon in the game)
+function wsSyms(cur, act, f, none) {
+  const t = (v, inner, l) => { const on = cur === v; return `<button class="bd-tile sym-t ${on ? 'on' : ''}" data-act="${act}" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}" aria-label="${esc(l)}">${inner}<span>${esc(l)}</span></button>`; };
+  return `<div class="bd-grid sym-grid">${none ? t('', ic('xc'), none) : ''}${symList().map(k => t('ic-' + k, ic(k), symName(k))).join('')}</div>`;
+}
+// the Templates panel: yours (kept on this device and in cloud saves), another design to copy, and the game's own
+function wsTplPanel(o) {
+  const g = `bd-grid ${o.cls || ''}`;
+  const tile = (act, id, n, x, del) => `<div class="bd-tw"><button class="bd-tile" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(n)} template">${o.draw(x)}<span>${esc(n)}</span></button>${del != null ? `<button class="bd-x" data-act="myTplDel" data-id="${o.k}${del}" aria-label="Delete ${esc(n)}">${ic('xc')}</button>` : ''}</div>`;
+  const mine = o.mine || myTpls(o.k);
+  return `<div class="bd-tpls"><div class="bd-lab">Your templates</div>${mine.length ? `<div class="${g}">${mine.map((x, i) => tile(o.act + 'Mine', i, x.n, x.b, i)).join('')}</div>` : `<div class="tiny muted">Save a ${o.what} you like and it shows here, in every save on this device.</div>`}
+    <button class="chip" style="margin-top:8px" data-act="myTplAdd" data-id="${o.k}">${ic('save')} Save this design</button>
+    ${o.others?.length ? `<div class="bd-lab">${esc(o.othersLab)}</div><div class="${g}">${o.others.map(([id, n, x]) => tile(o.act + 'Copy', id, n, x)).join('')}</div><div class="tiny muted" style="margin-top:4px">${esc(o.keeps)}</div>` : ''}
+    <div class="bd-lab">Game templates</div><div class="${g}">${o.game.map(([n, x], i) => tile(o.act + 'Tpl', i, n, x)).join('')}</div>${o.gameNote ? `<div class="tiny muted" style="margin-top:4px">${esc(o.gameNote)}</div>` : ''}</div>`;
+}
 const bdTabView = () => { const on = modals.querySelector('.bd-tabs .on'); if (on && on.parentElement.scrollWidth > on.parentElement.clientWidth) on.parentElement.scrollLeft = Math.max(0, on.offsetLeft - 40); };
 const bdKeep = m => { (m.undo ||= []).push(JSON.parse(JSON.stringify(m.draft.belt))); if (m.undo.length > 40) m.undo.shift(); };
 function modalTitle(m) {
   const d = m.draft; d.belt = beltClean(d.belt, d); m.tab ||= 'shape';
   const body = `<div class="bd-prev" aria-live="off">${titleArt(d, 'bd-belt')}</div>${safePhoto(d.photo) && m.tab !== 'photo' && m.tab !== 'rules' ? '<div class="tiny muted" style="text-align:center;margin:-4px 0 8px">This title uses its photo. Remove it in the Photo tab to show the drawn belt.</div>' : ''}
-    <div class="row bd-tools"><button class="chip ${m.tpl ? 'on' : ''}" data-act="bdTpl" data-id="open" aria-expanded="${!!m.tpl}">Templates</button><button class="chip" data-act="bdRand">🎲 Surprise me</button><button class="chip" data-act="bdUndo" ${m.undo?.length ? '' : 'disabled'}>↶ Undo</button></div>
+    ${wsTools('bd', m.tpl, m.undo)}
     ${m.tpl ? bdTplPanel(m) : ''}
-    <div class="bd-tabs" role="tablist" aria-label="Belt parts">${BD_TABS.map(([k, l]) => `<button role="tab" class="${m.tab === k ? 'on' : ''}" aria-selected="${m.tab === k}" data-act="bdTab" data-id="${k}">${l}</button>`).join('')}</div>
+    ${wsTabs(BD_TABS, m.tab, 'bdTab', 'Belt parts')}
     <div class="bd-pane" role="tabpanel">${bdPane(m)}</div>`;
   const canDel = m.wiz != null ? m.wiz >= 0 && (UI.wiz?.titles?.length || 0) > 1 : !m.isNew;
   return modal(m.isNew ? 'New championship' : esc(d.name || 'Championship'), body, `${canDel ? '<button class="btn bad" data-act="delTitle">' + (m.wiz != null ? 'Remove' : 'Retire title') + '</button>' : ''}<button class="btn pri" data-act="saveTitle">Save title</button>`, { cls: 'bd-modal' });
 }
 
 // ---------- your own templates: any belt or trophy design kept on this device, for every save ----------
-const myTpls = k => { const l = meta[k === 'p' ? 'myCups' : 'myBelts']; return Array.isArray(l) ? l : []; };
-function myTplSave(k, name, look) { const key = k === 'p' ? 'myCups' : 'myBelts', l = myTpls(k).slice(); l.unshift({ n: String(name || 'My design').replace(/[<>`"]/g, '').slice(0, 30), b: look }); meta[key] = l.slice(0, 24); ls.set(META, JSON.stringify(meta)); }
-// your saved belt and trophy designs ride along with every cloud upload (data.tpl, gzipped), and loading adds the missing ones
-async function tplPack() { const b = myTpls('b'), c = myTpls('p'); return b.length || c.length ? gz(JSON.stringify({ b, c })) : ''; }
+// b: belts, p: trophies, w: wrestler looks
+const TPL_KEY = { b: 'myBelts', p: 'myCups', w: 'myLooks' };
+const myTpls = k => { const l = meta[TPL_KEY[k] || 'myBelts']; return Array.isArray(l) ? l : []; };
+function myTplSave(k, name, look) { const key = TPL_KEY[k] || 'myBelts', l = myTpls(k).slice(); l.unshift({ n: String(name || 'My design').replace(/[<>`"]/g, '').slice(0, 30), b: look }); meta[key] = l.slice(0, 24); ls.set(META, JSON.stringify(meta)); }
+// your saved belt, trophy and wrestler look designs ride along with every cloud upload (data.tpl, gzipped), and loading adds the missing ones
+async function tplPack() { const b = myTpls('b'), c = myTpls('p'), w = myTpls('w'); return b.length || c.length || w.length ? gz(JSON.stringify({ b, c, w })) : ''; }
 async function tplMerge(z) {
   if (typeof z !== 'string' || !z) return 0; let x; try { x = JSON.parse(await ungz(z)); } catch (e) { return 0; }
   let n = 0;
-  for (const [k, key, fix] of [['b', 'myBelts', l => beltClean(l)], ['c', 'myCups', l => trophyClean(l)]]) {
-    const have = myTpls(k === 'c' ? 'p' : 'b').slice(), seen = new Set(have.map(t => t.n + '|' + JSON.stringify(t.b)));
+  for (const [k, key, fix] of [['b', 'myBelts', l => beltClean(l)], ['c', 'myCups', l => trophyClean(l)], ['w', 'myLooks', l => lookClean(l)]]) {
+    const have = myTpls(k === 'c' ? 'p' : k).slice(), seen = new Set(have.map(t => t.n + '|' + JSON.stringify(t.b)));
     for (const t of (Array.isArray(x?.[k]) ? x[k] : []).slice(0, 24)) { if (!t || typeof t !== 'object' || !t.b || typeof t.b !== 'object') continue;
       const e = { n: String(t.n || 'My design').replace(/[<>`"]/g, '').slice(0, 30), b: fix(t.b) }, id = e.n + '|' + JSON.stringify(e.b);
       if (!seen.has(id) && have.length < 24) { have.push(e); seen.add(id); n++; } }
@@ -10185,37 +10304,40 @@ async function tplMerge(z) {
   }
   if (n) ls.set(META, JSON.stringify(meta)); return n;
 }
-function myTplDel(k, i) { const key = k === 'p' ? 'myCups' : 'myBelts', l = myTpls(k).slice(); l.splice(i, 1); meta[key] = l; ls.set(META, JSON.stringify(meta)); }
+function myTplDel(k, i) { const key = TPL_KEY[k] || 'myBelts', l = myTpls(k).slice(); l.splice(i, 1); meta[key] = l; ls.set(META, JSON.stringify(meta)); }
 // the belt designer's Templates panel: the game's templates, yours, and the look of your other titles
 function bdTplPanel(m) {
-  const a = abbr(UI.wiz?.name || G?.promo?.name || 'BK'), mine = myTpls('b'), d = m.draft, others = (m.wiz != null ? UI.wiz?.titles || [] : G?.titles || []).filter(t => t.id !== d.id && t.belt);
-  const tile = (act, id, n, b, del) => `<div class="bd-tw"><button class="bd-tile" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(n)} template">${beltRender({ ...b, top: '', line: '' }, { cls: 'bd-mini', abbr: a })}<span>${esc(n)}</span></button>${del != null ? `<button class="bd-x" data-act="myTplDel" data-id="b${del}" aria-label="Delete ${esc(n)}">${ic('xc')}</button>` : ''}</div>`;
-  return `<div class="bd-tpls"><div class="bd-lab">Your templates</div>${mine.length ? `<div class="bd-grid">${mine.map((x, i) => tile('bdMine', i, x.n, x.b, i)).join('')}</div>` : '<div class="tiny muted">Save a belt you like and it shows here, in every save on this device.</div>'}
-    <button class="chip" style="margin-top:8px" data-act="myTplAdd" data-id="b">${ic('save')} Save this design</button>
-    ${others.length ? `<div class="bd-lab">Copy the look of another title</div><div class="bd-grid">${others.map(t => tile('bdCopy', t.id, t.short || t.name, t.belt)).join('')}</div><div class="tiny muted" style="margin-top:4px">Keeps this title's own wording.</div>` : ''}
-    <div class="bd-lab">Game templates</div><div class="bd-grid">${BTPL.map(([n, x], i) => tile('bdTpl', i, n, x)).join('')}</div></div>`;
+  const a = abbr(UI.wiz?.name || G?.promo?.name || 'BK'), d = m.draft, others = (m.wiz != null ? UI.wiz?.titles || [] : G?.titles || []).filter(t => t.id !== d.id && t.belt);
+  return wsTplPanel({ k: 'b', what: 'belt', act: 'bd', draw: b => beltRender({ ...b, top: '', line: '' }, { cls: 'bd-mini', abbr: a }),
+    others: others.map(t => [t.id, t.short || t.name, t.belt]), othersLab: 'Copy the look of another title', keeps: "Keeps this title's own wording.", game: BTPL });
 }
 
 // ---------- the trophy workshop: same layout as the belt designer ----------
 const PD_TABS = [['shape', 'Shape'], ['metal', 'Metal'], ['base', 'Base'], ['topper', 'Topper'], ['centre', 'Centre'], ['text', 'Text'], ['photo', 'Photo'], ['rules', 'Rules']];
 function pdOpt(f, v, label, inner, cls) { const b = UI.modal.draft.look, on = String(b[f]) === String(v); return `<button class="${cls || 'bd-tile'} ${on ? 'on' : ''}" data-act="pdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}" aria-label="${esc(label)}">${inner || ''}${cls === 'sw' ? '' : `<span>${esc(label)}</span>`}</button>`; }
+const pdSegCur = (f, list, cur) => `<div class="seg-ctl ${list.length > 4 ? 'bd-many' : ''}">${list.map(([v, l]) => { const on = String(cur) === String(v); return `<button class="${on ? 'on' : ''}" data-act="pdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`; }).join('')}</div>`;
 const pdSeg = (f, list) => `<div class="seg-ctl ${list.length > 4 ? 'bd-many' : ''}">${list.map(([v, l]) => { const on = String(UI.modal.draft.look[f]) === String(v); return `<button class="${on ? 'on' : ''}" data-act="pdSet" data-f="${f}" data-id="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`; }).join('')}</div>`;
 // swatches plus a colour picker for any colour at all
-const anyColour = (f, v, attr) => `<label class="sw sw-any" title="Any colour"><input type="color" ${attr}="${f}" value="${esc(v)}" aria-label="Pick any colour">${ic('pen')}</label>`;
-const pdSw = (f, list) => `<div class="swatches">${list.map(c => pdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}${anyColour(f, UI.modal.draft.look[f], 'data-pt')}</div>`;
+const anyColour = (f, v, attr, on) => `<label class="sw sw-any${on ? ' on' : ''}" title="Any colour"${on ? ` style="background:${esc(v)}"` : ''}><input type="color" ${attr}="${f}" value="${esc(v)}" aria-label="Pick any colour">${ic('pen')}</label>`;
+const pdSw = (f, list) => `<div class="swatches">${list.map(c => pdOpt(f, c, 'Colour ' + c, '', 'sw').replace('class="sw', `style="background:${c}" class="sw`)).join('')}${anyColour(f, UI.modal.draft.look[f], 'data-pt', !list.includes(UI.modal.draft.look[f]))}</div>`;
 function pdPane(m) {
   const d = m.draft, b = d.look, a = abbr(G?.promo?.name || 'BK'), mini = x => trophyRender({ ...b, line: '', sub: '', eng: '', base: 'none', ...x }, { cls: 'bd-mini tr-mini', abbr: a });
   switch (m.tab) {
     case 'shape': return `<div class="bd-lab">Trophy shape</div><div class="bd-grid tr-grid">${Object.entries(TBODY).map(([k, [l]]) => pdOpt('body', k, l, mini({ body: k, top: 'none' }))).join('')}</div>
       ${TBODY[b.body][1]().hx ? `<div class="bd-lab">Handles</div>${pdSeg('handle', Object.entries(THANDLE))}` : ''}
-      ${b.body === 'belt' ? `<div class="bd-lab">Belt plate</div>${pdSeg('plate', Object.entries(BPLATE).map(([k, v]) => [k, v[0]]))}` : ''}`;
+      ${b.body === 'belt' ? `<div class="bd-lab">Belt plate</div>${pdSeg('plate', Object.entries(BPLATE).map(([k, v]) => [k, v[0]]))}<div class="bd-lab">Strap colour</div>${pdSw('strap', BSTRAPS)}<div class="bd-lab">Strap style</div>${pdSeg('tex', Object.entries(BSTRAP))}` : ''}
+      ${TBODY[b.body][1]().globe ? '' : `<div class="bd-lab">Engraving</div>${pdSegCur('carve', Object.entries(BCARVE), tCarve(b))}`}
+      <div class="bd-lab">Detail</div>${pdSeg('orn', [[0, 'Relief'], [1, 'Ornate']])}<div class="tiny muted" style="margin-top:4px">Ornate adds a beaded rim${b.body === 'belt' ? ', filigree and beaded side plates' : ' around the shape'}.</div>`;
     case 'metal': return `<div class="bd-lab">Metal</div><div class="bd-grid">${Object.entries(BMETAL).map(([k, M]) => pdOpt('metal', k, M[0], `<i class="bd-metal" style="background:linear-gradient(${M[1]},${M[2]},${M[3]})"></i>`)).join('')}</div>
       <div class="bd-lab">Trim (handles, foot and stem)</div>${pdSeg('trim', [['', 'Same'], ...Object.entries(BMETAL).filter(([k]) => k !== b.metal).map(([k, M]) => [k, M[0]])])}`;
-    case 'base': return `<div class="bd-lab">Base</div>${pdSeg('base', Object.entries(TBASE))}${b.base !== 'none' ? `<div class="bd-lab">Base colour</div>${pdSeg('bcol', Object.entries(TBASECOL).map(([k, v]) => [k, v[0]]))}` : ''}`;
+    case 'base': return `<div class="bd-lab">Base</div>${pdSeg('base', Object.entries(TBASE))}${b.base !== 'none' ? `<div class="bd-lab">Base colour</div><div class="swatches">${Object.entries(TBASECOL).map(([k, v]) => { const M = BMETAL[b.trim || b.metal]; return pdOpt('bcol', k, v[0], '', 'sw').replace('class="sw', `style="background:${k === 'metal' ? `linear-gradient(${M[1]},${M[2]},${M[3]})` : `linear-gradient(${v[1]},${v[2]})`}" class="sw`); }).join('')}${anyColour('bcol', tBaseCol(b.bcol) ? b.bcol : (TBASECOL[b.bcol]?.[1] || '#7a4a26'), 'data-pt', !!tBaseCol(b.bcol))}</div><div class="tiny muted">${esc(tBaseCol(b.bcol) ? 'Your own colour' : TBASECOL[b.bcol][0])}</div>` : ''}`;
     case 'topper': return TBODY[b.body][1]().noTop ? '<div class="tiny muted" style="margin-top:10px">This shape has no topper. Try a cup, an urn, a column or the globe.</div>'
-      : `<div class="bd-lab">On top</div><div class="bd-grid tr-grid">${Object.entries(TTOP).map(([k, l]) => pdOpt('top', k, l, trophyRender({ ...b, top: k, line: '', base: 'none' }, { cls: 'bd-mini tr-mini', vb: '40 -34 120 120', abbr: a }))).join('')}</div>`;
+      : `<div class="bd-lab">On top</div><div class="bd-grid tr-grid">${Object.entries(TTOP).map(([k, l]) => pdOpt('top', k, l, trophyRender({ ...b, top: k, line: '', base: 'none' }, { cls: 'bd-mini tr-mini', vb: '40 -34 120 120', abbr: a }))).join('')}</div>
+      <div class="bd-lab">Game icons on top</div>${wsSyms(b.top, 'pdSet', 'top')}`;
     case 'centre': return `<div class="bd-lab">Centre piece</div><div class="bd-grid">${Object.entries(BEMBLEM).map(([k, l]) => pdOpt('emblem', k, l, beltRender({ plate: 'round', metal: b.metal, gem: b.gem, enamel: b.enamel, font: b.font, emblem: k, ring: 0, top: '', line: '', sides: 0 }, { cls: 'bd-mini', vb: '130 24 100 88', abbr: a }))).join('')}</div>
-      <div class="bd-lab">Gem colour</div>${pdSw('gem', BGEMS)}`;
+      <div class="bd-lab">Gem colour</div>${pdSw('gem', BGEMS)}
+      <label class="todo" style="margin-top:8px"><input type="checkbox" data-pt="ring" ${b.ring ? 'checked' : ''}><span>Ring of gems around the centre</span></label>
+      <div class="bd-lab">Game icons</div>${wsSyms(b.emblem, 'pdSet', 'emblem')}`;
     case 'text': return `<label class="f"><span>Nameplate</span><input type="text" data-pt="line" value="${esc(b.line)}" maxlength="26" placeholder="e.g. KING OF THE RING"></label>
       <label class="f"><span>Second line <span class="muted">(optional)</span></span><input type="text" data-pt="sub" value="${esc(b.sub)}" maxlength="26" placeholder="e.g. EST. YEAR ONE"></label>
       ${TBODY[b.body][1]().eng || b.body === 'belt' ? `<label class="f"><span>Engraved on the ${b.body === 'belt' ? 'belt' : 'trophy'} <span class="muted">(optional)</span></span><input type="text" data-pt="eng" value="${esc(b.eng)}" maxlength="20" placeholder="e.g. MOST VALUABLE"></label>` : ''}
@@ -10254,14 +10376,13 @@ function pzWinList(P) {
 const pdKeep = m => { (m.undo ||= []).push(JSON.parse(JSON.stringify(m.draft.look))); if (m.undo.length > 40) m.undo.shift(); };
 function modalPrize(m) {
   const d = m.draft; d.look = trophyClean(d.look, d); m.tab ||= 'shape';
-  const a = abbr(G?.promo?.name || 'BK'), mine = myTpls('p');
-  const tile = (act, id, n, x, del) => `<div class="bd-tw"><button class="bd-tile" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(n)} template">${trophyRender({ ...x, line: '', sub: '', eng: '', base: 'none' }, { cls: 'bd-mini tr-mini', abbr: a })}<span>${esc(n)}</span></button>${del != null ? `<button class="bd-x" data-act="myTplDel" data-id="p${del}" aria-label="Delete ${esc(n)}">${ic('xc')}</button>` : ''}</div>`;
+  const a = abbr(G?.promo?.name || 'BK');
+  const tpl = () => wsTplPanel({ k: 'p', what: 'trophy', act: 'pd', cls: 'tr-grid', draw: x => trophyRender({ ...x, line: '', sub: '', eng: '', base: 'none' }, { cls: 'bd-mini tr-mini', abbr: a }),
+    others: (G.prizes || []).filter(P => P.id !== d.id && P.look).map(P => [P.id, P.short || P.name, P.look]), othersLab: 'Copy the look of another trophy', keeps: "Keeps this trophy's own wording.", game: TTPL });
   const body = `<div class="bd-prev tr-prev" aria-live="off">${prizeArt(d, 'tr-big')}</div>${safePhoto(d.photo) && m.tab !== 'photo' && m.tab !== 'rules' ? '<div class="tiny muted" style="text-align:center;margin:-4px 0 8px">This trophy uses its photo. Remove it in the Photo tab to show the drawn one.</div>' : ''}
-    <div class="row bd-tools"><button class="chip ${m.tpl ? 'on' : ''}" data-act="pdTpl" data-id="open" aria-expanded="${!!m.tpl}">Templates</button><button class="chip" data-act="pdRand">${ic('dice')} Surprise me</button><button class="chip" data-act="pdUndo" ${m.undo?.length ? '' : 'disabled'}>Undo</button></div>
-    ${m.tpl ? `<div class="bd-tpls"><div class="bd-lab">Your templates</div>${mine.length ? `<div class="bd-grid tr-grid">${mine.map((x, i) => tile('pdMine', i, x.n, x.b, i)).join('')}</div>` : '<div class="tiny muted">Save a trophy you like and it shows here, in every save on this device.</div>'}
-      <button class="chip" style="margin-top:8px" data-act="myTplAdd" data-id="p">${ic('save')} Save this design</button>
-      <div class="bd-lab">Game templates</div><div class="bd-grid tr-grid">${TTPL.map(([n, x], i) => tile('pdTpl', i, n, x)).join('')}</div></div>` : ''}
-    <div class="bd-tabs" role="tablist" aria-label="Trophy parts">${PD_TABS.map(([k, l]) => `<button role="tab" class="${m.tab === k ? 'on' : ''}" aria-selected="${m.tab === k}" data-act="pdTab" data-id="${k}">${l}</button>`).join('')}</div>
+    ${wsTools('pd', m.tpl, m.undo)}
+    ${m.tpl ? tpl() : ''}
+    ${wsTabs(PD_TABS, m.tab, 'pdTab', 'Trophy parts')}
     <div class="bd-pane" role="tabpanel">${pdPane(m)}</div>`;
   return modal(m.isNew ? 'New trophy' : esc(d.name || 'Trophy'), body, `${m.isNew ? '' : '<button class="btn bad" data-act="delPrize">Delete</button>'}<button class="btn pri" data-act="savePrize">Save trophy</button>`, { cls: 'bd-modal' });
 }
@@ -10865,7 +10986,7 @@ const A = {
   bAskAuto() { const d = UI.modal?.draft; if (!d) return; delete d.askSet; render(); },
   shareOneComm() { const id = UI.modal.draftBack.draft.id; UI.modal = { type: 'community', tab: 'share', what: 'pick', sel: [id], title: W(id)?.name || '' }; render(); },
   editW(id) { const w = W(id); openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); },
-  editBody(id) { const w = W(id); if (!w) return; UI.bmOpen = true; UI.fmOpen = false; openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); setTimeout(() => document.querySelector('.fm-body')?.scrollIntoView({ block: 'start' }), 60); },
+  editBody(id) { const w = W(id); if (!w) return; UI.fmOpen = true; UI.fmTab = 'build'; openModal({ type: 'editW', draft: JSON.parse(JSON.stringify(w)) }); setTimeout(() => document.querySelector('.lk')?.scrollIntoView({ block: 'start' }), 60); },
   // closing the editor with changes asks first, instead of quietly throwing them away
   ewClose() { const m = UI.modal; if (!ewDirty(m)) { dropDraft(); return closeModal(); } UI.modal = { type: 'ewLeave', back: m }; render(); },
   ewKeep() { UI.modal = UI.modal?.back || null; render(); },
@@ -10894,6 +11015,7 @@ const A = {
     for (const i of [0, 1, 2, 3, 4, 'p']) delete d['proC' + i];
     d.pro = proClean(d.pro); if (!d.pro) delete d.pro;
     if (!d.photo && !faceOK(d.look)) d.look = faceCode(d); // keep the face they saw, even once a new wrestler gets an id
+    { const lc = lcClean(d.lc), sy = symClean(d.sym); if (lc) d.lc = lc; else delete d.lc; if (sy) d.sym = sy; else delete d.sym; }
     if (SANDBOX() && +d.askSet > 0) d.askSet = clamp(Math.round(+d.askSet / 100) * 100, 100, 10000000); else if (SANDBOX() || !(+d.askSet > 0)) delete d.askSet;
     const cSal = SANDBOX() && d.cSal !== '' && d.cSal != null && isFinite(+d.cSal) ? clamp(Math.round(+d.cSal / 100) * 100, 0, 10000000) : null, cWks = SANDBOX() && d.cWks !== '' && d.cWks != null && isFinite(+d.cWks) ? clamp(Math.round(+d.cWks), 1, 520) : null;
     delete d.cSal; delete d.cWks;
@@ -11186,7 +11308,7 @@ const A = {
     }, true);
   },
   // your own templates and copying another title's look
-  myTplAdd(k) { const m = UI.modal, d = m?.draft; if (!d) return; if (k === 'p') myTplSave('p', d.short || d.name, trophyClean(d.look, d)); else myTplSave('b', d.short || d.name, beltClean(d.belt, d)); render(); toast('Saved to your templates.'); },
+  myTplAdd(k) { const m = UI.modal, d = m?.draft; if (!d) return; if (k === 'w') myTplSave('w', d.short || d.name, lookClean(lkLook(d))); else if (k === 'p') myTplSave('p', d.short || d.name, trophyClean(d.look, d)); else myTplSave('b', d.short || d.name, beltClean(d.belt, d)); render(); toast('Saved to your templates.'); },
   myTplDel(v) { myTplDel(v[0], +v.slice(1)); render(); },
   bdMine(i) { const m = UI.modal, x = myTpls('b')[+i]; if (!x) return; bdKeep(m); const c = m.draft.belt; m.draft.belt = beltClean({ ...x.b, top: c.top, line: c.line, sub: c.sub }, m.draft); m.tpl = false; render(); },
   bdCopy(id) { const m = UI.modal, t = (m.wiz != null ? UI.wiz?.titles || [] : G.titles).find(x => x.id === id); if (!t) return; bdKeep(m); const c = m.draft.belt; m.draft.belt = beltClean({ ...t.belt, top: c.top, line: c.line, sub: c.sub }, m.draft); m.tpl = false; render(); },
@@ -11194,7 +11316,8 @@ const A = {
   tTab(v) { UI.ttab = v === 'prizes' ? 'prizes' : 'belts'; render(); },
   editPrize(id) { const P = PZ(id); openModal({ type: 'prize', isNew: !P, tab: P ? 'rules' : 'shape', draft: P ? JSON.parse(JSON.stringify(P)) : { id: uid(), name: 'New Trophy', short: '', look: trophyFromTpl(0, { line: 'NEW TROPHY' }), how: 'tourney', often: 'year', ev: '', tier: 'big', reward: 'none', rt: '', award: PZ_AWARDS[0], holder: [], wins: [], made: G.week } }); },
   pdTab(v) { UI.modal.tab = v; UI.modal.tpl = false; render(); },
-  pdSet(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f; pdKeep(m); d.look = trophyClean({ ...d.look, [f]: f === 'banner' ? +v : v }, d); render(); },
+  pdSet(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f; pdKeep(m); d.look = trophyClean({ ...d.look, [f]: ['banner', 'ring', 'orn'].includes(f) ? +v : v }, d); render(); },
+  pdCopy(id) { const m = UI.modal, P = PZ(id); if (!P) return; pdKeep(m); const c = m.draft.look; m.draft.look = trophyClean({ ...P.look, line: c.line, sub: c.sub, eng: c.eng }, m.draft); m.tpl = false; render(); },
   pdTpl(v) { const m = UI.modal; if (v === 'open') { m.tpl = !m.tpl; return render(); } pdKeep(m); m.draft.look = trophyFromTpl(+v, m.draft.look); m.tpl = false; render(); },
   pdMine(i) { const m = UI.modal, x = myTpls('p')[+i]; if (!x) return; pdKeep(m); const c = m.draft.look; m.draft.look = trophyClean({ ...x.b, line: c.line, sub: c.sub, eng: c.eng }, m.draft); m.tpl = false; render(); },
   pdRand() { const m = UI.modal; pdKeep(m); m.draft.look = trophySurprise(m.draft.look); render(); },
@@ -11312,7 +11435,7 @@ const ARCHETYPES = {
   main: { label: 'Main eventer', r: [75, 92], pop: [72, 88], age: [27, 37] },
   legend: { label: 'Legend', r: [70, 88], pop: [85, 97], age: [38, 50], stam: [35, 55] }
 };
-const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body', 'pro'];
+const PACK_FIELDS = ['name', 'nick', 'short', 'psych', 'sell', 'cons', 'safety', 'tech', 'brawl', 'air', 'pot', 'align', 'style', 'division', 'ring', 'mic', 'cha', 'pop', 'stam', 'age', 'hometown', 'height', 'weight', 'finisher', 'signature', 'theme', 'bio', 'color', 'photo', 'role', 'look', 'body', 'pro', 'lc', 'sym'];
 const overall = w => Math.round(w.ring * 0.35 + w.pop * 0.3 + w.mic * 0.15 + w.cha * 0.15 + w.stam * 0.05);
 const safePhoto = p => typeof p === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length < 80000 ? p : '';
 // true when a canvas has see-through pixels (a PNG with its background already cut out)
@@ -11360,6 +11483,7 @@ function cleanW(o) {
   const rl = roleFromText(o.role); if (rl && rl !== 'wrestler') w.role = rl;
   if (faceOK(o.look)) w.look = o.look;
   if (bodyOK(o.body)) w.body = o.body;
+  { const lc = lcClean(o.lc), sy = symClean(o.sym); if (lc) w.lc = lc; if (sy) w.sym = sy; }
   const pr = proClean(o.pro ?? o.pronouns); if (pr) w.pro = pr;
   return w;
 }
@@ -11687,54 +11811,88 @@ function beltBatch(m) {
     </div>`;
 }
 
-// the face maker in the wrestler editor: changes one place of the look code at a time, in four tabs
-const FM_TABS = [['face', 'Face'], ['hair', 'Hair'], ['paint', 'Paint & masks'], ['gear', 'Gear']];
-function faceMaker(d) {
-  const c = faceCode(d), at = i => parseInt(c[i], 36);
-  // each choice shows this wrestler's face with that choice applied, so you can see it before you pick
-  const peek = (i, j) => faceURL({ ...d, look: c.slice(0, i) + j.toString(36) + c.slice(i + 1) });
-  const chips = (i, list) => `<div class="fm-tiles">${list.map((l, j) => `<button class="fm-tile ${at(i) === j ? 'on' : ''}" data-act="bFace" data-f="${i}" data-id="${j}" aria-pressed="${at(i) === j}"><img class="px" alt="" src="${peek(i, j)}"><span>${l}</span></button>`).join('')}</div>`;
-  const sws = (i, cols, from, label) => `<div class="swatches">${cols.map((col, j) => j < from ? '' : `<button class="sw ${at(i) === j ? 'on' : ''}${col ? '' : ' mine'}" style="background:${col || safeColor(d.color) || '#c8102e'}" data-act="bFace" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : 'their colour'}" aria-pressed="${at(i) === j}"></button>`).join('')}</div>`;
-  const row = (l, h) => `<div class="fm-row"><span>${l}</span>${h}</div>`;
-  const F = at(4), hood = FACE_HOOD.has(F), women = looksWomen(d), tab = FM_TABS.some(([k]) => k === UI.fmTab) ? UI.fmTab : 'face';
-  const panes = {
-    face: () => row('Skin', `<div class="swatches">${FACE_SKIN_ORDER.map(j => `<button class="sw ${at(0) === j ? 'on' : ''}" style="background:${FACE.skin[j][0]}" data-act="bFace" data-f="0" data-id="${j}" aria-label="Skin tone ${FACE_SKIN_ORDER.indexOf(j) + 1}" aria-pressed="${at(0) === j}"></button>`).join('')}</div>`)
-      + row('Eyes', chips(10, FACE.eyes)) + row('Brows', chips(11, FACE.brows)) + row('Mouth', chips(12, FACE.mouth))
-      + row('Make-up', chips(15, FACE.makeup)),
-    hair: () => hood ? `<p class="small muted fm-row">The ${esc(FACE.face[F].toLowerCase())} covers the hair. Pick another face on Paint &amp; masks to show it.</p>`
-      : row('Hair', chips(1, FACE.hair)) + row('Hair colour', sws(2, FACE.hairC, 0, 'Hair')) + row('Facial hair', chips(3, FACE.beard)),
-    paint: () => row('Face', chips(4, FACE.face)) + (FACE_MASKS.has(F) ? row('Mask colour', sws(8, FACE.col, 1, 'Mask')) + row('Mask trim', sws(9, FACE.col, 1, 'Trim')) : '')
-      + row('Paint colour <span class="muted">· also the gear</span>', sws(6, FACE.col, 0, 'Paint')),
-    gear: () => row('Headwear', chips(13, FACE.hat)) + (at(13) ? row('Headwear colour', sws(14, FACE.col, 0, 'Headwear')) : '')
-      + row('Gear', chips(5, FACE.gear)) + row('Gear colour', sws(6, FACE.col, 0, 'Gear')) + row('Extra', chips(7, FACE.extra)),
-  };
-  return `<details class="fm" ${UI.fmOpen ? 'open' : ''}><summary data-act="fmTog"><img class="fm-big px av-${d.align === 'heel' ? 'heel' : 'face'}" alt="Face preview" src="${faceURL(d)}"><span>Pixel face<span class="tiny muted" style="display:block;font-weight:500">Shown when there's no photo</span></span></summary>
-    <div class="fm-row"><button class="btn" data-act="bFaceRand">${ic('dice')} Random face</button></div>
-    <div class="seg-ctl fm-tabs" role="tablist" aria-label="Face maker">${FM_TABS.map(([k, l]) => `<button role="tab" class="${tab === k ? 'on' : ''}" data-act="fmTab" data-id="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
-    <div role="tabpanel">${panes[tab]()}</div>
-  </details>`;
+// ---------- the wrestler's pixel look: the same workshop as the belts and trophies ----------
+// one editor for the face and the full body: a live preview on top, Templates / Surprise me / Undo, then tabs
+const LK_TABS = [['face', 'Face'], ['hair', 'Hair'], ['paint', 'Paint & masks'], ['gear', 'Gear'], ['sym', 'Symbol'], ['build', 'Build'], ['ring', 'Ring gear']];
+const lkTabs = () => LK_TABS.filter(([k]) => bodiesOn() || !['build', 'ring'].includes(k));
+const lkSnap = d => JSON.parse(JSON.stringify({ look: d.look, body: d.body, lc: d.lc, sym: d.sym }));
+const lkKeep = m => { (m.lkUndo ||= []).push(lkSnap(m.draft)); if (m.lkUndo.length > 40) m.lkUndo.shift(); };
+const lkApply = (d, x) => { for (const k of ['look', 'body', 'lc', 'sym']) { if (x[k] == null) delete d[k]; else d[k] = x[k]; } };
+// game templates: a style of gear and paint. They keep the wrestler's skin, eyes, brows, mouth and make-up.
+// f = places in the face code, b = places in the body code
+const LOOK_TPL = [
+  ['Luchador', { f: { 1: 0, 3: 0, 4: 5, 5: 1, 6: 1, 7: 0, 8: 1, 9: 4, 13: 0 }, b: { 0: 1, 1: 0, 2: 1, 3: 1, 4: 0, 5: 4, 6: 1, 7: 3 }, sym: { k: 'ic-star', at: 'head', c: '#f2c94c' } }],
+  ['Brawler', { f: { 1: 1, 3: 3, 4: 0, 5: 2, 6: 3, 7: 0, 13: 0 }, b: { 0: 3, 1: 3, 2: 2, 3: 3, 4: 0, 5: 0, 6: 1, 7: 1 } }],
+  ['Rock star', { f: { 1: 5, 3: 1, 4: 0, 5: 3, 6: 3, 7: 2, 13: 0 }, b: { 0: 0, 1: 5, 2: 3, 3: 3, 4: 3, 5: 3, 6: 0, 7: 3 } }],
+  ['High flyer', { f: { 1: 4, 4: 13, 5: 5, 6: 9, 7: 0, 8: 9, 9: 7, 13: 0 }, b: { 0: 0, 1: 6, 2: 1, 3: 9, 4: 1, 5: 9, 6: 1, 7: 1 }, sym: { k: 'ic-bolt', at: 'chest', c: '#f2c94c' } }],
+  ['Monster', { f: { 1: 0, 3: 0, 4: 8, 5: 4, 6: 3, 7: 0, 13: 8 }, b: { 0: 4, 1: 2, 2: 3, 3: 3, 4: 0, 5: 0, 6: 0, 7: 2 } }],
+  ['Hooded villain', { f: { 4: 12, 5: 4, 6: 3, 7: 0, 8: 3, 9: 1, 13: 0 }, b: { 0: 2, 1: 3, 2: 1, 3: 3, 4: 1, 5: 1, 6: 3, 7: 2 } }],
+  ['Cowboy', { f: { 1: 3, 3: 4, 4: 0, 5: 6, 6: 12, 7: 0, 13: 2, 14: 12 }, b: { 0: 3, 1: 4, 2: 3, 3: 12, 4: 0, 5: 12, 6: 0, 7: 0 } }],
+  ['Royalty', { f: { 1: 5, 3: 0, 4: 0, 5: 9, 6: 6, 7: 0, 13: 5 }, b: { 0: 1, 1: 6, 2: 1, 3: 6, 4: 0, 5: 6, 6: 0, 7: 3 }, sym: { k: 'ic-crown', at: 'trunks', c: '#f2c94c' } }],
+  ['Jester', { f: { 4: 9, 5: 3, 6: 6, 7: 0, 13: 0 }, b: { 0: 0, 1: 5, 2: 1, 3: 6, 4: 3, 5: 4, 6: 0, 7: 2 } }],
+  ['Corporate', { f: { 1: 3, 3: 0, 4: 0, 5: 7, 6: 3, 7: 5, 13: 0 }, b: { 0: 1, 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 0, 7: 0 } }],
+  ['Hardcore', { f: { 1: 4, 3: 1, 4: 1, 5: 5, 6: 3, 7: 8, 13: 1, 14: 1 }, b: { 0: 3, 1: 2, 2: 2, 3: 3, 4: 0, 5: 0, 6: 3, 7: 1 }, sym: { k: 'ic-flame', at: 'chest', c: '#ff6b00' } }],
+  ['Champion', { f: { 4: 0, 5: 0, 7: 7, 13: 0 }, b: { 0: 2, 1: 6, 2: 0, 3: 4, 4: 0, 5: 4, 6: 1, 7: 1, 8: 0 }, sym: { k: 'ic-trophy', at: 'trunks', c: '#f2c94c' } }]
+];
+function lookFromTpl(d, x) {
+  const f = [...faceCode(d)], b = [...bodyCode(d)];
+  for (const [i, v] of Object.entries(x.f || {})) if (+v < FACE_MAX[+i]) f[+i] = (+v).toString(36);
+  for (const [i, v] of Object.entries(x.b || {})) if (+v < BODY_MAX[+i]) b[+i] = (+v).toString(36);
+  return { look: f.join(''), body: b.join(''), lc: lcClean({ f0: d.lc?.f0 }), sym: x.sym ? { ...x.sym } : undefined };
 }
-// the body maker in the wrestler editor: the full wrestler shown on their wrestler page
-const BM_TABS = [['pose', 'Build & stance'], ['gear', 'Gear']];
-function bodyMaker(d) {
-  const c = bodyCode(d), at = i => parseInt(c[i], 36), tab = BM_TABS.some(([k]) => k === UI.bmTab) ? UI.bmTab : 'pose';
-  const peek = (i, j) => bodyURL({ ...d, body: c.slice(0, i) + j.toString(36) + c.slice(i + 1) });
-  const chips = (i, list) => `<div class="fm-tiles bm-tiles">${list.map((l, j) => `<button class="fm-tile ${at(i) === j ? 'on' : ''}" data-act="bBody" data-f="${i}" data-id="${j}" aria-pressed="${at(i) === j}"><img class="px" alt="" src="${peek(i, j)}"><span>${l}</span></button>`).join('')}</div>`;
-  const sws = (i, label, none) => `<div class="swatches">${FACE.col.map((col, j) => `<button class="sw ${at(i) === j ? 'on' : ''}${col || none ? '' : ' mine'}" style="background:${col || none || safeColor(d.color) || '#c8102e'}" data-act="bBody" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : none ? 'black' : 'their colour'}" aria-pressed="${at(i) === j}"></button>`).join('')}</div>`;
-  const row = (l, h) => `<div class="fm-row"><span>${l}</span>${h}</div>`;
+// a saved look or a teammate's look on this wrestler: everything but their skin
+function lookFromMine(d, t) {
+  const x = lookClean(t), f = [...(x.look || faceCode(d)).padEnd(FACE_LEN, '0')]; f[0] = faceCode(d)[0];
+  const lc = { ...(x.lc || {}) }; delete lc.f0; if (d.lc?.f0) lc.f0 = d.lc.f0;
+  return { look: f.join(''), body: x.body || d.body, lc: lcClean(lc), sym: x.sym };
+}
+const lkLook = w => ({ look: faceCode(w), body: bodyCode(w), lc: w.lc, sym: w.sym });
+// teammates and faction mates, for "Copy a teammate's look"
+const lkMates = d => { const ids = new Set(); for (const t of [...(G?.teams || []), ...(G?.factions || [])]) if (t.members?.includes(d.id)) t.members.forEach(id => id !== d.id && ids.add(id)); return [...ids].map(W).filter(Boolean).slice(0, 12); };
+function lkTplPanel(d) {
+  const draw = x => `<img class="px lk-tpl" alt="" src="${faceURL({ ...d, ...x })}">`;
+  return wsTplPanel({ k: 'w', what: 'look', act: 'lk', cls: 'lk-grid', draw, mine: myTpls('w').map(t => ({ n: t.n, b: lookFromMine(d, t.b) })),
+    others: lkMates(d).map(w => [w.id, w.short || w.name, lookFromMine(d, lkLook(w))]), othersLab: "Copy a teammate's look", keeps: 'Keeps their own skin tone.',
+    game: LOOK_TPL.map(([n, x]) => [n, lookFromTpl(d, x)]), gameNote: 'Templates change the hair, paint and gear. Skin, eyes and mouth stay as they are.' });
+}
+function lookMaker(d) {
+  const m = UI.modal, fc = faceCode(d), bc = bodyCode(d), fa = i => parseInt(fc[i], 36), ba = i => parseInt(bc[i], 36);
+  const tabs = lkTabs(), tab = tabs.some(([k]) => k === UI.fmTab) ? UI.fmTab : 'face', L = lcClean(d.lc) || {}, SY = symClean(d.sym), body = bodiesOn();
+  // each choice shows this wrestler with that choice applied, so you can see it before you pick
+  const peek = (k, i, j) => k === 'f' ? faceURL({ ...d, look: fc.slice(0, i) + j.toString(36) + fc.slice(i + 1) }) : bodyURL({ ...d, body: bc.slice(0, i) + j.toString(36) + bc.slice(i + 1) });
+  const tiles = (k, i, list) => `<div class="bd-grid lk-grid${k === 'b' ? ' lk-tall' : ''}">${list.map((l, j) => { const on = (k === 'f' ? fa(i) : ba(i)) === j; return `<button class="bd-tile ${on ? 'on' : ''}" data-act="lkSet" data-f="${k}${i}" data-id="${j}" aria-pressed="${on}" aria-label="${esc(l)}"><img class="px" alt="" src="${peek(k, i, j)}"><span>${esc(l)}</span></button>`; }).join('')}</div>`;
+  // the palette, then any colour at all
+  const sws = (k, i, cols, from, label, none) => { const slot = k + i, cur = L[slot], at = k === 'f' ? fa(i) : ba(i);
+    return `<div class="swatches">${cols.map((col, j) => j < from ? '' : `<button class="sw ${!cur && at === j ? 'on' : ''}${col || none ? '' : ' mine'}" style="background:${col || none || safeColor(d.color) || '#c8102e'}" data-act="lkSet" data-f="${slot}" data-id="${j}" aria-label="${label} ${j ? col : none ? 'black' : 'their colour'}" aria-pressed="${!cur && at === j}"></button>`).join('')}${anyColour(slot, cur || cols[at] || none || safeColor(d.color) || '#c8102e', 'data-lc', !!cur)}</div>`; };
+  const lab = t => `<div class="bd-lab">${t}</div>`;
+  const F = fa(4), hood = FACE_HOOD.has(F);
   const panes = {
-    pose: () => row('Build', chips(0, BODY.build)) + row('Shape', chips(9, BODY.shape)) + row('Stance', chips(1, BODY.stance)),
-    gear: () => row('Bottoms', chips(2, BODY.bottoms)) + row('Bottoms colour', sws(3, 'Bottoms'))
-      + row('Boots', chips(4, BODY.boots)) + (at(4) === 4 ? '' : row('Boots colour', sws(5, 'Boots', '#1b1b20')))
-      + row('Pads', chips(6, BODY.pads)) + row('Hands', chips(7, BODY.hands))
-      + ([0, 3, 6].includes(parseInt(faceCode(d)[5], 36)) ? row('Chest', chips(10, BODY.chest)) : '')
-      + row('Title belt', `<div class="seg-ctl">${BODY.belt.map((l, j) => `<button class="${at(8) === j ? 'on' : ''}" data-act="bBody" data-f="8" data-id="${j}" aria-pressed="${at(8) === j}">${l}</button>`).join('')}</div>`)
-      + '<p class="tiny muted fm-row">The top half wears the gear from the pixel face.</p>',
+    face: () => lab('Skin') + `<div class="swatches">${FACE_SKIN_ORDER.map(j => `<button class="sw ${!L.f0 && fa(0) === j ? 'on' : ''}" style="background:${FACE.skin[j][0]}" data-act="lkSet" data-f="f0" data-id="${j}" aria-label="Skin tone ${FACE_SKIN_ORDER.indexOf(j) + 1}" aria-pressed="${!L.f0 && fa(0) === j}"></button>`).join('')}${anyColour('f0', L.f0 || FACE.skin[fa(0)][0], 'data-lc', !!L.f0)}</div>`
+      + lab('Eyes') + tiles('f', 10, FACE.eyes) + lab('Brows') + tiles('f', 11, FACE.brows) + lab('Mouth') + tiles('f', 12, FACE.mouth) + lab('Make-up') + tiles('f', 15, FACE.makeup),
+    hair: () => hood ? `<p class="small muted" style="margin-top:10px">The ${esc(FACE.face[F].toLowerCase())} covers the hair. Pick another face on Paint &amp; masks to show it.</p>`
+      : lab('Hair') + tiles('f', 1, FACE.hair) + lab('Hair colour') + sws('f', 2, FACE.hairC, 0, 'Hair') + lab('Facial hair') + tiles('f', 3, FACE.beard),
+    paint: () => lab('Face') + tiles('f', 4, FACE.face) + (FACE_MASKS.has(F) ? lab('Mask colour') + sws('f', 8, FACE.col, 1, 'Mask') + lab('Mask trim') + sws('f', 9, FACE.col, 1, 'Trim') : '')
+      + lab('Paint colour <span class="muted">· also the gear</span>') + sws('f', 6, FACE.col, 0, 'Paint'),
+    gear: () => lab('Headwear') + tiles('f', 13, FACE.hat) + (fa(13) ? lab('Headwear colour') + sws('f', 14, FACE.col, 0, 'Headwear') : '')
+      + lab('Top') + tiles('f', 5, FACE.gear) + lab('Gear colour') + sws('f', 6, FACE.col, 0, 'Gear') + lab('Extra') + tiles('f', 7, FACE.extra),
+    sym: () => `<p class="small muted" style="margin-top:8px">Any icon from the game, on their gear or their face, like a belt's centre piece.</p>`
+      + (SY ? lab('Where it goes') + `<div class="seg-ctl">${SYM_AT.filter(([a]) => body || a !== 'trunks').map(([a, l]) => `<button class="${SY.at === a ? 'on' : ''}" data-act="lkSym" data-f="at" data-id="${a}" aria-pressed="${SY.at === a}">${l}</button>`).join('')}</div>`
+        + lab('Symbol colour') + `<div class="swatches">${SYM_COLS.map(c => `<button class="sw ${SY.c === c ? 'on' : ''}" style="background:${c}" data-act="lkSym" data-f="c" data-id="${c}" aria-label="Symbol colour ${c}" aria-pressed="${SY.c === c}"></button>`).join('')}${anyColour('s', SY.c, 'data-lc', !SYM_COLS.includes(SY.c))}</div>` : '')
+      + lab('Symbol') + wsSyms(SY?.k || '', 'lkSym', 'k', 'None'),
+    build: () => lab('Build') + tiles('b', 0, BODY.build) + lab('Shape') + tiles('b', 9, BODY.shape) + lab('Stance') + tiles('b', 1, BODY.stance),
+    ring: () => lab('Bottoms') + tiles('b', 2, BODY.bottoms) + lab('Bottoms colour') + sws('b', 3, FACE.col, 0, 'Bottoms')
+      + lab('Boots') + tiles('b', 4, BODY.boots) + (ba(4) === 4 ? '' : lab('Boots colour') + sws('b', 5, FACE.col, 0, 'Boots', '#1b1b20'))
+      + lab('Pads') + tiles('b', 6, BODY.pads) + lab('Hands') + tiles('b', 7, BODY.hands)
+      + ([0, 3, 6].includes(fa(5)) ? lab('Chest') + tiles('b', 10, BODY.chest) : '')
+      + lab('Title belt') + `<div class="seg-ctl">${BODY.belt.map((l, j) => `<button class="${ba(8) === j ? 'on' : ''}" data-act="lkSet" data-f="b8" data-id="${j}" aria-pressed="${ba(8) === j}">${l}</button>`).join('')}</div>`
+      + '<p class="tiny muted" style="margin-top:8px">The top half wears the gear from the Gear tab.</p>',
   };
-  return `<details class="fm fm-body" ${UI.bmOpen ? 'open' : ''}><summary data-act="bmTog"><img class="bm-big px av-${d.align === 'heel' ? 'heel' : 'face'}" alt="Full body preview" src="${bodyURL(d)}"><span>Full body<span class="tiny muted" style="display:block;font-weight:500">Shown on their wrestler page</span></span></summary>
-    <div class="fm-row"><button class="btn" data-act="bBodyRand">${ic('dice')} Random body</button></div>
-    <div class="seg-ctl fm-tabs" role="tablist" aria-label="Body maker">${BM_TABS.map(([k, l]) => `<button role="tab" class="${tab === k ? 'on' : ''}" data-act="bmTab" data-id="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
-    <div role="tabpanel">${panes[tab]()}</div>
+  const al = d.align === 'heel' ? 'heel' : 'face';
+  return `<details class="fm lk" ${UI.fmOpen ? 'open' : ''}><summary data-act="fmTog"><img class="fm-big px av-${al}" alt="" src="${faceURL(d)}">${body ? `<img class="bm-big px av-${al}" alt="" src="${bodyURL(d)}">` : ''}<span>Pixel look<span class="tiny muted" style="display:block;font-weight:500">${d.photo ? 'The full body on their page' : body ? 'Face and full body, when there\'s no photo' : 'Shown when there\'s no photo'}</span></span></summary>
+    <div class="bd-prev lk-prev" aria-live="off"><img class="lk-face px av-${al}" alt="Face preview" src="${faceURL(d)}">${body ? `<img class="lk-body px av-${al}" alt="Full body preview" src="${bodyURL(d)}">` : ''}</div>
+    ${wsTools('lk', m?.lkTpl, m?.lkUndo)}${m?.lkTpl ? lkTplPanel(d) : ''}
+    ${wsTabs(tabs, tab, 'fmTab', 'Look parts')}
+    <div class="bd-pane" role="tabpanel">${panes[tab]()}</div>
   </details>`;
 }
 // pronouns in the wrestler editor: a quick pick, or their own words for custom pronouns
@@ -11767,8 +11925,7 @@ function modalBuilder(m) {
    </div>
    ${d.photo ? `<div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPhotoDel">Remove photo${facesOn() ? ' and use a pixel face' : ''}</button></div>` : ''}
    ${pxPanel(d)}
-   ${!d.photo && facesOn() ? faceMaker(d) : ''}
-   ${bodiesOn() ? bodyMaker(d) : ''}
+   ${facesOn() && (!d.photo || bodiesOn()) ? lookMaker(d) : ''}
    <div class="swatches">${SWATCHES.map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bColor" data-id="${c}" aria-label="Color ${c}"></button>`).join('')}</div>
 
    <div class="sec">Character</div>
@@ -13123,6 +13280,8 @@ function sanitizeGame(g) {
     w.photo = safePhoto(w.photo); w.color = safeColor(w.color); w.align = w.align === 'heel' ? 'heel' : 'face';
     if (w.look != null && !faceOK(w.look)) delete w.look;
     if (w.body != null && !bodyOK(w.body)) delete w.body;
+    if (w.lc != null) { const lc = lcClean(w.lc); if (lc) w.lc = lc; else delete w.lc; }
+    if (w.sym != null) { const sy = symClean(w.sym); if (sy) w.sym = sy; else delete w.sym; }
     if (w.pro != null) { const pr = proClean(w.pro); if (pr) w.pro = pr; else delete w.pro; }
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
@@ -13703,13 +13862,23 @@ const CREATOR_ACTIONS = {
     });
   },
   bPhotoDel() { UI.modal.draft.photo = ''; delete UI.modal.draft.photoLocal; delete UI.modal.draft.photoGen; PX = null; render(); },
-  bFace(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < FACE_LEN) || !(n >= 0 && n < FACE_MAX[i])) return; const c = [...faceCode(d)]; c[i] = n.toString(36); if (i === 4 && FACE_HOOD.has(n) && !['2', '3', '7'].includes(c[7])) c[7] = '0'; d.look = c.join(''); UI.fmOpen = true; render(); },
-  bFaceRand() { const d = UI.modal.draft; d.look = faceRandom(Math.random(), looksWomen(d), true); UI.fmOpen = true; render(); },
   fmTab(v) { UI.fmTab = v; UI.fmOpen = true; render(); },
-  bBody(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < BODY_LEN) || !(n >= 0 && n < BODY_MAX[i])) return; const c = [...bodyCode(d)]; c[i] = n.toString(36); d.body = c.join(''); UI.bmOpen = true; render(); },
-  bBodyRand() { const d = UI.modal.draft; d.body = bodyRandom(d, Math.random()); UI.bmOpen = true; render(); },
-  bmTab(v) { UI.bmTab = v; UI.bmOpen = true; render(); },
-  bmTog(v, el) { UI.bmOpen = !el.parentElement.open; },
+  lkSet(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f, k = f[0], i = +f.slice(1), n = +v, max = k === 'f' ? FACE_MAX : BODY_MAX;
+    if (!['f', 'b'].includes(k) || !(i >= 0 && i < max.length) || !(n >= 0 && n < max[i])) return; lkKeep(m);
+    if (k === 'f') { const c = [...faceCode(d)]; c[i] = n.toString(36); if (i === 4 && FACE_HOOD.has(n) && !['2', '3', '7'].includes(c[7])) c[7] = '0'; d.look = c.join(''); }
+    else { const c = [...bodyCode(d)]; c[i] = n.toString(36); d.body = c.join(''); }
+    if (d.lc?.[f]) { d.lc = { ...d.lc }; delete d.lc[f]; if (!Object.keys(d.lc).length) delete d.lc; }
+    UI.fmOpen = true; render(); },
+  lkSym(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f; lkKeep(m);
+    if (f === 'k') { if (symOK(v)) d.sym = { at: 'chest', c: '#f2c94c', ...(symClean(d.sym) || {}), k: v }; else delete d.sym; }
+    else if (d.sym) d.sym = symClean({ ...d.sym, [f]: v });
+    UI.fmOpen = true; render(); },
+  lkTpl(v) { const m = UI.modal; if (v === 'open') { m.lkTpl = !m.lkTpl; UI.fmOpen = true; return render(); } const x = LOOK_TPL[+v]; if (!x) return; lkKeep(m); lkApply(m.draft, lookFromTpl(m.draft, x[1])); m.lkTpl = false; render(); },
+  lkMine(i) { const m = UI.modal, x = myTpls('w')[+i]; if (!x) return; lkKeep(m); lkApply(m.draft, lookFromMine(m.draft, x.b)); m.lkTpl = false; render(); },
+  lkCopy(id) { const m = UI.modal, w = W(id); if (!w) return; lkKeep(m); lkApply(m.draft, lookFromMine(m.draft, lkLook(w))); m.lkTpl = false; render(); },
+  lkRand() { const m = UI.modal, d = m.draft; lkKeep(m); d.look = faceRandom(Math.random(), looksWomen(d), true); d.body = bodyRandom(d, Math.random()); delete d.lc;
+    if (Math.random() < .2) d.sym = { k: 'ic-' + pick(symList()), at: pick(bodiesOn() ? ['chest', 'chest', 'trunks', 'head'] : ['chest', 'head']), c: pick(SYM_COLS) }; else delete d.sym; UI.fmOpen = true; render(); },
+  lkUndo() { const m = UI.modal; if (m.lkUndo?.length) { lkApply(m.draft, m.lkUndo.pop()); UI.fmOpen = true; render(); } },
   fmTog(v, el) { UI.fmOpen = !el.parentElement.open; },
   bPx(v, el) { pxSet(PX, el.dataset.f, v); applyPX(); render(); },
   bColor(c) { UI.modal.draft.color = c; if (PX?.bg === 'color') applyPX(); render(); },
@@ -16391,7 +16560,11 @@ document.addEventListener('input', e => {
   }
   if (el.dataset.es != null && el.type !== 'checkbox' && UI.modal?.draft) { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
   if (el.dataset.et != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.et] = el.value; }
-  if (el.dataset.pt != null && UI.modal?.draft?.look) { const d = UI.modal.draft; d.look = trophyClean({ ...d.look, [el.dataset.pt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = prizeArt(d, 'tr-big'); }
+  if (el.type === 'color' && !el._kept && UI.modal?.draft && (el.dataset.pt != null || el.dataset.bt != null)) { el._kept = 1; (el.dataset.pt != null ? pdKeep : bdKeep)(UI.modal); }
+  if (el.dataset.pt != null && el.type !== 'checkbox' && UI.modal?.draft?.look) { const d = UI.modal.draft; d.look = trophyClean({ ...d.look, [el.dataset.pt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = prizeArt(d, 'tr-big'); }
+  if (el.dataset.lc != null && UI.modal?.draft && isHex(el.value)) { const m = UI.modal, d = m.draft, k = el.dataset.lc; if (!el._kept) { lkKeep(m); el._kept = 1; }
+    if (k === 's') { if (d.sym) d.sym = symClean({ ...d.sym, c: el.value }); } else d.lc = { ...(d.lc || {}), [k]: el.value.toLowerCase() };
+    const f = document.querySelector('.lk-prev .lk-face'), b = document.querySelector('.lk-prev .lk-body'); if (f) f.src = faceURL(d); if (b) b.src = bodyURL(d); }
   if (el.dataset.bt != null && el.type === 'range') { const o = document.getElementById('bdv-' + el.dataset.bt); if (o) o.textContent = el.value + '%'; }
   if (el.dataset.bt != null && el.type !== 'checkbox' && UI.modal?.draft?.belt) { const d = UI.modal.draft; d.belt = beltClean({ ...d.belt, [el.dataset.bt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = titleArt(d, 'bd-belt'); }
   if (el.dataset.tt === 'name' && UI.modal?.draft?.titles?.[+el.dataset.i]) UI.modal.draft.titles[+el.dataset.i].name = el.value;
@@ -16502,6 +16675,9 @@ document.addEventListener('change', e => {
   if (el.dataset.es != null && UI.modal?.draft) { if (el.type === 'checkbox') UI.modal.draft.autoEnd = el.checked; else if (el.dataset.es === 'titleId') UI.modal.draft.titleId = el.value || null; else UI.modal.draft[el.dataset.es] = el.value; }
   if (el.dataset.rr && el.tagName === 'SELECT') { A.rrMove(el.dataset.rr, el.value); return; }
   if (el.dataset.tt && el.tagName === 'SELECT' && UI.modal?.draft?.titles?.[+el.dataset.i]) { const t = UI.modal.draft.titles[+el.dataset.i]; if (el.dataset.tt === 'holder') t.holder = el.value; else { const n = el.value === 'trios' ? 3 : el.value === 'tag' ? 2 : 0; if (n) { if (t.n !== n) t.hn = ''; t.n = n; t.mid = true; t.div = ''; t.holder = ''; } else { if (t.n) { t.hn = ''; delete t.n; } t.mid = el.value === 'mid'; t.div = el.value === 'women' ? "Women's" : ''; } if (/ (World|Television|Women's|Tag Team|Trios) Championship$/.test(t.name)) t.name = t.name.replace(/(World|Television|Women's|Tag Team|Trios) Championship$/, n === 3 ? 'Trios Championship' : n === 2 ? 'Tag Team Championship' : t.div ? "Women's Championship" : t.mid ? 'Television Championship' : 'World Championship'); } render(); return; }
+  if (el.dataset.lc != null && UI.modal?.draft) { UI.fmOpen = true; render(); return; }
+  if (el.type === 'color' && UI.modal?.draft && (el.dataset.pt != null || el.dataset.bt != null)) { render(); return; }
+  if (el.dataset.pt === 'ring' && UI.modal?.draft?.look) { const m = UI.modal; pdKeep(m); m.draft.look = trophyClean({ ...m.draft.look, ring: el.checked ? 1 : 0 }, m.draft); render(); return; }
   if (el.dataset.bt === 'ring' && UI.modal?.draft?.belt) { const m = UI.modal; bdKeep(m); m.draft.belt = beltClean({ ...m.draft.belt, ring: el.checked ? 1 : 0 }, m.draft); render(); return; }
   if (el.dataset.et != null) { UI.modal.draft[el.dataset.et] = el.type === 'checkbox' ? el.checked : el.value; if (el.type === 'checkbox') { if (!UI.modal.draft.tag && Array.isArray(UI.modal.draft.holder)) UI.modal.draft.holder = UI.modal.draft.holder.slice(0, 1); render(); } }
   if (el.dataset.act === 'todoCk') A.todoCk(el.dataset.id);
@@ -16678,8 +16854,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.91';
+const VERSION = '1.9.92';
 const WHATS_NEW = [
+  ['🎨 One workshop for every design', 'Wrestler looks, championship belts and trophies now share the same editor: a live preview on top, then Templates, Surprise me and Undo, then tabs. The pixel face and full body are one editor now, with game templates (Luchador, Rock star, Royalty and more), your own saved looks, a teammate\'s look to copy, Undo, and any colour at all for skin, hair, gear, masks, headwear, bottoms and boots. Every icon in the game is now a symbol you can use: on a belt\'s centre or side plates, on a trophy or on top of it, and on a wrestler\'s chest, trunks or forehead. Trophies also get the belts\' engravings, ornate detail, a ring of gems, any base colour, and strap colours for a belt on a stand. Existing designs look exactly the same.'],
   ['🧍 Pronouns for every wrestler', 'Pick any wrestler\'s pronouns in their editor: he/him, she/her, they/them, he/they, she/they, any pronouns, or your own custom set (like xe/xem). Pronouns are separate from the division, so anyone can be in any division. Backstage events, texts, news, the Dirt Sheet, contract talks, Story Mode and more now use each wrestler\'s own pronouns. Usual follows the division (Women\'s she/her, Men\'s he/him, Open they/them). Pronouns go with shares, worlds and imports (add a Pronouns column), and you can add yours to your Community profile.'],
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
