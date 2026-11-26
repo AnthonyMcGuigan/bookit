@@ -5401,7 +5401,7 @@ function rankBar() {
 
 // ---- weekly goals ----
 const GOALS = {
-  rating: { mk() { const base = G.history.slice(-3).map(h => h.rating); const T = clamp(Math.round((base.length ? avg(base) : 55) + (isBig(G.week) ? 7 : 3)), 50, 88); return { T, text: `Put on a ${T}+ show` }; }, ok: (g, rec) => rec.rating >= g.T },
+  rating: { mk() { const base = G.history.slice(-3).map(h => h.rating - (h.wk === G.tutWk && G.tutWk != null ? TUT_BONUS.rating : 0)); /* the tutorial's hot crowd doesn't raise the bar */ const T = clamp(Math.round((base.length ? avg(base) : 55) + (isBig(G.week) ? 7 : 3)), 50, 88); return { T, text: `Put on a ${T}+ show` }; }, ok: (g, rec) => rec.rating >= g.T },
   main: { mk() { const T = clamp(Math.round((G.history.length ? avg(G.history.slice(-3).map(h => h.results.at(-1)?.rating || 55)) : 55) + 4), 55, 82); return { T, text: `Main event rates ${T}+` }; }, ok: (g, rec) => rec.results.length > 1 && rec.results.at(-1).rating >= g.T },
   hot: { mk() { const n = isBig(G.week) ? 3 : 2; return { n, text: `Get ${n} segments rated 70+` }; }, ok: (g, rec) => rec.results.filter(r => r.rating >= 70).length >= g.n },
   defend: { mk() { const t = G.titles.filter(t => t.holder.length).sort((a, b) => a.lastDefense - b.lastDefense)[0]; return t && { id: t.id, text: `Put the ${t.short} title on the line` }; }, ok: (g, rec) => rec.results.some(r => r.seg.kind === 'match' && r.seg.title === g.id) },
@@ -7845,7 +7845,7 @@ function viewBookCard() {
   if (onEv() && !bigWk(UI.selWeek)) { UI.selWeek = nextBig(); UI.calMonth = UI.calWkv = null; }
   const wk = UI.selWeek, big = isBig(wk);
   const mk = UI.calMonth ?? monthKey(wk);
-  const att = attention().filter(a => a.lv === 'bad' || a.lv === 'warn');
+  const attAll = attention(), att = attAll.filter(a => a.lv === 'bad' || a.lv === 'warn');
   const last = lastRec();
   // ----- calendar -----
   const bkDue = backupDue();
@@ -7873,7 +7873,7 @@ function viewBookCard() {
     <div class="cal-h"><button class="iconbtn sm" data-act="calNav" data-id="-1" aria-label="Previous month">‹</button><b>${monthLabel(mk)}</b>${wk !== G.week || UI.calMonth != null ? '<button class="btn sm" data-act="calToday">Tonight</button>' : ''}<button class="iconbtn sm" data-act="calNav" data-id="1" aria-label="Next month">›</button></div>
     ${monthGrid(mk, wk, tile)}
   </div>`);
-  const statusBar = `<div class="kpis"><span>👥 ${kfmt(G.fans)} fans</span><span>⭐ ${Math.round(G.promo.prestige)} prestige</span>${last ? `<span>Last: <b class="stars">${starStr(last.rating)}</b></span>` : ''}${att.length ? `<button class="kpi-alert" data-act="brief">⚠️ ${att.length} to check ›</button>` : '<button class="kpi-ok" data-act="brief">Briefing ›</button>'}</div>`;
+  const statusBar = `<div class="kpis"><span>👥 ${kfmt(G.fans)} fans</span><span>⭐ ${Math.round(G.promo.prestige)} prestige</span>${last ? `<span>Last: <b class="stars">${starStr(last.rating)}</b></span>` : ''}${attAll.length ? `<button class="${att.length ? 'kpi-alert' : 'kpi-ok'}" data-act="brief">${att.length ? '⚠️ ' : ''}Briefing · ${attAll.length} ›</button>` : '<button class="kpi-ok" data-act="brief">Briefing ›</button>'}</div>`;
 
   // ----- past show: results on the same screen -----
   const h = histFor(wk);
@@ -15599,9 +15599,9 @@ const TUT = [
   { k: 'hi', t: '🔔 Your first show', btn: 'Let\'s go',
     d: () => G.tutReplay ? `A quick walk through booking and running ${esc(showName(G.week))}. It takes about two minutes.` : `Let's book and run ${esc(showName(G.week))} together. It takes about two minutes. Opening night crowds are hot, so this one is set up to be a win.` },
   { k: 'cal', t: '📅 Your calendar', btn: 'Next', sel: '.cal',
-    d: () => { const b = nextBig(); return `One show a week. Tonight is the glowing week. Gold weeks are big events${b ? `, and your first is <b>${esc(bigName(b))}</b> in week ${b}` : ''}.`; } },
-  { k: 'match', t: '🤼 Book the opener', sel: '[data-act="addSeg"][data-id="match"]', done: () => tutCardSegs().some(s => s.kind === 'match'),
-    d: () => 'Tap <b>＋ Match</b>, pick a wrestler for each side, then tap <b>Add to card</b>. A face against a heel works best.' },
+    d: () => { const b = nextBig(); return `One show a week. Tonight is the glowing week. Gold weeks are big events${b ? `, and your first is <b>${esc(bigName(b))}</b> ${b - G.week === 1 ? 'next week' : `in ${b - G.week} weeks`}` : ''}.`; } },
+  { k: 'match', t: '🤼 Book a match', sel: '[data-act="addSeg"][data-id="match"]', done: () => tutCardSegs().some(s => s.kind === 'match'),
+    d: () => 'Tap <b>＋ Match</b>, pick a wrestler for each side, then tap <b>Add to card</b>. A face against a heel is a good start. The hints under the match tell you what else helps or hurts, like styles that clash.' },
   { k: 'fill', t: '✨ Fill out the card', sel: '[data-act="autoFill"]', done: () => { const c = tutCardSegs(); return c.length >= 4 && new Set(c.map(s => s.kind)).size >= 2; },
     d: () => 'A full show has 4 to 8 segments, with promos or angles mixed in. Add more yourself, or tap <b>✨ Auto-fill</b> to finish the card for you.' },
   { k: 'main', t: '⭐ The main event', btn: 'Next', sel: () => tutMainOk() ? '.mcard .mrow.me' : '[data-act="segMain"]',
@@ -15612,7 +15612,7 @@ const TUT = [
     d: () => `Tap <b>Run</b> to go live and watch each segment play out.${G.tutReplay ? '' : ` The hot opening night crowd adds +${TUT_BONUS.rating} to the show.`}` },
   { k: 'win', t: '🏆 Your first show is in the books', btn: 'Finish',
     d: () => { const r = G.tutRes || {}, b = nextBig();
-      return `${r.rating ? `It rated <b>${r.rating}</b> (${starStr(r.rating)}). ` : ''}From here, each week is the same: book, run, then check the Briefing and the Office.${b ? ` Build your stories toward <b>${esc(bigName(b))}</b> in week ${b}.` : ''} You can replay this from Menu → How to play.`; } }
+      return `${r.rating ? `It rated <b>${r.rating}</b> (${starStr(r.rating)}). ` : ''}From here, each week is the same: book, run, then tap <b>Briefing</b> at the top and check the Office.${b ? ` Build your stories toward <b>${esc(bigName(b))}</b>${b - G.week === 1 ? ' next week' : ` in ${b - G.week} weeks`}.` : ''} You can replay this from Menu → How to play.`; } }
 ];
 const TUT_WIN = TUT.length - 1;
 const tutOn = () => G && G.tut != null && G.tut >= 0 && G.tut < TUT.length;
@@ -15643,7 +15643,7 @@ function tutSegHint(s) {
 }
 // after every render: ring the thing to tap, and tell screen readers when the step changes
 function tutMark() {
-  if (!tutOn()) { tutMark.last = null; return; }
+  if (!tutOn()) { tutMark.last = null; const say = document.getElementById('tut-say'); if (say) say.remove(); return; }
   let sel = null;
   if (UI.modal?.type === 'seg' && TUT[G.tut].k === 'match') sel = modals.querySelector('[data-act="segSave"]');
   else if (!UI.modal && UI.tab === 'book' && UI.selWeek === G.week) { const q = TUT[G.tut].sel; const qq = typeof q === 'function' ? q() : q; if (qq) sel = root.querySelector(qq); }
