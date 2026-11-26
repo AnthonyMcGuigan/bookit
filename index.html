@@ -11466,7 +11466,8 @@ const PLAYLOG = (() => {
     for (const k of Object.keys(feats)) { if (e.length >= 40) break; e.push(['feature', k, feats[k]]); delete feats[k]; }
     if (secs >= (leaving ? 5 : 60) && e.length < 40) { e.push(['time', '', Math.min(3600, Math.round(secs))]); secs = 0; }
     if (!e.length) return;
-    try { await sbFetch('/rest/v1/rpc/log_play', { method: 'POST', keepalive: !!leaving, body: JSON.stringify({ d: dev(), s: sid, v: VERSION, p: P, e }) }, false); }
+    // log_play(p jsonb) takes one argument named p, so the batch goes inside "p" (top-level keys would look for a d, s, v, p, e function and 404)
+    try { await sbFetch('/rest/v1/rpc/log_play', { method: 'POST', keepalive: !!leaving, body: JSON.stringify({ p: { d: dev(), s: sid, v: VERSION, p: P, e } }) }, false); }
     catch (x) { if (!leaving && Q.length < 200) Q.unshift(...e.filter(r => r[0] !== 'feature' && r[0] !== 'time')); } // a lost minute of features or time is fine
   }
   const open = () => { sid = rnd(12); Q.push(['open', '', 0]); };
@@ -16128,7 +16129,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.83';
+const VERSION = '1.9.84';
 const WHATS_NEW = [
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
   ['📅 Limited dates for veterans', 'Older wrestlers (and a few big part-time stars) can ask for a limited dates clause in contract talks: a set number of shows a month. Give them what they ask for and they are easier to sign. Once their month is used up, the picker and Auto-fill skip them, and booking them anyway upsets them. Their profile shows the dates left this month.'],
