@@ -10056,8 +10056,14 @@ const A = {
     if (d.cash) { const t = G.titles.find(x => x.id === d.cash.titleId); if (!t || !cashFor(t) || !t.holder.some(h => d.sides.flat().includes(h))) d.cash = null; }
     const card = BK(); const i = card.findIndex(x => x.id === d.id);
     if (i < 0 && !roomLeft(UI.selWeek, card)) return toast(fullMsg(UI.selWeek));
-    if (i >= 0) card[i] = d; else if (UI.modal.at != null) card.splice(UI.modal.at, 0, d); else if (d.kind !== 'match' && card.length && card[card.length - 1].kind === 'match') card.splice(card.length - 1, 0, d); else card.push(d); // a new promo or angle goes before the main event match
-    UI.modal = null; commit(i >= 0 ? 'Segment updated.' : 'Added to the card.');
+    // most people book their biggest match first: on a big event the first match becomes the main event and later ones slot in under it
+    const big = isBig(UI.selWeek), mainAt = card.findIndex(x => x.isMain);
+    let msg = i >= 0 ? 'Segment updated.' : 'Added to the card.';
+    if (i >= 0) card[i] = d; else if (UI.modal.at != null) card.splice(UI.modal.at, 0, d);
+    else if (mainAt >= 0) card.splice(mainAt, 0, d);
+    else if (big && d.kind === 'match' && !card.some(x => x.kind === 'match')) { d.isMain = true; card.push(d); msg = 'Added as the main event. New matches go under it, and you can drag to change.'; }
+    else if (d.kind !== 'match' && card.length && card[card.length - 1].kind === 'match') card.splice(card.length - 1, 0, d); else card.push(d); // a new promo or angle goes before the main event match
+    UI.modal = null; commit(msg);
   },
   segDelModal() { const d = UI.modal.draft; setBK(BK().filter(x => x.id !== d.id)); UI.modal = null; commit('Removed.'); },
   segDel(id) { setBK(BK().filter(x => x.id !== id)); commit(); },
@@ -10534,7 +10540,7 @@ const A = {
     if (st.titleId && G.titles.some(t => t.id === st.titleId && t.holder.some(h => seg.sides.flat().includes(h)))) seg.title = st.titleId;
     seg.hype = Math.round(st.heat * 0.4);
     if (!roomLeft(big, G.future[big] || [])) return toast(`The ${bigName(big)} card is full. Drop a match from it first.`);
-    (G.future[big] ||= []).push(seg);
+    { const c = (G.future[big] ||= []), mi = c.findIndex(x => x.isMain); if (mi >= 0) c.splice(mi, 0, seg); else c.push(seg); }
     news(`📣 ${bigName(big)}: ${vsLine(seg)} was added to the card.`, 'story');
     commit(`Added to ${bigName(big)}. The story's heat gave it a head start on hype.`);
   },
