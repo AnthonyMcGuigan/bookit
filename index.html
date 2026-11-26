@@ -6882,6 +6882,14 @@ function autoFillOnce(wk, card, big, target, H, notes) {
     note(`The ${t.short || t.name} goes on the line: ${nm(t.holder[0])} defends against ${nm(ch[0])}.`);
     take([...t.holder, ...ch]);
   }
+  // the Head Booker reads this week's goals: someone who needs a win gets one
+  if (H.s && wk === G.week) for (const g of (G.booker?.goals || []).filter(g => g.key === 'cold' && !g.done)) {
+    const w = W(g.id); if (!w || used.has(w.id) || !avail().includes(w) || segs.length >= target) continue;
+    const opp = avail().filter(o => o !== w && sameDiv(w, o) && o.align !== w.align && o.pop <= w.pop + 5).sort((x, y) => y.pop - x.pop)[0];
+    if (!opp) continue;
+    segs.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[w.id], [opp.id]], winner: 0, finish: 'Clean', title: null });
+    note(`${nm(w.id)} needed a win, so they beat ${nm(opp.id)}.`); take([w.id, opp.id]);
+  }
   // fill the rest with matches and a hype promo
   let guard = 0;
   while (segs.length < target && guard++ < 20) {
