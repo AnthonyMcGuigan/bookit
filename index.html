@@ -1316,6 +1316,33 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 .filters button, .chip.add, .seg-ctl.sm button { min-height: 36px; }
 .todo input[type=checkbox] { width: 24px; height: 24px; margin: 0; }
 .g-rank { min-height: 36px; }
+
+/* Settings hub: sections split into this save and this device, each opening its own page */
+.st-q { margin-bottom: 12px; }
+.st-hd { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 6px 2px 8px; }
+.st-pill { font-size: 10.5px; font-weight: 800; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
+.st-pill.sv { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.st-grp { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 16px; }
+.st-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); text-align: left; font: inherit; min-height: 56px; }
+.st-row:last-child { border-bottom: 0; }
+.st-row:hover { background: color-mix(in srgb, var(--card2) 60%, transparent); }
+.st-ic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--card2); color: var(--accent); flex: none; }
+.st-ic .i { width: 18px; height: 18px; }
+.st-m { flex: 1; min-width: 0; }
+.st-t { font-weight: 650; display: block; }
+.st-d { font-size: 12.5px; color: var(--dim); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-chev { color: var(--muted); font-size: 20px; line-height: 1; flex: none; }
+.st-back { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-weight: 700; margin: 0 0 10px; background: none; border: 0; padding: 4px 0; font: inherit; font-weight: 700; }
+.st-page { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 4px; margin-bottom: 14px; }
+.st-page .todo:last-child { border-bottom: 0; }
+.st-sub { font-size: 12.5px; color: var(--dim); margin: -2px 2px 12px; }
+.st-pre { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.st-pc { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 8px; text-align: center; color: var(--ink); font: inherit; }
+.st-pc .st-ic { margin: 0 auto 6px; }
+.st-pc b { display: block; font-size: 13px; }
+.st-pc span.x { display: block; font-size: 11px; color: var(--dim); line-height: 1.3; margin-top: 2px; }
+.st-pc.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.st-hit { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 10px 2px 6px; }
 </style>
 </head>
 <body>
@@ -7962,6 +7989,7 @@ function renderModal() {
   modalAnim = key !== lastModalKey; lastModalKey = key;
   switch (m.type) {
     case 'menu': return modalMenu();
+    case 'settings': return modalSettings(m);
     case 'cloud': return modalCloud(m);
     case 'cos': return modalCos();
     case 'shows': return modalShows();
@@ -8053,21 +8081,6 @@ function renderModal() {
   return '';
 }
 
-// sound, music, text size, motion and theme: the same on the start screen and in a game
-const displaySettings = () => `
-    <div class="small muted" style="margin:14px 0 8px">Sound &amp; display</div>
-    <label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound (bell, crowd and music)</span></label>
-    <label class="todo"><input type="checkbox" data-in="musicOn" ${meta.music !== false ? 'checked' : ''} ${meta.sound === false ? 'disabled' : ''}><span>Menu music${meta.sound === false ? ' (turn sound on first)' : ''}</span></label>
-    <label class="f"><span>Music volume</span><input type="range" min="0" max="100" step="5" data-in="musicVol" value="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}" aria-valuetext="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}%" ${meta.sound === false || meta.music === false ? 'disabled' : ''}></label>
-    <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
-    <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
-    <label class="f"><span>🎆 Big moment effects</span><select data-in="fx">${[[0, 'Off'], [1, 'Some: world titles, big main events'], [2, 'Lots: plus a 90+ segment']].map(([v, l]) => `<option value="${v}" ${FX_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    <label class="todo"><input type="checkbox" data-in="avBelts" ${meta.avBelts === false ? '' : 'checked'}><span>Champions wear their belt on their photo<br><span class="tiny muted">Trophy holders show their trophy too.</span></span></label>
-    <label class="f"><span>Wrestlers without a photo</span><select data-in="faces"><option value="pixel">Pixel faces</option><option value="initials" ${meta.faces === 'initials' ? 'selected' : ''}>Initials</option></select></label>
-    <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
-    ${sbOn() ? `<div class="small muted" style="margin:14px 0 8px">Privacy</div>
-    <label class="todo"><input type="checkbox" data-in="statsOn" ${meta.stats === true || (meta.stats !== false && !navigator.globalPrivacyControl) ? 'checked' : ''}><span>Share anonymous play stats (how many play, shows run, screens used). No name, email or account. <button class="link" data-act="privacy">Details</button></span></label>` : ''}
-`;
 // before any company exists: cloud saves, restore, settings and help, so a new player (or a new phone) can get set up
 function modalStartMenu() {
   return modal('Menu', `
@@ -8075,7 +8088,7 @@ function modalStartMenu() {
     <div class="list">${sbOn() ? '<button class="btn block" data-act="cloud">🌐 Cloud saves</button>' : ''}<button class="btn block" data-act="import">⬆ Restore a backup</button></div>
     ${sbOn() ? '<div class="tiny muted" style="margin-top:6px">Played on another phone? Sign in to Cloud saves with the same email to load your game here.</div>' : ''}
     <div class="sec">Settings</div>
-    ${displaySettings()}
+    <button class="st-row st-grp" style="margin-bottom:0" data-act="settings"><span class="st-ic">${ic('grid')}</span><span class="st-m"><span class="st-t">Settings</span><span class="st-d">Look, sound, motion and privacy</span></span><span class="st-chev" aria-hidden="true">›</span></button>
     <div class="sec">Help</div>
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button></div>
   `);
@@ -8115,30 +8128,110 @@ function calMove(fn, msg) {
   if (!weekUnits().some(u => u.on) && !onEv()) { const u = nextUp(); if (u) goUnit(u); }
   commit(msg);
 }
-function calSettings() {
-  const cs = CAL(), st = G.settings;
-  const seg = (k, opts, act = 'calSet', cur = cs[k]) => `<div class="seg-ctl">${opts.map(([v, l]) => `<button class="${cur === v ? 'on' : ''}" data-act="${act}" data-id="${k}|${v}" aria-pressed="${cur === v}">${l}</button>`).join('')}</div>`;
-  const box = (k, t) => `<label class="todo"><input type="checkbox" data-in="calBox" data-id="${k}" ${cs[k] ? 'checked' : ''}><span>${t}</span></label>`;
-  return `<div class="small muted" style="margin:14px 0 8px">📅 Calendar: how it looks</div>
-    <label class="f"><span>Week starts on</span>${seg('start', [['mon', 'Monday'], ['sun', 'Sunday']])}</label>
-    <label class="f"><span>Calendar size</span>${seg('size', [['month', 'Full month'], ['week', 'This week'], ['hidden', 'Hidden']])}</label>
-    <label class="f"><span>Dates</span>${seg('dates', [['date', 'Real dates'], ['week', 'Week numbers']])}</label>
-    <label class="f"><span>Show on my calendar</span><select data-in="calShows">${[['this', 'This show only'], ['mine', 'This show and big events'], ['all', 'All my shows and big events']].map(([v, l]) => `<option value="${v}" ${cs.shows === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    <div class="tiny muted" style="margin:-4px 0 12px">Only changes the look on this device. Shows still run on the same nights.</div>
-    <div class="small muted" style="margin:14px 0 8px">📅 Calendar: when shows run</div>
-    <label class="f"><span>Big event night</span>${seg('bigDay', [[5, 'Saturday'], [6, 'Sunday']], 'bigDaySet', bigDay()).replace(/data-id="bigDay\|/g, 'data-id="')}</label>
-    ${st.bigMode === 'month' ? `<label class="f"><span>Big event weekend</span>${seg('bigWkd', [['first', 'First'], ['mid', 'Middle'], ['last', 'Last']], 'calRule', bigWkdOf(st))}</label>` : `<div class="tiny muted" style="margin:-4px 0 12px">Big events run every ${st.bigEvery} weeks. Schedule them by month in Office → Setup to pick the weekend.</div>`}
-    <label class="todo"><input type="checkbox" data-in="goHome" ${goHomeOn() ? 'checked' : ''}><span>📺 Weekly shows still air on big event weeks (go-home shows)<br><span class="tiny muted">Off: the big event is the only show that week, so there's no weekly TV money or go-home hype that week.</span></span></label>
-    <label class="f"><span>Book ahead up to</span>${seg('ahead', [[8, '8 weeks'], [16, '16 weeks'], [26, '26 weeks']], 'calRule', AHEAD())}</label>
-    <div class="tiny muted" style="margin:-4px 0 12px">These change your schedule. They can't change a week that has already started airing.</div>
-    <div class="small muted" style="margin:14px 0 8px">📅 Calendar: planning helpers</div>
-    <label class="f"><span>Remind me to book the big event</span><select data-in="calRemind">${[[0, 'Never'], [1, '1 week before'], [2, '2 weeks before'], [3, '3 weeks before'], [4, '4 weeks before'], [6, '6 weeks before'], [8, '8 weeks before']].map(([v, l]) => `<option value="${v}" ${cs.remind === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    ${box('auto', '🎆 Open the big event first when its week comes')}
-    ${box('count', '⏳ Countdown to the next big event above the calendar')}
-    ${box('rivals', '🆚 Show rival big events on my calendar')}
-    ${box('hol', "🎄 Mark holidays (New Year, Valentine's, Halloween, Thanksgiving, Christmas)")}
-    <div class="tiny muted" style="margin:-4px 0 12px">Planning helpers never move a show.</div>`;
+// Calendar settings, in three parts: how it looks and planning helpers stay on this device; when shows run is this save's rule
+const calSeg = (k, opts, act = 'calSet', cur = CAL()[k]) => `<div class="seg-ctl">${opts.map(([v, l]) => `<button class="${cur === v ? 'on' : ''}" data-act="${act}" data-id="${k}|${v}" aria-pressed="${cur === v}">${l}</button>`).join('')}</div>`;
+const calBox = (k, t) => `<label class="todo"><input type="checkbox" data-in="calBox" data-id="${k}" ${CAL()[k] ? 'checked' : ''}><span>${t}</span></label>`;
+const calLookItems = () => { const cs = CAL(); return [
+  ['week starts monday sunday', `<label class="f"><span>Week starts on</span>${calSeg('start', [['mon', 'Monday'], ['sun', 'Sunday']])}</label>`],
+  ['calendar size month week hidden', `<label class="f"><span>Calendar size</span>${calSeg('size', [['month', 'Full month'], ['week', 'This week'], ['hidden', 'Hidden']])}</label>`],
+  ['dates real week numbers', `<label class="f"><span>Dates</span>${calSeg('dates', [['date', 'Real dates'], ['week', 'Week numbers']])}</label>`],
+  ['show on my calendar shows', `<label class="f"><span>Show on my calendar</span><select data-in="calShows">${[['this', 'This show only'], ['mine', 'This show and big events'], ['all', 'All my shows and big events']].map(([v, l]) => `<option value="${v}" ${cs.shows === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`]]; };
+const calHelpItems = () => { const cs = CAL(); return [
+  ['remind book big event reminder ppv', `<label class="f"><span>Remind me to book the big event</span><select data-in="calRemind">${[[0, 'Never'], [1, '1 week before'], [2, '2 weeks before'], [3, '3 weeks before'], [4, '4 weeks before'], [6, '6 weeks before'], [8, '8 weeks before']].map(([v, l]) => `<option value="${v}" ${cs.remind === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`],
+  ['open big event first ppv', calBox('auto', 'Open the big event first when its week comes')],
+  ['countdown next big event', calBox('count', 'Countdown to the next big event above the calendar')],
+  ['rival big events calendar', calBox('rivals', 'Show rival big events on my calendar')],
+  ['holidays new year valentine halloween thanksgiving christmas', calBox('hol', "Mark holidays (New Year, Valentine's, Halloween, Thanksgiving, Christmas)")]]; };
+const calRuleItems = () => { const st = G.settings; return [
+  ['big event night saturday sunday ppv', `<label class="f"><span>Big event night</span>${calSeg('bigDay', [[5, 'Saturday'], [6, 'Sunday']], 'bigDaySet', bigDay()).replace(/data-id="bigDay\|/g, 'data-id="')}</label>`],
+  ['big event weekend first middle last month', st.bigMode === 'month' ? `<label class="f"><span>Big event weekend</span>${calSeg('bigWkd', [['first', 'First'], ['mid', 'Middle'], ['last', 'Last']], 'calRule', bigWkdOf(st))}</label>` : `<div class="tiny muted" style="margin:0 0 12px">Big events run every ${st.bigEvery} weeks. Schedule them by month in Office → Setup to pick the weekend.</div>`],
+  ['go-home shows weekly big event weeks', `<label class="todo"><input type="checkbox" data-in="goHome" ${goHomeOn() ? 'checked' : ''}><span>Weekly shows still air on big event weeks (go-home shows)<br><span class="tiny muted">Off: the big event is the only show that week, so there's no weekly TV money or go-home hype that week.</span></span></label>`],
+  ['book ahead weeks', `<label class="f" style="margin-top:12px"><span>Book ahead up to</span>${calSeg('ahead', [[8, '8 weeks'], [16, '16 weeks'], [26, '26 weeks']], 'calRule', AHEAD())}</label>`]]; };
+// ---------- Settings: one hub. Game rules (this save) are kept in the save and go with backups, cloud saves and shares;
+// look, sound, motion and the calendar's view (this device) stay on this phone or computer for every save.
+// Each section is a list of [words to search, control]; the controls are the same data-in / data-act ones as before.
+// Play styles set the game-rule switches in one tap. Changing any of them by hand makes it Custom.
+const PLAY_STYLES = {
+  story: { n: 'Story first', ic: 'star', d: 'Booking and stories, no books to balance', set: { deep: false, finances: false, contracts: false, persona: true, injuries: false, aging: false, organic: true, moments: 2, difficulty: 'easy' } },
+  balanced: { n: 'Balanced', ic: 'target', d: 'The usual game', set: { deep: false, finances: false, contracts: false, persona: true, injuries: true, aging: true, organic: true, moments: 1, difficulty: 'normal' } },
+  full: { n: 'Full sim', ic: 'briefcase', d: 'Every skill, payroll and contract', set: { deep: true, finances: true, contracts: true, persona: true, injuries: true, aging: true, organic: true, moments: 1, difficulty: 'hard' } }
+};
+const simNow = () => { const s = G.settings; return { deep: !!s.deep, finances: MON(), contracts: !!s.deep && CON(), persona: PER(), injuries: !!s.injuries, aging: s.aging !== false, organic: s.organic !== false, moments: MOM_LV(), difficulty: Object.hasOwn(DIFF, String(s.difficulty)) ? s.difficulty : 'normal' }; };
+function playStyle() { const now = simNow(); return Object.keys(PLAY_STYLES).find(k => Object.entries(PLAY_STYLES[k].set).every(([x, v]) => now[x] === v)) || 'custom'; }
+// set game rules (some or all of a play style); contracts coming back on give anyone about to run out a fresh runway
+function simApply(set) {
+  const s = G.settings, wasCon = !!s.deep && CON();
+  for (const [k, v] of Object.entries(set)) s[k] = v;
+  if (set.persona) ensurePers();
+  if (s.deep && s.contracts !== false && !wasCon) for (const w of signed()) if (w.contract.weeks < TALKS_OPEN + 4) w.contract.weeks = TALKS_OPEN + 4 + rint(0, 40);
 }
+const onOff = v => v ? 'on' : 'off';
+const chName = () => CHALLENGES.find(c => c[0] === simNow().difficulty)[1];
+const momName = () => ['Off', 'Some', 'Lots'][MOM_LV()];
+const ST_SECS = [
+  { id: 'depth', save: 1, ic: 'layers', t: 'Sim depth', sum: () => `Deep sim ${onOff(G.settings.deep)} · ${chName()} challenge`, keys: ['deep', 'difficulty'], items: () => [
+    ['deep sim skills psychology selling consistency potential', `<label class="todo"><input type="checkbox" data-in="deep" ${G.settings.deep ? 'checked' : ''}><span>Deep sim<br><span class="tiny muted">Show every skill (psychology, selling, consistency and more) and potential. Turns money and contracts on too.</span></span></label>`],
+    ['challenge difficulty easy relaxed normal hard tough', `<label class="f" style="margin-top:12px"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${simNow().difficulty === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>`]] },
+  { id: 'money', save: 1, ic: 'coin', t: 'Money & contracts', sum: () => G.settings.deep ? `Money ${onOff(MON())} · Contracts ${onOff(CON())}` : 'Off (turn on Deep sim)', keys: ['finances', 'contracts'], items: () => [
+    ['money payroll tickets tv deals finances', `<label class="todo"><input type="checkbox" data-in="finances" ${MON() ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>Money: payroll, tickets and TV deals${G.settings.deep ? '' : '<br><span class="tiny muted">Turn on Deep sim first.</span>'}</span></label>`],
+    ['contracts deals run out leave', `<label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.deep && CON() ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>Contracts: deals run out and wrestlers can leave${G.settings.deep ? '' : '<br><span class="tiny muted">Turn on Deep sim first.</span>'}</span></label>`]] },
+  { id: 'people', save: 1, ic: 'users', t: 'Wrestlers & locker room', sum: () => [PER() && 'Personalities', G.settings.injuries && 'injuries', G.settings.aging !== false && 'aging'].filter(Boolean).join(', ').replace(/^./, c => c.toUpperCase()) || 'All off', keys: ['persona', 'injuries', 'aging'], items: () => [
+    ['personalities texts demands memory indie dates workhorse', `<label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>Personalities<br><span class="tiny muted">Texts, demands, memory, and workhorses who ask for indie dates.</span></span></label>`],
+    ['injuries happen hurt', `<label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>`],
+    ['aging retire age retirements', `<label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>`]] },
+  { id: 'story', save: 1, ic: 'flame', t: 'Stories & events', sum: () => `Surprise moments: ${momName()}${lessList().length ? ` · ${lessList().length} seen less` : ''}`, keys: ['organic', 'moments'], items: () => [
+    ['stories start on their own feuds organic', `<label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own<br><span class="tiny muted">Wrestlers who keep crossing paths start feuds without you.</span></span></label>`],
+    ['surprise moments run-ins cutscenes show', `<label class="f" style="margin-top:12px"><span>Surprise moments on the show</span><select data-in="moments">${[[0, 'Off: only what you book happens'], [1, 'Some: now and then'], [2, 'Lots: most shows have one or more']].map(([v, l]) => `<option value="${v}" ${MOM_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`],
+    ['see less random events backstage moments', lessSettings()]] },
+  { id: 'calrules', save: 1, ic: 'calendar', t: 'Calendar rules', sum: () => `${DAYS[bigDay()]} big events${G.settings.bigMode === 'month' ? ' · ' + { first: 'first', mid: 'middle', last: 'last' }[bigWkdOf(G.settings)] + ' weekend' : ''} · Go-home shows ${onOff(goHomeOn())}`, note: 'These change your schedule. They can\'t change a week that has already started airing.', items: calRuleItems },
+  { id: 'sandbox', save: 1, ic: 'pen', t: 'Sandbox', sum: () => SANDBOX() ? 'On: edit and move anyone' : 'Off', keys: ['sandbox'], items: () => [
+    ['sandbox edit move anyone world build', `<label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Companies.</span></span></label>`],
+    ...(MON() && SANDBOX() ? [['bank balance money set', `<label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label><div class="tiny" style="color:var(--warn);margin:-4px 0 12px">Changing your bank balance can throw off the game's balance. Money stops being a challenge.</div>`]] : [])] },
+  { id: 'look', ic: 'grid', t: 'Look', sum: () => `${{ dark: 'Dark', light: 'Light', auto: 'Match my device' }[meta.theme === 'light' || meta.theme === 'auto' ? meta.theme : 'dark']} · ${{ s: 'Small', m: 'Normal', l: 'Large', xl: 'Huge' }[meta.text] || 'Normal'} text · ${facesOn() ? 'Pixel faces' : 'Initials'}`, items: () => [
+    ['theme dark light', `<label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>`],
+    ['text size font zoom', `<label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}" aria-pressed="${(meta.text || 'm') === k}">${l}</button>`).join('')}</div></label>`],
+    ['wrestlers without a photo pixel faces initials', `<label class="f"><span>Wrestlers without a photo</span><select data-in="faces"><option value="pixel">Pixel faces</option><option value="initials" ${meta.faces === 'initials' ? 'selected' : ''}>Initials</option></select></label>`],
+    ['champions belt photo trophy holders', `<label class="todo"><input type="checkbox" data-in="avBelts" ${meta.avBelts === false ? '' : 'checked'}><span>Champions wear their belt on their photo<br><span class="tiny muted">Trophy holders show their trophy too.</span></span></label>`]] },
+  { id: 'sound', ic: 'sound', t: 'Sound & music', sum: () => meta.sound === false ? 'Off' : `On · Music ${meta.music === false ? 'off' : Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100) + '%'}`, items: () => [
+    ['sound bell crowd', `<label class="todo"><input type="checkbox" data-in="soundOn" ${meta.sound !== false ? 'checked' : ''}><span>Sound (bell, crowd and music)</span></label>`],
+    ['menu music', `<label class="todo"><input type="checkbox" data-in="musicOn" ${meta.music !== false ? 'checked' : ''} ${meta.sound === false ? 'disabled' : ''}><span>Menu music${meta.sound === false ? ' (turn sound on first)' : ''}</span></label>`],
+    ['music volume', `<label class="f" style="margin-top:12px"><span>Music volume</span><input type="range" min="0" max="100" step="5" data-in="musicVol" value="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}" aria-valuetext="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}%" ${meta.sound === false || meta.music === false ? 'disabled' : ''}></label>`]] },
+  { id: 'motion', ic: 'sparkles', t: 'Motion & effects', sum: () => `${{ reduce: 'Less motion', full: 'Full animations' }[meta.motion] || 'Match my device'} · Big moments: ${['Off', 'Some', 'Lots'][FX_LV()]}`, items: () => [
+    ['motion animations reduce', `<label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>`],
+    ['big moment effects confetti pyro flashes', `<label class="f"><span>Big moment effects</span><select data-in="fx">${[[0, 'Off'], [1, 'Some: world titles, big main events'], [2, 'Lots: plus a 90+ segment']].map(([v, l]) => `<option value="${v}" ${FX_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`]] },
+  { id: 'calview', ic: 'calendar', t: 'Calendar view', sum: () => { const c = CAL(); return `${{ month: 'Full month', week: 'This week', hidden: 'Hidden' }[c.size]} · Starts ${c.start === 'sun' ? 'Sunday' : 'Monday'}${c.remind ? ` · Reminder ${c.remind} wk${c.remind > 1 ? 's' : ''} out` : ''}`; }, note: 'Only changes how the calendar looks and reminds you. Shows still run on the same nights.', items: () => [...calLookItems(), ...calHelpItems()] },
+  { id: 'privacy', ic: 'shield', t: 'Privacy', when: () => sbOn(), sum: () => `Anonymous stats ${onOff(meta.stats === true || (meta.stats !== false && !navigator.globalPrivacyControl))}`, items: () => [
+    ['privacy anonymous play stats', `<label class="todo"><input type="checkbox" data-in="statsOn" ${meta.stats === true || (meta.stats !== false && !navigator.globalPrivacyControl) ? 'checked' : ''}><span>Share anonymous play stats (how many play, shows run, screens used). No name, email or account. <button class="link" data-act="privacy">Details</button></span></label>`]] }
+];
+const stSecs = () => ST_SECS.filter(x => (!x.save || G) && (!x.when || x.when()));
+const stPill = save => `<span class="st-pill${save ? ' sv' : ''}">${save ? 'This save' : 'This device'}</span>`;
+const stRow = x => `<button class="st-row" data-act="stPage" data-id="${x.id}"><span class="st-ic">${ic(x.ic)}</span><span class="st-m"><span class="st-t">${x.t}</span><span class="st-d">${esc(x.sum())}</span></span><span class="st-chev" aria-hidden="true">›</span></button>`;
+function stStyles() {
+  const cur = playStyle();
+  return `<div class="st-pre" role="group" aria-label="Play style">${Object.entries(PLAY_STYLES).map(([k, p]) => `<button class="st-pc${cur === k ? ' on' : ''}" data-act="stStyle" data-id="${k}" aria-pressed="${cur === k}"><span class="st-ic">${ic(p.ic)}</span><b>${p.n}</b><span class="x">${p.d}</span></button>`).join('')}</div>
+    <div class="st-sub">${cur === 'custom' ? 'Custom: you have changed some rules by hand. Tap a style to reset them to it.' : 'Tap a style to set the rules below in one go. Change any of them and it becomes Custom.'}</div>`;
+}
+function modalSettings(m) {
+  const secs = stSecs(), q = String(m.q || '').trim().toLowerCase();
+  const pg = !q && secs.find(x => x.id === m.pg);
+  if (pg) return modal('Settings', `<button class="st-back" data-act="stPage" data-id="">‹ Settings</button>
+    <div class="st-hd">${pg.t} ${stPill(pg.save)}</div>
+    <div class="st-page">${pg.items().map(i => i[1]).join('')}</div>
+    ${pg.note ? `<div class="tiny muted" style="margin:-6px 2px 14px">${pg.note}</div>` : ''}
+    ${pg.id !== 'privacy' ? `<button class="btn block" data-act="stReset" data-id="${pg.id}">Reset ${pg.t.toLowerCase()} to the defaults</button>` : ''}`);
+  const search = `<input type="search" class="st-q" data-in="setQ" aria-label="Search settings" placeholder="Search settings" value="${esc(m.q || '')}">`;
+  if (q) {
+    const words = q.split(/\s+/), hits = secs.map(x => ({ x, it: x.items().filter(i => words.every(w => (i[0] + ' ' + x.t).toLowerCase().includes(w))) })).filter(h => h.it.length);
+    return modal('Settings', `${search}${hits.length ? hits.map(h => `<div class="st-hit">${h.x.t} · ${h.x.save ? 'this save' : 'this device'}</div><div class="st-page">${h.it.map(i => i[1]).join('')}</div>`).join('') : `<div class="small muted" style="margin:8px 2px">No settings match "${esc(m.q)}".</div>`}`);
+  }
+  const save = secs.filter(x => x.save), dev = secs.filter(x => !x.save);
+  return modal('Settings', `${search}
+    ${G ? `<div class="st-hd">This save ${stPill(1)}</div><div class="st-sub">Saved with ${esc(worldLabel(G))}. Goes with backups, cloud saves and shares.</div>
+    ${stStyles()}<div class="st-grp">${save.map(stRow).join('')}</div>` : ''}
+    <div class="st-hd">This device ${stPill(0)}</div><div class="st-sub">The same for every save on this ${/Mobi|Android|iPhone/.test(navigator.userAgent) ? 'phone' : 'device'}.</div>
+    <div class="st-grp">${dev.map(stRow).join('')}</div>`);
+}
+const ST_DEV_DEF = { look: () => { meta.theme = 'dark'; meta.text = 'm'; meta.faces = 'pixel'; meta.avBelts = true; applyTheme(); }, sound: () => { meta.sound = true; meta.music = true; meta.musicVol = .35; MUSIC.sync?.(); }, motion: () => { meta.motion = ''; meta.fx = 1; applyTheme(); }, calview: () => { meta.cal = {}; UI.calWkv = null; } };
 function modalMenu() {
   if (!G) return modalStartMenu();
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
@@ -8151,21 +8244,7 @@ function modalMenu() {
     ${sbOn() ? `<button class="btn block" style="margin-top:8px" data-act="cloud">🌐 Cloud saves${meta.cloudAuto ? ' (auto backup on)' : ''}</button>` : ''}
     <div class="tiny muted" style="margin-top:8px">Company setup (names, shows, big events, match types) is in Office → Setup.</div>
     <div class="sec">Settings</div>
-    <div class="small muted" style="margin-bottom:8px">Sim settings</div>
-    <label class="todo"><input type="checkbox" data-in="deep" ${G.settings.deep ? 'checked' : ''}><span>🧠 Deep sim: show every skill (psychology, selling, consistency and more) and potential</span></label>
-    <label class="todo"><input type="checkbox" data-in="finances" ${G.settings.finances ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>💰 Money: payroll, tickets and TV deals${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
-    <label class="todo"><input type="checkbox" data-in="contracts" ${G.settings.contracts !== false ? 'checked' : ''} ${G.settings.deep ? '' : 'disabled'}><span>📝 Contracts: deals run out and wrestlers can leave${G.settings.deep ? '' : ' (turn on Deep sim first)'}</span></label>
-    <label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>💬 Personalities: texts, demands and memory</span></label>
-    <label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>🛠️ Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Companies.</span></span></label>
-    ${MON() && SANDBOX() ? `<div class="card" style="margin:4px 0 10px;padding:10px 12px"><label class="f" style="margin:0"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label><div class="tiny" style="color:var(--warn);margin-top:6px">⚠️ Changing your bank balance can throw off the game's balance. Money stops being a challenge.</div></div>` : ''}
-    <label class="f"><span>Challenge</span><select data-in="difficulty">${CHALLENGES.map(([k, l, d]) => `<option value="${k}" ${(Object.hasOwn(DIFF, String(G.settings.difficulty)) ? G.settings.difficulty : 'normal') === k ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>
-    <label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>
-    <label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own</span></label>
-    <label class="f"><span>⚡ Surprise moments on the show</span><select data-in="moments">${[[0, 'Off: only what you book happens'], [1, 'Some: now and then'], [2, 'Lots: most shows have one or more']].map(([v, l]) => `<option value="${v}" ${MOM_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    ${lessSettings()}
-    <label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>
-${calSettings()}
-${displaySettings()}
+    <button class="st-row st-grp" style="margin-bottom:0" data-act="settings"><span class="st-ic">${ic('layers')}</span><span class="st-m"><span class="st-t">Settings</span><span class="st-d">${esc(PLAY_STYLES[playStyle()]?.n || 'Custom')} rules · Look, sound and calendar</span></span><span class="st-chev" aria-hidden="true">›</span></button>
     <div class="sec">Help</div>
     <div class="list"><button class="btn block" data-act="help">📖 How to play</button><button class="btn block" data-act="feedback">💬 Send feedback</button><button class="btn block" data-act="support">❤️ Support the game</button><button class="btn block" data-act="privacy">🔒 Privacy &amp; terms</button><button class="btn block" data-act="about">ℹ️ About</button></div>
     <div class="sec">Leave</div>
@@ -9385,6 +9464,21 @@ const A = {
   textSize(k) { meta.text = ['s', 'm', 'l', 'xl'].includes(k) ? k : 'm'; ls.set(META, JSON.stringify(meta)); applyTheme(); render(); },
   whatsNew() { UI.modal = { type: 'whatsnew' }; render(); },
   menu() { openModal({ type: 'menu' }); },
+  settings(pg) { openModal({ type: 'settings', pg: typeof pg === 'string' ? pg : '', q: '' }); },
+  stPage(id) { const m = UI.modal; if (m?.type !== 'settings') return; m.pg = id || ''; m.q = ''; render(); document.querySelector('.modal .mb')?.scrollTo(0, 0); },
+  stStyle(k) { const P = PLAY_STYLES[k]; if (!P || !G) return; if (playStyle() === k) return toast(`${P.n} is already on.`);
+    const go = () => { simApply(P.set); commit(`Play style: ${P.n}. ${P.d}.`); };
+    if (G.week > 1) confirmBox(`Switch to ${P.n}?`, `This sets this save's game rules: deep sim, money, contracts, personalities, injuries, aging, stories, surprise moments and challenge. Calendar rules and Sandbox don't change.`, 'Switch', go); else go(); },
+  stReset(id) { const x = ST_SECS.find(y => y.id === id); if (!x) return;
+    if (x.save) {
+      if (id === 'calrules') return calMove(() => { G.settings.bigDay = 6; G.settings.bigWkd = 'last'; G.settings.goHome = true; G.settings.ahead = 16; }, 'Calendar rules are back to the defaults.');
+      if (id === 'sandbox') { G.settings.sandbox = false; return commit('Sandbox off.'); }
+      const d = PLAY_STYLES.balanced.set, set = {}; for (const k of x.keys) set[k] = d[k];
+      if (id === 'money' && G.settings.deep) { set.finances = true; set.contracts = true; }
+      simApply(set); if (id === 'story') G.settings.less = {};
+      return commit(`${x.t} back to the defaults.`);
+    }
+    ST_DEV_DEF[id]?.(); ls.set(META, JSON.stringify(meta)); render(); toast(`${x.t} back to the defaults.`); },
   cloud() { openModal({ type: 'cloud', list: null }); cloudList(); },
   async cloudUp(n) {
     if (!G) return; const go = async () => { try { await cloudPush(+n); toast('Uploaded to cloud slot ' + n + '.'); cloudList(); } catch (e) { toast(+n > CLOUD_FREE && e?.code === 'permission-denied' ? 'Cloud slots 4 to 6 are for BookIt Supporters.' : cloudErr(e)); } };
@@ -15149,6 +15243,7 @@ document.addEventListener('input', e => {
     else if (k === 'bdQ' && UI.modal?.type === 'bdraft') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'cQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'libQ') { UI.modal.lq = v; debRender(el, e); }
+    else if (k === 'setQ' && UI.modal?.type === 'settings') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'rrQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'mediaQ') { UI.modal.q = v; debRender(el, e); }
     else if (k === 'cTitle') UI.modal.title = v;
