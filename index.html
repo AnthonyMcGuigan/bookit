@@ -4896,7 +4896,82 @@ function cleanCareer(c) {
   for (const [k, v] of Object.entries(c.ach || {})) if (ids.has(k) && v && typeof v === 'object') o.ach[k] = { wk: +v.wk || 0, co: String(v.co || '').replace(/[<>&"'`]/g, '').slice(0, 40), at: +v.at || 0 };
   for (const [k, v] of Object.entries(c.st || {})) if (ms.has(k) || k === 'events') o.st[k] = clamp(+v || 0, 0, 1e10);
   for (const [k, v] of Object.entries(c.tier || {})) if (ms.has(k)) o.tier[k] = clamp(Math.floor(+v || 0), 0, 3);
+  if (c.sb && typeof c.sb === 'object' && CAR_DEV.test(String(c.sb.me || ''))) o.sb = { me: c.sb.me, base: carPart(c.sb.base), oth: carDevs(c.sb.oth) };
   return o;
+}
+// ---- the career in the cloud: every cloud save carries it, and devices merge without losing progress ----
+// The XP and stats are split into a base (what the device had when syncing began) plus what each device has added since.
+// Each device is the only one that writes its own part, so the parts add up exactly: nothing counted twice, nothing lost.
+// Bases are merged by taking the bigger, so a booker's level never drops on any device.
+// Achievements are joined, milestone steps and the biggest fanbase take the higher value.
+const CAR_DEV = /^[a-z0-9]{8,16}$/, CAR_MAXD = 40;
+const carAdd = k => k !== 'peak'; // the biggest fanbase is a high-water mark, everything else adds up
+function carPart(x) {
+  const o = { xp: 0, st: Object.create(null), t: 0 }; if (!x || typeof x !== 'object') return o;
+  o.xp = clamp(+x.xp || 0, 0, 1e7); o.t = clamp(+x.t || 0, 0, 1e13);
+  const ok = new Set([...MILES.map(m => m[0]), 'events']);
+  for (const [k, v] of Object.entries(x.st || {})) if (ok.has(k) && carAdd(k)) o.st[k] = clamp(+v || 0, 0, 1e10);
+  return o;
+}
+function carDevs(x) {
+  const o = Object.create(null); if (!x || typeof x !== 'object') return o;
+  for (const [k, v] of Object.entries(x).filter(([k]) => CAR_DEV.test(k)).sort((a, b) => (+b[1]?.t || 0) - (+a[1]?.t || 0)).slice(0, CAR_MAXD)) o[k] = carPart(v);
+  return o;
+}
+// the career with its sync parts set up (the first time, everything this device has becomes its base)
+function carSync() {
+  const c = CAR();
+  if (!c.sb) { let me = ''; while (me.length < 12) me += Math.random().toString(36).slice(2); c.sb = { me: me.slice(0, 12), base: carPart({ xp: c.xp, st: c.st }), oth: Object.create(null) }; saveCareer(); }
+  return c;
+}
+// what this device has added since syncing began
+function carMine(c) {
+  const o = carPart({ xp: c.xp - c.sb.base.xp - sum(Object.values(c.sb.oth).map(d => d.xp)), t: Date.now() });
+  for (const k of Object.keys(c.st)) if (carAdd(k)) o.st[k] = Math.max(0, (c.st[k] || 0) - (c.sb.base.st[k] || 0) - sum(Object.values(c.sb.oth).map(d => d.st[k] || 0)));
+  o.xp = Math.max(0, o.xp); return o;
+}
+// the copy that goes up with a cloud save
+function carPack() {
+  const c = carSync();
+  return { v: 2, since: c.since, ach: c.ach, tier: c.tier, peak: c.st.peak || 0, base: c.sb.base, dev: { ...c.sb.oth, [c.sb.me]: carMine(c) } };
+}
+// fold a cloud copy into this device's career. Returns true when anything changed.
+function carMerge(r) {
+  if (!r || typeof r !== 'object' || r.v !== 2) return false;
+  const c = carSync(), sb = c.sb, base = carPart(r.base), dev = carDevs(r.dev); let ch = false;
+  const shift = (from, to) => { // move the totals by the change in one part
+    const dx = to.xp - from.xp; if (dx) { c.xp = clamp(c.xp + dx, 0, 1e7); ch = true; }
+    for (const k of new Set([...Object.keys(from.st), ...Object.keys(to.st)])) { const d = (to.st[k] || 0) - (from.st[k] || 0); if (d) { c.st[k] = Math.max(0, (c.st[k] || 0) + d); ch = true; } }
+  };
+  const nb = carPart({ xp: Math.max(sb.base.xp, base.xp), st: {} });
+  for (const k of new Set([...Object.keys(sb.base.st), ...Object.keys(base.st)])) nb.st[k] = Math.max(sb.base.st[k] || 0, base.st[k] || 0);
+  shift(sb.base, nb); sb.base = nb;
+  for (const [id, d] of Object.entries(dev)) {
+    if (id === sb.me) continue; // this device's own part is always right here
+    const was = sb.oth[id]; if (was && was.t >= d.t) continue;
+    shift(was || carPart(null), d); sb.oth[id] = d; ch = true;
+  }
+  const ids = new Set(ACH.map(a => a[0]));
+  for (const [k, v] of Object.entries(r.ach || {})) {
+    if (!ids.has(k) || !v || typeof v !== 'object') continue;
+    const x = { wk: +v.wk || 0, co: String(v.co || '').replace(/[<>&"'`]/g, '').slice(0, 40), at: +v.at || 0 };
+    if (!c.ach[k]) { c.ach[k] = x; ch = true; } else if (x.at && (!c.ach[k].at || x.at < c.ach[k].at)) c.ach[k] = x; // keep the first time it was earned
+  }
+  for (const [id] of MILES) { const t = clamp(Math.floor(+r.tier?.[id] || 0), 0, 3); if (t > (c.tier[id] || 0)) { c.tier[id] = t; ch = true; } }
+  const pk = clamp(+r.peak || 0, 0, 1e10); if (pk > (c.st.peak || 0)) { c.st.peak = pk; ch = true; }
+  if (+r.since > 0 && +r.since < c.since) c.since = +r.since;
+  saveCareer(); return ch;
+}
+// read the career from every cloud save this player has and merge it in. Signed-in players only: it never makes a guest account.
+let carPulled = 0;
+async function carPull(force) {
+  if (!sbOn() || (!force && Date.now() - carPulled < 60e3)) return false;
+  sbSess ||= sbLoad(); const id = sbSess?.user?.id; if (!id) return false;
+  carPulled = Date.now();
+  let ch = false, before = lvlOf(CAR().xp);
+  try { const rows = await sbFetch(`/rest/v1/docs?select=data->car&col=in.(${CLOUD_SLOTS.map(n => 'cloud' + n).join(',')})&id=eq.${sbQ(id)}`); for (const r of Array.isArray(rows) ? rows : []) ch = carMerge(r.car) || ch; } catch (e) { return false; }
+  if (ch) { const L = lvlOf(CAR().xp); if (L > before) toast(`🎖️ Booker career synced from the cloud: level ${L}.`); render(); }
+  return ch;
 }
 let CAREER = null;
 function CAR() {
@@ -7497,8 +7572,10 @@ async function cloudPush(n) {
   const z = await gz(JSON.stringify({ ...G, savedAt: Date.now() }));
   if (z.length > CLOUD_MAX) throw { code: 'big' };
   cloudNear(z.length);
-  const lz = await libPack(385000 - z.length);
-  await sbDb().doc(`cloud${n}/${sbSess.user.id}`).set({ v: 1, save: z, sum: saveSummary(G), at: Date.now(), ...(lz ? { lib: lz, libN: LIB.length } : {}) });
+  // pick up the career from the other cloud saves first, so this upload never drops another device's progress
+  await carPull(true); const car = carPack(), cl = JSON.stringify(car).length;
+  const lz = await libPack(385000 - z.length - cl);
+  await sbDb().doc(`cloud${n}/${sbSess.user.id}`).set({ v: 1, save: z, sum: saveSummary(G), at: Date.now(), car, ...(lz ? { lib: lz, libN: LIB.length } : {}) });
   meta.cloudWk = { ...(meta.cloudWk || {}), [n]: G.week }; ls.set(META, JSON.stringify(meta));
 }
 async function cloudList() {
@@ -7507,8 +7584,9 @@ async function cloudList() {
   if (G && m.size == null) try { m.size = (await gz(JSON.stringify({ ...G, savedAt: Date.now() }))).length; if (UI.modal === m) render(); } catch (e) {}
   try {
     await sbGuest(); const id = sbSess?.user?.id; if (!id) throw 0;
-    const rows = await sbFetch(`/rest/v1/docs?select=col,data->sum,data->at,data->libN&col=in.(cloud1,cloud2,cloud3,cloud4,cloud5,cloud6)&id=eq.${sbQ(id)}`);
-    const list = {}; for (const r of Array.isArray(rows) ? rows : []) { const n = +String(r.col).slice(5); if (CLOUD_SLOTS.includes(n)) list[n] = { sum: r.sum && typeof r.sum === 'object' ? r.sum : {}, at: +r.at || 0, libN: +r.libN || 0 }; }
+    const rows = await sbFetch(`/rest/v1/docs?select=col,data->sum,data->at,data->libN,data->car&col=in.(cloud1,cloud2,cloud3,cloud4,cloud5,cloud6)&id=eq.${sbQ(id)}`);
+    const list = {}; let ch = false; for (const r of Array.isArray(rows) ? rows : []) { const n = +String(r.col).slice(5); if (CLOUD_SLOTS.includes(n)) list[n] = { sum: r.sum && typeof r.sum === 'object' ? r.sum : {}, at: +r.at || 0, libN: +r.libN || 0, car: !!r.car }; ch = carMerge(r.car) || ch; }
+    if (ch) carPulled = Date.now();
     await supCheck();
     if (UI.modal === m) { m.list = list; m.err = ''; render(); }
   } catch (e) { if (UI.modal === m) { m.list = {}; m.err = cloudErr(e); render(); } }
@@ -7522,6 +7600,10 @@ function cloudAutoPush() {
 function cloudLibCard(m) {
   const L = m.list, best = L ? Math.max(0, ...Object.values(L).map(x => x.libN || 0)) : 0, n = lib().length;
   return `<div class="sec">📚 Wrestler library</div><div class="item"><div class="main"><div class="t">${n} on this device${best ? ` · ${best} in the cloud` : ''}</div><div class="d">Every upload carries your library. Loading a cloud save, or tapping Get, adds the cloud's wrestlers to this device.</div></div>${best ? `<button class="btn sm" data-act="cloudLib" ${m.libBusy ? 'disabled' : ''}>${m.libBusy ? '…' : 'Get'}</button>` : ''}</div>`;
+}
+function cloudCarCard(m) {
+  const xp = CAR().xp, L = lvlOf(xp), up = m.list && Object.values(m.list).some(x => x.car);
+  return `<div class="sec">🎖️ Booker career</div><div class="item"><div class="main"><div class="t">Level ${L} · ${Object.keys(CAR().ach).length} of ${ACH.length} achievements</div><div class="d">${up ? 'In the cloud. ' : ''}Every upload carries your level, achievements and milestones. Your devices add their progress together, so nothing is lost when you play on more than one.</div></div></div>`;
 }
 function modalCloud(m) {
   const u = sbSess?.user, L = m.list;
@@ -7538,6 +7620,7 @@ function modalCloud(m) {
       : `<div class="tiny muted" style="margin-top:8px">This ${multi() ? 'world' : 'game'} uses ${cloudPct(m.size)}% of the cloud save limit.</div>`) : ''}
     ${G && multi() ? `<div class="tiny muted" style="margin-top:6px">A cloud save holds the whole world: ${esc(andList(coNames(G)))}, plus the AI companies and indie stars.</div>` : ''}
     ${cloudLibCard(m)}
+    ${cloudCarCard(m)}
     ${G ? `<label class="todo" style="margin-top:10px"><input type="checkbox" data-act="cloudAuto" ${meta.cloudAuto ? 'checked' : ''}><span>Back up slot ${meta.slot} to cloud slot ${meta.slot} after every week</span></label>` : ''}
     ${u && !u.email ? '<div class="tiny muted" style="margin-top:8px">To load these saves on another device, add your email below and sign in there with it.</div>' : ''}
     ${sbAccountCard()}`;
@@ -8299,7 +8382,7 @@ const A = {
     const x = UI.modal?.list?.[n]; if (!x) return;
     confirmBox('Load this cloud save?', `${x.sum?.promo || 'This game'}, week ${x.sum?.week || '?'}, goes into slot ${meta.slot}, replacing the game there.`, 'Load it', async () => {
       try { const d = (await sbDb().doc(`cloud${+n}/${sbSess.user.id}`).get()).data(); if (!d?.save) throw { code: 'gone' };
-        const g = sanitizeGame(JSON.parse(await ungz(d.save))); G = g; save(); const nl = await libMerge(d.lib); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Cloud save loaded into slot ' + meta.slot + '.' + (nl ? ` ${nl} wrestler${nl > 1 ? 's' : ''} added to your library.` : '')); }
+        carMerge(d.car); const g = sanitizeGame(JSON.parse(await ungz(d.save))); G = g; save(); const nl = await libMerge(d.lib); UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; render(); toast('Cloud save loaded into slot ' + meta.slot + '.' + (nl ? ` ${nl} wrestler${nl > 1 ? 's' : ''} added to your library.` : '')); }
       catch (e) { toast(e?.code === 'gone' ? 'That cloud save is gone.' : 'Could not load it. Try again.'); }
     });
   },
@@ -9797,6 +9880,7 @@ async function sbTakeLink() {
     if (!u?.id) throw 0;
     sbStore({ access_token: at, refresh_token: rt, expires_in: +h.get('expires_in') || 3600, user: u });
     if (COMM.status !== 'idle') commReset();
+    carPull(true);
     setTimeout(() => toast(u.email ? 'Signed in as ' + u.email + '.' : 'Signed in.'), 600);
   } catch (e) { setTimeout(() => toast('Could not finish signing in. Try the link again.'), 600); }
 }
@@ -11521,7 +11605,7 @@ const CREATOR_ACTIONS = {
     try {
       const r = await sbFetch('/auth/v1/verify', { method: 'POST', body: JSON.stringify({ type: m.codeType === 'email_change' ? 'email_change' : 'email', email: m.codeFor, token }) }, m.codeType === 'email_change');
       if (!r?.access_token || !r?.user?.id) throw { code: 'unavailable' };
-      sbStore(r); delete m.codeFor; delete m.codeType; commReset(); supCheck().then(render);
+      sbStore(r); delete m.codeFor; delete m.codeType; commReset(); supCheck().then(render); carPull(true);
       toast(r.user.email ? 'Signed in as ' + r.user.email + '.' : 'Signed in.');
     } catch (e) { toast(e?.status === 403 || e?.status === 400 ? 'That code didn\'t work. It may have expired, so ask for a new one.' : 'Could not sign in. Try again.'); }
   },
@@ -13598,8 +13682,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.63';
+const VERSION = '1.9.64';
 const WHATS_NEW = [
+  ['🎖️ Your booker career in the cloud', 'Your booker level, achievements and milestones now go up with every cloud save. Sign in on another phone or computer and your level comes with you. If you play on two devices, each one adds its progress to the total, so nothing is lost or counted twice.'],
   ['💾 Clearer saves', 'A save holds your whole world, and now it says so. Backup files are named after every company you run, with the week and date (like BookIt_WWE+AEW_week-12_2026-11-25.json), and Backup & transfer lists what the file holds. Save slots and cloud saves show every company. Cloud saves tell you how much of the cloud limit your game uses and warn you from 80%, before it stops fitting.'],
   ['🔁 Take over a rival', 'With Sandbox on, open any AI company in Office → Companies and tap Take over to run it yourself, as one of up to 4 companies in your world. Its roster, contracts, titles and title history, teams, factions, feuds, photos and big events come with it. It keeps its name and show, and you can add more weekly shows and a brand split as you take it over.'],
   ['🏢 Companies tab', 'The Rivals tab in the Office is now called Companies. It still shows every company in your world, their rosters and fans, and is where you create, edit or share them.'],
@@ -13701,7 +13786,7 @@ if (!safeBoot && IDB.ok) (async () => {
   else if (!rec || (+rec.at || 0) < (+G.savedAt || 0)) bigPut(n, ls.get(KEY(n)), +G.savedAt || Date.now(), null);
 })();
 sbFromLink(); addEventListener('hashchange', sbFromLink);
-if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); supResume(); }
+if (sbOn()) { supReturn(); setTimeout(supCheck, 2500); setTimeout(() => sbLinkP ? sbLinkP.then(() => carPull(true)) : carPull(true), 3000); supResume(); }
 try { PLAYLOG.start(); } catch (e) {}
 // animated splash: once per app launch, tap to skip, skipped under automated tests (?splash forces it)
 try { if (!navigator.webdriver || /[?&]splash\b/.test(location.search)) {
