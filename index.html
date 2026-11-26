@@ -1413,7 +1413,8 @@ const SEG_PLACES = {
   backstage: { n: 'Backstage', ic: '🚪', desc: 'Lower stakes. Promos land softer, attacks feel real.' },
   screen: { n: 'On the big screen', ic: '📺', desc: 'Pre-taped, so it never flops, but the ceiling is lower.', taped: true },
   crowd: { n: 'In the crowd', ic: '🎟️', desc: 'Up close with the fans. Faces get a pop, heels get heat.' },
-  lot: { n: 'Parking lot', ic: '🚗', desc: 'Angles only. Raw and dangerous. Big heat, the target gets hurt worse.', angle: true }
+  lot: { n: 'Parking lot', ic: '🚗', desc: 'Angles only. Raw and dangerous. Big heat, the target gets hurt worse.', angle: true },
+  remote: { n: 'Remote', ic: '📡', desc: 'Promos only. Sent in by video from wherever they are. Safe, but a little less heat. A per-appearance star who likes you does it for free.', promo: true, taped: true }
 };
 const SEG_LENS = { quick: { n: 'Quick', desc: 'Short and safe. Less heat.' }, '': { n: 'Normal', desc: '' }, long: { n: 'Long', desc: 'Great talkers soar, weak ones drag. More heat.' } };
 const SEG_ENDS = {
@@ -1422,7 +1423,9 @@ const SEG_ENDS = {
   walk: { n: 'Walk-off', desc: 'Someone storms off. Heels get heat, faces look weak.' },
   inter: { n: 'Interrupted', desc: 'Pick who barges in. They join the story.' }
 };
-const segPlace = s => SEG_PLACES[s.loc] && !(SEG_PLACES[s.loc].angle && s.kind !== 'angle') ? s.loc : '';
+const placeFits = (v, s) => !(v.angle && s.kind !== 'angle') && !(v.promo && s.kind !== 'promo');
+const segPlace = s => SEG_PLACES[s.loc] && placeFits(SEG_PLACES[s.loc], s) ? s.loc : '';
+const segTaped = s => !!SEG_PLACES[segPlace(s)]?.taped || s.kind === 'angle' && !!ANGLE_TYPES[s.atype]?.taped;
 const segLen = s => Object.hasOwn(SEG_LENS, s.span || '') ? s.span || '' : '';
 const segEnd = s => Object.hasOwn(SEG_ENDS, s.outro || '') ? s.outro || '' : '';
 const segSay = s => String(s.line || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 140);
@@ -3216,15 +3219,15 @@ function bookRecord(seg, res, rating) {
 function segPlan(seg, ctx, out, people, add, addR, getR) {
   const doers = (seg.who || []).map(W).filter(Boolean), d = doers.length ? doers : people, tg = out.tg || (seg.target || []).map(W).filter(Boolean);
   const pl = segPlace(seg), ln = segLen(seg), en = segEnd(seg), heel = d.every(w => w.align === 'heel'), face = d.every(w => w.align === 'face');
-  const taped = pl === 'screen' || ANGLE_TYPES[seg.atype]?.taped && seg.kind === 'angle';
+  const taped = segTaped(seg);
   out.xHeat = 0; out.heatMul = 1;
   if (pl === 'ring') addR(add(2, 'In the ring: the whole crowd is watching'));
   else if (pl === 'backstage') addR(seg.kind === 'promo' ? add((60 - getR()) * 0.12, 'Backstage: lower stakes') : add(2, 'Backstage: it felt real'));
-  else if (pl === 'screen') { if (out.land < 0) addR(add(-out.land, 'Pre-taped: no chance to flop')); const over = getR() - 80; if (over > 0) addR(add(-over, 'Pre-taped: lower ceiling')); }
+  else if (pl === 'screen' || pl === 'remote') { if (out.land < 0) addR(add(-out.land, 'Pre-taped: no chance to flop')); const over = getR() - 80; if (over > 0) addR(add(-over, 'Pre-taped: lower ceiling')); if (pl === 'remote') out.heatMul = 0.8; }
   else if (pl === 'crowd') { if (face) addR(add(3, 'Up close with the fans')); else if (heel) { addR(add(1, 'Heels in the crowd: fans furious')); out.xHeat += 2; } }
   else if (pl === 'lot' && seg.kind === 'angle') { addR(add(2, 'Parking lot: it felt dangerous')); out.xHeat += 3; out.lot = true; }
-  if (ln === 'quick') { addR(add((60 - getR()) * 0.15, 'Quick: short and safe')); out.heatMul = 0.7; }
-  else if (ln === 'long') { const talk = avg(d.map(w => w.mic * 0.6 + w.cha * 0.4)); addR(add((talk - 65) * 0.25, talk >= 65 ? 'Long: they held the crowd' : 'Long: it dragged on')); out.heatMul = 1.3; }
+  if (ln === 'quick') { addR(add((60 - getR()) * 0.15, 'Quick: short and safe')); out.heatMul *= 0.7; }
+  else if (ln === 'long') { const talk = avg(d.map(w => w.mic * 0.6 + w.cha * 0.4)); addR(add((talk - 65) * 0.25, talk >= 65 ? 'Long: they held the crowd' : 'Long: it dragged on')); out.heatMul *= 1.3; }
   if (taped) return; // a video can't be interrupted or turn into a brawl
   const nm0 = d.map(w => w.name).join(' & ');
   if (en === 'brawl' && tg.length) { addR(add(3, 'It broke down into a brawl')); out.xHeat += 4; out.brawl = true; out.endText = ' It broke down into a brawl, and security had to pull them apart.'; }
@@ -4701,7 +4704,26 @@ const guestList = (wk = G.week) => (G.guests || []).filter(d => guestDeal(d.id, 
 // exclusive to another of your companies, or to this one
 function exclElsewhere(id) { for (const c of G.cos || []) { const d = (c.guests || []).find(x => x.id === id && x.excl && x.until >= G.week); if (d) return c.promo?.name || 'another company'; } return null; }
 const exclAny = id => !!(guestDeal(id)?.excl || exclElsewhere(id));
-const guestFees = segs => sum([...new Set(segs.flatMap(segPeople))].map(id => guestDeal(id)?.fee || 0));
+// a match costs the full fee. Promos and angles cost a tenth of it, and a remote promo is free once they like you.
+const paTalk = fee => fee > 0 ? Math.max(10, Math.round(fee * 0.1 / 10) * 10) : 0;
+const guestLikes = w => !!w && (PER() ? (w.trust ?? 50) >= 55 : (w.morale ?? 50) >= 60);
+const remoteFree = (s, id) => s.kind === 'promo' && segPlace(s) === 'remote' && guestLikes(W(id));
+function guestFeeOn(id, segs) {
+  const d = guestDeal(id); if (!d) return 0;
+  const mine = segs.filter(s => segPeople(s).includes(id));
+  if (!mine.length) return 0;
+  if (mine.some(s => s.kind === 'match')) return d.fee;
+  return mine.every(s => remoteFree(s, id)) ? 0 : paTalk(d.fee);
+}
+const guestFees = segs => sum([...new Set(segs.flatMap(segPeople))].map(id => guestFeeOn(id, segs)));
+// under Where: what a remote promo costs the per-appearance talent in it
+function remoteNote(s) {
+  if (s.kind !== 'promo') return '';
+  const gs = segPeople(s).filter(id => guestDeal(id)), nmz = l => esc(l.map(shortOf).join(' & ')); if (!gs.length) return '';
+  if (segPlace(s) !== 'remote') return ` ${nmz(gs)}: ${money(paTalk(guestDeal(gs[0]).fee))}${gs.length > 1 ? ' each' : ''} for a promo here.`;
+  const free = gs.filter(id => remoteFree(s, id)), paid = gs.filter(id => !free.includes(id));
+  return (free.length ? ` ${nmz(free)} ${free.length > 1 ? 'like' : 'likes'} you, so it's free.` : '') + (paid.length ? ` ${nmz(paid)} ${paid.length > 1 ? "don't" : "doesn't"} know you well enough yet: ${paid.map(id => money(paTalk(guestDeal(id).fee))).join(' / ')}.` : '');
+}
 function paChance(w, fee, excl, wks) {
   if (w.refusedWk === G.week) return 0;
   let c = (fee / paFee(w, excl) - 0.7) / 0.45;
@@ -7100,7 +7122,7 @@ function matchRow(s, i, n, o) {
     chips.push(s.kind === 'promo' ? '🎤 ' + esc(s.ptype) + (PROMO_TONES[s.tone] && s.tone ? ' · ' + esc(PROMO_TONES[s.tone].n) : '') : '🎬 ' + esc(s.atype));
     const pl = segPlace(s), ln = segLen(s), en = segEnd(s);
     if (pl) chips.push(`${SEG_PLACES[pl].ic} ${esc(SEG_PLACES[pl].n)}`); if (ln) chips.push(`⏱️ ${esc(SEG_LENS[ln].n)}`);
-    if (en && !(pl === 'screen' || ANGLE_TYPES[s.atype]?.taped && s.kind === 'angle')) chips.push(en === 'inter' && W((s.inter || [])[0]) ? `⚡ ${esc(shortOf(s.inter[0]))} interrupts` : esc(SEG_ENDS[en].n));
+    if (en && !segTaped(s)) chips.push(en === 'inter' && W((s.inter || [])[0]) ? `⚡ ${esc(shortOf(s.inter[0]))} interrupts` : esc(SEG_ENDS[en].n));
     const st = s.target?.length ? storyBetween(s.who || [], s.target) : storiesTouching(s.who || [])[0]; if (st) chips.push(`🔥 ${esc(st.title)}`);
   }
   if (o.builds) chips.push(`<span class="hype">📈 Builds ${esc(o.builds)}</span>`);
@@ -7886,13 +7908,13 @@ function blankSeg(kind) {
 }
 // the promo and angle plan: their line, where, how long, how it ends
 function segPlanEditor(s) {
-  const pl = segPlace(s), ln = segLen(s), en = segEnd(s), taped = pl === 'screen' || (s.kind === 'angle' && ANGLE_TYPES[s.atype]?.taped);
+  const pl = segPlace(s), ln = segLen(s), en = segEnd(s), taped = segTaped(s);
   const sp = (s.who || []).map(W).filter(Boolean), ex = s.kind === 'promo' && sp.length ? segQuote({ ...s, line: '' }, sp, (s.target || []).map(W).filter(Boolean), true) : '';
   let h = `<div class="sec" style="margin-top:6px">${s.kind === 'promo' ? '🎤 The promo' : '🎬 The angle'}</div>`;
   if (s.kind === 'promo') h += `<label class="f"><span>Their line <span class="muted">(optional)</span></span><input type="text" data-segln maxlength="140" value="${esc(segSay(s))}" placeholder="${esc(ex ? 'e.g. ' + ex : 'Leave empty and the game writes one')}"><div class="tiny muted" style="margin-top:4px">Shows in a speech bubble on the live show. Leave it empty and the game writes one from the topic and tone.</div></label>`;
-  h += `<label class="f"><span>Where</span><select data-seg="loc">${Object.entries(SEG_PLACES).filter(([k, v]) => !v.angle || s.kind === 'angle').map(([k, v]) => `<option value="${k}" ${k === pl ? 'selected' : ''}>${v.ic} ${esc(v.n)}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(SEG_PLACES[pl].desc)}</div></label>`;
+  h += `<label class="f"><span>Where</span><select data-seg="loc">${Object.entries(SEG_PLACES).filter(([k, v]) => placeFits(v, s)).map(([k, v]) => `<option value="${k}" ${k === pl ? 'selected' : ''}>${v.ic} ${esc(v.n)}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(SEG_PLACES[pl].desc)}${remoteNote(s)}</div></label>`;
   h += `<label class="f"><span>Length</span><div class="seg-ctl">${Object.entries(SEG_LENS).map(([k, v]) => `<button class="${k === ln ? 'on' : ''}" data-act="segSpan" data-id="${k || 'n'}">${esc(v.n)}</button>`).join('')}</div>${SEG_LENS[ln].desc ? `<div class="tiny muted" style="margin-top:4px">${esc(SEG_LENS[ln].desc)}</div>` : ''}</label>`;
-  if (taped) return h + `<div class="tiny muted" style="margin:-4px 0 10px">📺 It's pre-taped, so nobody can interrupt and it can't turn into a brawl.</div>`;
+  if (taped) return h + `<div class="tiny muted" style="margin:-4px 0 10px">${pl === 'remote' ? '📡 It\'s sent in by video' : '📺 It\'s pre-taped'}, so nobody can interrupt and it can't turn into a brawl.</div>`;
   h += `<label class="f"><span>How it ends</span><select data-seg="outro">${Object.entries(SEG_ENDS).filter(([k, v]) => !v.needT || (s.target || []).length || k === en).map(([k, v]) => `<option value="${k}" ${k === en ? 'selected' : ''}>${esc(v.n)}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(SEG_ENDS[en].desc)}${en === 'brawl' && !(s.target || []).length ? ' Add a target first.' : ''}</div></label>`;
   if (en === 'inter') h += `<div class="side"><div class="lbl">Who interrupts</div>${chipsFor(s.inter || [], 'inter', 1)}<div class="tiny muted" style="margin-top:4px">They start a feud with ${sp.length ? esc(sp.map(w => shortOf(w.id)).join(' & ')) : 'the speaker'}, or heat up the one they have.</div></div>`;
   return h;
@@ -8046,7 +8068,7 @@ function renderPicker() {
    ${gTab ? `<div class="seg-ctl" style="margin-bottom:10px"><button class="${gOn ? '' : 'on'}" data-act="pickTab" data-id="roster" aria-pressed="${!gOn}">🤼 Roster (${signed().length})</button><button class="${gOn ? 'on' : ''}" data-act="pickTab" data-id="guests" aria-pressed="${gOn}">💰 Per appearance (${nG})</button></div>` : ''}
    ${ctlChips}
    ${UI.modal?.type === 'seg' && p.max >= 2 && p.f !== 'ents' && !q ? (() => { const ts = (G.teams || []).filter(t => liveMembers(t).length >= 2 && (!isTrios(t) || p.max >= 3)), fs = (G.factions || []).filter(f => liveMembers(f).length >= 2); return ts.length || fs.length ? `<div class="tiny muted" style="margin-bottom:4px">Teams and factions</div><div class="filters">${ts.map(t => `<button data-act="pickTeam" data-id="${t.id}">👥 ${esc(t.name)}${isTrios(t) ? ' (trios)' : ''}</button>`).join('')}${fs.map(f => `<button data-act="pickFaction" data-id="${f.id}">👑 ${esc(f.name)}</button>`).join('')}</div>` : ''; })() : ''}
-   <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${pickNF(p) ? ` Showing ${list.length} of ${total}. <button class="link" data-act="pickClear">Clear filters</button>` : ''}${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear.' : ''}</div>
+   <div class="tiny muted" style="margin-bottom:4px">Pick up to ${p.max}. ${p.sel.length} selected.${pickNF(p) ? ` Showing ${list.length} of ${total}. <button class="link" data-act="pickClear">Clear filters</button>` : ''}${gOn ? ' Paid per show, not weekly. You pay their fee only when they appear. Promos and angles cost a tenth, and a remote promo is free once they like you.' : ''}</div>
    ${list.map(w => { const g = gOn && guestDeal(w.id, UI.selWeek), sel = p.sel.includes(w.id), other = inDraft.has(w.id); const flags = [w.injury > 0 ? '🩹 injured' : '', w.fatigue >= 60 ? '😮‍💨 tired' : '', onCard.has(w.id) ? '📋 already on card' : '', brandF && !onBrand(w) ? brandName(brandOf(w)) : '', other ? 'in this segment' : '', titlesOf(w.id).length ? '🏆' : '', storiesOf(w.id).length ? '🔥 ' + storiesOf(w.id).map(s => s.title).join(', ') : ''].filter(Boolean).join(' · ');
      const tmLock = !sel && UI.modal?.type === 'editTeam' && otherTeamOf(w.id, UI.modal.draft.id, UI.modal.draft.kind);
      return `<button class="pick ${sel ? 'sel' : ''} ${w.injury > 0 || other || tmLock ? 'dis' : ''}" data-act="pickTog" data-id="${w.id}"><span class="ck">${sel ? '✓' : ''}</span>${av(w, 32)}<div class="main" style="flex:1;min-width:0"><div class="t" style="font-weight:650">${nm(w.id)} <span class="tiny muted">${esc(w.style)}</span></div><div class="tiny muted">${tmLock ? `<span style="color:var(--warn)">👥 In ${esc(tmLock.name)}</span> · ` : ''}${rival.has(w.id) ? '<span class="sugg">⭐ Story rival</span> ' : ''}${isNW(w) ? `<b>${ROLES[roleOf(w)].ic} ${ROLES[roleOf(w)].n}</b> · ` : ''}OVR <b>${overall(w)}</b>${pickStat(srt, w)} · <b>${recStr(w)}</b>${w.streak >= 3 ? ' 🔥W' + w.streak : w.streak <= -3 ? ' 🥶L' + -w.streak : ''} · Pop ${Math.round(w.pop)} · Ring ${w.ring} · Mic ${w.mic}${srt !== 'fresh' && w.fatigue >= 30 && w.fatigue < 60 ? ' · Fatigue ' + Math.round(w.fatigue) : ''}${flags ? ' · ' + esc(flags) : ''}${g ? ` · <span class="tag ${g.excl ? 'gold' : ''} pa-t">${g.excl ? 'Exclusive' : 'Non-exclusive'}</span> · ${w.retired ? 'Legend · ' : ''}until wk ${g.until}` : ''}</div></div>${g ? `<span class="pa-fee">${money(g.fee)}<small>/show</small></span>` : ''}</button>`; }).join('') || `<div class="empty">${gOn && !q && !total ? 'No one on a per-appearance deal yet. Sign one from Office → Indie Stars.' : `Nobody matches.${pickNF(p) ? ' <button class="link" data-act="pickClear">Clear filters</button>' : ''}`}</div>`}
@@ -8140,7 +8162,7 @@ function modalGuest(m) {
   const d = guestDeal(w.id), ask = paFee(w, m.excl), until = G.week + m.wks - 1;
   const body = `${paSwitch(w, true)}<div class="row" style="margin-bottom:12px">${av(w, 48)}<div class="sp"><b>${esc(w.name)}</b><div class="small muted">${w.retired ? `🎤 Retired legend · ` : ''}Pop ${Math.round(w.pop)} · OVR ${overall(w)} · Age ${w.age}</div></div></div>
    <div class="small muted" style="margin-bottom:10px">They stay off your roster and payroll. You pay their fee only on the shows they're booked on. Book them from the 💰 Per appearance tab when you pick wrestlers.</div>
-   ${d ? `<div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${money(d.fee)}/show · ${d.excl ? 'exclusive' : 'non-exclusive'}</b></div><div class="row small"><span class="sp muted">Runs until</span><b>Week ${d.until} · ${d.apps} appearance${d.apps === 1 ? '' : 's'} so far</b></div></div>` : ''}
+   ${d ? `<div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${money(d.fee)}/show · ${d.excl ? 'exclusive' : 'non-exclusive'}</b></div><div class="row small"><span class="sp muted">Runs until</span><b>Week ${d.until} · ${d.apps} appearance${d.apps === 1 ? '' : 's'} so far</b></div><div class="row small"><span class="sp muted">Promo or angle only</span><b>${money(paTalk(d.fee))}/show</b></div><div class="row small"><span class="sp muted">Remote promo</span><b>${guestLikes(w) ? 'Free, they like you' : money(paTalk(d.fee)) + ' until they like you'}</b></div></div>` : ''}
    <label class="f"><span>Deal type</span><div class="seg-ctl"><button class="${m.excl ? '' : 'on'}" data-act="gExcl" data-id="0">Non-exclusive</button><button class="${m.excl ? 'on' : ''}" data-act="gExcl" data-id="1">🔒 Exclusive</button></div></label>
    <div class="tiny muted" style="margin:-4px 0 10px">${m.excl ? 'Costs more per show. Nobody else can sign them until the deal ends.' : 'Cheaper per show. Rivals can still sign them full-time, which ends your deal.'}</div>
    <div class="card"><div class="row small"><span class="sp muted">${m.excl ? 'Exclusive' : 'Non-exclusive'} asking price</span><b>${money(ask)}/show</b></div>
@@ -13977,8 +13999,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.66';
+const VERSION = '1.9.67';
 const WHATS_NEW = [
+  ['🎤 Cheaper guest promos', 'Per-appearance stars now charge a tenth of their fee for a promo or angle. Their full fee is only for matches. Promos have a new Remote spot under Where: the promo is sent in by video, and a per-appearance star who likes you does it for free.'],
   ['📅 Calendar settings', 'Menu → Settings has a new Calendar section. Start weeks on Sunday, shrink the calendar to this week or hide it, show week numbers, and pick which shows appear. Choose which weekend of the month big events air on, turn off weekly shows on big event weeks, and book up to 26 weeks ahead. Planning helpers add a big event countdown, rival big events and holidays on your calendar, and when the "book the big event" reminder comes.'],
   ['🎆 Book the big event', 'Tapping Book the card on the big event panel, or a big event reminder, now opens the big event. Before, it opened the weekly show that airs the same week.'],
   ['🧠 Hand jobs to your staff', 'Office → Staff has a new Jobs your staff handle card. Switch on the jobs you want done for you: your Media Manager (the PR Agent\'s new name) books media every week and can send wrestlers who are off TV on tours or indie trips, your Doctor rests worn-out wrestlers, the new Talent Relations hire re-signs cheaper contracts, and your Head Trainer sets training focus. A This week your staff list shows what they did.'],
