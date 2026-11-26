@@ -5345,7 +5345,7 @@ function feudAdvice() {
     sent++;
   }
 }
-const feudMsgOpen = m => { if (!m.feud || m.ans != null || G.week - m.wk >= 2 || (m.nb && (nextBig() !== m.nb || G.history.some(h => h.big && h.wk === m.nb)))) return false; // the producer's advice is about one big event: once it has run, the question is gone const st = G.stories.find(x => x.id === m.feud); return !!st && st.status === 'active'; };
+const feudMsgOpen = m => { if (!m.feud || m.ans != null || G.week - m.wk >= 2 || (m.nb && (nextBig() !== m.nb || G.history.some(h => h.big && h.wk === m.nb)))) return false; /* the producer's advice is about one big event: once it has run, the question is gone */ const st = G.stories.find(x => x.id === m.feud); return !!st && st.status === 'active'; };
 function feudChoices(m) {
   const st = G.stories.find(x => x.id === m.feud); if (!st) return [];
   const nb = m.nb || nextBig(), nn = bigAfter(nb);
