@@ -7307,8 +7307,9 @@ function beltSurprise(cur) {
 }
 // a title's belt as drawn everywhere in the game (titles with no design keep the classic gold belt)
 const titleBelt = (t, cls) => beltRender(t.belt, { title: t, cls, label: (t.name || 'Championship') + ' belt', abbr: abbr(UI.wiz?.name || G?.promo?.name || 'BookIt'), champ: champInit(t) });
-// the champion's initials for their own side plates: a team's name, or each holder's first letter
-function champInit(t) { const h = (t?.holder || []).filter(id => W(id)); if (!h.length) return ''; if (h.length > 1) { const tm = typeof teamOf === 'function' && teamOf(h); if (tm) return abbr(tm.name).slice(0, 3); return h.map(id => (nameOf(id)[0] || '').toUpperCase()).join('').slice(0, 3); } return initials(nameOf(h[0])).slice(0, 3); }
+// the champion's initials for their own side plates: a team's name, or each holder's first letter.
+// Works in the setup wizard too, before a game exists (G is null there): holders come from the wizard's picks.
+function champInit(t) { const wz = UI.wiz, find = id => (G ? W(id) : null) || (wz && [...(wz.mine || []), ...(wz.pool || [])].find(w => w.id === id)) || null, nm = id => find(id)?.name || ''; const h = (t?.holder || []).filter(id => find(id)); if (!h.length) return ''; if (h.length > 1) { const tm = G && typeof teamOf === 'function' && teamOf(h); if (tm) return abbr(tm.name).slice(0, 3); return h.map(id => (nm(id)[0] || '').toUpperCase()).join('').slice(0, 3); } return initials(nm(h[0])).slice(0, 3); }
 // title rules: level and how often it must be defended
 // a title's card level: where it sits on the show. Its prestige starts in that level's band and still moves with how it's booked.
 // [key, name, short name, starting prestige, band low, band high, hint]
@@ -16096,7 +16097,7 @@ function crash(msg) {
   try { save(); } catch (e) {}
   const d = document.createElement('div'); d.className = 'crash';
   d.innerHTML = `<div class="crash-in"><div style="font-size:44px">${typeof ic === 'function' ? ic('medical') : ''}</div><h2>Something went wrong</h2>
-    <p class="muted">Your game was saved a moment ago. Reloading usually fixes this.</p>
+    <p class="muted">${G ? 'Your game was saved a moment ago. Reloading usually fixes this.' : 'Setup was not finished, so there is no save yet. Reloading starts setup again.'}</p>
     <button class="btn pri block" data-crash="reload">Reload the game</button>
     <button class="btn block" data-crash="menu" style="margin-top:8px">Open the main menu instead</button>
     <button class="btn block" data-crash="close" style="margin-top:8px">Keep playing</button>
