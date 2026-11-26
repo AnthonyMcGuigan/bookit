@@ -158,6 +158,7 @@ button.item:active { background: var(--card2); }
 .st-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .st-chips button { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .st-chips button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.st-chips button.on .i { --ic: var(--accent-ink); color: var(--accent-ink); }
 .ch-row .tag { flex: none; }
 .dirt-mast { text-align: center; padding: 6px 4px 10px; border-bottom: 3px double var(--line); margin-bottom: 8px; }
 .dirt-name { font-family: var(--f-display); font-size: clamp(26px, 9vw, 36px); line-height: 1; letter-spacing: .03em; text-transform: uppercase; }
@@ -2487,6 +2488,7 @@ function startStory(a, b, heat, why, o = {}) {
   const title = stClean(o.title) || `${lnOf(a)} vs ${lnOf(b)}`.slice(0, 50);
   const st = { id: uid(), title, type: STORY_KINDS.includes(o.type) ? o.type : 'Feud', a: a.slice(), b: b.slice(), titleId: o.titleId || null, heat, start: G.week, status: 'active', notes: why, log: [{ wk: G.week, text: why }], autoEnd: true, _touched: G.week };
   G.stories.push(st); news(`🔥 New storyline: "${title}". ${why}`, 'story');
+  cmStoryHeat(st);
   return st;
 }
 // the booking switch: start a storyline when this segment airs
@@ -3793,7 +3795,13 @@ function segPlan(seg, ctx, out, people, add, addR, getR) {
 // the words on screen: the booker's own line, or one written from the topic and tone
 function segQuote(seg, sp, tg, first) {
   const own = segSay(seg); if (own) return own;
-  { const st = sp.length && (tg.length ? storyBetween(sp.map(w => w.id), tg.map(w => w.id)) : storiesTouching(sp.map(w => w.id))[0]); const sl = st && storyLine(st, sp, tg, first); if (sl) return sl; }
+  const cmm = sp.length && cmFor(seg, sp, tg), cml = cmm ? cmLine(cmm, tg) : '';
+  if (cml && seg.mem && seg.mem !== 'auto') return cml;
+  { const st = sp.length && (tg.length ? storyBetween(sp.map(w => w.id), tg.map(w => w.id)) : storiesTouching(sp.map(w => w.id))[0]);
+    // left to them, they bring up the past now and then, not every week
+    const now = first || (G.week + String(seg.id || '').length) % 5 < 2;
+    if (cml && now && !(st && sp.some(w => stLines(st, stSide(st, w.id) || 'x').length))) return cml;
+    const sl = st && storyLine(st, sp, tg, first); if (sl) return sl; }
   if (seg.kind !== 'promo' || !sp.length) return '';
   const T = tg[0] ? lastName(tg[0]) : '', me = lastName(sp[0]), t = G.titles.find(x => x.holder.some(h => [...sp, ...tg].some(w => w.id === h)));
   const L = {
@@ -4015,6 +4023,7 @@ function simSegment(seg, ctx) {
     }
     out.text_extra = out.land >= 4 ? ' The crowd ate it up.' : out.land <= -4 ? ' It fell flat.' : '';
     { const b = storyBeat(st, speakers, tg, add); r += b.x || 0; out.stTag = b.tag; }
+    { const c = cmPromo(seg, speakers, tg, add); r += c.x; out.pHeat += c.h; }
     out.story = st; out.pt = pt;
     const tn2 = tg.map(w => w.name).join(' & ');
     out.text = `${speakers.map(w => w.name).join(' & ')} ${seg.ptype === 'Interview' ? 'sat down for an interview' : seg.ptype === 'Hype Promo' ? 'cut a promo' : seg.ptype === 'Face-off' ? 'went face to face with ' + tn2
@@ -4196,6 +4205,7 @@ function applySegment(seg, res, ctx) {
       if (mates.length && !storyBetween([tw.id], mates)) G.stories.push({ id: uid(), title: 'Betrayal: ' + lastName(tw) + ' vs ' + mates.map(id => lastName(W(id))).join(' & '), type: 'Feud', a: [tw.id], b: mates.slice(), titleId: null, heat: 45, start: G.week, status: 'active', notes: tw.name + ` turned on ${pn(tw).their} partner.`, log: [{ wk: G.week, text: res.text }], autoEnd: true, organic: true });
     }
   }
+  cmAfterSeg(seg, res, ctx, res.hb || []);
   if (seg.kind === 'angle') {
     const at = res.at || {};
     if (at.turn) for (const w of res.doers) if (w.align !== at.turn) {
@@ -5526,6 +5536,7 @@ function concludeStory(st, met, o = {}) {
   const bonus = Math.round(st.heat / 10 * payoffMult(st, big, match));
   delete st.plan; delete st.planWk; delete st.advK;
   if (winSide) {
+    cmFeud(st, winSide, big);
     st[winSide].forEach(id => { const w = W(id); if (w) { addPop(w, bonus); w.morale = clamp(w.morale + 8, 0, 100); } });
     st[winSide === 'a' ? 'b' : 'a'].forEach(id => { const w = W(id); if (w) addPop(w, bonus / 3); });
   }
@@ -6805,7 +6816,7 @@ const CHALLENGES = [['easy', 'Relaxed', 'Fans come easier, injuries are rare and
 const DF = () => { const d = G?.settings?.difficulty; return typeof d === 'string' && Object.hasOwn(DIFF, d) ? DIFF[d] : DIFF.normal; };
 // how many fans a promotion of this standing can hold; growth slows as you near it
 const fanCap = () => Math.round((140000 + G.promo.prestige * 6000) * DF().cap);
-const askFor = (w, wk) => Math.max(500, Math.round(asking(w) * lenMult(wk) * (w.courted ? 1.15 : 1) * relPay(w) * DF().ask * (perk('deals') ? 0.9 : 1) / 100) * 100);
+const askFor = (w, wk) => Math.max(500, Math.round(asking(w) * lenMult(wk) * (w.courted ? 1.15 : 1) * relPay(w) * cmPay(w) * DF().ask * (perk('deals') ? 0.9 : 1) / 100) * 100);
 function offerChance(w, salary, weeks, o) {
   const ask = o?.ask || askFor(w, weeks);
   let c = (salary / ask - 0.7) / 0.45;
@@ -6829,6 +6840,8 @@ function offerChance(w, salary, weeks, o) {
   if (o?.indie != null && wantsIndie(w)) c += o.indie ? 0.06 : -0.15;
   // an older wrestler wants a limited number of shows a month
   c += datesChance(w, o?.dates);
+  // reminding them of a moment you gave them (or one you made them suffer)
+  if (o?.rem) c += o.rem / 100;
   return clamp(c, 0, 1);
 }
 // ---------- tag teams talk money together ----------
@@ -9437,7 +9450,7 @@ function blankSeg(kind) {
 function segPlanEditor(s) {
   const pl = segPlace(s), ln = segLen(s), en = segEnd(s), taped = segTaped(s);
   const sp = (s.who || []).map(W).filter(Boolean), ex = s.kind === 'promo' && sp.length ? segQuote({ ...s, line: '' }, sp, (s.target || []).map(W).filter(Boolean), true) : '';
-  let h = `<div class="sec" style="margin-top:6px">${s.kind === 'promo' ? '🎤 The promo' : '🎬 The angle'}</div>`;
+  let h = (s.kind === 'promo' ? cmPicker(s) : '') + `<div class="sec" style="margin-top:6px">${s.kind === 'promo' ? '🎤 The promo' : '🎬 The angle'}</div>`;
   if (s.kind === 'promo') h += `<label class="f"><span>Their line <span class="muted">(optional)</span></span><input type="text" data-segln maxlength="140" value="${esc(segSay(s))}" placeholder="${esc(ex ? 'e.g. ' + ex : 'Leave empty and the game writes one')}"><div class="tiny muted" style="margin-top:4px">Shows in a speech bubble on the live show. Leave it empty and the game writes one from the topic and tone.</div></label>`;
   h += `<label class="f"><span>Where</span><select data-seg="loc">${Object.entries(SEG_PLACES).filter(([k, v]) => placeFits(v, s)).map(([k, v]) => `<option value="${k}" ${k === pl ? 'selected' : ''}>${v.ic} ${esc(v.n)}</option>`).join('')}</select><div class="tiny muted" style="margin-top:4px">${esc(SEG_PLACES[pl].desc)}${remoteNote(s)}</div></label>`;
   h += `<label class="f"><span>Length</span><div class="seg-ctl">${Object.entries(SEG_LENS).map(([k, v]) => `<button class="${k === ln ? 'on' : ''}" data-act="segSpan" data-id="${k || 'n'}">${esc(v.n)}</button>`).join('')}</div>${SEG_LENS[ln].desc ? `<div class="tiny muted" style="margin-top:4px">${esc(SEG_LENS[ln].desc)}</div>` : ''}</label>`;
@@ -9671,7 +9684,7 @@ function modalWrestler(m) {
    ${w.retired ? '' : skillsBlock(w)}
    ${w.contract ? relBlock(w) + personaBlock(w) : ''}${indieBlock(w)}${datesBlock(w)}
    ${(() => { const st = STATS(w), ranks = G.titles.filter(t => !t.tag).map(t => [t, contenders(t, 10).findIndex(x => x.id === w.id)]).filter(x => x[1] >= 0);
-     return `<div class="sec">Career stats</div><div class="grid3 cstats"><div><b>${st.m}</b><span>matches</span></div><div><b>${st.m ? Math.round(st.sum / st.m) : '–'}</b><span>avg rating</span></div><div><b>${st.best || '–'}</b><span>best match</span></div><div><b>${st.tw}</b><span>title wins</span></div><div><b>${st.def}</b><span>defenses</span></div><div><b>${st.motn}</b><span>match of the night</span></div></div>
+     return cmBlock(w) + `<div class="sec">Career stats</div><div class="grid3 cstats"><div><b>${st.m}</b><span>matches</span></div><div><b>${st.m ? Math.round(st.sum / st.m) : '–'}</b><span>avg rating</span></div><div><b>${st.best || '–'}</b><span>best match</span></div><div><b>${st.tw}</b><span>title wins</span></div><div><b>${st.def}</b><span>defenses</span></div><div><b>${st.motn}</b><span>match of the night</span></div></div>
      ${ranks.length ? `<div class="small" style="margin-top:6px">${ranks.map(([t, i]) => `🏆 <b>#${i + 1}</b> contender for the ${esc(t.short)} title`).join('<br>')}</div>` : ''}${shotsOf(w.id).length ? `<div class="small" style="margin-top:6px">${shotsOf(w.id).map(x => esc(shotLine(x))).join('<br>')}</div>` : ''}`; })()}
    ${(() => { const fcs = factionsOfW(w.id); return fcs.length ? `<div class="sec">Faction</div><div class="list">${fcs.map(f => `<button class="item" data-act="editFaction" data-id="${f.id}"><div class="main"><div class="t">👑 ${esc(f.name)}${f.leader === w.id ? ' <span class="tag gold">Leader</span>' : ''}</div><div class="d">${f.members.length} members · ${teamRec(f)}</div></div></button>`).join('')}</div>` : ''; })()}
    ${(() => { const rs = reignsOfW(w.id), tms = (G.teams || []).filter(t => t.members.includes(w.id));
@@ -9692,6 +9705,43 @@ function modalWrestler(m) {
    <div class="tiny muted" style="margin-top:8px">“Make heel/face” switches instantly behind the scenes. For a big moment, book a Turn angle on a show instead. <button class="link" data-act="retireW" data-id="${w.id}">Retire ${esc(lastName(w))}</button></div>`}`;
   return modal(esc(w.name), body);
 }
+// ---- career memories on screen ----
+function cmBlock(w) {
+  const l = cmOf(w); if (!l.length) return '';
+  const show = UI.cmAll === w.id ? l : l.slice(0, 6);
+  return `<div class="sec">Career memories</div><div class="card" style="padding:8px 14px">${show.map(m => `<div class="small mem ${m.v < 0 ? 'neg' : 'pos'}"><span class="wk">WK ${m.wk}</span><span>${CMK[m.k].ic} ${esc(memText(m))}</span></div>`).join('')}
+    ${l.length > 6 && UI.cmAll !== w.id ? `<button class="link small" data-act="cmAll" data-id="${w.id}">Show all ${l.length}</button>` : ''}<div class="tiny muted" style="margin-top:6px">${esc(lastName(w))} brings these up in promos and contract talks.</div></div>`;
+}
+// promo editor: pick the memory the promo is about
+function cmPicker(s) {
+  const sp = (s.who || []).map(W).filter(Boolean); if (!sp.length) return '';
+  const tg = (s.target || []).map(W).filter(Boolean), ids = tg.map(w => w.id);
+  const all = sp.flatMap(cmOf).filter(m => (m.wid && ids.includes(m.wid) && CM_LINES[m.k]) || (m.v > 0 && CM_BRAG[m.k]));
+  if (!all.length) return '';
+  const seen = new Set(), list = all.sort((a, b) => (ids.includes(b.wid) - ids.includes(a.wid)) || Math.abs(b.v) - Math.abs(a.v) || b.wk - a.wk).filter(m => { const k = cmKey(m); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 5);
+  const cur = s.mem && (s.mem === 'none' || list.some(m => cmKey(m) === s.mem)) ? s.mem : 'auto', m = cur !== 'auto' && cur !== 'none' && list.find(x => cmKey(x) === cur);
+  const fits = m && m.wid && ids.includes(m.wid), who = sp.length > 1 && m ? (sp.find(w => cmOf(w).includes(m))?.name || '') + ': ' : '';
+  const note = cur === 'none' ? 'They won\'t bring up the past.' : cur === 'auto' ? (cmFor(s, sp, tg) ? 'They\'ll bring up their history with the target on their own. Pick one to make it count for more.' : 'They\'ll leave the past alone unless you pick something.')
+    : fits ? `Fits: +3 to the promo and more heat. They'll say: “${cmLine(m, tg)}”` : m.v > 0 && CM_BRAG[m.k] ? `A brag: +2 to the promo. They'll say: “${cmLine(m, tg)}”` : 'It has nothing to do with the target: -2.';
+  return `<div class="sec" style="margin-top:6px">📖 Bring up the past</div><div class="st-chips" style="margin-bottom:6px">
+    <button class="${cur === 'auto' ? 'on' : ''}" data-act="segMem" data-id="auto">Their call</button>
+    ${list.map(x => `<button class="${cur === cmKey(x) ? 'on' : ''}" data-act="segMem" data-id="${esc(cmKey(x))}">${CMK[x.k].ic} ${esc(who && cur === cmKey(x) ? who : '')}${esc(memText(x))}</button>`).join('')}
+    <button class="${cur === 'none' ? 'on' : ''}" data-act="segMem" data-id="none">None</button></div><div class="tiny muted" style="margin-bottom:10px">${esc(note)}</div>`;
+}
+// contract talks: their case, and the moment you remind them of
+function cmTalk(w, m) {
+  const cs = cmCase(w), rl = cmRemind(w), said = cmCaseSay(w);
+  if (!cs.items.length && !rl.length) return '';
+  const pc = p => `${p > 0 ? '+' : ''}${p}%`;
+  const caseH = cs.items.length ? `<div class="small" style="margin-bottom:6px"><b>📋 ${esc(lastName(w))}'s case</b> <span class="tiny muted">asks ${pc(Math.round(cs.pct))}</span></div>
+    ${cs.items.map(x => `<div class="small mem ${x.v < 0 ? 'neg' : 'pos'}"><span class="wk">WK ${x.wk}</span><span>${CMK[x.k].ic} ${esc(memText(x))}</span></div>`).join('')}
+    ${said ? `<div class="ph-b" style="margin:8px 0 0">${esc(said)}</div>` : ''}` : '';
+  const rem = rl.length ? `<div class="small" style="margin:${caseH ? '12px' : '0'} 0 6px"><b>🗣️ Remind ${esc(lastName(w))} of...</b> <span class="tiny muted">one per talk</span></div>
+    <div class="st-chips">${rl.map(x => { const k = cmKey(x), p = remindPct(w, x); return `<button class="${m.rem === k ? 'on' : ''}" ${m.rem ? 'disabled' : `data-act="negRem" data-id="${esc(k)}"`}>${CMK[x.k].ic} ${esc(remindLbl(w, x))}${m.rem === k ? ` (${pc(p)})` : ''}</button>`; }).join('')}</div>
+    ${m.rem ? `<div class="ph-b" style="margin:8px 0 0">${esc(m.remSay || '')}</div>` : `<div class="tiny muted" style="margin-top:6px">A good night you gave them helps. Bring up a bad one and they'll throw it back at you.</div>`}` : '';
+  return `<div class="card" style="margin-top:10px">${caseH}${rem}</div>`;
+}
+const remOf = (w, m) => { const x = m?.rem && cmOf(w).find(y => cmKey(y) === m.rem); return x ? remindPct(w, x) : 0; };
 function modalNegotiate(m) {
   const w = W(m.id); if (!w) return '';
   const ps = partnersFor(w), team = !!(m.team && ps.length), ws = team ? [w, ...ps] : [w], tm = teamFor(w);
@@ -9720,7 +9770,7 @@ function modalNegotiate(m) {
    ${ws.some(x => x.refusedWk === G.week) ? '<div class="small" style="color:var(--bad);margin-top:6px">They said no. Try again next week.</div>' : ''}</div>
    ${m.counter && !team ? `<div class="card" style="margin-top:10px;border-color:var(--accent)"><div class="row small"><span class="sp"><b>💬 Counter-offer</b><div class="tiny muted">${esc(lastName(w))} won't take ${money(m.salary)}, but would sign for ${money(m.counter.sal)}/wk over ${lenLabel(m.counter.weeks)}. It stands until you make another offer.</div></span><button class="btn sm pri" data-act="takeCounter">Accept ${money(m.counter.sal)}</button></div></div>` : ''}
    ${w.contract && !team && m.salary < w.contract.salary ? `<div class="tiny" style="color:var(--bad);margin-top:6px">This is a pay cut. Even if ${pn(w).they} sign${pn(w).s}, ${pn(w).they} won't be happy about it.</div>` : ''}
-   ${teamBox}${indieBox}${datesBox(ws, m)}
+   ${team ? '' : cmTalk(w, m)}${teamBox}${indieBox}${datesBox(ws, m)}
    <label class="f"><span id="negSalLbl">Weekly salary${team ? ', each' : ''}: ${money(m.salary)}</span><input type="range" min="${Math.max(300, Math.round(ask * 0.4 / 100) * 100)}" max="${Math.round(ask * 2 / 100) * 100}" step="100" value="${m.salary}" data-in="negSal" style="width:100%"></label>
    <label class="f"><span>Length</span><div class="seg-ctl">${DEAL_LENS.map(([n, l]) => `<button class="${m.weeks === n ? 'on' : ''}" data-act="negLen" data-id="${n}">${l}${n === prefLen(w) ? ' ★' : ''}</button>`).join('')}</div></label>
    <div id="negChance">${negChanceHTML(w, m)}</div>
@@ -9756,7 +9806,7 @@ function teamTalkHTML(ws, m) {
 }
 function negChanceHTML(w, m) {
   const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
-  const c = team ? teamChance(ws, m.salary, m.weeks, m.indie, m.dates).c : offerChance(w, m.salary, m.weeks, { indie: m.indie, dates: m.dates });
+  const c = team ? teamChance(ws, m.salary, m.weeks, m.indie, m.dates).c : offerChance(w, m.salary, m.weeks, { indie: m.indie, dates: m.dates, rem: remOf(w, m) });
   const [lbl, cls] = chanceLabel(c), n = ws.length;
   return `<div class="alert ${cls}"><span class="ic">🤝</span><div><b>${lbl}</b> <span class="muted small">(${Math.round(c * 100)}%)</span><div class="small muted">${lenLabel(m.weeks)}, through week ${G.week + m.weeks}. Total cost ${money(m.salary * m.weeks * n)}${team ? ` for ${n}` : ''}.${m.weeks < 52 ? ' Short deals cost more per week.' : m.weeks > 104 ? ' Long deals get a small discount per week.' : ''}${PER() && ws.some(x => m.salary < askFor(x, m.weeks) * 0.8 && BLAST_ODDS[x.pers] >= .3) ? ' <b style="color:var(--bad)">A lowball like this could end up on social media.</b>' : ''}</div></div></div>`;
 }
@@ -10702,6 +10752,10 @@ const A = {
   segFill() { const d = UI.modal.draft, n = fillEntrants(d); render(); toast(n ? `Added ${n} entrant${n > 1 ? 's' : ''}.` : 'Nobody else is free to enter.'); },
   segClearEnts() { const d = UI.modal.draft; d.sides = []; d.winner = -1; render(); },
   segEdge(i) { UI.modal.draft.edge = +i; render(); },
+  segMem(k) { const d = UI.modal?.draft; if (!d) return; if (k === 'auto') delete d.mem; else d.mem = String(k).slice(0, 60); render(); },
+  cmAll(id) { UI.cmAll = id; render(); },
+  negRem(k) { const m = UI.modal, w = m && W(m.id); if (!w || m.rem) return; const x = cmOf(w).find(y => cmKey(y) === k); if (!x) return;
+    m.rem = k; m.remSay = remindSay(w, x); if (remindPct(w, x) < 0) { remember(w, -2, 'You threw a bad night back in my face'); w.morale = clamp(w.morale - 2, 0, 100); } render(); },
   segSpan(k) { const d = UI.modal.draft; if (k === 'n' || !Object.hasOwn(SEG_LENS, k)) delete d.span; else d.span = k; render(); },
   shotUseNext(v) { UI.modal.shotUse = v === 'any' ? 'any' : 'event'; render(); },
   shotDel(id) { const s = SHOTS().find(x => x.id === id); if (!s) return; dropShot(s); commit(`${s.ids.map(nameOf).join(' & ')} no longer has a title shot.`); },
@@ -11115,7 +11169,7 @@ const A = {
   offer() {
     const m = UI.modal, w = W(m.id); if (!w) return;
     const ws = m.team ? [w, ...partnersFor(w)] : [w], team = ws.length > 1;
-    const c = m.sure ? 1 : team ? teamChance(ws, m.salary, m.weeks, m.indie, m.dates).c : offerChance(w, m.salary, m.weeks, { indie: m.indie, dates: m.dates });
+    const c = m.sure ? 1 : team ? teamChance(ws, m.salary, m.weeks, m.indie, m.dates).c : offerChance(w, m.salary, m.weeks, { indie: m.indie, dates: m.dates, rem: remOf(w, m) });
     delete m.sure;
     const newbies = ws.filter(x => !x.contract);
     if (G.settings.finances && newbies.length && G.money < m.salary * 2 * newbies.length) return toast(`Not enough money to cover their first weeks.`);
@@ -11129,7 +11183,7 @@ const A = {
         else x.morale = clamp(x.morale + (m.salary >= ask ? 10 : 3), 0, 100);
         delete x.courted; delete x.payGap;
         if (G.guests) G.guests = G.guests.filter(d => d.id !== x.id);
-        if (!was) { x.joined = G.week; x.lastBooked = G.week; }
+        if (!was) { x.joined = G.week; x.lastBooked = G.week; cmAdd(x, 'sg', { ev: G.promo.name }); }
         if (!team) news(`✍️ ${x.name} ${was ? 're-signed' : 'signed'} a ${lenLabel(m.weeks)} deal at ${money(m.salary)}/wk (through week ${G.week + m.weeks})${x.contract.indie ? ', with indie dates' : ''}${x.contract.dates ? `, for ${dPlural(x.contract.dates)}` : ''}.`, 'contract');
       }
       if (team) news(`✍️ ${tn} (${ws.map(x => x.name).join(' & ')}) ${ws.every(x => newbies.includes(x)) ? 'signed' : 're-signed'} together: ${lenLabel(m.weeks)} at ${money(m.salary)}/wk each (through week ${G.week + m.weeks}).`, 'contract');
@@ -12917,6 +12971,7 @@ function suCheck(g, end) {
   }
 }
 function storyTick() {
+  (G.stories || []).forEach(cmStoryHeat);
   const s = G?.story; if (!s) return;
   const end = G.week >= s.sEnd;
   for (const g of s.goals) suCheck(g, end);
@@ -14215,6 +14270,167 @@ function remember(w, v, t) {
   const P = PER() ? w.pers : '', k = P === 'hot' ? 1.5 : P === 'money' ? .7 : P === 'loyal' && v < 0 ? .5 : 1;
   w.trust = clamp((w.trust ?? 50) + v * k, 0, 100);
   if (t) w.mem = [{ wk: G.week, t, v }, ...(w.mem || [])].slice(0, 8);
+}
+// ---------- career memories ----------
+// Every wrestler keeps the big moments of their career (w.cm): titles won and lost, feuds, betrayals, big event
+// main events, classic matches. Promos quote them, history between two wrestlers makes a feud start hotter,
+// and both sides bring them up in contract talks. Always on: it doesn't need personalities.
+const CM_MAX = 30, CM_CLASSIC = 88;
+const CMK = {
+  tw: { ic: '🏆', v: 3, n: 'Title win', t: m => `Won the ${m.x}${m.on ? ' from ' + m.on : ''}${cmAt(m)}` },
+  tl: { ic: '📉', v: -3, n: 'Title loss', t: m => `Lost the ${m.x} to ${m.on}${cmAt(m)}` },
+  fw: { ic: '🏁', v: 2, n: 'Feud won', t: m => `Won the feud with ${m.on}${cmAt(m)}` },
+  fl: { ic: '📉', v: -2, n: 'Feud lost', t: m => `Lost the feud with ${m.on}${cmAt(m)}` },
+  bt: { ic: '🔄', v: 0, n: 'Turned on a partner', t: m => `Turned on ${m.on}` },
+  btd: { ic: '🗡️', v: -3, n: 'Betrayed', t: m => `Betrayed by ${m.on}` },
+  me: { ic: '⭐', v: 2, n: 'Main event', t: m => `Main-evented ${m.ev}${m.f ? ' for the first time' : ''}` },
+  cl: { ic: '🌟', v: 2, n: 'Classic match', t: m => `Stole the show with ${m.on} at ${m.ev}` },
+  bw: { ic: '🥊', v: 1, n: 'Big win', t: m => `Beat ${m.on} at ${m.ev}` },
+  bl: { ic: '📉', v: -1, n: 'Big loss', t: m => `Lost to ${m.on} at ${m.ev}` },
+  sg: { ic: '✍️', v: 1, n: 'Signed', t: m => `Signed with ${m.ev}` }
+};
+const cmAt = m => m.ev ? ' at ' + m.ev : '';
+const cmOf = w => Array.isArray(w?.cm) ? w.cm.filter(m => m && CMK[m.k]) : [];
+const memText = m => CMK[m.k].t({ ...m, on: (m.wid && W(m.wid)?.name) || m.on || (m.k === 'tw' ? '' : 'someone'), x: m.x || 'title', ev: m.ev || '' });
+const cmKey = m => `${m.wk}:${m.k}:${m.wid || ''}`;
+const cmWhere = big => big ? bigName(G.week) : (curShow()?.name || G.promo.show);
+// one memory: newest first, and the small ones fall off first when the list is full
+function cmAdd(w, k, o = {}) {
+  if (!w || !CMK[k]) return null;
+  const ow = o.wid && W(o.wid), m = { wk: G.week, k, v: CMK[k].v, ...(ow ? { wid: ow.id, on: ow.name } : {}), ...(o.ev ? { ev: String(o.ev).slice(0, 60) } : {}), ...(o.x ? { x: String(o.x).slice(0, 60) } : {}), ...(o.f ? { f: 1 } : {}) };
+  const l = cmOf(w); if (l.some(x => cmKey(x) === cmKey(m))) return null;
+  // the same kind of night against the same person doesn't need saying twice in half a year
+  if ('cl bw bl me'.includes(k) && l.some(x => x.k === k && (x.wid || '') === (m.wid || '') && (k !== 'me' || x.ev === m.ev) && G.week - x.wk < 26)) return null;
+  l.unshift(m);
+  while (l.length > CM_MAX) { const old = l.slice(10), lo = Math.min(...old.map(x => Math.abs(x.v))), i = l.lastIndexOf(old.filter(x => Math.abs(x.v) === lo).pop()); l.splice(i, 1); }
+  w.cm = l; return m;
+}
+// the memories two sides share: what each of A remembers about anyone on B
+const cmWith = (w, ids) => cmOf(w).filter(m => m.wid && ids.includes(m.wid));
+const cmShared = (a, b) => a.flatMap(id => cmWith(W(id), b));
+// after a match or angle: titles, turns, classics, big event wins and losses, the main event
+function cmAfterSeg(seg, res, ctx, hb) {
+  if (ctx.proj) return;
+  const ev = cmWhere(ctx.big);
+  if (seg.kind === 'match') {
+    const win = res.winners.map(W).filter(Boolean), lose = (res.losers || []).map(W).filter(Boolean), t = res.title;
+    if (t && hb.length && win.length && !hb.some(h => res.winners.includes(h)) && t.holder.some(h => res.winners.includes(h))) {
+      const x = t.short ? t.short + ' title' : t.name;
+      win.forEach(w => cmAdd(w, 'tw', { wid: hb[0], ev: ctx.big ? ev : '', x }));
+      hb.map(W).filter(Boolean).forEach(w => cmAdd(w, 'tl', { wid: res.winners[0], ev: ctx.big ? ev : '', x }));
+    } else if (res.rating >= CM_CLASSIC && !res.ffa) { /* a classic: one memory for the match, below */ }
+    else if (ctx.big && !res.ffa && win.length && lose.length) {
+      win.forEach(w => cmAdd(w, 'bw', { wid: lose[0].id, ev })); lose.forEach(w => cmAdd(w, 'bl', { wid: win[0].id, ev }));
+    }
+    if (res.rating >= CM_CLASSIC && !res.ffa && !(t && hb.length && !hb.some(h => res.winners.includes(h)))) for (const sd of seg.sides || []) { const opp = seg.sides.filter(s => s !== sd).flat().map(W).filter(Boolean).sort((a, b) => b.pop - a.pop)[0]; if (opp) sd.map(W).filter(Boolean).forEach(w => cmAdd(w, 'cl', { wid: opp.id, ev })); }
+  }
+  const tw = res.tw && W(res.tw.id);
+  if (tw) { const mates = (seg.sides || []).find(sd => sd.includes(tw.id))?.filter(id => id !== tw.id && W(id)) || []; if (mates.length) { cmAdd(tw, 'bt', { wid: mates[0] }); mates.forEach(id => cmAdd(W(id), 'btd', { wid: tw.id })); } }
+  // the first big event main event always counts; after that only the great ones
+  if (seg.kind === 'match' && ctx.main && ctx.big && res.rating >= 60) segPeople(seg).map(W).filter(Boolean).forEach(w => { const f = !cmOf(w).some(m => m.k === 'me'); if (f || res.rating >= CM_CLASSIC) cmAdd(w, 'me', { ev, f }); });
+}
+// a feud that ends with a winner: both sides remember who won
+function cmFeud(st, winSide, big) {
+  const lose = winSide === 'a' ? 'b' : 'a', ev = big ? bigName(G.week) : '';
+  // the feud's last match is this memory now
+  [...st.a, ...st.b].map(W).filter(Boolean).forEach(w => { if (Array.isArray(w.cm)) w.cm = w.cm.filter(m => !(m.wk === G.week && (m.k === 'bw' || m.k === 'bl') && [...st.a, ...st.b].includes(m.wid))); });
+  st[winSide].map(W).filter(Boolean).forEach(w => cmAdd(w, 'fw', { wid: st[lose][0], ev }));
+  st[lose].map(W).filter(Boolean).forEach(w => cmAdd(w, 'fl', { wid: st[winSide][0], ev }));
+}
+// a new feud between wrestlers with history starts hotter, once
+const CM_HEAT = { tw: 5, tl: 5, btd: 8, bt: 8, fw: 4, fl: 4, cl: 4, bw: 2, bl: 2 };
+function cmStoryHeat(st) {
+  if (!st || st.cmChk || st.status !== 'active') return;
+  st.cmChk = 1;
+  const sh = cmShared(st.a, st.b); if (!sh.length) return;
+  const seen = new Set(), add = Math.min(15, sh.reduce((s, m) => { if (seen.has(m.k + m.wk)) return s; seen.add(m.k + m.wk); return s + (CM_HEAT[m.k] || 0); }, 0));
+  if (add < 1) return;
+  const best = sh.slice().sort((a, b) => (CM_HEAT[b.k] || 0) - (CM_HEAT[a.k] || 0) || b.wk - a.wk)[0];
+  st.heat = clamp(st.heat + add, 0, 100);
+  st.log.unshift({ wk: G.week, text: `📖 The fans remember their history: ${memText(best).replace(/^./, c => c.toLowerCase())} (week ${best.wk}). +${add} heat.` });
+}
+// what a wrestler says about a memory, to the wrestler it's about
+const CM_LINES = {
+  tw: ['I took the {x} from you once, {T}. I\'ll do it again.', 'Week {wk}, {T}. I beat you for the {x}. Nothing has changed.'],
+  tl: ['You took my {x}, {T}. I want it back.', 'Every night I think about losing the {x} to you, {T}.'],
+  fw: ['I already beat you once, {T}. You remember how that ended.', 'We did this before, {T}, and I won. Why would this time be different?'],
+  fl: ['You won the last round, {T}. This time it ends differently.', 'I\'ve had a long time to think about losing to you, {T}.'],
+  btd: ['You stabbed me in the back, {T}. I will never forget it.', 'Week {wk}, you turned on me, {T}. Tonight you pay for it.'],
+  bt: ['I turned on you because you were holding me back, {T}. I\'d do it again.', 'Still crying about week {wk}, {T}? Get over it.'],
+  cl: ['We tore the house down at {ev}, {T}. Let\'s see if you can still keep up.'],
+  bw: ['I beat you at {ev}, {T}. I\'ll beat you again.'],
+  bl: ['You got lucky at {ev}, {T}. That won\'t happen twice.']
+};
+// a memory to brag about with nobody in front of them
+const CM_BRAG = {
+  tw: ['I won the {x}{at}. Name one other person back there who did that.'],
+  me: ['I main-evented {ev}. Not many people in that locker room can say that.'],
+  cl: ['I stole the show at {ev}. I\'ll do it again tonight.'],
+  fw: ['I ended my feud with {O} on my terms. Who\'s next?'],
+  bw: ['I beat {O} at {ev}. Remember that.']
+};
+const cmFill = (s, m, T) => s.replace(/\{T\}/g, T || '').replace(/\{x\}/g, m.x || 'title').replace(/\{ev\}/g, m.ev || 'the big show').replace(/\{at\}/g, cmAt(m)).replace(/\{wk\}/g, m.wk).replace(/\{O\}/g, (m.wid && W(m.wid)?.name) || m.on || 'them');
+// the line for this memory: aimed at the target when it's about them, a brag when it's their own moment
+function cmLine(m, tg) {
+  const T = tg && m.wid && tg.find(w => w.id === m.wid);
+  const pool = T ? CM_LINES[m.k] : CM_BRAG[m.k]; if (!pool) return '';
+  return cmFill(pool[(m.wk + G.week) % pool.length], m, T ? lastName(T) : '');
+}
+// which memory a promo uses: the one the booker picked, or the strongest one about the target
+function cmFor(seg, sp, tg) {
+  if (seg.mem === 'none') return null;
+  const all = sp.flatMap(cmOf);
+  if (seg.mem && seg.mem !== 'auto') { const m = all.find(x => cmKey(x) === seg.mem); if (m) return m; }
+  const ids = tg.map(w => w.id), about = all.filter(m => m.wid && ids.includes(m.wid) && CM_LINES[m.k]);
+  if (about.length) return about.sort((a, b) => Math.abs(b.v) - Math.abs(a.v) || b.wk - a.wk)[0];
+  // nobody in front of them: a recent proud moment to brag about
+  return tg.length ? null : all.filter(m => m.v > 0 && CM_BRAG[m.k] && G.week - m.wk <= 52).sort((a, b) => b.v - a.v || b.wk - a.wk)[0] || null;
+}
+// the promo's rating and heat from bringing up the past
+function cmPromo(seg, sp, tg, add) {
+  const m = cmFor(seg, sp, tg); if (!m) return { x: 0, h: 0 };
+  const picked = seg.mem && seg.mem !== 'auto', fits = m.wid && tg.some(w => w.id === m.wid);
+  if (fits) return { m, x: add(picked ? 3 : 1, picked ? 'Brought up their history: ' + CMK[m.k].n.toLowerCase() : 'History between them'), h: picked ? 4 : 1 };
+  if (!picked) return { x: 0, h: 0 };
+  if (m.v > 0 && CM_BRAG[m.k]) return { m, x: add(2, 'Bragged about a real career moment'), h: 0 };
+  return { m, x: add(-2, 'Brought up something that has nothing to do with this'), h: 0 };
+}
+// ---- contract talks ----
+// big moments in the last two years make a wrestler ask for more (up to 10%)
+const cmRecent = w => cmOf(w).filter(m => G.week - m.wk <= 104);
+function cmCase(w) {
+  const l = cmRecent(w).filter(m => m.v !== 0 && m.k !== 'sg'), seen = new Set(), items = [];
+  for (const m of l.sort((a, b) => Math.abs(b.v) - Math.abs(a.v) || b.wk - a.wk)) { if (seen.has(m.k)) continue; seen.add(m.k); items.push(m); if (items.length >= 3) break; }
+  const pct = clamp(items.reduce((s, m) => s + m.v * 1.5, 0), -5, 10);
+  return { items, pct };
+}
+const cmPay = w => 1 + cmCase(w).pct / 100;
+const CASE_SAY = {
+  tw: 'I held the {x}. You know what I\'m worth.', me: 'I main-evented {ev}. Pay me like a main eventer.', cl: 'I stole the show at {ev}. People talk about that match.',
+  fw: 'I won my feud with {O}. The fans bought every week of it.', bw: 'I beat {O} at {ev}. That\'s a big-show win.',
+  tl: 'I know I lost the {x}. I\'ll take a fair deal.', fl: 'I lost to {O}, I know. I\'m not asking for the world.', btd: 'After what {O} did to me, I just want somewhere I\'m looked after.', bl: 'I didn\'t win at {ev}. I know where I stand.'
+};
+const cmCaseSay = w => { const top = cmCase(w).items[0]; return top && CASE_SAY[top.k] ? cmFill(CASE_SAY[top.k], top) : ''; };
+// remind them: moments you gave them help, moments you made them suffer hurt
+const REMIND = { tw: 8, me: 5, cl: 4, fw: 4, bw: 2, tl: -6, fl: -4, btd: -5, bl: -3 };
+function cmRemind(w) {
+  const l = cmOf(w).filter(m => REMIND[m.k] != null), out = [], seen = new Set();
+  for (const m of l) { if (seen.has(m.k)) continue; seen.add(m.k); out.push(m); }
+  return out.sort((a, b) => REMIND[b.k] - REMIND[a.k]).slice(0, 4);
+}
+function remindPct(w, m) {
+  let p = REMIND[m.k] || 0;
+  if (m.k === 'tw' && cmOf(w).filter(x => x.k === 'tw').at(-1) === m) p += 3; // their first title
+  if (PER()) p *= w.pers === 'loyal' ? 1.5 : w.pers === 'money' ? .5 : w.pers === 'hot' && p < 0 ? 1.5 : 1;
+  return Math.round(p);
+}
+const REMIND_LBL = { tw: (m, P) => `You put the ${m.x || 'title'} on ${P.them}`, me: (m, P) => `You gave ${P.them} the ${m.ev} main event`, cl: (m, P) => `${P.Their} classic at ${m.ev}`, fw: (m, P) => `${P.Their} feud win over ${m.on}`, bw: (m, P) => `${P.Their} win at ${m.ev}`, tl: (m, P) => `You took the ${m.x || 'title'} off ${P.them}`, fl: (m, P) => `You had ${P.them} lose the feud with ${m.on}`, btd: (m, P) => `You booked ${m.on} to betray ${P.them}`, bl: (m, P) => `You had ${P.them} lose at ${m.ev}` };
+const remindLbl = (w, m) => { const mm = { ...m, on: (m.wid && W(m.wid)?.name) || m.on || 'a rival' }; return (m.k === 'tw' && cmOf(w).filter(x => x.k === 'tw').at(-1) === m ? `${pn(w).Their} first title came here` : REMIND_LBL[m.k](mm, pn(w))); };
+function remindSay(w, m) {
+  const p = remindPct(w, m);
+  if (p >= 6) return pick(['Yeah, you gave me my shot. I haven\'t forgotten that. Let\'s make this work.', 'You\'re right. You believed in me when nobody else did.', `That was the best night of my career. Fine, I\'m listening.`]);
+  if (p > 0) return pick(['That was a good night. Fair point.', 'Sure, I remember. It counts for something.']);
+  return pick([`You really want to bring that up? You're the one who booked it.`, `That's the night you threw me under the bus. Thanks for the reminder.`, 'I was trying to forget that, boss.']);
 }
 function textFrom(w, t, ask, x) {
   G.phone.unshift({ id: uid(), wk: G.week, wid: w.id, t, ask: ask || null, ans: null, read: false, ...x });
@@ -17081,9 +17297,10 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.93';
+const VERSION = '1.9.94';
 const WHATS_NEW = [
   ['🎭 Repackage a wrestler', 'Is someone stale? Open their profile and tap Repackage to give them a new name, character and look in the same workshop. Pick a character type (Monster, Cult leader, Rock star and more), then debut it overnight or take them off TV for 2 to 6 weeks of vignettes. You see the odds of a hit, a mixed reaction or a flop before you commit: stale characters, good talkers, a good fit and a longer build help, and changing a star the fans already love is a big risk. Past characters show on the profile, and a Debut / Return angle gets a boost for the new character.'],
+  ['📖 Career memories', 'Wrestlers now remember the big moments of their careers: titles won and lost, feuds, betrayals, classic matches and big event main events. They\'re on every profile. Promos quote them ("I took that title from you once"), and a new feud between two wrestlers with history starts hotter. In the promo editor, Bring up the past picks the memory a promo is about. In contract talks, big moments push the asking price up, and you can remind a wrestler of a great night you gave them. Bring up a bad one and they\'ll throw it back at you.'],
   ['🎨 One workshop for every design', 'Wrestler looks, championship belts and trophies now share the same editor: a live preview on top, then Templates, Surprise me and Undo, then tabs. The pixel face and full body are one editor now, with game templates (Luchador, Rock star, Royalty and more), your own saved looks, a teammate\'s look to copy, Undo, and any colour at all for skin, hair, gear, masks, headwear, bottoms and boots. Every icon in the game is now a symbol you can use: on a belt\'s centre or side plates, on a trophy or on top of it, and on a wrestler\'s chest, trunks or forehead. Trophies also get the belts\' engravings, ornate detail, a ring of gems, any base colour, and strap colours for a belt on a stand. Existing designs look exactly the same.'],
   ['🧍 Pronouns for every wrestler', 'Pick any wrestler\'s pronouns in their editor: he/him, she/her, they/them, he/they, she/they, any pronouns, or your own custom set (like xe/xem). Pronouns are separate from the division, so anyone can be in any division. Backstage events, texts, news, the Dirt Sheet, contract talks, Story Mode and more now use each wrestler\'s own pronouns. Usual follows the division (Women\'s she/her, Men\'s he/him, Open they/them). Pronouns go with shares, worlds and imports (add a Pronouns column), and you can add yours to your Community profile.'],
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
