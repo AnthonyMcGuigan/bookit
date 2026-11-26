@@ -920,6 +920,38 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .cut-x span { font-size: 12px; font-weight: 800; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 3px 9px; }
 .cut-x span:first-child { background: rgba(255,181,71,.18); border-color: rgba(255,181,71,.6); color: #ffcf5a; }
 .cut-c, .cs-c { display: grid; gap: 8px; margin-top: 10px; }
+/* backfires: a full-screen moment when something you did blows up in your face */
+.bf-cs { z-index: 96; }
+.bf-cs .cs-mid { background: radial-gradient(ellipse at 50% 32%, rgba(255,40,55,.55), transparent 70%); }
+.bf-cs .cs-rec { color: #ff5a64; }
+.bf-cs .cs-line { border-left-color: #ff3b48; }
+.bf-stamp-w { text-align: center; margin: 6px 0 26px; }
+.bf-stamp { display: inline-block; font-family: var(--f-display); font-size: 52px; line-height: 1; color: #ff3b48; border: 5px solid #ff3b48; border-radius: 10px; padding: 6px 14px 2px; letter-spacing: .06em; text-shadow: 0 0 24px rgba(255,40,60,.6); box-shadow: 0 0 30px rgba(255,40,60,.35), inset 0 0 18px rgba(255,40,60,.3); transform: rotate(-8deg); animation: bfStamp .5s cubic-bezier(.2,1.5,.4,1) .1s both; }
+@keyframes bfStamp { from { opacity: 0; transform: rotate(-8deg) scale(2.4); } to { opacity: 1; transform: rotate(-8deg) scale(1); } }
+.bf-cs .cs-mid { animation: bfShake .45s ease-out .45s; }
+@keyframes bfShake { 0%, 100% { transform: none; } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+.bf-cost { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; }
+.bf-cost span { font-size: 13px; font-weight: 800; padding: 5px 11px; border-radius: 999px; background: rgba(255,60,70,.18); border: 1px solid rgba(255,90,95,.7); color: #ff9aa1; }
+.bf-n { font-size: 12px; color: rgba(255,255,255,.6); text-align: center; margin-top: 10px; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .bf-stamp, .bf-cs .cs-mid { animation: none; } }
+.news.bfl, .dirt-row.bfl { background: color-mix(in srgb, var(--bad) 12%, transparent); border-left: 4px solid var(--bad); padding-left: 8px; border-radius: 6px; font-weight: 700; }
+.bf-tag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 1px 6px; border-radius: 5px; background: var(--bad); color: #fff; margin-right: 6px; vertical-align: 1px; }
+.paid-tag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 1px 6px; border-radius: 5px; background: var(--accent); color: var(--accent-ink); margin-right: 6px; vertical-align: 1px; }
+/* universe headlines */
+.uh-lead { border-radius: 14px; padding: 14px 14px 14px 18px; background: linear-gradient(160deg, var(--card2), var(--card)); border: 1px solid var(--line); margin-bottom: 10px; position: relative; overflow: hidden; }
+.uh-lead::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--co, var(--accent)); }
+.uh-k { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.uh-h { font-family: var(--f-display); font-size: 22px; line-height: 1.1; letter-spacing: .02em; margin: 6px 0 0; }
+.uh-row { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); align-items: flex-start; }
+.uh-row:first-child { border-top: 0; }
+.uh-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--co); }
+.uh-t { font-weight: 700; font-size: 14px; line-height: 1.35; }
+.uh-row.bfl { background: color-mix(in srgb, var(--bad) 12%, transparent); border-radius: 8px; padding-left: 6px; padding-right: 6px; }
+.uh-buy { display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 14px; border: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); margin-bottom: 12px; }
+.uh-opt { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); margin-bottom: 8px; color: inherit; font: inherit; }
+.uh-opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.uh-opt .ic-big { font-size: 22px; line-height: 1; }
+.risk { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); white-space: nowrap; }
 .cut-c .btn, .cs-c .btn { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 10px 14px; }
 .cut-c .btn span, .cs-c .btn span { font-size: 12px; opacity: .85; font-weight: 600; }
 .cs { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; color: #fff; background: rgba(6,4,10,.96); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: csIn .35s ease-out; }
@@ -1889,7 +1921,8 @@ const titlesOf = id => G.titles.filter(t => t.holder.includes(id));
 const storiesOf = id => G.stories.filter(s => s.status === 'active' && (s.a.includes(id) || s.b.includes(id)));
 const segPeople = s => s.kind === 'match' ? s.sides.flat() : [...(s.who || []), ...(s.target || [])];
 function autoTodo(key) { for (const t of G.todos || []) if (t.auto === key && !t.done) t.done = true; }
-function news(text, cat) { G.news.unshift({ wk: G.week, text, cat: cat || 'misc' }); if (G.news.length > 400) G.news.length = 400; }
+const newsRow = n => `<div class="news${n.bf ? ' bfl' : ''}"><span class="wk">WK ${n.wk}</span><span>${n.bf ? '<span class="bf-tag">BACKFIRED</span>' : ''}${esc(n.text)}</span></div>`;
+function news(text, cat, x) { G.news.unshift({ wk: G.week, text, cat: cat || 'misc', ...(x || {}) }); if (G.news.length > 400) G.news.length = 400; }
 function nm(id) { const w = W(id); if (!w) return 'Unknown'; return `<span class="n-${w.align}">${esc(w.name)}</span>`; }
 function nmList(ids, sep = ' & ') { return ids.map(nm).join(sep) || '<span class="muted">nobody yet</span>'; }
 
@@ -3327,7 +3360,7 @@ function yearEnd(world = true) {
     }
     for (const w of trainees()) w.age = (+w.age || 20) + 1;
     for (const w of G.wrestlers.filter(w => !w.retired && w.age >= 38 && (world || w.contract))) if (Math.random() < (w.age - 37) * 0.1 + (w.injury > 4 ? 0.1 : 0)) retire(w);
-    for (const r of world ? G.rivalPromos : []) r.roster = r.roster.filter(w => { const go = w.age >= 39 && Math.random() < (w.age - 38) * 0.12; if (go) news(`🎤 ${w.name} retired from ${r.name}.`, 'contract'); return !go; });
+    for (const r of world ? G.rivalPromos : []) r.roster = r.roster.filter(w => { const go = w.age >= 39 && Math.random() < (w.age - 38) * 0.12; if (go) wnews(`🎤 ${w.name} retired from ${r.name}${w.pop >= 55 ? ' after a big career' : ''}.`, r, w.pop >= 55); return !go; });
     for (const r of G.rivalPromos) setRivalChamp(r);
   }
   G.popAt = Object.fromEntries(G.wrestlers.map(w => [w.id, Math.round(w.pop)]));
@@ -4085,7 +4118,7 @@ function runShow(opts = {}) {
   // with the brand split on, every brand's show is an A show; B shows are the extra nights on a shared roster
   const bShow = !onMain() && !splitOn();
   const special = isSpecial(G.week) && !big; // a bonus TV special: bigger building, bigger TV money, more new fans
-  const attendance = Math.round(Math.min((big ? 22000 : bShow ? 4000 : 9000) * (special ? 1.5 : 1), G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype * (special ? 1.4 : 1) * (perk('crowd') ? 1.1 : 1)) * rnd(.93, 1.07));
+  const attendance = Math.round(Math.min((big ? 22000 : bShow ? 4000 : 9000) * (special ? 1.5 : 1), G.fans * (big ? 0.16 : bShow ? 0.035 : 0.07) * hype * (special ? 1.4 : 1) * (perk('crowd') ? 1.1 : 1)) * rnd(.93, 1.07) * (G.buzzShow?.wk === G.week ? G.buzzShow.x : 1));
   const fin = {
     gate: attendance * (big ? 50 : 25), tv: big ? 0 : Math.round(G.tv * (bShow ? 0.5 : 1) * (special ? 2 : 1)), ppv: big ? Math.round((perk('ppv') ? 1.1 : 1) * G.fans * 0.05 * hype * 12 * (1 + avg(card.filter(x => x.kind === 'match').map(x => x.hype || 0)) / 150) * (sg ? sgOn ? 1.1 : 0.92 : 1)) : 0,
     // a big event is an extra night: pay, merch and TV money come in with the weekly shows
@@ -4283,7 +4316,7 @@ function dirtWorld() {
   for (const x of G.wlog || []) if (x.wk === G.week && !out.includes(x.t)) out.push(x.t);
   const pub = /^(🏆 .* (won|cashed in and took)|💼 .*cashed in|👋|🎤|✍️|🩹|🔄|🛑|🚪|🏚️|🤝|🏟️)/u;
   for (const c of [G, ...(G.cos || [])]) for (const n of c.news || []) { if (n.wk < G.week) break; if (n.wk === G.week && pub.test(n.text) && !out.includes(n.text)) out.push(n.text); }
-  const rank = t => /🏆|💼/u.test(t) ? 0 : /🏚️|🤝|🏟️|🚪/u.test(t) ? 1 : /✍️|💰|👋/u.test(t) ? 2 : 3;
+  const rank = t => /^💥/u.test(t) ? -1 : /🏆|💼/u.test(t) ? 0 : /🏚️|🤝|🏟️|🚪/u.test(t) ? 1 : /✍️|💰|👋/u.test(t) ? 2 : 3;
   return out.sort((a, b) => rank(a) - rank(b)).slice(0, 8);
 }
 // rumours: built from what's really going on, plus some noise
@@ -4432,10 +4465,102 @@ const fitsT = (r, t, w) => t.div === "Women's" ? isWomen(w) : !(r.titles || []).
 const rivBig = (r, wk) => (wk + (r.off || 0)) % 4 === 0;
 const rivNext = r => { for (let k = G.week; k < G.week + 8; k++) if (rivBig(r, k)) return k; return G.week + 4; };
 const ppvName = (r, wk) => (r.ppvs?.length ? r.ppvs[Math.floor(wk / 4) % r.ppvs.length] : 'Big Event');
-function wnews(text, r, loud) {
-  G.wlog ||= []; G.wlog.unshift({ wk: G.week, t: text, ...(r ? { r: r.id } : {}) }); if (G.wlog.length > 80) G.wlog.length = 80;
+function wnews(text, r, loud, x) {
+  G.wlog ||= []; G.wlog.unshift({ wk: G.week, t: text, ...(r ? { r: r.id } : {}), ...(x || {}) }); if (G.wlog.length > 80) G.wlog.length = 80;
   if (r) { r.log ||= []; r.log.unshift({ wk: G.week, t: text }); if (r.log.length > 14) r.log.length = 14; }
   if (loud) news(text, 'office');
+}
+// ---------- universe headlines: kinds, extra news from the AI world, and headlines you pay for ----------
+// Every world news line has a kind for its colour and filter. Old lines get one from their icon.
+const UH_KINDS = {
+  title: ['Titles', '#ffb547', /^(🏆|👑|💼)/u], move: ['Signings', '#4fd98b', /^(🖊️|✍️|💰|📇|✂️|🎤)/u], hurt: ['Injuries', '#ff6470', /^(🚑|🩹|🤕)/u],
+  biz: ['Business', '#6cb6ff', /^(📈|📉|🏚️|🤝|🏟️|🚪|💸|🔁|🌍)/u], show: ['Shows', '#a463f2', /^(🎆|🌟|📺)/u], story: ['Stories', '#ff8a3d', /^(🔥|📣|⭐)/u],
+  paid: ['Paid', '#ffb547', null], bf: ['Backfired', '#ff3b48', null]
+};
+const uhKind = x => x.bf ? 'bf' : x.paid ? 'paid' : x.k && UH_KINDS[x.k] ? x.k : Object.keys(UH_KINDS).find(k => UH_KINDS[k][2]?.test(x.t)) || 'biz';
+const uhLead = x => { const k = uhKind(x); return k === 'bf' ? 0 : k === 'title' && /World|beat|won/.test(x.t) ? 1 : k === 'show' ? 2 : k === 'biz' ? 3 : k === 'paid' ? 4 : k === 'move' ? 5 : 6; };
+// what an AI company's week puts in the news, beyond the moves the AI makes
+function uhRival(r, big, best0) {
+  try {
+    const segs = r.card?.segs || [], main = segs.at(-1);
+    if (big && main && r.roster.length >= 6) {
+      const [w, l] = main.won === main.a ? [main.an, main.bn] : [main.bn, main.an];
+      wnews(`🎆 ${ppvName(r, G.week)}: ${w} beat ${l} in the main event${main.title && main.tn ? ` for the ${main.tn} title` : ''}. Rated ${r.last}.`, r);
+    }
+    if (r.last >= 82 && best0 && r.last > best0 && (r.hist || []).length >= 6) wnews(`🌟 ${r.name}'s ${r.show} scored ${r.last}, the best show in its history.`, r);
+    if (r.red === 1) wnews(`💸 Paychecks are late at ${r.name}. The locker room is nervous.`, r);
+    for (const t of r.titles || []) {
+      const wks = G.week - (t.since || G.week), hs = rHolders(r, t);
+      if (hs.length && (wks === 26 || wks === 52 || wks === 104)) wnews(`👑 ${hs.map(x => x.name).join(' & ')} ${hs.length > 1 ? 'have' : 'has'} held the ${t.name} for ${wks === 26 ? 'half a year' : wks === 52 ? 'a full year' : 'two years'}.`, r);
+    }
+  } catch (e) { console.warn('headlines', e); }
+}
+// once a world week: the best show anywhere, and your own milestones the world would notice
+function uhWeek() {
+  try {
+    const shows = dirtShows(), top = shows[0], next = top && shows.find(x => x.co !== top.co);
+    if (top && next && top.rating >= 75 && (!top.me || top.big || G.week % 2 === 0)) wnews(`📺 Show of the week: ${top.name} (${top.co}) scored ${top.rating}, ahead of ${next.co}'s ${next.name} at ${next.rating}.`, null, false, top.me ? { me: 1 } : undefined);
+    for (const t of G.titles || []) {
+      const wks = G.week - (t.since || G.week), hs = t.holder.map(W).filter(Boolean);
+      if (hs.length && (wks === 26 || wks === 52 || wks === 104)) wnews(`👑 ${hs.map(x => x.name).join(' & ')} ${hs.length > 1 ? 'have' : 'has'} held the ${G.promo.name} ${t.name} for ${wks === 26 ? 'half a year' : wks === 52 ? 'a full year' : 'two years'}.`, null, false, { me: 1 });
+    }
+  } catch (e) { console.warn('headlines', e); }
+}
+
+// ---------- paid headlines ----------
+// Pay the press to run a story. Two a week. Each kind has a small chance to come out as a paid plant,
+// which turns the story against you. Buying a lot in a short time makes that more likely.
+const BUZZ_MAX = 2;
+const BUZZ = {
+  star: { ic: '⭐', n: 'Hype a wrestler', d: w => `Talk up ${w ? w.name : 'one of your wrestlers'}. Popularity and momentum up.`, risk: .08, cost: () => 8000 + Math.round(G.fans * .25 / 1000) * 1000, who: 1 },
+  show: { ic: '📺', n: 'Sell your next show', d: () => `More fans at ${showName(G.week)} this week.`, risk: .1, cost: () => 12000 + Math.round(G.fans * .3 / 1000) * 1000 },
+  co: { ic: '🏟️', n: 'Talk up the company', d: () => `Fans and prestige up for ${G.promo.name}.`, risk: .12, cost: () => 20000 + Math.round(G.fans * .5 / 1000) * 1000 },
+  dig: { ic: '🗡️', n: 'Dig at a rival', d: r => `Run a story against ${r ? r.name : 'a rival company'}. They lose fans to you.`, risk: .2, cost: () => 15000 + Math.round(G.fans * .35 / 1000) * 1000, riv: 1 }
+};
+const buzzLeft = () => { const b = G.buzz; return BUZZ_MAX - (b && b.wk === G.week ? b.n : 0); };
+const buzzRecent = () => (G.buzz?.log || []).filter(x => G.week - x.wk < 4).length;
+const buzzRisk = k => clamp(BUZZ[k].risk + buzzRecent() * .03 + (k === 'co' && G.promo.prestige >= 80 ? .03 : 0) - staffQ('pr') * .01, .03, .4);
+const BUZZ_HEAD = {
+  star: w => pick([`${w.name} is the hottest name in wrestling, say people around the business`, `Sources: ${w.name} turned down a huge offer to stay with ${G.promo.name}`, `${w.name} is "ready for the top," according to veterans who've seen them`]),
+  show: () => pick([`Tickets are moving fast for ${showName(G.week)}: "Don't miss this one"`, `Word is ${showName(G.week)} has something big planned this week`, `Insiders call this week's ${showName(G.week)} a must-see`]),
+  co: () => pick([`${G.promo.name} is the company everyone in wrestling is watching`, `Wrestlers everywhere want to work for ${G.promo.name}, we hear`, `${G.promo.name} is on the rise, and the numbers back it up`]),
+  dig: r => pick([`Trouble at ${r.name}: the locker room has lost faith in management`, `${r.name}'s ratings slide has its TV partner worried`, `Talent at ${r.name} are said to be looking for the exit`])
+};
+const BUZZ_BAD = {
+  star: w => [`The press found out you paid for it`, `${DIRT_NAME} ran the receipts: ${G.promo.name} paid for the "${w.name}" story. Fans are making fun of it, and ${lastName(w)} is embarrassed.`],
+  show: () => [`The hype story got exposed`, `It came out that ${G.promo.name} paid for the buzz around ${showName(G.week)}. Some fans are staying home to make a point.`],
+  co: () => [`Caught buying good press`, `${DIRT_NAME} found the money trail: ${G.promo.name} paid for its own glowing coverage. The business is laughing.`],
+  dig: r => [`${r.name} fired back`, `${r.name} proved the story was planted by ${G.promo.name}. Fans feel sorry for them and the press turned on you.`]
+};
+function buzzBuy(k, id) {
+  const B = BUZZ[k]; if (!B || buzzLeft() <= 0) return 'No more headlines this week.';
+  const w = B.who ? W(id) : null, r = B.riv ? RV(id) : null;
+  if (B.who && !w?.contract) return 'Pick one of your wrestlers.';
+  if (B.riv && !r) return 'Pick a rival company.';
+  const cost = B.cost();
+  if (MON()) { if (G.money < cost) return 'Not enough money for that.'; G.money -= cost; }
+  const risk = buzzRisk(k);
+  G.buzz = { wk: G.week, n: (G.buzz?.wk === G.week ? G.buzz.n : 0) + 1, log: [{ wk: G.week, k }, ...(G.buzz?.log || [])].slice(0, 8) };
+  const head = BUZZ_HEAD[k](w || r);
+  wnews(`📢 "${head}"`, null, false, { paid: 1, me: 1 });
+  if (Math.random() < risk) {
+    const [h, d] = BUZZ_BAD[k](w || r), cost2 = [];
+    if (k === 'star') { const p = rint(3, 5); w.pop = clamp(w.pop - p, 1, 100); w.momentum = clamp((w.momentum || 0) - 10, -50, 50); remember(w, -5, 'You paid for a fake story about me'); w.morale = clamp(w.morale - 6, 0, 100); cost2.push(`Popularity −${p}`, 'Momentum −10', `${lastName(w)} morale −6`); }
+    if (k === 'show') { G.buzzShow = { wk: G.week, x: .85 }; const f = Math.round(G.fans * .01); G.fans = Math.max(1000, G.fans - f); cost2.push('Crowd −15% this week', `Fans −${kfmt(f)}`); }
+    if (k === 'co') { const f = Math.round(G.fans * .015); G.fans = Math.max(1000, G.fans - f); G.promo.prestige = clamp(G.promo.prestige - 3, 1, 100); cost2.push('Prestige −3', `Fans −${kfmt(f)}`); }
+    if (k === 'dig') { const f = Math.round(r.fans * .03); r.fans += f; G.promo.prestige = clamp(G.promo.prestige - 3, 1, 100); r.prestige = clamp(r.prestige + 2, 1, 100); cost2.push('Prestige −3', `${r.short} fans +${kfmt(f)}`); }
+    if (MON()) cost2.push(`${money(cost)} gone`);
+    wnews(`💥 Exposed: ${G.promo.name} paid for the "${head}" story.`, null, true, { bf: 1, me: 1 });
+    backfire({ src: 'Paid headline', h, d, ids: w ? [w.id] : [], cost: cost2, quiet: 1 });
+    return 'It backfired.';
+  }
+  let out;
+  if (k === 'star') { const p = rint(2, 4); addPop(w, p); w.momentum = clamp((w.momentum || 0) + 8, -50, 50); out = `${w.name}: popularity up, momentum +8.`; }
+  if (k === 'show') { G.buzzShow = { wk: G.week, x: 1.12 }; out = `${showName(G.week)}: about 12% more fans this week.`; }
+  if (k === 'co') { const f = Math.round(G.fans * .02 * Math.max(.2, 1 - G.fans / fanCap())); G.fans += f; G.promo.prestige = clamp(G.promo.prestige + 2, 1, 100); out = `+${kfmt(f)} fans, prestige +2.`; }
+  if (k === 'dig') { const f = Math.round(r.fans * .025); r.fans = Math.max(500, r.fans - f); G.fans += Math.round(f * .4); r.prestige = clamp(r.prestige - 1, 1, 100); out = `${r.name} lost about ${kfmt(f)} fans. You picked up ${kfmt(Math.round(f * .4))}.`; }
+  news(`📢 Your paid story ran: "${head}". ${out}`, 'office');
+  return `The story ran. ${out}`;
 }
 function makeRival(name, o = {}) {
   name = String(name || 'Rival Promotion').slice(0, 40);
@@ -4698,7 +4823,7 @@ function rivalPlan(r) {
     if (r.feuds.length >= nf) break;
     const c = rW(r, t.holder[0]); if (!c || busy().has(c.id) || c.injury) continue;
     const ch = r.roster.filter(w => w !== c && !busy().has(w.id) && !w.injury && fitsT(r, t, w) && !r.titles.some(x => x.holder.includes(w.id))).sort((a, b) => (b.pop + pushB(r, b) + (b.align !== c.align ? 8 : 0) + (b.momentum || 0) / 2) - (a.pop + pushB(r, a) + (a.align !== c.align ? 8 : 0) + (a.momentum || 0) / 2))[0];
-    if (ch && Math.random() < 0.6) r.feuds.push({ id: uid(), a: ch.id, b: c.id, tid: t.id, heat: rint(10, 25), start: G.week });
+    if (ch && Math.random() < 0.6) { r.feuds.push({ id: uid(), a: ch.id, b: c.id, tid: t.id, heat: rint(10, 25), start: G.week }); if (c.pop >= 45 && Math.random() < 0.6) wnews(`🔥 ${r.name}: ${ch.name} is coming for ${c.name} and the ${t.name}.`, r); }
   }
   while (r.feuds.length < nf) {
     const b = busy(), pool = r.roster.filter(w => !b.has(w.id) && !w.injury);
@@ -4815,7 +4940,9 @@ function rivalWeek(world = true) {
     const stars = top.length ? avg(top.map(w => (w.pop + overall(w)) / 2)) : 30;
     r.last = segs.length ? Math.round(clamp(card * 0.45 + stars * 0.3 + r.prestige * 0.15 + 4 + rnd(-4, 4) + (sup ? 8 : 0), 25, 97)) : 30;
     r.hist = [...(r.hist || []).slice(-11), r.last];
+    const best0 = Math.max(0, ...(r.hist || []).slice(0, -1));
     rivalBooks(r, big);
+    uhRival(r, big, best0);
     r.prestige = clamp(r.prestige + (r.last - r.prestige) * 0.03, 1, 100);
     if (r.counter && r.counter < G.week) delete r.counter;
     rivalPlan(r); if (!r.manual) rivalMoves(r); rivTitles(r); setRivalChamp(r);
@@ -4829,6 +4956,7 @@ function rivalWeek(world = true) {
     const r = G.rivalPromos.filter(r => r.roster.length >= 6).sort((a, b) => b.prestige - a.prestige)[0];
     if (r) { r.counter = G.week + 2; news(`📺 ${r.name} is running a loaded ${r.show} against ${bigName(G.week + 2)} in 2 weeks. If they beat you that night, they take twice the fans.`, 'office'); }
   }
+  if (world) uhWeek();
   // the ratings war: a rival that beats your show takes a few of your fans
   const last = G.history.at(-1), best = G.rivalPromos.filter(r => r.roster.length).sort((a, b) => b.last - a.last)[0];
   if (last && best && last.wk === G.week) {
@@ -5483,7 +5611,7 @@ const EVENTS = {
     choices: () => [['Rest them this week', 'Safe. They miss one show'], ['Let them work', 'Probably fine. Probably']],
     pick(i, d) { const w = W(d.a);
       if (i === 0) { w.injury = 1; return `${w.name} sits out this week to heal up.`; }
-      if (Math.random() < .35) { w.injury = rint(2, 4); news(`🩹 ${w.name} worked through it and made it worse: out ${w.injury} weeks.`, 'injury'); return `Bad call: ${w.name} is out ${w.injury} weeks.`; }
+      if (Math.random() < .35) { w.injury = rint(2, 4); backfire({ src: 'Injury scare', h: `${w.name} made it worse`, d: `You let ${w.name} work through it. It wasn't fine: out ${w.injury} weeks.`, ids: [w.id], cost: [`Out ${w.injury} weeks`], cat: 'injury' }); return `Bad call: ${w.name} is out ${w.injury} weeks.`; }
       w.morale = clamp(w.morale + 3, 0, 100); return `${w.name} is fine and appreciated your trust.`; }
   },
   raid: {
@@ -5537,7 +5665,7 @@ Object.assign(EVENTS, {
     pick(i, d) { const w = W(d.a), r = RV(d.r); if (!w?.contract || !r) return 'The offer fell through.';
       if (i === 0) { if (MON()) w.contract.salary = Math.round(w.contract.salary * 1.25 / 100) * 100; else G.todos.unshift({ t: `Give ${w.name} a big win (you promised a push)`, done: false }); w.morale = clamp(w.morale + 8, 0, 100); return `${w.name} is staying${MON() ? ' on a raise' : ''}.`; }
       if (i === 1) { w.morale = clamp(w.morale - 12, 0, 100);
-        if (w.morale < 45 && Math.random() < .4) { leaveCompany(w, 'forced their way out'); goRival(w, r.name); if (MON()) G.money += Math.round(d.amt / 2000) * 1000; news(`💼 ${w.name} forced their way out and joined ${r.name}.`, 'contract'); return `${w.name} forced their way out to ${r.name}${MON() ? ' for a smaller buyout' : ''}.`; }
+        if (w.morale < 45 && Math.random() < .4) { leaveCompany(w, 'forced their way out'); goRival(w, r.name); if (MON()) G.money += Math.round(d.amt / 2000) * 1000; backfire({ src: 'Contract standoff', h: `${w.name} forced their way out`, d: `You held ${w.name} to their contract. They made life so hard backstage that they got out anyway, and joined ${r.name}.`, ids: [w.id], cost: [`${lastName(w)} joined ${r.short || r.name}`, MON() ? 'Smaller buyout' : ''], cat: 'contract' }); return `${w.name} forced their way out to ${r.name}${MON() ? ' for a smaller buyout' : ''}.`; }
         return `${w.name} stays, but they're not happy about it.`; }
       if (MON()) G.money += d.amt; leaveCompany(w, 'left for a rival'); goRival(w, r.name); news(`💼 ${w.name} left for ${r.name}${MON() ? ' for a ' + money(d.amt) + ' buyout' : ''}.`, 'contract'); return `${w.name} is off to ${r.name}.`; }
   },
@@ -5582,7 +5710,7 @@ Object.assign(EVENTS, {
       if (i === 0) { seg.winner = side; w.morale = clamp(w.morale + 4, 0, 100); return `${w.name} goes over tonight.`; }
       if (i === 2) { seg.winner = -1; return 'The match will decide it.'; }
       w.morale = clamp(w.morale - 12, 0, 100);
-      if (Math.random() < .25) { removeFromSeg(seg, w.id); news(`😠 ${w.name} walked out before the show.`, 'office'); return `${w.name} walked out. Find a replacement for their match.`; }
+      if (Math.random() < .25) { removeFromSeg(seg, w.id); backfire({ src: 'Hold firm', h: `${w.name} walked out`, d: `You held firm on the finish. ${w.name} packed their bag and left the building before the show. Their match needs a replacement.`, ids: [w.id], cost: ['Morale −12', 'Gone from the card'] }); return `${w.name} walked out. Find a replacement for their match.`; }
       return `${w.name} will do the job, but they're angry.`; }
   },
   creative: {
@@ -5680,7 +5808,7 @@ Object.assign(EVENTS, {
     choices: () => [['Let it get heated', 'Story heat goes up. It might get messy'], ['Keep them apart', 'Do the interviews one at a time']],
     pick(i, d) { const st = G.stories.find(s => s.id === d.sid); if (i || !st) return 'Two calm interviews. Nothing changes.';
       st.heat = clamp(st.heat + 8, 0, 100); st._touched = G.week; (st.log ||= []).push({ wk: G.week, text: 'Things got heated at a press event.' });
-      if (Math.random() < .3) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return `${st.title} heat +8. It got out of hand, and the press noticed (prestige −1).`; }
+      if (Math.random() < .3) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); backfire({ src: 'Press event', h: 'It got out of hand', d: `The press event turned into a real fight, and the press made ${G.promo.name} look bad.`, ids: [d.a, d.b], cost: ['Prestige −1', 'Story heat +8'] }); return `${st.title} heat +8. It got out of hand, and the press noticed (prestige −1).`; }
       return `They had to be pulled apart. ${st.title} heat +8.`; }
   },
   fanShirt: {
@@ -5719,7 +5847,7 @@ Object.assign(EVENTS, {
     choices: () => [['Rest them a week', 'They miss this week and come back fresh'], ['Keep them working', 'They\'d rather work. It could catch up with them']],
     pick(i, d) { const w = W(d.a); if (!w) return 'Never mind.';
       if (i === 0) { w.injury = 1; w.fatigue = Math.max(0, (w.fatigue || 0) - 35); return `${w.name} sits out this week to recharge.`; }
-      evMood(w, 2); if (Math.random() < .25) { w.injury = rint(1, 3); news(`🩹 ${w.name} was worn down and got hurt: out ${w.injury} week${w.injury === 1 ? '' : 's'}.`, 'injury'); return `The doctor was right: ${w.name} is out ${w.injury} week${w.injury === 1 ? '' : 's'}.`; }
+      evMood(w, 2); if (Math.random() < .25) { w.injury = rint(1, 3); backfire({ src: "Doctor's orders", h: `${w.name} broke down`, d: `You kept ${w.name} working against the doctor's advice. They got hurt: out ${w.injury} week${w.injury === 1 ? '' : 's'}.`, ids: [w.id], cost: [`Out ${w.injury} week${w.injury === 1 ? '' : 's'}`], cat: 'injury' }); return `The doctor was right: ${w.name} is out ${w.injury} week${w.injury === 1 ? '' : 's'}.`; }
       return `${w.name} pushes through.`; }
   },
   ringTrouble: {
@@ -5727,7 +5855,7 @@ Object.assign(EVENTS, {
     title: '🔧 Ring trouble', text: d => vary(d, `The ring crew says the boards are cracked. A proper fix costs ${money(d.c)}.`, `A ring rope snapped at a house show. The crew wants ${money(d.c)} for new ropes and posts.`, `The ring crew flagged a problem: the ring needs ${money(d.c)} of repairs to be safe.`),
     choices: d => [['Pay for the fix', `−${money(d.c)}. Everyone is safe`], ['Patch it up', 'Free, but someone might get hurt']],
     pick(i, d) { if (i === 0) { G.money -= d.c; return 'The ring is good as new.'; }
-      const w = Math.random() < .3 && pick(healthy()); if (w) { w.injury = rint(1, 3); news(`🔧 ${w.name} got hurt on the patched-up ring: out ${w.injury} week${w.injury === 1 ? '' : 's'}.`, 'injury'); return `The patch gave way. ${w.name} is out ${w.injury} week${w.injury === 1 ? '' : 's'}.`; }
+      const w = Math.random() < .3 && pick(healthy()); if (w) { w.injury = rint(1, 3); backfire({ src: 'Ring trouble', h: 'The patch gave way', d: `You patched the ring instead of fixing it. ${w.name} went through the boards and is out ${w.injury} week${w.injury === 1 ? '' : 's'}.`, ids: [w.id], cost: [`${lastName(w)} out ${w.injury} week${w.injury === 1 ? '' : 's'}`], cat: 'injury' }); return `The patch gave way. ${w.name} is out ${w.injury} week${w.injury === 1 ? '' : 's'}.`; }
       return 'The patch held. This time.'; }
   },
   celeb: {
@@ -5736,15 +5864,15 @@ Object.assign(EVENTS, {
     choices: () => [['Put them on TV', 'New fans tune in. Hardcore fans might roll their eyes'], ['No thanks', 'Keep it about the wrestling']],
     pick(i, d) { if (i) return 'You kept the show about the wrestling.';
       const f = Math.round(G.fans * .012 * evRoom()); G.fans += f;
-      if (Math.random() < .35) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return `+${kfmt(f)} fans, but long-time fans weren't happy (prestige −1).`; }
+      if (Math.random() < .35) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); backfire({ src: 'Celebrity guest', h: 'Long-time fans hated it', d: `${d.cel} brought new viewers, but your loyal fans felt the show wasn't about wrestling anymore.`, cost: ['Prestige −1', `+${kfmt(f)} fans`] }); return `+${kfmt(f)} fans, but long-time fans weren't happy (prestige −1).`; }
       return `The cameo was a hit: +${kfmt(f)} fans.`; }
   },
   rivalTrash: {
     when() { ensureRivals(); const r = bigRival(); return r && { r: r.id }; },
     title: '🗞️ Trash talk', text: d => vary(d, `The owner of ${RV(d.r)?.name || 'a rival company'} told a podcast your company is "a joke with a TV deal".`, `${RV(d.r)?.name || 'A rival company'} put out a statement calling your roster "our leftovers".`, `${RV(d.r)?.name || 'A rival company'} is trashing your company all over social media.`),
     choices: () => [['Fire back on TV', 'Your locker room loves it. It could turn ugly'], ['Take the high road', 'You look professional']],
-    pick(i) { if (i) { G.promo.prestige = clamp(G.promo.prestige + 1, 1, 100); return 'You stayed classy. Prestige +1.'; }
-      for (const w of signed()) evMood(w, 2); if (Math.random() < .3) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); return 'The locker room is fired up, but it got petty (prestige −1).'; } return 'The locker room is fired up.'; }
+    pick(i, d) { if (i) { G.promo.prestige = clamp(G.promo.prestige + 1, 1, 100); return 'You stayed classy. Prestige +1.'; }
+      for (const w of signed()) evMood(w, 2); if (Math.random() < .3) { G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); backfire({ src: 'Trash talk', h: 'It got petty', d: `Firing back on TV turned into a playground fight with ${RV(d?.r)?.name || 'a rival company'}. The press made fun of both of you.`, cost: ['Prestige −1'] }); return 'The locker room is fired up, but it got petty (prestige −1).'; } return 'The locker room is fired up.'; }
   },
   streamDeal: {
     when() { if (G.history.length < 8 || Math.random() > .4) return null; return { amt: MON() ? Math.max(5000, Math.round(G.fans * .15 / 1000) * 1000) : 0 }; },
@@ -5758,7 +5886,7 @@ Object.assign(EVENTS, {
     choices: () => [['Bring them back', 'They can work this week. It\'s a risk'], ['Let them heal fully', 'Safe, but they\'re itching to get back']],
     pick(i, d) { const w = W(d.a); if (!w || !w.injury) return 'They\'re already back.';
       if (i) { evMood(w, -2); return `${w.name} heals up properly.`; }
-      w.injury = 0; evMood(w, 4); if (Math.random() < .25) { w.injury = rint(2, 5); news(`🩹 ${w.name} came back too soon: out ${w.injury} more weeks.`, 'injury'); return `Too soon. ${w.name} is out ${w.injury} more weeks.`; }
+      w.injury = 0; evMood(w, 4); if (Math.random() < .25) { w.injury = rint(2, 5); backfire({ src: 'Cleared early', h: `${w.name} came back too soon`, d: `You brought ${w.name} back early. The injury flared up again: out ${w.injury} more weeks.`, ids: [w.id], cost: [`Out ${w.injury} more weeks`], cat: 'injury' }); return `Too soon. ${w.name} is out ${w.injury} more weeks.`; }
       return `${w.name} is back and ready to work.`; }
   },
   jealous: {
@@ -5803,7 +5931,7 @@ Object.assign(EVENTS, {
       if (i) { evMood(w, -5); return `${w.name} stays, but they wanted that fight.`; }
       for (const seg of G.card) removeFromSeg(seg, w.id); w.mediaWk = G.week;
       if (Math.random() < .6) { addPop(w, 6); w.momentum = clamp(w.momentum + 12, -50, 50); news(`🥊 ${w.name} won a crossover fight. The sports world is talking.`, 'office'); return `${w.name} won the fight! A much bigger name now.`; }
-      addPop(w, 2); w.momentum = clamp(w.momentum - 6, -50, 50); if (Math.random() < .15) w.injury = 2; news(`🥊 ${w.name} lost a crossover fight.`, 'office'); return `${w.name} lost the fight${w.injury ? ' and got hurt' : ''}, but people noticed.`; }
+      addPop(w, 2); w.momentum = clamp(w.momentum - 6, -50, 50); if (Math.random() < .15) w.injury = 2; backfire({ src: 'Crossover fight', h: `${w.name} lost the fight`, d: `${w.name} lost in front of the whole sports world${w.injury ? ' and got hurt doing it' : ''}. At least people noticed.`, ids: [w.id], cost: ['Momentum −6', w.injury ? 'Out 2 weeks' : ''] }); return `${w.name} lost the fight${w.injury ? ' and got hurt' : ''}, but people noticed.`; }
   },
   legend: {
     when() { const r = pick(G.wrestlers.filter(w => w.retired && w.pop >= 40)); return { lg: r ? r.name : 'A Hall of Fame legend' }; },
@@ -6329,7 +6457,8 @@ function maybeBlast(w, why, x = {}) {
   remember(w, -2, why === 'lowball' ? 'I went public about your lowball offer' : 'I went public about your broken promise');
   const t = blastText(w, why, x), shares = Math.round((w.pop * w.pop * 3 + rint(50, 400)) / 10) * 10;
   textFrom(w, t, null, { social: { why, sev, shares, lost } });
-  news(`📢 ${w.name} blasted ${G.promo.name} on social media${why === 'lowball' ? ' over a lowball offer' : ` over a broken promise (${x.what})`}. Prestige -${sev}, about ${kfmt(lost)} fans turned away.`, 'contract');
+  news(`📢 ${w.name} blasted ${G.promo.name} on social media${why === 'lowball' ? ' over a lowball offer' : ` over a broken promise (${x.what})`}. Prestige -${sev}, about ${kfmt(lost)} fans turned away.`, 'contract', { bf: 1 });
+  backfire({ src: why === 'lowball' ? 'Lowball offer' : 'Broken promise', h: `${w.name} went public`, d: `"${t}" ${shares.toLocaleString()} shares and counting. Answer it from your phone.`, ids: [w.id], cost: [`Prestige −${sev}`, `Fans −${kfmt(lost)}`, 'Indie stars warier'], quiet: 1 });
   return true;
 }
 // how you answer a post. Signed wrestlers and free agents get different options.
@@ -6347,7 +6476,7 @@ function blastAnswer(m, i) {
     if (i === 1) { if (MON()) G.money += blastFine(w); remember(w, -8, 'You fined me for my post'); w.morale = clamp(w.morale - 8, 0, 100); G.promo.prestige = clamp(G.promo.prestige + Math.ceil(sv / 2), 1, 100); m.res = MON() ? `Fined ${money(blastFine(w))}.` : 'You laid down the law.'; return `${w.name} was ${MON() ? 'fined' : 'disciplined'}. The locker room got the message.`; }
     // a worked shoot: it works if they're on your side, it can blow up if they aren't
     if (Math.random() < clamp(.35 + (w.trust ?? 50) / 100 + w.cha / 400, .2, .9)) { addPop(w, 3); w.momentum = clamp((w.momentum || 0) + 6, -50, 50); G.promo.prestige = clamp(G.promo.prestige + sv, 1, 100); cool(0); remember(w, 3, 'You turned my rant into a storyline'); m.res = 'Fans think it was all part of the show.'; return `It worked. Fans think ${w.name}'s rant was a storyline.`; }
-    remember(w, -4, 'You tried to use my rant on TV'); G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); m.res = 'They went off script. It made things worse.'; return `${w.name} went off script. It made things worse.`;
+    remember(w, -4, 'You tried to use my rant on TV'); G.promo.prestige = clamp(G.promo.prestige - 1, 1, 100); backfire({ src: 'Put it on TV', h: `${w.name} went off script`, d: `You tried to turn ${w.name}'s rant into a storyline. They meant every word, said it live, and made things worse.`, ids: [w.id], cost: ['Prestige −1', `${lastName(w)} trust −4`] }); m.res = 'They went off script. It made things worse.'; return `${w.name} went off script. It made things worse.`;
   }
   if (i === 0) { remember(w, 8, 'You apologized after my post'); if (w.refusedWk === G.week) delete w.refusedWk; cool(.5); m.res = 'They\'ll hear a new offer.'; return `${w.name} will hear a new offer this week.`; }
   m.res = 'You let it blow over.'; return 'You let it blow over.';
@@ -6573,6 +6702,28 @@ function iconize(html) {
   }).replace(/(<\/svg>) {2,}/g, '$1 ');
 }
 
+// ---------- backfires ----------
+// Anything that blows up in your face goes through backfire(): it queues a full-screen moment that shows as soon as
+// nothing else is open, and marks the news line in red. G.bfq [{id, wk, src, h, d, ids, cost}]
+function backfire(o) {
+  G.bfq ||= [];
+  G.bfq.push({ id: uid(), wk: G.week, src: String(o.src || 'Backstage'), h: String(o.h || 'It backfired'), d: String(o.d || ''), ids: (o.ids || []).filter(Boolean).slice(0, 3), cost: (o.cost || []).filter(Boolean).slice(0, 5) });
+  if (G.bfq.length > 6) G.bfq.splice(0, G.bfq.length - 6);
+  if (!o.quiet) news(o.d || o.h, o.cat || 'office', { bf: 1 });
+}
+function bfView() {
+  const q = G?.bfq; if (!q?.length || UI.modal || UI.picker || UI.wiz) return '';
+  const b = q[0], ws = b.ids.map(W).filter(Boolean);
+  if (bfView.last !== b.id) { bfView.last = b.id; try { SFX.crowd('boo', .7, .15); } catch (e) {} }
+  return `<div class="cs bf-cs" role="alertdialog" aria-modal="true" aria-label="It backfired: ${esc(b.h)}"><div class="cs-bar"></div><div class="cs-mid"><div class="cs-top"><span class="cs-rec">⚠️ IT BACKFIRED</span><button class="cs-skip" data-act="bfGo">Continue ›</button></div>
+    <div class="bf-stamp-w"><span class="bf-stamp">BACKFIRE</span></div>
+    <div class="cs-loc">${esc(b.src)} · Week ${b.wk}</div><div class="cs-t" style="font-size:30px">${esc(b.h)}</div>
+    ${ws.length ? `<div class="cs-f">${ws.map(w => momFace(w, ws.length > 1 ? 72 : 96)).join('')}</div>` : ''}
+    ${b.d ? `<div class="cs-line">${esc(b.d)}</div>` : ''}
+    ${b.cost.length ? `<div class="bf-cost">${b.cost.map(c => `<span>${esc(c)}</span>`).join('')}</div>` : ''}
+    <div class="cs-c"><button class="btn pri" data-act="bfGo" style="align-items:center">${q.length > 1 ? 'Next' : 'Deal with it'}</button></div>
+    ${q.length > 1 ? `<div class="bf-n">${q.length - 1} more backfire${q.length > 2 ? 's' : ''} to see</div>` : ''}</div><div class="cs-bar"></div></div>`;
+}
 function toast(msg) {
   const el = document.getElementById('toast');
   el.innerHTML = iconize(`<div class="toast">${esc(String(msg).replace(EMO_RE, '').trim())}</div>`);
@@ -7083,7 +7234,8 @@ function render() {
   navHeight();
   // keep the open sheet's scroll position when it re-renders (e.g. tapping options in the builder)
   const mbOld = modals.querySelector('.modal-bg:not(.picker-bg) .mb'), keyOld = lastModalKey, scOld = mbOld ? mbOld.scrollTop : 0;
-  modals.innerHTML = iconize(renderModal() + renderPicker());
+  modals.innerHTML = iconize(renderModal() + renderPicker() + bfView());
+  if (G.bfq?.length && modals.querySelector('.bf-cs') && !modals.contains(document.activeElement)) modals.querySelector('.bf-cs .btn.pri')?.focus({ preventScroll: true });
   const mbNew = modals.querySelector('.modal-bg:not(.picker-bg) .mb');
   if (mbNew && scOld && keyOld === lastModalKey) mbNew.scrollTop = scOld;
   // the week strip: keep the show being booked in view
@@ -7197,7 +7349,7 @@ function viewHome() {
   ${hot.length ? `<div class="sec">Hottest stories <span class="sp"></span><button class="btn sm" data-act="tab" data-id="stories">All</button></div><div class="list">${hot.map(s => `<button class="item" data-act="openStory" data-id="${s.id}"><div class="main"><div class="t">${esc(s.title)}</div><div class="d">${nmList(s.a)} <span class="vs">VS</span> ${nmList(s.b)}</div>${heatBar(s.heat)}</div></button>`).join('')}</div>` : ''}
   <div class="sec">Champions</div><div class="list">${champs}</div>
   <div class="sec">Latest news <span class="sp"></span><button class="btn sm" data-act="notesTab" data-id="news">All news</button></div>
-  <div class="card" style="padding:4px 14px">${G.news.slice(0, 6).map(n => `<div class="news"><span class="wk">WK ${n.wk}</span><span>${esc(n.text)}</span></div>`).join('')}</div>
+  <div class="card" style="padding:4px 14px">${G.news.slice(0, 6).map(newsRow).join('')}</div>
   ${last ? `<button class="btn block" data-act="recap" data-id="${last.wk}">See last show's full results</button>` : ''}`;
 }
 
@@ -7524,7 +7676,7 @@ function rivalsView() {
   return `${SANDBOX() ? `<div class="alert good" style="margin-bottom:10px"><span class="ic">🛠️</span><div class="small"><b>Sandbox is on.</b> Edit any company, its titles and roster, build wrestlers and move anyone anywhere. Open a company and tap <b>Take over</b> to run it yourself. Then share the world: players who start in it play normally. Switch it off in Menu → Settings.</div></div>` : ''}<div class="card" style="margin-bottom:10px"><div class="sec" style="margin-top:0">🌍 The wrestling world</div>
     <div class="row tiny muted" style="padding-bottom:4px"><span class="sp">Company</span><span style="width:64px;text-align:right">Fans</span><span style="width:44px;text-align:right">Show</span></div>
     ${all.map((x, i) => `<div class="row small" style="padding:3px 0"><span class="sp clip">${i + 1}. ${x.me ? `<b>${esc(x.name)} (you)</b>` : esc(x.name)} <span class="tag">${x.tier}</span></span><span style="width:64px;text-align:right">${kfmt(x.fans)}</span><b style="width:44px;text-align:right">${x.r || '–'}</b></div>`).join('')}
-    ${wl.length ? `<div class="sec">Around the world</div>${wl.map(x => `<div class="small" style="padding:3px 0">${esc(x.t)} <span class="tiny muted">wk ${x.wk}</span></div>`).join('')}<div class="grid2" style="margin-top:8px"><button class="btn sm" data-act="worldNews">All world news</button><button class="btn sm" data-act="notesTab" data-id="dirt">🗞️ Dirt sheet</button></div>` : ''}</div>
+    <div class="sec">Universe headlines</div>${wl.length ? `<div>${wl.map(uhRow).join('')}</div>` : '<div class="tiny muted">Nothing yet. Run a few shows and the rest of the world will make news.</div>'}<div class="grid2" style="margin-top:8px"><button class="btn sm" data-act="worldNews">All headlines</button><button class="btn sm" data-act="buzz" data-id="star" ${buzzLeft() > 0 ? '' : 'disabled'}>📢 Buy a headline</button></div></div>
   <div class="list">${rs.map(r => { const c = rivalW(r.champId), ph = philOf(r); return `<button class="item" data-act="openRival" data-id="${r.id}">${rivAv(r)}<div class="main"><div class="t">${esc(r.name)} <span class="tag">${tierOf(r)}</span></div><div class="d">${ph.ic} ${ph.n} · ${r.roster.length} wrestlers · ${kfmt(r.fans)} fans${c ? ' · champ ' + esc(c.name) : ''}</div></div></button>`; }).join('') || '<div class="empty">No rival promotions right now.</div>'}</div>
   <div class="grid2" style="margin-top:12px"><button class="btn" data-act="newRival">+ Create a rival</button><button class="btn" data-act="community">From Community</button></div>
   <button class="btn block" style="margin-top:8px" data-act="shareWorld">🌍 Share this world</button>
@@ -7554,11 +7706,40 @@ function modalRival(m) {
     <div class="list">${r.roster.slice().sort((a, b) => b.pop - a.pop).map(w => { const t = tOf(w); return `<div class="item">${av(w)}<div class="main"><div class="t"><span class="n-${w.align === 'heel' ? 'heel' : 'face'}">${esc(w.name)}</span>${t ? ` <span class="tag gold">${esc(t.short)} champ</span>` : ''}${pushB(r, w) ? ' <span class="tag">⭐ Push</span>' : ''}${w.injury ? ' <span class="tag">🚑 Hurt</span>' : ''}</div><div class="d">${esc(w.style)} · Pop ${Math.round(w.pop)} · OVR ${overall(w)} · ${lenLabel(Math.max(1, w.rWeeks || 1))} left</div></div><button class="btn sm" data-act="poach" data-id="${w.id}">${SANDBOX() ? 'Take' : 'Sign'}</button></div>`; }).join('') || '<div class="empty">Nobody signed yet.</div>'}</div>`;
   return modal(esc(r.name), body, `<button class="btn" data-act="rivalCode" data-id="${r.id}">Share code</button>${SANDBOX() ? `<button class="btn" data-act="rivRoster" data-id="${r.id}">👥 Roster</button>` : ''}<button class="btn pri" data-act="editRival" data-id="${r.id}">Edit</button>`);
 }
-function modalWorldNews() {
-  const wl = G.wlog || [];
-  let wk = null;
-  const body = wl.length ? wl.map(x => { const h = x.wk !== wk ? `<div class="sec">Week ${x.wk}</div>` : ''; wk = x.wk; return h + `<div class="small" style="padding:3px 0">${esc(x.t)}</div>`; }).join('') : '<div class="empty">Nothing yet. Run a few shows and the rest of the world will make news.</div>';
-  return modal('🌍 World news', body);
+const uhText = x => String(x.t).replace(EMO_RE, '').trim();
+function uhRow(x) {
+  const k = uhKind(x), K = UH_KINDS[k];
+  return `<div class="uh-row${k === 'bf' ? ' bfl' : ''}" style="--co:${K[1]}"><span class="uh-dot"></span><div class="sp"><div class="uh-k">${k === 'bf' ? '<span class="bf-tag">BACKFIRED</span>' : k === 'paid' ? '<span class="paid-tag">PAID</span>' : esc(K[0])}${(c => c ? (k === 'bf' || k === 'paid' ? '' : ' · ') + esc(c) : '')(x.r && RV(x.r) ? RV(x.r).name : x.me ? G.promo.name : '')}</div><div class="uh-t">${esc(uhText(x))}</div></div></div>`;
+}
+function buzzCard() {
+  const n = buzzLeft();
+  return `<div class="uh-buy"><div style="font-size:26px">📢</div><div class="sp"><b>Buy a headline</b><div class="tiny muted">${n > 0 ? `Pay the press to run your story. ${n} left this week. Small chance it backfires.` : 'You bought both headlines this week. Two more next week.'}</div></div><button class="btn sm pri" data-act="buzz" data-id="star" ${n > 0 ? '' : 'disabled'}>Buy</button></div>`;
+}
+function modalWorldNews(m) {
+  const wl = G.wlog || [], f = m?.f || 'all';
+  const fl = wl.filter(x => f === 'all' || (f === 'me' ? x.me : uhKind(x) === f));
+  const lw = wl[0]?.wk, lead = f === 'all' && wl.filter(x => x.wk === lw).sort((a, b) => uhLead(a) - uhLead(b))[0];
+  const chips = [['all', 'All'], ['title', 'Titles'], ['move', 'Signings'], ['show', 'Shows'], ['biz', 'Business'], ['story', 'Stories'], ['hurt', 'Injuries'], ['me', 'You'], ['bf', 'Backfired']];
+  let wk = null, open = false;
+  const rows = fl.filter(x => x !== lead).slice(0, 80).map(x => { let h = ''; if (x.wk !== wk) { h = `${open ? '</div>' : ''}<div class="sec">Week ${x.wk}</div><div class="card" style="padding:2px 12px">`; open = true; } wk = x.wk; return h + uhRow(x); }).join('') + (open ? '</div>' : '');
+  const lk = lead && uhKind(lead);
+  const body = `${buzzCard()}${lead ? `<div class="uh-lead" style="--co:${lk === 'bf' ? '#ff3b48' : lead.r && RV(lead.r) ? safeColor(RV(lead.r).color) || UH_KINDS[lk][1] : UH_KINDS[lk][1]}"><div class="uh-k">${lk === 'bf' ? '<span class="bf-tag">BACKFIRED</span>' : lk === 'paid' ? '<span class="paid-tag">PAID</span>' : ''}Lead story · Week ${lead.wk}${lead.r && RV(lead.r) ? ` · ${esc(RV(lead.r).name)}` : ''}</div><div class="uh-h">${esc(uhText(lead))}</div></div>` : ''}
+    <div class="filters" style="margin-bottom:6px">${chips.map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="uhF" data-id="${k}">${l}</button>`).join('')}</div>
+    ${rows || `<div class="empty">${wl.length ? 'No headlines like that yet.' : 'Nothing yet. Run a few shows and the rest of the world will make news.'}</div>`}`;
+  return modal('🗞️ Universe headlines', body, `<button class="btn" data-act="notesTab" data-id="dirt">🗞️ Dirt sheet</button><button class="btn pri" data-act="buzz" data-id="star" ${buzzLeft() > 0 ? '' : 'disabled'}>Buy a headline</button>`);
+}
+const buzzStars = () => signed().filter(w => !w.retired).sort((a, b) => b.pop - a.pop);
+function modalBuzz(m) {
+  const k = m.k, B = BUZZ[k], stars = buzzStars(), rivs = (G.rivalPromos || []).filter(r => r.roster.length);
+  const w = W(m.wid) || stars[0], r = RV(m.rid) || rivs[0];
+  const pct = x => Math.round(buzzRisk(x) * 100) + '%';
+  const body = `<div class="small muted" style="margin-top:0">The press will run one story for you. Most of the time it works. Sometimes it gets out that you paid for it, and that hurts.${buzzRecent() ? ' Buying a lot in a short time makes that more likely.' : ''}</div>
+    <div style="margin-top:10px">${Object.entries(BUZZ).filter(([x, o]) => !o.riv || rivs.length).map(([x, o]) => `<button class="uh-opt ${x === k ? 'on' : ''}" data-act="buzzK" data-id="${x}" aria-pressed="${x === k}"><span class="ic-big">${o.ic}</span><span class="sp"><b>${o.n}</b><span class="tiny muted" style="display:block">${esc(o.d(x === 'star' ? w : x === 'dig' ? r : null))}</span><span class="row" style="gap:6px;margin-top:6px">${MON() ? `<span class="tag gold">${money(o.cost())}</span>` : ''}<span class="risk">⚠️ ${pct(x)} backfire</span></span></span></button>`).join('')}</div>
+    ${B.who ? `<label class="f"><span>Who is it about?</span><select data-in="buzzW">${stars.map(x => `<option value="${x.id}" ${x === w ? 'selected' : ''}>${esc(x.name)} (Pop ${Math.round(x.pop)})</option>`).join('')}</select></label>` : ''}
+    ${B.riv ? `<label class="f"><span>Which company?</span><select data-in="buzzR">${rivs.map(x => `<option value="${x.id}" ${x === r ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>` : ''}
+    <div class="tiny muted" style="margin-top:6px">${buzzLeft()} of ${BUZZ_MAX} left this week.</div>`;
+  const can = buzzLeft() > 0 && (!MON() || G.money >= B.cost()) && (!B.who || stars.length) && (!B.riv || rivs.length);
+  return modal('📢 Buy a headline', body, `<button class="btn" data-act="worldNews">Back</button><button class="btn pri" data-act="buzzGo" ${can ? '' : 'disabled'}>Run it${MON() ? ' · ' + money(B.cost()) : ''}</button>`);
 }
 function modalEditRival(m) {
   const d = m.draft, r = d.id && RV(d.id);
@@ -7682,7 +7863,7 @@ function dirtView() {
     ${lead ? rev(lead, 1) : `<div class="dirt-lead"><div class="dirt-k">Quiet week</div><div class="dirt-h">No shows to review this week</div></div>`}</div>
   ${revs.slice(1).map(v => rev(v)).join('')}
   ${x.table?.length > 1 ? `<div class="sec">📊 The ratings race</div><div class="card dirt-list">${x.table.map((t, j) => `<div class="dirt-row${t.me ? ' me' : ''}"><b class="dirt-n">${j + 1}</b><span class="sp"><b>${esc(t.n)}</b>${t.big ? ' <span class="tag gold">Big</span>' : ''}<span class="tiny muted" style="display:block">${esc(t.co)}${t.me ? ' (you)' : ''}</span></span><span style="text-align:right">${stars(t.r)}</span></div>`).join('')}</div>` : ''}
-  ${x.world?.length ? `<div class="sec">🌍 Confirmed this week</div><div class="card dirt-list">${x.world.map(t => `<div class="dirt-row"><span class="sp">${esc(t)}</span></div>`).join('')}</div>` : ''}
+  ${x.world?.length ? `<div class="sec">🌍 Confirmed this week</div><div class="card dirt-list">${x.world.map(t => /^💥/u.test(t) ? `<div class="dirt-row bfl"><span class="sp"><span class="bf-tag">BACKFIRED</span>${esc(t)}</span></div>` : `<div class="dirt-row"><span class="sp">${esc(t)}</span></div>`).join('')}</div>` : ''}
   ${x.rum?.length ? `<div class="sec">👂 The rumour mill</div><div class="card dirt-list">${x.rum.map(r => `<div class="dirt-row dirt-rum"><span class="sp">${esc(r.t)}<span style="display:block;margin-top:4px">${dirtSrcTag(r.s)}</span></span></div>`).join('')}</div>` : ''}
   ${x.take ? `<div class="sec">🎙️ Hot take</div><div class="card dirt-take"><div class="dirt-h" style="font-size:20px">${esc(x.take.h)}</div><div class="dirt-b">${esc(x.take.b)}</div></div>` : ''}
   ${x.pr?.length ? `<div class="sec">👑 Power rankings</div><div class="card dirt-list">${x.pr.map((p, j) => `<div class="dirt-row${p.me ? ' me' : ''}"><b class="dirt-n">${j + 1}</b><span class="sp"><b>${esc(p.n)}</b><span class="tiny muted" style="display:block">${esc(p.co)}</span></span>${mv(p.mv)}</div>`).join('')}</div>` : ''}
@@ -7692,7 +7873,7 @@ function dirtView() {
 // ---------- notes ----------
 function viewNotes() {
   const t = UI.notesTab;
-  const cats = [['all', 'All'], ['show', 'Shows'], ['story', 'Stories'], ['title', 'Titles'], ['contract', 'Contracts'], ['injury', 'Injuries'], ['office', 'Office']];
+  const cats = [['all', 'All'], ['show', 'Shows'], ['story', 'Stories'], ['title', 'Titles'], ['contract', 'Contracts'], ['injury', 'Injuries'], ['office', 'Office'], ['bf', 'Backfired']];
   const nf = UI.newsF;
   return `
   <div class="seg-ctl quad wrap tri" style="margin-bottom:12px">${[['todo', 'To-do'], ['book', 'Notebook'], ['news', 'News log'], ['dirt', 'Dirt sheet'], ['shows', 'Show history']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="notesTab" data-id="${k}">${l}${k === 'dirt' && dirtUnread() ? ' <span class="cnt">New</span>' : ''}</button>`).join('')}</div>
@@ -7703,7 +7884,7 @@ function viewNotes() {
   ${t === 'book' ? `<div class="card"><div class="small muted" style="margin-bottom:8px">Plans, ideas, who to push. Saves itself.</div><textarea data-in="notebook" style="min-height:50vh" placeholder="e.g. Week 12: Vanessa cashes in. Build Kai as the next big face...">${esc(G.notebook)}</textarea></div>
      <div class="tiny muted">Wrestlers and stories have their own notes too.</div>` : ''}
   ${t === 'news' ? `<div class="filters">${cats.map(([k, l]) => `<button class="${nf === k ? 'on' : ''}" data-act="newsF" data-id="${k}">${l}</button>`).join('')}</div>
-     <div class="card" style="padding:4px 14px">${G.news.filter(n => nf === 'all' || n.cat === nf).slice(0, 200).map(n => `<div class="news"><span class="wk">WK ${n.wk}</span><span>${esc(n.text)}</span></div>`).join('') || '<div class="empty">Nothing yet.</div>'}</div>` : ''}
+     <div class="card" style="padding:4px 14px">${G.news.filter(n => nf === 'all' || (nf === 'bf' ? n.bf : n.cat === nf)).slice(0, 200).map(newsRow).join('') || '<div class="empty">Nothing yet.</div>'}</div>` : ''}
   ${t === 'shows' ? `<div class="list">${G.history.slice().reverse().map(h => `<button class="item" data-act="recap" data-id="${h.wk}"><div class="main"><div class="t">${h.big ? '🎆 ' : ''}${esc(h.name)} <span class="muted small">wk ${h.wk}</span></div><div class="d">${h.results.length} segments · ${h.attendance.toLocaleString()} fans${MON() ? ` · ${h.net >= 0 ? '+' : ''}${money(h.net)}` : ''}</div></div><div style="text-align:right"><div class="stars">${starStr(h.rating)}</div><div class="tiny muted">${h.rating}</div></div></button>`).join('') || '<div class="empty">No shows run yet.</div>'}</div>` : ''}`;
 }
 
@@ -7805,6 +7986,7 @@ function renderModal() {
     case 'rival': return modalRival(m);
     case 'editRival': return modalEditRival(m);
     case 'worldNews': return modalWorldNews(m);
+    case 'buzz': return modalBuzz(m);
     case 'rivalRoster': return modalRivalRoster(m);
     case 'ewLeave': return modal('Save your changes?', `<p>You changed ${esc(m.back?.draft?.name || 'this wrestler')} but didn't tap Save.</p>`, `<button class="btn" data-act="ewDiscard">Discard</button><button class="btn" data-act="ewKeep">Keep editing</button><button class="btn pri" data-act="ewSave">Save</button>`, { closeAct: 'ewKeep' });
     case 'storage': return modalStorage();
@@ -8877,6 +9059,11 @@ const A = {
   },
   rrGen(n) { const r = RV(UI.modal.id); if (!r) return; fillRival(r, clamp(+n || 1, 1, 10)); commit(`Added ${n} new wrestler${+n > 1 ? 's' : ''}.`); },
   worldNews() { openModal({ type: 'worldNews' }); },
+  uhF(k) { if (UI.modal?.type === 'worldNews') { UI.modal.f = k; render(); } },
+  buzz(k) { openModal({ type: 'buzz', k: BUZZ[k] ? k : 'star' }); },
+  buzzK(k) { if (UI.modal?.type === 'buzz' && BUZZ[k]) { UI.modal.k = k; render(); } },
+  buzzGo() { const m = UI.modal; if (m?.type !== 'buzz') return; const B = BUZZ[m.k], id = B.who ? m.wid || buzzStars()[0]?.id : B.riv ? m.rid || (G.rivalPromos || [])[0]?.id : null; const msg = buzzBuy(m.k, id); if (/^It backfired/.test(msg)) UI.modal = null; else if (/^The story ran/.test(msg)) UI.modal = { type: 'worldNews' }; commit(/backfired/.test(msg) ? '' : msg); },
+  bfGo() { (G.bfq ||= []).shift(); commit(); },
   saveRival() {
     const d = UI.modal.draft, name = String(d.name || '').trim().slice(0, 40); if (!name) return toast('Give it a name.');
     ensureRivals();
@@ -11444,6 +11631,9 @@ function sanitizeGame(g) {
   g.mediaLog = (Array.isArray(g.mediaLog) ? g.mediaLog : []).filter(x => x && typeof x === 'object' && Object.hasOwn(MEDIA, x.k) && typeof x.wid === 'string').slice(0, 30)
     .map(x => ({ wk: Math.floor(+x.wk) || 0, wid: x.wid, k: x.k, ...(x.short ? { short: 1 } : {}), ...(x.long ? { long: 1, wks: clamp(Math.floor(+x.wks) || 1, 1, 20) } : {}), ...(x.back ? { back: 1 } : {}), ...(x.bad ? { bad: 1 } : {}), ...(x.d != null ? { d: clamp(+x.d || 0, -50, 50) } : {}) }));
   cleanTraining(g, true);
+  g.bfq = Array.isArray(g.bfq) ? g.bfq.filter(b => b && typeof b === 'object').slice(-6).map(b => ({ id: String(b.id || uid()).slice(0, 20), wk: Math.floor(+b.wk) || 0, src: String(b.src || '').slice(0, 40), h: String(b.h || '').slice(0, 120), d: String(b.d || '').slice(0, 400), ids: (Array.isArray(b.ids) ? b.ids : []).filter(x => typeof x === 'string').slice(0, 3), cost: (Array.isArray(b.cost) ? b.cost : []).map(x => String(x).slice(0, 40)).slice(0, 5) })) : undefined;
+  if (g.buzz) g.buzz = typeof g.buzz === 'object' ? { wk: Math.floor(+g.buzz.wk) || 0, n: clamp(Math.floor(+g.buzz.n) || 0, 0, BUZZ_MAX), log: (Array.isArray(g.buzz.log) ? g.buzz.log : []).filter(x => x && BUZZ[x.k]).slice(0, 8).map(x => ({ wk: Math.floor(+x.wk) || 0, k: x.k })) } : undefined;
+  if (g.buzzShow) g.buzzShow = typeof g.buzzShow === 'object' ? { wk: Math.floor(+g.buzzShow.wk) || 0, x: clamp(+g.buzzShow.x || 1, .8, 1.2) } : undefined;
   if (g.blast) g.blast = g.blast && typeof g.blast === 'object' && typeof g.blast.wid === 'string' ? { wid: g.blast.wid, until: clamp(Math.floor(+g.blast.until) || 0, 0, g.week + 20) } : undefined;
   if (Array.isArray(g.phone)) for (const m of g.phone) if (m && m.gig) m.gig = { wk: Math.floor(+m.gig.wk) || 0, p: String(m.gig.p || 'an indie show').slice(0, 60), big: m.gig.big ? 1 : 0, pulled: clamp(Math.floor(+m.gig.pulled) || 0, 0, 20) };
   if (Array.isArray(g.phone)) for (const m of g.phone) if (m && m.social) m.social = { why: m.social.why === 'promise' ? 'promise' : 'lowball', sev: clamp(+m.social.sev || 1, 1, 3), shares: Math.max(0, Math.round(+m.social.shares) || 0), lost: Math.max(0, Math.round(+m.social.lost) || 0) };
@@ -12694,7 +12884,8 @@ function relVeto(seg) {
     for (const x of was) if (relMine(x)) x.morale = clamp(x.morale - 4, 0, 100);
     G.promo.prestige = clamp(G.promo.prestige - .5, 1, 100);
     const t = `😤 ${w.name} refused to lose to ${was.map(x => x.name).join(' & ') || 'their opponent'} and changed the finish.`;
-    news(t, 'office');
+    news(t, 'office', { bf: 1 });
+    backfire({ src: 'Refused finish', h: `${w.name} changed the finish`, d: `${w.name} refused to lose to ${was.map(x => x.name).join(' & ') || 'their opponent'} and went into business for themselves. Your booking went out the window.`, ids: [w.id, ...was.map(x => x.id)].slice(0, 3), cost: ['Prestige −0.5', `${was.map(x => lastName(x)).join(' & ') || 'Winner'} morale −4`], quiet: 1 });
     return t;
   }
   return null;
@@ -12982,7 +13173,8 @@ function doMedia(w, k, m = 1, ev = false) {
     const what = pick(['said something they shouldn\'t have', 'took a cheap shot at the fans', 'talked about backstage business', 'froze up on air', 'mixed up the company\'s name', 'picked a fight with the host', 'gave away a storyline', 'showed up late and flustered']);
     if (Math.random() < .5) mText(w, pick(['Ok, that interview did not go how I wanted. My bad.', 'I know, I know. I shouldn\'t have said that.', 'Please don\'t watch that clip. Ever.', 'Lesson learned. No more live interviews before coffee.']));
     logMedia(w, k, { short: !ev, d: Math.round((w.pop - before) * 10) / 10, bad: 1 });
-    news(`${M.ic} ${w.name} ${what} during a ${M.n.toLowerCase()} spot. Popularity down.`, 'office');
+    news(`${M.ic} ${w.name} ${what} during a ${M.n.toLowerCase()} spot. Popularity down.`, 'office', { bf: 1 });
+    backfire({ src: M.n, h: `${w.name} blew the interview`, d: `${w.name} ${what} during a ${M.n.toLowerCase()} spot. The clip is everywhere.`, ids: [w.id], cost: [`Pop ${Math.round(before)} → ${Math.round(w.pop)}`, 'Momentum −4'], quiet: 1 });
     return `${w.name} ${what}. Pop ${Math.round(before)} → ${Math.round(w.pop)}.`;
   }
   addPop(w, M.pop * m); w.momentum = clamp(w.momentum + 2 * m, -50, 50);
@@ -13465,7 +13657,7 @@ function goalsWeek() {
     if (w.tb && G.week >= (w.tb.until || 0) - 1) { if (w.tb.back != null && w.goal) w.train = w.tb.back; delete w.tb; }
     if (w.wall && G.week >= w.wall - 1) delete w.wall;
     // risky pushing can hurt them
-    if (w.tb?.risk && G.settings.injuries && !w.injury && Math.random() < .06) { const n = rint(1, 3); w.injury = n; news(`🤕 ${w.name} got hurt pushing too hard in training (${n} wk).`, 'injury'); delete w.tb; }
+    if (w.tb?.risk && G.settings.injuries && !w.injury && Math.random() < .06) { const n = rint(1, 3); w.injury = n; backfire({ src: 'Training', h: `${w.name} got hurt pushing too hard`, d: `The extra training caught up with ${w.name}. They're out ${n} week${n === 1 ? '' : 's'} and lose the training boost.`, ids: [w.id], cost: [`Out ${n} week${n === 1 ? '' : 's'}`, 'Training boost lost'], cat: 'injury' }); delete w.tb; }
     badgeCheck(w);
     const g = w.goal; if (!g) continue;
     const L = GOAL_LV[g.lv] || GOAL_LV[0], fn = firstName(w.short || w.name);
@@ -14576,6 +14768,7 @@ document.addEventListener('change', e => {
   if (el.dataset.in) {
     const k = el.dataset.in;
     if (k === 'rosterSort') { UI.rosterSort = el.value; render(); }
+    else if ((k === 'buzzW' || k === 'buzzR') && UI.modal?.type === 'buzz') { UI.modal[k === 'buzzW' ? 'wid' : 'rid'] = el.value; render(); }
     else if (k === 'rtBtTitle') { const b = UI.modal?.bbatch, it = b?.items[b.i]; if (it) { it.tid = G.titles.some(x => x.id === el.value) ? el.value : ''; render(); } }
     else if (k === 'bdSort') { UI.bdSort = el.value; try { localStorage.setItem('bookit-bdSort', el.value); } catch (e) { } render(); }
     else if (k === 'pickSort') { UI.pickSort = el.value; try { localStorage.setItem('bookit-pickSort', el.value); } catch (e) { } render(); }
@@ -14814,6 +15007,8 @@ document.addEventListener('visibilitychange', () => MUSIC.sync());
 // ---------- crash safety ----------
 const VERSION = '1.9.76';
 const WHATS_NEW = [
+  ['🗞️ Universe headlines and paid stories', 'World news is now Universe headlines: a lead story, colour-coded kinds you can filter, and more news from around the world (big show results, best-ever shows, late paychecks, title reigns, retirements, new feuds and the show of the week). Buy up to two headlines a week to hype a wrestler, sell your show, talk up the company or dig at a rival. Each one has a small chance to backfire.'],
+  ['💥 Backfires you can\'t miss', 'When something you chose blows up in your face (a walkout, a refused finish, a blown interview, a training injury, a social media blast, a paid story exposed and more), a full-screen BACKFIRE moment shows what happened and what it cost. Backfires are marked in red in the news, the headlines and the Dirt Sheet.'],
   ['🎨 One colour per icon', 'Icons no longer mix two colours. The menu lines, speaker waves, arrows and other line parts now match the rest of the icon, and the last few colour emoji (sit-downs, perks, producer notes, holidays and more) are now plain icons too.'],
   ['🎯 Training goals and a Training tab', 'Office has a new Training tab with goals, the school and who is training what. Give a wrestler an Easy, Stretch or Dream goal from their profile. Hit it for a morale and popularity boost. Your Head Trainer texts you when someone hits a wall, and stats that reach 80 through training earn badges.'],
   ['🎆 Big moment effects', 'The biggest moments on the live show now light up: confetti falls when a world title (or the top women\'s title) changes hands, and pyro goes off when a big event\'s main event rates 85 or more. Set it to Lots for camera flashes on a 90+ segment too, or turn it off. Find it in Menu → Big moment effects. Less motion turns it off as well.'],
