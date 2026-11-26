@@ -395,6 +395,7 @@ button.mrow:active { background: var(--card2); }
 .fm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 8px; }
 .fm-tile { display: grid; justify-items: center; gap: 4px; padding: 6px 4px 5px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); color: var(--dim); font-family: var(--f-cond); font-weight: 700; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; line-height: 1.1; }
 .fm-tile img { width: 52px; height: 52px; border-radius: 8px; display: block; }
+.fm-tabs { margin-top: 10px; }
 .fm-tile.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--ink); }
 .fm .sw.mine { background: conic-gradient(#c8102e 0 25%, #1f4fbf 0 50%, #f2b705 0 75%, #1f8a3b 0) !important; }
 .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); }
@@ -7459,45 +7460,84 @@ function ding() {
   document.body.appendChild(el); setTimeout(() => el.remove(), 1400);
 }
 
-// ---- pixel faces: every wrestler without a photo gets a 32x32 pixel headshot drawn from a 10-character look code ----
-// code positions: skin, hair, hair colour, beard, face (paint/mask), gear, gear colour (0 = their colour), extra, mask colour, mask trim
+// ---- pixel faces: every wrestler without a photo gets a 32x32 pixel headshot drawn from a look code ----
+// code positions (one base-36 character each): skin, hair, hair colour, beard, face (paint/mask), gear, gear colour (0 = their colour),
+// extra, mask colour, mask trim, eyes, brows, mouth, headwear, headwear colour (0 = their colour), make-up.
+// Older 10-character codes still work: the missing places read as 0, which draws exactly what they drew before.
 const FACE = {
-  skin: [['#f6d3b3', '#dcaa86'], ['#eab98f', '#cc9068'], ['#d29a6a', '#b07a4c'], ['#b0774a', '#8c5a34'], ['#8a5532', '#6a3d22'], ['#5e3820', '#452814']],
-  hair: ['Bald', 'Buzz', 'Spiky', 'Slicked', 'Mohawk', 'Long', 'Ponytail', 'Bob', 'Curly'],
-  hairC: ['#1b1410', '#3b2414', '#6b3f1e', '#b8792f', '#e3c06a', '#d8d8d8', '#a3261f', '#2d5fd0', '#9b3fd0', '#e23a8a'],
-  beard: ['None', 'Stubble', 'Goatee', 'Full'],
-  face: ['Plain', 'Eye black', 'War paint', 'Half paint', 'Skull', 'Mask'],
-  gear: ['Bare', 'Singlet', 'Tee', 'Jacket', 'Hood'],
-  col: ['', '#c8102e', '#1f4fbf', '#111111', '#f2b705', '#1f8a3b', '#7b2cbf', '#f4f4f4', '#ff6b00', '#0891b2'],
-  extra: ['None', 'Headband', 'Shades', 'Earring'],
+  skin: [['#f6d3b3', '#dcaa86'], ['#eab98f', '#cc9068'], ['#d29a6a', '#b07a4c'], ['#b0774a', '#8c5a34'], ['#8a5532', '#6a3d22'], ['#5e3820', '#452814'], ['#fde6d4', '#e8c4a8'], ['#432716', '#2e190d']],
+  hair: ['Bald', 'Buzz', 'Spiky', 'Slicked', 'Mohawk', 'Long', 'Ponytail', 'Bob', 'Curly', 'Afro', 'Dreads', 'Braids', 'Bun', 'Pigtails', 'Undercut', 'Shaggy', 'Receding', 'Fauxhawk'],
+  hairC: ['#1b1410', '#3b2414', '#6b3f1e', '#b8792f', '#e3c06a', '#d8d8d8', '#a3261f', '#2d5fd0', '#9b3fd0', '#e23a8a', '#f4ebc8', '#2fa84f', '#17a2a2', '#e46b12'],
+  beard: ['None', 'Stubble', 'Goatee', 'Full', 'Moustache', 'Horseshoe', 'Chops', 'Long', 'Soul patch', 'Braided'],
+  face: ['Plain', 'Eye black', 'War paint', 'Half paint', 'Skull', 'Mask', 'Tribal', 'Star eye', 'Demon', 'Jester', 'Stripes', 'Open mask', 'Hood mask', 'Eye mask'],
+  gear: ['Bare', 'Singlet', 'Tee', 'Jacket', 'Hood', 'Tank top', 'Vest', 'Suit', 'Crop top', 'Robe'],
+  col: ['', '#c8102e', '#1f4fbf', '#111111', '#f2b705', '#1f8a3b', '#7b2cbf', '#f4f4f4', '#ff6b00', '#0891b2', '#e23a8a', '#9aa3ad', '#6b3f1e'],
+  extra: ['None', 'Headband', 'Shades', 'Earring', 'Nose ring', 'Glasses', 'Eye patch', 'Chain', 'Scar', 'Bandage'],
+  eyes: ['Normal', 'Narrow', 'Wide', 'Glare', 'Sleepy', 'Wild'],
+  brows: ['Normal', 'Thick', 'Thin', 'Arched', 'Unibrow', 'None'],
+  mouth: ['Usual', 'Smile', 'Grin', 'Snarl', 'Shout', 'Smirk', 'Tongue', 'Frown'],
+  hat: ['None', 'Bandana', 'Cowboy hat', 'Beanie', 'Cap', 'Crown', 'Top hat', 'Tiara', 'Horns'],
+  makeup: ['Usual', 'None', 'Red lips', 'Dark lips', 'Pink lips', 'Eyeliner'],
 };
-const FACE_MAX = [6, 9, 10, 4, 6, 5, 10, 4, 10, 10];
-const faceOK = c => typeof c === 'string' && /^[0-9]{10}$/.test(c) && [...c].every((d, i) => +d < FACE_MAX[i]);
-function faceRandom(seed, women) {
+// skin swatches shown light to dark
+const FACE_SKIN_ORDER = [6, 0, 1, 2, 3, 4, 5, 7];
+const FACE_LEN = 16;
+const FACE_MAX = [FACE.skin, FACE.hair, FACE.hairC, FACE.beard, FACE.face, FACE.gear, FACE.col, FACE.extra, FACE.col, FACE.col, FACE.eyes, FACE.brows, FACE.mouth, FACE.hat, FACE.col, FACE.makeup].map(a => a.length);
+// masks that cover the hair, and every face choice that is a mask (shows the mask colour pickers)
+const FACE_HOOD = new Set([5, 12]), FACE_MASKS = new Set([5, 11, 12, 13]);
+const faceOK = c => typeof c === 'string' && c.length >= 10 && c.length <= FACE_LEN && /^[0-9a-z]+$/.test(c) && [...c].every((d, i) => parseInt(d, 36) < FACE_MAX[i]);
+const faceDigits = code => [...String(code).padEnd(FACE_LEN, '0')].map(d => parseInt(d, 36));
+const faceJoin = a => a.map(n => (+n || 0).toString(36)).join('');
+// full: draw from every option (Random face, new faces for everyone). Without it the first ten places are the
+// same as they always were, so a wrestler who never had a face made keeps the face they have.
+function faceRandom(seed, women, full) {
   let h = 2166136261; for (const ch of String(seed)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
   const r = () => { h += 0x6D2B79F5; let t = h; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const p = a => a[Math.floor(r() * a.length)];
   const x = r(), face = x < .08 ? 5 : x < .13 ? 1 : x < .17 ? 2 : x < .2 ? 3 : x < .22 ? 4 : 0;
   const m1 = p([1, 2, 3, 4, 5, 6, 8, 9]);
-  return [Math.floor(r() * 6), women ? p([5, 5, 6, 6, 7, 8, 2]) : p([0, 0, 1, 1, 2, 3, 4, 5, 8]), p([0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]), women ? 0 : p([0, 0, 0, 1, 2, 3, 3]), face,
-    women ? p([1, 2, 3, 3]) : p([0, 0, 1, 1, 2, 3, 4]), p([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), r() < .15 ? p([1, 2, 3]) : 0, m1, p([4, 7, 3, 1, 2].filter(c => c !== m1))].join('');
+  const a = [Math.floor(r() * 6), women ? p([5, 5, 6, 6, 7, 8, 2]) : p([0, 0, 1, 1, 2, 3, 4, 5, 8]), p([0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]), women ? 0 : p([0, 0, 0, 1, 2, 3, 3]), face,
+    women ? p([1, 2, 3, 3]) : p([0, 0, 1, 1, 2, 3, 4]), p([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), r() < .15 ? p([1, 2, 3]) : 0, m1, p([4, 7, 3, 1, 2].filter(c => c !== m1))];
+  if (!full) return a.join('');
+  const y = r();
+  const f = y < .035 ? 5 : y < .05 ? 11 : y < .055 ? 12 : y < .065 ? 13 : y < .095 ? 1 : y < .11 ? 2 : y < .12 ? 3 : y < .125 ? 4 : y < .135 ? 6 : y < .14 ? 7 : y < .143 ? 8 : y < .146 ? 9 : y < .155 ? 10 : 0;
+  const gc = p([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]), m2 = p([4, 7, 3, 1, 2, 11].filter(c => c !== m1));
+  const hat = r() < .14 ? (women ? p([1, 3, 4, 5, 7, 7]) : p([1, 1, 2, 3, 4, 4, 5, 6, 8])) : 0;
+  return faceJoin([Math.floor(r() * 8),
+    women ? p([5, 5, 6, 6, 7, 8, 2, 9, 10, 11, 12, 13, 14, 15]) : p([0, 0, 1, 1, 2, 3, 4, 5, 8, 9, 10, 11, 14, 15, 16, 16, 17]),
+    r() < .15 ? p([6, 7, 8, 9, 11, 12, 13]) : p([0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5, 10]),
+    women ? 0 : p([0, 0, 0, 0, 1, 1, 2, 3, 3, 4, 5, 6, 7, 8, 9]),
+    f, women ? p([1, 2, 3, 3, 5, 8, 8, 9]) : p([0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 7, 9]), gc,
+    r() < .28 ? (women ? p([1, 2, 3, 3, 4, 5, 7, 9]) : p([1, 2, 3, 4, 5, 6, 7, 7, 8, 9])) : 0,
+    m1, m2,
+    r() < .6 ? 0 : p([1, 2, 3, 4, 5]),
+    r() < .6 ? 0 : women ? p([2, 3, 3]) : p([1, 1, 2, 3, 4, 5]),
+    r() < .45 ? 0 : p([1, 1, 2, 3, 4, 5, 6, 7]),
+    hat, p([0, 0, 1, 2, 3, 4, 7, 11]),
+    women && r() < .55 ? p([1, 2, 3, 4, 5]) : 0]);
 }
 const looksWomen = w => isWomen(w) || FEM_NAMES.has(String(w.name || '').split(' ')[0]);
-const faceCode = w => faceOK(w.look) ? w.look : faceRandom(w.id || w.name || '?', looksWomen(w));
+const faceCode = w => (faceOK(w.look) ? w.look : faceRandom(w.id || w.name || '?', looksWomen(w))).padEnd(FACE_LEN, '0');
 function faceShade(hex, f) { const n = parseInt(hex.slice(1), 16), m = v => Math.max(0, Math.min(255, Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f))); return '#' + [n >> 16, n >> 8 & 255, n & 255].map(v => m(v).toString(16).padStart(2, '0')).join(''); }
 function faceSVG(code, align, wcol, women, tight) {
-  const [S, H, HC, B, F, GR, GC, X, M1, M2] = [...code].map(Number), N = 32;
+  const [S, H, HC, B, F, GR, GC, X, M1, M2, E, BR, MO, HW, HWC, MU] = faceDigits(code), N = 32;
   const g = Array.from({ length: N }, () => Array(N).fill(null));
   const set = (x, y, c) => { if (x >= 0 && x < N && y >= 0 && y < N && c) g[y][x] = c; };
   const rect = (x, y, w, h, c) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) set(i, j, c); };
+  const ell = (cx, cy, rx, ry, c, alt) => { for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) if ((x - cx) ** 2 / rx ** 2 + (y - cy) ** 2 / ry ** 2 < 1) set(x, y, alt && (x + y) % 3 === 0 ? alt : c); };
   const [sk, sd] = FACE.skin[S], hc = FACE.hairC[HC], hd = faceShade(hc, -.35), lip = faceShade(sk, -.45);
   const gc = GC ? FACE.col[GC] : safeColor(wcol) || '#c8102e', gd = faceShade(gc, -.3);
   const isSk = (x, y) => g[y][x] === sk || g[y][x] === sd;
   const sh = y => Math.min(14, 6 + (y - 24) * 2);
-  const mask = F === 5, hair = !mask && H;
+  const mask = FACE_HOOD.has(F), hair = !mask && H;
+  const gold = '#f2c94c', goldD = '#b8860b';
   // hair that falls behind
   if (hair === 5) { rect(8, 7, 16, 18, hc); rect(7, 12, 18, 13, hc); }
   if (hair === 8) for (let y = 4; y < 20; y++) for (let x = 6; x < 26; x++) if ((x - 16) ** 2 / 100 + (y - 12) ** 2 / 64 < 1) set(x, y, (x + y) % 3 ? hc : hd);
+  if (hair === 9) ell(16, 10, 12, 9.5, hc, hd);
+  if (hair === 10) for (const x of [6, 8, 10, 21, 23, 25]) for (let y = 8; y < 27; y++) set(x, y, (y + x) % 4 ? hc : hd);
+  if (hair === 12) { ell(16, 3, 4, 3, hc, hd); }
+  if (hair === 13) { ell(5, 13, 3, 4, hc, hd); ell(27, 13, 3, 4, hc, hd); }
   // shoulders, neck, chest
   for (let y = 24; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, sk);
   rect(11, 20, 10, 6, sk); rect(19, 20, 2, 6, sd);
@@ -7506,37 +7546,104 @@ function faceSVG(code, align, wcol, women, tight) {
   if (GR === 2) { for (let y = 26; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); rect(12, 26, 8, 1, sk); rect(13, 27, 6, 1, sk); }
   if (GR === 3) { for (let y = 25; y < N; y++) { rect(15 - sh(y), y, sh(y) - 2, 1, gc); rect(21, y, sh(y) - 3, 1, gc); } for (let y = 24; y < 29; y++) { set(35 - y, y, gd); set(y - 4, y, gd); } rect(3, 30, 2, 2, '#e9c46a'); rect(27, 30, 2, 2, '#e9c46a'); }
   if (GR === 4) { for (let y = 4; y < N; y++) for (let x = 3; x < 29; x++) { const inH = (x - 16) ** 2 / 64 + (y - 13) ** 2 / 110 < 1; if (y > 24 ? Math.abs(x - 15.5) <= sh(y) + 1 : inH) set(x, y, x > 22 ? gd : gc); } rect(13, 25, 6, 7, sk); }
+  if (GR === 5) { for (let y = 26; y < N; y++) rect(10, y, 12, 1, gc); rect(10, 24, 2, 2, gc); rect(20, 24, 2, 2, gc); rect(13, 26, 6, 1, sk); rect(14, 27, 4, 1, sk); rect(19, 26, 3, 6, gd); }
+  if (GR === 6) { for (let y = 25; y < N; y++) { rect(9, y, 5, 1, gc); rect(18, y, 5, 1, gc); } for (let y = 25; y < N; y++) { set(13, y, gd); set(18, y, gd); } for (const [x, y] of [[10, 27], [10, 30], [21, 27], [21, 30]]) set(x, y, '#dcdcdc'); }
+  if (GR === 7) { for (let y = 24; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); for (let y = 24; y < N; y++) { const w = Math.max(1, 6 - (y - 24)); rect(16 - w, y, w * 2, 1, y < 31 ? '#f4f4f4' : gc); } for (let y = 24; y < 30; y++) { set(15 - Math.max(1, 6 - (y - 24)), y, gd); set(16 + Math.max(1, 6 - (y - 24)) - 1, y, gd); } const tie = GC === 1 || (!GC && /^#c/i.test(gc)) ? '#1f4fbf' : '#c8102e'; rect(15, 25, 2, 1, tie); rect(15, 26, 2, 4, tie); set(15, 30, faceShade(tie, -.3)); set(16, 30, faceShade(tie, -.3)); }
+  if (GR === 8) { rect(9, 28, 14, 3, gc); rect(9, 30, 14, 1, gd); rect(11, 25, 1, 3, gc); rect(20, 25, 1, 3, gc); rect(15, 28, 2, 1, gd); }
+  if (GR === 9) { for (let y = 25; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, (y * 3 + 15 - sh(y)) % 4 ? gc : faceShade(gc, .35)); for (let y = 25; y < N; y++) for (let x = 0; x < N; x++) if (g[y][x] === gc && (x + y) % 5 === 0) set(x, y, faceShade(gc, .45)); rect(12, 26, 8, 6, sk); for (let y = 23; y < 28; y++) { rect(8 - (y - 23), y, 4, 1, '#f4f4f4'); rect(20 + (y - 23), y, 4, 1, '#f4f4f4'); } }
   // head, ears
   for (let y = 6; y < 23; y++) { const i = y < 8 ? 2 : y > 19 ? y - 18 : 0; rect(9 + i, y, 14 - i * 2, 1, sk); }
   for (let y = 9; y < 21; y++) set(22 - (y > 19 ? y - 18 : 0), y, sd);
   rect(8, 12, 1, 4, sk); rect(23, 12, 1, 4, sd);
   // eyes, brows, nose, mouth
-  const eyes = () => { rect(11, 14, 3, 2, '#fff'); rect(18, 14, 3, 2, '#fff'); for (const x of [12, 19]) { set(x, 14, '#151515'); set(x, 15, '#151515'); } };
+  const P = '#151515', lashOn = MU === 0 ? women : MU >= 2;
+  const eyes = () => {
+    if (E === 1) { rect(11, 14, 3, 1, sd); rect(18, 14, 3, 1, sd); rect(11, 15, 3, 1, '#fff'); rect(18, 15, 3, 1, '#fff'); set(12, 15, P); set(19, 15, P); }
+    else if (E === 2) { rect(11, 13, 3, 3, '#fff'); rect(18, 13, 3, 3, '#fff'); for (const x of [12, 19]) { set(x, 14, P); set(x, 15, P); } }
+    else if (E === 3) { rect(11, 14, 3, 2, '#fff'); rect(18, 14, 3, 2, '#fff'); set(11, 14, sd); set(20, 14, sd); set(13, 14, P); set(13, 15, P); set(18, 14, P); set(18, 15, P); }
+    else if (E === 4) { rect(11, 14, 3, 1, sd); rect(18, 14, 3, 1, sd); rect(11, 15, 3, 1, '#fff'); rect(18, 15, 3, 1, '#fff'); set(12, 15, P); set(19, 15, P); rect(11, 16, 3, 1, faceShade(sk, -.12)); rect(18, 16, 3, 1, faceShade(sk, -.12)); }
+    else if (E === 5) { rect(11, 13, 3, 3, '#fff'); set(12, 14, P); rect(18, 14, 3, 2, '#fff'); set(20, 15, P); }
+    else { rect(11, 14, 3, 2, '#fff'); rect(18, 14, 3, 2, '#fff'); for (const x of [12, 19]) { set(x, 14, P); set(x, 15, P); } }
+  };
   eyes();
-  const brow = women ? faceShade(hc, -.2) : hd; rect(11, 12, 3, 1, brow); rect(18, 12, 3, 1, brow);
-  if (align === 'heel') { set(13, 12, sk); set(13, 13, brow); set(18, 12, sk); set(18, 13, brow); }
+  if (lashOn) { const ly = E === 2 || E === 5 ? 13 : 14; set(10, ly, P); set(21, ly, P); }
+  if (MU === 5) { rect(11, E === 2 ? 12 : 13, 3, 1, P); rect(18, E === 2 ? 12 : 13, 3, 1, P); set(10, 13, P); set(21, 13, P); }
+  const brow = women ? faceShade(hc, -.2) : hd;
+  if (BR === 0) { rect(11, 12, 3, 1, brow); rect(18, 12, 3, 1, brow); }
+  if (BR === 1) { rect(11, 11, 3, 2, brow); rect(18, 11, 3, 2, brow); }
+  if (BR === 2) { rect(12, 12, 2, 1, brow); rect(18, 12, 2, 1, brow); }
+  if (BR === 3) { set(11, 13, brow); rect(12, 12, 2, 1, brow); rect(18, 12, 2, 1, brow); set(20, 13, brow); }
+  if (BR === 4) rect(11, 12, 10, 1, brow);
+  if (align === 'heel' && BR < 2) { set(13, 12, sk); set(13, 13, brow); set(18, 12, sk); set(18, 13, brow); }
+  if (align === 'heel' && BR === 4) { set(15, 13, brow); set(16, 13, brow); }
   rect(15, 16, 2, 2, sd); set(16, 17, faceShade(sd, -.2));
-  if (women) { rect(14, 19, 4, 1, '#b8324a'); set(10, 14, '#151515'); set(21, 14, '#151515'); }
-  else { rect(14, 19, 4, 1, lip); if (align === 'heel') set(17, 18, lip); else { set(13, 18, lip); set(18, 18, lip); } }
+  const lipC = MU === 2 ? '#c8102e' : MU === 3 ? '#4a1424' : MU === 4 ? '#e05a8a' : MU === 1 ? lip : women ? '#b8324a' : lip;
+  const mouth = () => {
+    const dk = '#3a0d0d';
+    if (MO === 1) { rect(14, 19, 4, 1, lipC); set(13, 18, lipC); set(18, 18, lipC); set(15, 20, faceShade(sk, -.15)); set(16, 20, faceShade(sk, -.15)); }
+    if (MO === 2) { rect(13, 18, 6, 1, lipC); rect(13, 19, 6, 1, '#fff'); set(13, 19, lipC); set(18, 19, lipC); rect(14, 20, 4, 1, lipC); }
+    if (MO === 3) { rect(13, 18, 6, 1, lipC); rect(14, 19, 4, 1, '#fff'); set(13, 19, dk); set(18, 19, dk); set(15, 19, dk); rect(13, 20, 1, 1, lipC); rect(18, 20, 1, 1, lipC); }
+    if (MO === 4) { rect(14, 18, 4, 3, dk); rect(14, 18, 4, 1, '#fff'); rect(13, 18, 1, 3, lipC); rect(18, 18, 1, 3, lipC); rect(14, 21, 4, 1, lipC); }
+    if (MO === 5) { rect(14, 19, 3, 1, lipC); set(17, 18, lipC); }
+    if (MO === 6) { rect(14, 18, 4, 2, dk); rect(13, 18, 1, 2, lipC); rect(18, 18, 1, 2, lipC); rect(15, 19, 2, 3, '#e0607a'); set(15, 21, '#c04860'); }
+    if (MO === 7) { rect(14, 18, 4, 1, lipC); set(13, 19, lipC); set(18, 19, lipC); }
+  };
+  if (!MO) {
+    if (women) rect(14, 19, 4, 1, lipC);
+    else { rect(14, 19, 4, 1, lipC); if (align === 'heel') set(17, 18, lipC); else { set(13, 18, lipC); set(18, 18, lipC); } }
+  }
   // paint
   const pc = GC ? gc : '#c8102e';
   if (F === 1) { rect(11, 16, 3, 1, '#111'); rect(18, 16, 3, 1, '#111'); }
   if (F === 2) { for (const x of [10, 12, 19, 21]) rect(x, 16, 1, 4, pc); rect(15, 7, 2, 5, pc); }
   if (F === 3) { for (let y = 7; y < 23; y++) for (let x = 16; x < 23; x++) if (isSk(x, y)) set(x, y, y % 4 ? '#f4f4f4' : '#dddddd'); rect(18, 13, 4, 4, '#111'); rect(19, 14, 2, 2, '#fff'); set(19, 14, '#c00'); }
   if (F === 4) { for (let y = 7; y < 23; y++) for (let x = 9; x < 23; x++) if (isSk(x, y)) set(x, y, x > 20 ? '#cfcfcf' : '#f2f2f2'); rect(10, 13, 5, 4, '#111'); rect(17, 13, 5, 4, '#111'); set(12, 15, '#e33'); set(19, 15, '#e33'); rect(15, 17, 2, 1, '#111'); for (let x = 12; x < 20; x++) set(x, 19, x % 2 ? '#111' : '#f2f2f2'); }
+  if (F === 6) { for (const [x, y] of [[10, 17], [11, 18], [12, 19], [21, 17], [20, 18], [19, 19], [10, 19], [21, 19], [14, 8], [15, 9], [16, 9], [17, 8], [15, 10], [16, 10]]) set(x, y, pc); rect(9, 16, 3, 1, pc); rect(20, 16, 3, 1, pc); }
+  if (F === 7) { for (let y = 10; y < 19; y++) for (let x = 15; x < 24; x++) { const dx = Math.abs(x - 19), dy = Math.abs(y - 14); if (dx + dy <= 4 && (dx <= 1 || dy <= 1 || dx + dy <= 2) && isSk(x, y)) set(x, y, '#111'); } eyes(); }
+  if (F === 8) { for (let y = 6; y < 23; y++) for (let x = 8; x < 24; x++) if (isSk(x, y)) set(x, y, x > 20 ? faceShade(pc, -.3) : pc); rect(10, 13, 5, 4, '#111'); rect(17, 13, 5, 4, '#111'); for (const [x, y] of [[11, 10], [12, 11], [20, 10], [19, 11], [15, 7], [16, 7], [15, 8], [16, 8]]) set(x, y, '#111'); rect(13, 19, 6, 1, '#111'); eyes(); }
+  if (F === 9) { for (let y = 6; y < 23; y++) for (let x = 8; x < 24; x++) if (isSk(x, y)) set(x, y, x > 20 ? '#dedede' : '#f6f6f6'); for (const cx of [12, 19]) for (let y = 10; y < 20; y++) { const w = 2 - Math.abs(y - 14.5) / 2.6; for (let x = Math.ceil(cx - w); x <= cx + w; x++) set(x, y, pc); } rect(15, 16, 2, 2, '#c8102e'); rect(13, 19, 6, 1, '#c8102e'); eyes(); }
+  if (F === 10) { for (const y of [9, 12, 15, 18]) { rect(9, y, 3, 1, '#111'); set(12, y + 1, '#111'); rect(20, y, 3, 1, '#111'); set(19, y + 1, '#111'); } rect(14, 7, 1, 3, '#111'); rect(17, 7, 1, 3, '#111'); set(15, 7, '#111'); set(16, 7, '#111'); }
   // beard
   if (!mask && B === 3) { for (let y = 17; y < 24; y++) { const i = y > 20 ? y - 20 : 0; rect(9 + i, y, 14 - i * 2, 1, hc); } rect(13, 19, 6, 1, lip); rect(14, 18, 4, 1, sk); rect(14, 20, 4, 1, hc); set(15, 16, sd); }
   if (!mask && B === 2) { rect(13, 18, 6, 1, hc); rect(13, 19, 1, 3, hc); rect(18, 19, 1, 3, hc); rect(14, 20, 4, 3, hc); }
   if (!mask && B === 1) for (let y = 17; y < 22; y++) for (let x = 10; x < 22; x++) if ((x + y * 3) % 3 === 0 && g[y][x] === sk) set(x, y, faceShade(sk, -.25));
-  // lucha mask
-  if (mask) {
-    const m1 = FACE.col[M1] || '#f2b705', m2 = FACE.col[M2] || '#c8102e', md = faceShade(m1, -.3);
+  if (!mask && B === 4) { rect(13, 18, 6, 1, hc); set(12, 19, hc); set(19, 19, hc); rect(15, 18, 2, 1, hd); }
+  if (!mask && B === 5) { rect(13, 18, 6, 1, hc); rect(12, 18, 1, 5, hc); rect(19, 18, 1, 5, hc); set(12, 22, hd); set(19, 22, hd); }
+  if (!mask && B === 6) { rect(9, 12, 2, 8, hc); rect(21, 12, 2, 8, hc); rect(10, 18, 3, 3, hc); rect(19, 18, 3, 3, hc); rect(13, 18, 6, 1, hc); }
+  if (!mask && (B === 7 || B === 9)) { for (let y = 17; y < 24; y++) { const i = y > 20 ? y - 20 : 0; rect(9 + i, y, 14 - i * 2, 1, y % 3 ? hc : hd); } rect(13, 19, 6, 1, lip); rect(14, 18, 4, 1, sk); set(15, 16, sd); }
+  if (!mask && B === 7) { rect(12, 24, 8, 3, hc); rect(13, 27, 6, 2, hc); rect(14, 29, 4, 1, hd); for (let y = 24; y < 29; y++) set(14 + (y % 3), y, hd); }
+  if (!mask && B === 9) { for (let y = 24; y < 30; y++) rect(15, y, 2, 1, y % 2 ? hc : hd); rect(14, 30, 4, 1, gold); rect(15, 31, 2, 1, hc); }
+  if (!mask && B === 8) rect(15, 21, 2, 1, hc);
+  // masks
+  const m1 = FACE.col[M1] || '#f2b705', m2 = FACE.col[M2] || '#c8102e', md = faceShade(m1, -.3);
+  if (F === 5) {
     for (let y = 5; y < 23; y++) for (let x = 7; x < 25; x++) if (isSk(x, y) || (y < 8 && x > 9 && x < 22)) set(x, y, x > 20 ? md : m1);
     for (let y = 5; y < 20; y++) { set(15, y, m2); set(16, y, m2); }
     rect(10, 13, 5, 4, m2); rect(17, 13, 5, 4, m2); eyes();
     for (const [x, y] of [[9, 11], [10, 10], [11, 11], [20, 11], [21, 10], [22, 11]]) set(x, y, m2);
     rect(13, 18, 6, 3, m2); rect(14, 19, 4, 1, lip); rect(14, 20, 4, 1, sk);
   }
+  if (F === 11) {
+    for (let y = 5; y < 18; y++) for (let x = 7; x < 25; x++) if (isSk(x, y) || (y < 8 && x > 9 && x < 22 && !g[y][x])) set(x, y, x > 20 ? md : m1);
+    for (let y = 5; y < 16; y++) { set(15, y, m2); set(16, y, m2); }
+    rect(10, 13, 5, 4, m2); rect(17, 13, 5, 4, m2); eyes();
+    for (let x = 9; x < 23; x++) set(x, 17, m2);
+    for (const [x, y] of [[9, 11], [10, 10], [11, 11], [20, 11], [21, 10], [22, 11]]) set(x, y, m2);
+  }
+  if (F === 12) {
+    for (let y = 3; y < 24; y++) for (let x = 7; x < 25; x++) if (isSk(x, y) || (y < 8 && x > 8 && x < 23)) set(x, y, x > 20 ? md : m1);
+    rect(10, 3, 12, 2, m1); rect(9, 5, 14, 1, m1);
+    for (let y = 3; y < 23; y += 2) set(16, y, m2);
+    rect(10, 13, 5, 3, m2); rect(17, 13, 5, 3, m2); eyes();
+    for (let x = 13; x < 19; x++) set(x, 19, x % 2 ? m2 : md);
+    rect(11, 22, 10, 2, m2);
+  }
+  if (F === 13) {
+    rect(9, 12, 14, 5, m1); rect(21, 12, 2, 5, md); rect(10, 11, 4, 1, m1); rect(18, 11, 4, 1, m1);
+    rect(7, 13, 2, 1, m2); rect(6, 14, 2, 2, m2); rect(15, 12, 2, 1, m2);
+    eyes(); rect(15, 16, 2, 1, sd);
+  }
+  if (MO) mouth();
   // hair on top
   const top = (y0, y1, x0, x1) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) set(x, y, (x * 7 + y * 3) % 5 ? hc : hd); };
   if (hair === 1) { top(5, 7, 10, 22); top(7, 9, 9, 23); rect(9, 9, 1, 3, hc); rect(22, 9, 1, 3, hd); }
@@ -7545,11 +7652,36 @@ function faceSVG(code, align, wcol, women, tight) {
   if (hair === 4) { top(1, 9, 14, 18); for (let y = 7; y < 11; y++) set(9, y, faceShade(sk, -.15)); }
   if (hair >= 5 && hair <= 7) { top(4, 9, 9, 23); top(8, 12, 8, 11); top(8, 12, 21, 24); if (hair !== 6) { top(12, hair === 7 ? 20 : 25, 7, 9); top(12, hair === 7 ? 20 : 25, 23, 25); } rect(12, 5, 6, 1, faceShade(hc, .35)); if (hair === 6) { top(4, 7, 22, 26); top(7, 14, 24, 27); } }
   if (hair === 8) for (let y = 4; y < 10; y++) for (let x = 8; x < 24; x++) if ((x - 16) ** 2 / 70 + (y - 9) ** 2 / 25 < 1) set(x, y, (x + y) % 3 ? hc : hd);
+  if (hair === 9) for (let y = 1; y < 11; y++) for (let x = 5; x < 28; x++) if ((x - 16) ** 2 / 110 + (y - 9.5) ** 2 / 40 < 1 && (y < 9 || x < 9 || x > 22)) set(x, y, (x + y) % 3 ? hc : hd);
+  if (hair === 10) { top(4, 9, 9, 23); for (const x of [8, 23]) for (let y = 9; y < 22; y++) set(x, y, (y + x) % 4 ? hc : hd); for (const x of [10, 13, 18, 21]) rect(x, 9, 1, 2, hc); }
+  if (hair === 11) { for (let y = 5; y < 9; y++) for (let x = 9; x < 23; x++) set(x, y, x % 2 ? hc : hd); rect(10, 4, 12, 1, hc); for (const x of [7, 24]) for (let y = 9; y < 29; y++) { set(x, y, y % 2 ? hc : hd); set(x + (x < 16 ? 1 : -1), y, y % 2 ? hd : hc); } rect(6, 29, 3, 1, gc); rect(23, 29, 3, 1, gc); }
+  if (hair === 12) { top(4, 9, 9, 23); top(8, 11, 8, 10); top(8, 11, 22, 24); rect(13, 4, 6, 1, faceShade(hc, .3)); }
+  if (hair === 13) { top(4, 9, 9, 23); top(8, 11, 8, 10); top(8, 11, 22, 24); rect(7, 11, 2, 2, gc); rect(23, 11, 2, 2, gc); }
+  if (hair === 14) { for (let y = 2; y < 9; y++) for (let x = 9; x < 23; x++) if (y > 2 + Math.max(0, x - 16) / 2 || x < 17) set(x, y, (x * 7 + y * 3) % 5 ? hc : hd); for (let y = 8; y < 12; y++) { set(9, y, faceShade(sk, -.25)); set(22, y, faceShade(sk, -.25)); } }
+  if (hair === 15) { top(4, 10, 8, 24); for (let x = 9; x < 23; x++) if (x % 3) set(x, 10, hc); for (let x = 9; x < 23; x += 3) set(x, 11, hd); top(10, 17, 7, 9); top(10, 17, 23, 25); }
+  if (hair === 16) { top(8, 13, 8, 10); top(8, 13, 22, 24); for (let x = 11; x < 21; x += 2) set(x, 6, hd); rect(12, 7, 3, 1, faceShade(sk, .35)); }
+  if (hair === 17) { top(2, 9, 13, 19); for (const x of [13, 15, 17]) set(x + 1, 1, hd); top(6, 9, 9, 23); rect(9, 9, 1, 2, hc); rect(22, 9, 1, 2, hd); }
   if (!mask && !H) { rect(12, 7, 2, 1, faceShade(sk, .35)); set(11, 8, faceShade(sk, .35)); }
+  // headwear
+  const hw = HWC ? FACE.col[HWC] : safeColor(wcol) || '#c8102e', hwd = faceShade(hw, -.3);
+  if (HW === 1) { rect(10, 4, 12, 1, hw); rect(9, 5, 14, 5, hw); rect(21, 5, 2, 5, hwd); for (let y = 5; y < 10; y++) for (let x = 9; x < 23; x++) if ((x + y * 2) % 5 === 0) set(x, y, faceShade(hw, .5)); rect(23, 8, 2, 2, hw); set(25, 10, hw); set(24, 11, hwd); }
+  if (HW === 2) { rect(10, 1, 12, 6, hw); g[1][15] = g[1][16] = null; rect(15, 2, 2, 1, hwd); rect(20, 1, 2, 6, hwd); rect(10, 6, 12, 1, '#111'); rect(4, 7, 24, 2, hw); rect(4, 8, 3, 1, hwd); rect(25, 8, 3, 1, hwd); set(3, 6, hw); set(28, 6, hw); }
+  if (HW === 3) { for (let y = 2; y < 8; y++) { const i = y < 4 ? 4 - y : 0; rect(9 + i, y, 14 - i * 2, 1, hw); } for (let y = 2; y < 8; y++) for (let x = 9; x < 23; x += 2) if (g[y][x] === hw) set(x, y, hwd); rect(8, 7, 16, 3, faceShade(hw, -.15)); for (let x = 8; x < 24; x += 2) set(x, 8, hwd); rect(14, 0, 4, 2, '#f4f4f4'); }
+  if (HW === 4) { for (let y = 3; y < 9; y++) { const i = y < 5 ? 5 - y : 0; rect(9 + i, y, 14 - i * 2, 1, hw); } rect(20, 4, 3, 5, hwd); set(16, 3, hwd); rect(7, 9, 18, 1, hwd); rect(8, 10, 16, 1, faceShade(hw, -.5)); rect(13, 5, 6, 3, faceShade(hw, .4)); }
+  if (HW === 5) { rect(10, 5, 12, 3, gold); rect(10, 7, 12, 1, goldD); for (const x of [10, 13, 18, 21]) { rect(x, 3, 1, 2, gold); } rect(15, 2, 2, 3, gold); set(15, 1, gold); set(16, 1, gold); for (const x of [12, 16, 19]) set(x, 6, HWC ? hw : '#c8102e'); set(11, 6, '#fff7c2'); }
+  if (HW === 6) { const tc = '#151515', tl = '#2a2a2a'; rect(10, 0, 12, 7, tc); rect(19, 0, 3, 7, tl); rect(10, 5, 12, 1, hw); rect(6, 7, 20, 2, tc); rect(6, 7, 20, 1, tl); }
+  if (HW === 7) { rect(11, 8, 10, 1, gold); rect(13, 7, 6, 1, gold); rect(15, 5, 2, 2, gold); set(15, 6, HWC ? hw : '#e23a8a'); set(16, 6, HWC ? hw : '#e23a8a'); set(12, 7, goldD); set(19, 7, goldD); }
+  if (HW === 8) { for (let y = 3; y < 10; y++) { const i = y < 6 ? 6 - y : 0; rect(9 + i, y, 14 - i * 2, 1, '#8d939b'); } rect(19, 4, 3, 6, '#6b7178'); rect(8, 9, 16, 2, hw); for (let x = 9; x < 23; x += 3) set(x, 10, '#dcdcdc'); for (const [x, y] of [[8, 7], [7, 6], [6, 5], [6, 4], [6, 3], [7, 2], [23, 7], [24, 6], [25, 5], [25, 4], [25, 3], [24, 2]]) set(x, y, '#f1e6c8'); set(7, 1, '#d8c9a0'); set(24, 1, '#d8c9a0'); }
   // extras
   if (X === 1) rect(9, 10, 14, 2, pc);
   if (X === 2) { rect(10, 13, 5, 3, '#111'); rect(17, 13, 5, 3, '#111'); rect(15, 14, 2, 1, '#111'); set(11, 13, '#6ab0ff'); set(18, 13, '#6ab0ff'); }
-  if (X === 3) set(8, 16, '#f2c94c');
+  if (X === 3) set(8, 16, gold);
+  if (X === 4) { set(17, 18, gold); }
+  if (X === 5) { const fr = '#2a2a2a'; for (const x0 of [10, 17]) { rect(x0, 13, 5, 1, fr); rect(x0, 16, 5, 1, fr); rect(x0, 13, 1, 4, fr); rect(x0 + 4, 13, 1, 4, fr); } rect(15, 14, 2, 1, fr); set(9, 14, fr); set(22, 14, fr); }
+  if (X === 6) { rect(17, 13, 5, 4, '#111'); for (let x = 9; x < 17; x++) set(x, 11 + Math.round((x - 9) / 4), '#111'); set(22, 12, '#111'); set(23, 11, '#111'); }
+  if (X === 7) { for (let x = 11; x < 21; x++) { const y = 24 + (x >= 12 && x <= 19 ? 1 : 0) + (x >= 13 && x <= 18 ? 1 : 0) + (x >= 15 && x <= 16 ? 1 : 0); set(x, y, x % 2 ? gold : goldD); } rect(15, 28, 2, 2, gold); set(16, 29, goldD); }
+  if (X === 8) for (const [x, y] of [[10, 11], [11, 12], [12, 13], [12, 16], [13, 17], [13, 18]]) set(x, y, '#9c3b34');
+  if (X === 9) { rect(18, 17, 4, 2, '#efe3c8'); set(19, 17, '#d6c7a6'); set(20, 18, '#d6c7a6'); }
   // dark outline, then the ropes behind
   const out = g.map(r => r.slice());
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!g[y][x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => g[y + b]?.[x + a])) out[y][x] = '#0b0b0f';
@@ -11296,23 +11428,31 @@ function beltBatch(m) {
     </div>`;
 }
 
-// the face maker in the wrestler editor: changes one place of the look code at a time
+// the face maker in the wrestler editor: changes one place of the look code at a time, in four tabs
+const FM_TABS = [['face', 'Face'], ['hair', 'Hair'], ['paint', 'Paint & masks'], ['gear', 'Gear']];
 function faceMaker(d) {
-  const c = faceCode(d), at = i => +c[i];
+  const c = faceCode(d), at = i => parseInt(c[i], 36);
   // each choice shows this wrestler's face with that choice applied, so you can see it before you pick
-  const peek = (i, j) => faceURL({ ...d, look: c.slice(0, i) + j + c.slice(i + 1) });
+  const peek = (i, j) => faceURL({ ...d, look: c.slice(0, i) + j.toString(36) + c.slice(i + 1) });
   const chips = (i, list) => `<div class="fm-tiles">${list.map((l, j) => `<button class="fm-tile ${at(i) === j ? 'on' : ''}" data-act="bFace" data-f="${i}" data-id="${j}" aria-pressed="${at(i) === j}"><img class="px" alt="" src="${peek(i, j)}"><span>${l}</span></button>`).join('')}</div>`;
-  const sws = (i, cols, from, label) => `<div class="swatches">${cols.map((col, j) => j < from ? '' : `<button class="sw ${at(i) === j ? 'on' : ''}${col ? '' : ' mine'}" style="background:${col || safeColor(d.color) || '#c8102e'}" data-act="bFace" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : 'their colour'}"></button>`).join('')}</div>`;
+  const sws = (i, cols, from, label) => `<div class="swatches">${cols.map((col, j) => j < from ? '' : `<button class="sw ${at(i) === j ? 'on' : ''}${col ? '' : ' mine'}" style="background:${col || safeColor(d.color) || '#c8102e'}" data-act="bFace" data-f="${i}" data-id="${j}" aria-label="${label} ${j ? col : 'their colour'}" aria-pressed="${at(i) === j}"></button>`).join('')}</div>`;
   const row = (l, h) => `<div class="fm-row"><span>${l}</span>${h}</div>`;
-  const mask = at(4) === 5, women = looksWomen(d);
+  const F = at(4), hood = FACE_HOOD.has(F), women = looksWomen(d), tab = FM_TABS.some(([k]) => k === UI.fmTab) ? UI.fmTab : 'face';
+  const panes = {
+    face: () => row('Skin', `<div class="swatches">${FACE_SKIN_ORDER.map(j => `<button class="sw ${at(0) === j ? 'on' : ''}" style="background:${FACE.skin[j][0]}" data-act="bFace" data-f="0" data-id="${j}" aria-label="Skin tone ${FACE_SKIN_ORDER.indexOf(j) + 1}" aria-pressed="${at(0) === j}"></button>`).join('')}</div>`)
+      + row('Eyes', chips(10, FACE.eyes)) + row('Brows', chips(11, FACE.brows)) + row('Mouth', chips(12, FACE.mouth))
+      + (women || at(15) ? row('Make-up', chips(15, FACE.makeup)) : ''),
+    hair: () => hood ? `<p class="small muted fm-row">The ${esc(FACE.face[F].toLowerCase())} covers the hair. Pick another face on Paint &amp; masks to show it.</p>`
+      : row('Hair', chips(1, FACE.hair)) + row('Hair colour', sws(2, FACE.hairC, 0, 'Hair')) + (women && !at(3) ? '' : row('Facial hair', chips(3, FACE.beard))),
+    paint: () => row('Face', chips(4, FACE.face)) + (FACE_MASKS.has(F) ? row('Mask colour', sws(8, FACE.col, 1, 'Mask')) + row('Mask trim', sws(9, FACE.col, 1, 'Trim')) : '')
+      + row('Paint colour <span class="muted">· also the gear</span>', sws(6, FACE.col, 0, 'Paint')),
+    gear: () => row('Headwear', chips(13, FACE.hat)) + (at(13) ? row('Headwear colour', sws(14, FACE.col, 0, 'Headwear')) : '')
+      + row('Gear', chips(5, FACE.gear)) + row('Gear colour', sws(6, FACE.col, 0, 'Gear')) + row('Extra', chips(7, FACE.extra)),
+  };
   return `<details class="fm" ${UI.fmOpen ? 'open' : ''}><summary data-act="fmTog"><img class="fm-big px av-${d.align === 'heel' ? 'heel' : 'face'}" alt="Face preview" src="${faceURL(d)}"><span>Pixel face<span class="tiny muted" style="display:block;font-weight:500">Shown when there's no photo</span></span></summary>
-    <div class="fm-row"><button class="btn" data-act="bFaceRand">🎲 Random face</button></div>
-    ${row('Skin', `<div class="swatches">${FACE.skin.map(([a], j) => `<button class="sw ${at(0) === j ? 'on' : ''}" style="background:${a}" data-act="bFace" data-f="0" data-id="${j}" aria-label="Skin tone ${j + 1}"></button>`).join('')}</div>`)}
-    ${row('Face', chips(4, FACE.face))}
-    ${mask ? row('Mask colour', sws(8, FACE.col, 1, 'Mask')) + row('Mask trim', sws(9, FACE.col, 1, 'Trim')) : row('Hair', chips(1, FACE.hair)) + row('Hair colour', sws(2, FACE.hairC, 0, 'Hair')) + (women && !at(3) ? '' : row('Beard', chips(3, FACE.beard)))}
-    ${row('Gear', chips(5, FACE.gear))}
-    ${row('Gear and paint colour', sws(6, FACE.col, 0, 'Gear'))}
-    ${row('Extra', chips(7, FACE.extra))}
+    <div class="fm-row"><button class="btn" data-act="bFaceRand">${ic('dice')} Random face</button></div>
+    <div class="seg-ctl fm-tabs" role="tablist" aria-label="Face maker">${FM_TABS.map(([k, l]) => `<button role="tab" class="${tab === k ? 'on' : ''}" data-act="fmTab" data-id="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
+    <div role="tabpanel">${panes[tab]()}</div>
   </details>`;
 }
 // ---- the builder screen ----
@@ -13228,7 +13368,7 @@ const CREATOR_ACTIONS = {
     }
     m.busy = null; m.res = res; commit(res.ok.length ? `Added ${res.ok.length} photo${res.ok.length > 1 ? 's' : ''}.` : 'No photos were added.');
   },
-  rtPlace() { const ws = G.wrestlers.filter(w => !w.photo); if (!ws.length) return; confirmBox('New faces for everyone?', `The ${ws.length} wrestlers without a photo get a new random pixel face. Faces you made in the editor are replaced too.`, 'New faces', () => { for (const w of ws) w.look = faceRandom(Math.random(), looksWomen(w)); UI.modal = { type: 'rtools', tab: 'photos' }; commit(`${ws.length} new face${ws.length > 1 ? 's' : ''}.`); }); },
+  rtPlace() { const ws = G.wrestlers.filter(w => !w.photo); if (!ws.length) return; confirmBox('New faces for everyone?', `The ${ws.length} wrestlers without a photo get a new random pixel face. Faces you made in the editor are replaced too.`, 'New faces', () => { for (const w of ws) w.look = faceRandom(Math.random(), looksWomen(w), true); UI.modal = { type: 'rtools', tab: 'photos' }; commit(`${ws.length} new face${ws.length > 1 ? 's' : ''}.`); }); },
   rtPhotosOff() { confirmBox('Remove imported photos?', 'Wrestlers with a photo from the mass import go back to their pixel face or initials. Other photos stay.', 'Remove', () => { for (const w of G.wrestlers) if (w.photoLocal) { w.photo = ''; delete w.photoLocal; } UI.modal = { type: 'rtools', tab: 'photos' }; commit('Removed.'); }, true); },
   rtParse() { const m = UI.modal; m.text = document.getElementById('rtIn').value; const r = parseImport(m.text); m.parsed = r.pack || null; m.error = r.error || ''; render(); rtTop(); },
   rtBack() { const m = UI.modal; if (m.fromLib) return A.library(); m.parsed = null; m.error = ''; render(); rtTop(); },
@@ -13264,8 +13404,9 @@ const CREATOR_ACTIONS = {
     });
   },
   bPhotoDel() { UI.modal.draft.photo = ''; delete UI.modal.draft.photoLocal; delete UI.modal.draft.photoGen; PX = null; render(); },
-  bFace(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < 10) || !(n >= 0 && n < FACE_MAX[i])) return; const c = [...faceCode(d)]; c[i] = String(n); if (i === 4 && n === 5) c[7] = c[7] === '2' ? '2' : '0'; d.look = c.join(''); UI.fmOpen = true; render(); },
-  bFaceRand() { const d = UI.modal.draft; d.look = faceRandom(Math.random(), looksWomen(d)); UI.fmOpen = true; render(); },
+  bFace(v, el) { const d = UI.modal.draft, i = +el.dataset.f, n = +v; if (!(i >= 0 && i < FACE_LEN) || !(n >= 0 && n < FACE_MAX[i])) return; const c = [...faceCode(d)]; c[i] = n.toString(36); if (i === 4 && FACE_HOOD.has(n) && !['2', '3', '7'].includes(c[7])) c[7] = '0'; d.look = c.join(''); UI.fmOpen = true; render(); },
+  bFaceRand() { const d = UI.modal.draft; d.look = faceRandom(Math.random(), looksWomen(d), true); UI.fmOpen = true; render(); },
+  fmTab(v) { UI.fmTab = v; UI.fmOpen = true; render(); },
   fmTog(v, el) { UI.fmOpen = !el.parentElement.open; },
   bPx(v, el) { pxSet(PX, el.dataset.f, v); applyPX(); render(); },
   bColor(c) { UI.modal.draft.color = c; if (PX?.bg === 'color') applyPX(); render(); },
@@ -16232,7 +16373,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.85';
+const VERSION = '1.9.86';
 const WHATS_NEW = [
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
