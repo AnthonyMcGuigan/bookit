@@ -8048,6 +8048,32 @@ const symName = k => { const n = String(k).replace(/^ic-/, ''); return SYM_NAME[
 const SYM_SRC = new Map();
 const symInner = k => { const n = String(k).replace(/^ic-/, ''); if (!SYM_SRC.has(n)) SYM_SRC.set(n, document.getElementById('i-' + n)?.innerHTML || ''); return SYM_SRC.get(n); };
 // a symbol drawn in metal (or any colour) on a 24 x 24 box centred on (cx, cy) with radius r, with a dark edge below it for relief
+// an icon as an n x n grid of on/off pixels, for symbols and tattoos set to Pixel
+const SYM_PIX = new Map();
+function symPix(k, n) {
+  const key = k + n; if (SYM_PIX.has(key)) return SYM_PIX.get(key);
+  let out = null;
+  try {
+    const el = document.getElementById('i-' + String(k).replace(/^ic-/, '')), S = n * 8, cv = document.createElement('canvas'); cv.width = cv.height = S;
+    const x = cv.getContext('2d'); x.scale(S / 24, S / 24); x.fillStyle = x.strokeStyle = '#000'; x.lineCap = x.lineJoin = 'round';
+    for (const c of el ? el.children : []) {
+      const a = q => c.getAttribute(q);
+      if (c.tagName === 'circle') { x.beginPath(); x.arc(+a('cx'), +a('cy'), +a('r'), 0, Math.PI * 2); if (a('fill') !== 'none') x.fill(); if (a('stroke') && a('stroke') !== 'none') { x.lineWidth = +a('stroke-width') || 2; x.stroke(); } continue; }
+      if (c.tagName === 'rect') { x.beginPath(); x.rect(+a('x') || 0, +a('y') || 0, +a('width'), +a('height')); if (a('fill') !== 'none') x.fill(); if (a('stroke') && a('stroke') !== 'none') { x.lineWidth = +a('stroke-width') || 2; x.stroke(); } continue; }
+      if (c.tagName !== 'path') continue;
+      const p = new Path2D(a('d') || '');
+      if (a('fill') !== 'none') x.fill(p, a('fill-rule') === 'evenodd' ? 'evenodd' : 'nonzero');
+      if (a('stroke') && a('stroke') !== 'none') { x.lineWidth = +a('stroke-width') || 2; x.stroke(p); }
+    }
+    const d = x.getImageData(0, 0, S, S).data; out = [];
+    for (let j = 0; j < n; j++) { const row = []; for (let i = 0; i < n; i++) { let t = 0; for (let y = 0; y < 8; y++) for (let z = 0; z < 8; z++) t += d[((j * 8 + y) * S + i * 8 + z) * 4 + 3]; row.push(t / 64 > 96); } out.push(row); }
+  } catch (e) { out = null; }
+  SYM_PIX.set(key, out); return out;
+}
+// stamps a pixel icon centred on cx, cy into a pixel grid; ok(x, y) says which pixels it may cover
+function pixStamp(g, k, cx, cy, r, c, ok) { const n = Math.max(3, Math.round(r * 2)), m = symPix(k, n); if (!m) return;
+  const x0 = Math.round(cx - n / 2), y0 = Math.round(cy - n / 2);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const x = x0 + i, y = y0 + j; if (m[j][i] && g[y] && x >= 0 && x < g[y].length && (!ok || ok(x, y))) g[y][x] = c; } }
 function symDraw(k, cx, cy, r, fill, edge, ew = 1.4, shd) {
   const s = symInner(k); if (!s) return '';
   const sc = r * 2 / 24, at = (dy = 0) => `translate(${(cx - 12 * sc).toFixed(2)} ${(cy - 12 * sc + dy).toFixed(2)}) scale(${sc.toFixed(3)})`;
@@ -8368,7 +8394,7 @@ function faceGrid(code, align, wcol, women, lx) {
     const FP = { tribal: [[21, 16], [20, 17], [21, 18], [20, 19]], bands: [[17, 8], [18, 8], [19, 8], [20, 8]], script: [[20, 17], [20, 19], [19, 21]],
       sleeve: Array.from({ length: 6 * 15 }, (_, i) => [17 + i % 6, 7 + Math.floor(i / 6)]).filter(([x, y]) => (x * 3 + y * 2) % 5 < 2 && !(y >= 13 && y <= 16 && x >= 17 && x <= 21)) };
     for (const t of TT.p) for (const side of ['l', 'r']) { if (!t.at.includes(side + 'fc')) continue;
-      if (t.d.startsWith('ic-')) { face.push({ k: t.d, c: t.c, x: side === 'l' ? 11 : 21, y: 18.5, r: 1.8 * ({ s: .75, l: 1.3 }[t.s] || 1) }); continue; }
+      if (t.d.startsWith('ic-')) { const x = side === 'l' ? 11 : 21, r = 1.8 * ({ s: .75, l: 1.3 }[t.s] || 1); if (t.px) pixStamp(g, t.d, x, 18.5, r * 1.2, t.c, sk2); else face.push({ k: t.d, c: t.c, x, y: 18.5, r }); continue; }
       FP[{ jagged: 'tribal', swirl: 'tribal', ink: 'sleeve', band: 'bands', barbed: 'bands', stars: 'script' }[t.d] || t.d]?.forEach(([x, y]) => { if (side === 'l') x = 31 - x; if (sk2(x, y)) g[y][x] = t.c; }); }
     g.tatIc = { icons: [...face, ...ti.icons], clip: ti.clip }; g.tatFace = face; }
   else if (TT) { const ink = TT.c, sk2 = (x, y) => g[y]?.[x] === sk || g[y]?.[x] === sd, dot = (x, y) => { if (sk2(x, y)) g[y][x] = ink; };
@@ -8389,10 +8415,11 @@ function pixRects(out) {
   for (let y = 0; y < out.length; y++) for (let x = 0, N = out[y].length; x < N;) { const c = out[y][x]; if (!c) { x++; continue; } let e = x; while (e < N && out[y][e] === c) e++; s += `<rect x="${x}" y="${y}" width="${e - x}" height="1" fill="${c}"/>`; x = e; }
   return s;
 }
+const FACE_SYM = { head: [16, 9.5, 2.4, 4], chest: [16, 28.6, 2.6, 6] };
 function faceSVG(code, align, wcol, women, tight, lx) {
-  const fg = faceGrid(code, align, wcol, women, lx), out = pixOutline(fg);
+  const fg = faceGrid(code, align, wcol, women, lx); symPaint(fg, lx?.sym, FACE_SYM); const out = pixOutline(fg);
   const bg = align === 'heel' ? '#4a0d14' : '#0d2a5c', bl = faceShade(bg, .25);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}` + pixRects(out) + tatIcons(fg.tatIc, 'tk') + symOn(lx?.sym, { head: [16, 9.5, 2.4, 4], chest: [16, 28.6, 2.6, 6] }) + '</svg>';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}` + pixRects(out) + tatIcons(fg.tatIc, 'tk') + symOn(lx?.sym, FACE_SYM) + '</svg>';
 }
 const FACE_CACHE = new Map();
 // tight: a closer crop for small round avatars, so the face fills the circle
@@ -8444,7 +8471,7 @@ function lcClean(o) { if (!o || typeof o !== 'object') return undefined; const x
 const SYM_AT = [['head', 'Forehead'], ['chest', 'Chest'], ['trunks', 'Trunks'], ['boots', 'Boots']];
 const SYM_X = [['l', 'Left'], ['c', 'Centre'], ['r', 'Right']], SYM_S = { s: ['Small', .75], m: ['Medium', 1], l: ['Large', 1.35] };
 const SYM_COLS = ['#f2c94c', '#f4f4f4', '#111111', '#c8102e', '#1f4fbf', '#1f8a3b', '#7b2cbf', '#ff6b00', '#0891b2', '#e23a8a'];
-function symClean(o) { if (!o || typeof o !== 'object' || !symOK(o.k)) return undefined; return { k: o.k, at: SYM_AT.some(([a]) => a === o.at) ? o.at : 'chest', c: isHex(o.c) ? String(o.c).toLowerCase() : '#f2c94c', ...(o.x === 'l' || o.x === 'r' ? { x: o.x } : {}), ...(o.s === 's' || o.s === 'l' ? { s: o.s } : {}) }; }
+function symClean(o) { if (!o || typeof o !== 'object' || !symOK(o.k)) return undefined; return { k: o.k, at: SYM_AT.some(([a]) => a === o.at) ? o.at : 'chest', c: isHex(o.c) ? String(o.c).toLowerCase() : '#f2c94c', ...(o.x === 'l' || o.x === 'r' ? { x: o.x } : {}), ...(o.s === 's' || o.s === 'l' ? { s: o.s } : {}), ...(o.px == 1 ? { px: 1 } : {}) }; }
 // tattoos: ink drawn on bare skin, so gear covers them. w.tat = { p: [{ d: design or 'ic-name', at: [spots], c: ink, s?: icon size }] }, up to 6.
 // The first version, { at: [places], st: style, c: ink }, still draws exactly as it did until the tattoos are edited.
 const TAT_AT = [['face', 'Face'], ['neck', 'Neck'], ['chest', 'Chest'], ['stomach', 'Stomach'], ['larm', 'Left arm'], ['rarm', 'Right arm'], ['legs', 'Legs']];
@@ -8457,7 +8484,7 @@ const TAT_FACE_SPOTS = ['lfc', 'rfc', 'lnk', 'rnk', 'lsh', 'rsh', 'lpc', 'rpc'];
 const TAT_D = [['tribal', 'Tribal'], ['jagged', 'Jagged'], ['swirl', 'Swirl'], ['ink', 'Full ink'], ['band', 'Band'], ['barbed', 'Barbed wire'], ['script', 'Script'], ['stars', 'Stars']];
 const TAT_MAX = 6;
 const tatOne = t => { if (!t || typeof t !== 'object' || !Array.isArray(t.at)) return null; const at = TAT_SPOTS.filter(a => t.at.includes(a)), d = TAT_D.some(([a]) => a === t.d) || symOK(t.d) ? t.d : null;
-  if (!d) return null; const x = { d, at, c: isHex(t.c) ? String(t.c).toLowerCase() : '#1a1a2a' }; if (d.startsWith('ic-') && (t.s === 's' || t.s === 'l')) x.s = t.s; return x; };
+  if (!d) return null; const x = { d, at, c: isHex(t.c) ? String(t.c).toLowerCase() : '#1a1a2a' }; if (d.startsWith('ic-') && (t.s === 's' || t.s === 'l')) x.s = t.s; if (d.startsWith('ic-') && t.px == 1) x.px = 1; return x; };
 function tatClean(o) { if (!o || typeof o !== 'object') return undefined;
   if (Array.isArray(o.p)) { const p = o.p.slice(0, TAT_MAX).map(tatOne).filter(t => t && t.at.length); return p.length ? { p } : undefined; }
   if (!Array.isArray(o.at)) return undefined; const at = TAT_AT.map(([a]) => a).filter(a => o.at.includes(a)); if (!at.length) return undefined;
@@ -8493,7 +8520,8 @@ function tatPaint(g, list, isSkin, spotAt, y0, y1) {
   for (let y = y0; y < y1; y++) for (let x = 0; x < W0; x++) if (isSkin(x, y)) clip += `M${x} ${y}h1v1h-1z`;
   for (const t of list) { const px = []; for (let y = y0; y < y1; y++) for (let x = 0; x < W0; x++) if (isSkin(x, y) && t.at.includes(spotAt(x, y))) px.push([x, y]);
     if (!px.length) continue; const cx = px.reduce((a, q) => a + q[0], 0) / px.length + .5, cy = px.reduce((a, q) => a + q[1], 0) / px.length + .5;
-    if (t.d.startsWith('ic-')) { icons.push({ k: t.d, c: t.c, x: cx, y: cy, r: Math.max(2.2, Math.sqrt(px.length) / 2.2) * ({ s: .7, l: 1.3 }[t.s] || 1) }); continue; }
+    if (t.d.startsWith('ic-')) { const r = Math.max(2.2, Math.sqrt(px.length) / 2.2) * ({ s: .7, l: 1.3 }[t.s] || 1), sk0 = new Set(px.map(([x, y]) => y * 999 + x));
+      if (t.px) pixStamp(g, t.d, cx, cy, r, t.c, (x, y) => isSkin(x, y) || sk0.has(y * 999 + x)); else icons.push({ k: t.d, c: t.c, x: cx, y: cy, r }); continue; }
     const ys = px.map(q => q[1]), a = Math.min(...ys), ym = Math.round((a + Math.max(...ys)) / 2);
     for (const [x, y] of px) if (tatOn(t.d, x, y, a, ym, cx, cy)) g[y][x] = t.c; }
   return { icons, clip };
@@ -8511,11 +8539,15 @@ function tatIcons(ti, id) {
 // a whole pixel look (a saved look template): face code, body code, colours and symbol
 function lookClean(o) { o = o && typeof o === 'object' ? o : {}; const x = {}; if (faceOK(o.look)) x.look = o.look; if (bodyOK(o.body)) x.body = o.body; const lc = lcClean(o.lc), sy = symClean(o.sym), tt = tatClean(o.tat); if (lc) x.lc = lc; if (sy) x.sym = sy; if (tt) x.tat = tt; return x; }
 // a symbol drawn as the real icon (crisp, not pixels) on top of a pixel face or body: spots = { place: [x, y, r, side step] }
+function symXs(sym, x, dx) { return Array.isArray(x) ? (sym.x === 'l' ? [x[0]] : sym.x === 'r' ? [x[1]] : x) : [x + (sym.x === 'l' ? -dx : sym.x === 'r' ? dx : 0)]; }
+// a symbol set to Pixel is stamped into the pixel grid instead (before the outline, so it sits in the art)
+function symPaint(g, sym, spots) { const p = sym?.px && spots[sym.at]; if (!p) return; const [x, y, r0, dx] = p, r = r0 * SYM_S[sym.s || 'm'][1];
+  for (const cx of symXs(sym, x, dx)) pixStamp(g, sym.k, cx, y, r * 1.1, sym.c); }
 function symOn(sym, spots) {
-  const p = sym && spots[sym.at]; if (!p) return '';
+  const p = sym && !sym.px && spots[sym.at]; if (!p) return '';
   const [x, y, r0, dx] = p, r = r0 * SYM_S[sym.s || 'm'][1], lum = parseInt(sym.c.slice(1, 3), 16) + parseInt(sym.c.slice(3, 5), 16) + parseInt(sym.c.slice(5, 7), 16);
   const edge = lum < 120 ? faceShade(sym.c, .45) : '#0b0b0f';
-  const xs = Array.isArray(x) ? (sym.x === 'l' ? [x[0]] : sym.x === 'r' ? [x[1]] : x) : [x + (sym.x === 'l' ? -dx : sym.x === 'r' ? dx : 0)];
+  const xs = symXs(sym, x, dx);
   return `<g shape-rendering="geometricPrecision">${xs.map(cx => symDraw(sym.k, cx, y, r, sym.c, edge, .5, .45)).join('')}</g>`;
 }
 const lookKey = w => (w.lc ? JSON.stringify(w.lc) : '') + (w.sym ? JSON.stringify(w.sym) : '') + (w.tat ? JSON.stringify(w.tat) : '');
@@ -8634,12 +8666,14 @@ function bodySVG(w, holds, opts) {
     else { const hw = 24 - (24 - hipW) + 1; span(51, hw, '#1b1b20'); span(52, hw, '#1b1b20'); span(53, hw, '#1b1b20'); rect(18, 48, 12, 8, gold); rect(19, 49, 10, 6, gl); rect(21, 50, 6, 4, gold); rect(22, 51, 4, 2, gk); rect(15, 51, 2, 3, gold); rect(31, 51, 2, 3, gold); }
   }
   // ring: ropes behind, mat below
+  const BSYM = { head: [24, 15.5, 2.6, 4], chest: [24, 40, 4.4, 5.5], trunks: [24, 56, 3.2, 4.5], boots: [[legX(-1) + lt, legX(1) + lt], 81, 2.7, 0] };
+  symPaint(g, SY, BSYM);
   const out = pixOutline(g);
   const bg = w.align === 'heel' ? '#4a0d14' : '#0d2a5c', rope = w.align === 'heel' ? '#b0303c' : '#3b6fd6';
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wd} ${H}" shape-rendering="crispEdges"><rect width="${Wd}" height="${H}" fill="${bg}"/>`;
   s += [38, 50, 62].map(y => `<rect y="${y}" width="${Wd}" height="2" fill="${rope}"/><rect y="${y + 2}" width="${Wd}" height="1" fill="${faceShade(rope, -.45)}"/>`).join('');
   s += `<rect y="90" width="${Wd}" height="6" fill="#c9ccd6"/><rect y="90" width="${Wd}" height="1" fill="#e9ebf1"/><rect x="10" y="90" width="28" height="2" fill="#9ea3b2"/>`;
-  return s + pixRects(out) + tatIcons(TI, 'tk') + symOn(SY, { head: [24, 15.5, 2.6, 4], chest: [24, 40, 4.4, 5.5], trunks: [24, 56, 3.2, 4.5], boots: [[legX(-1) + lt, legX(1) + lt], 81, 2.7, 0] }) + '</svg>';
+  return s + pixRects(out) + tatIcons(TI, 'tk') + symOn(SY, BSYM) + '</svg>';
 }
 const BODY_CACHE = new Map();
 const tatMapURL = (w, sel) => 'data:image/svg+xml,' + encodeURIComponent(bodySVG({ ...w, tat: undefined, sym: undefined }, false, { map: sel }));
@@ -12819,6 +12853,7 @@ function lookMaker(d) {
       + (SY ? lab('Where it goes') + `<div class="seg-ctl">${SYM_AT.filter(([a]) => body || a === 'head' || a === 'chest').map(([a, l]) => `<button class="${SY.at === a ? 'on' : ''}" data-act="lkSym" data-f="at" data-id="${a}" aria-pressed="${SY.at === a}">${l}</button>`).join('')}</div>`
         + lab(SY.at === 'boots' ? 'Which boot' : 'Side') + `<div class="seg-ctl">${SYM_X.map(([a, l]) => { const on = (SY.x || 'c') === a; return `<button class="${on ? 'on' : ''}" data-act="lkSym" data-f="x" data-id="${a}" aria-pressed="${on}">${SY.at === 'boots' && a === 'c' ? 'Both' : l}</button>`; }).join('')}</div>`
         + lab('Size') + `<div class="seg-ctl">${Object.entries(SYM_S).map(([a, [l]]) => { const on = (SY.s || 'm') === a; return `<button class="${on ? 'on' : ''}" data-act="lkSym" data-f="s" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>`
+        + lab('Look') + `<div class="seg-ctl">${[['', 'Sharp'], ['1', 'Pixel']].map(([a, l]) => { const on = (SY.px ? '1' : '') === a; return `<button class="${on ? 'on' : ''}" data-act="lkSym" data-f="px" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>`
         + lab('Symbol colour') + `<div class="swatches">${SYM_COLS.map(c => `<button class="sw ${SY.c === c ? 'on' : ''}" style="background:${c}" data-act="lkSym" data-f="c" data-id="${c}" aria-label="Symbol colour ${c}" aria-pressed="${SY.c === c}"></button>`).join('')}${anyColour('s', SY.c, 'data-lc', !SYM_COLS.includes(SY.c))}</div>` : '')
       + lab('Symbol') + wsSyms(SY?.k || '', 'lkSym', 'k', 'None'),
     tat: () => { const list = tatList(d.tat), n = Math.max(0, Math.min(UI.tatSel || 0, list.length - 1)), t = list[n];
@@ -12833,7 +12868,7 @@ function lookMaker(d) {
         + (body ? `<div class="tat-where"><img class="tat-map px" alt="Body map: tap a spot to add or take it off this tattoo" src="${tatMapURL(d, t.at)}">${grid}</div>` : grid)
         + lab('Design') + `<div class="bd-grid tat-grid">${TAT_D.map(([a, l]) => { const on = t.d === a; return `<button class="bd-tile ${on ? 'on' : ''}" data-act="lkTat" data-f="d" data-id="${a}" aria-pressed="${on}">${tatSwatch(a, t.c)}<span>${l}</span></button>`; }).join('')}</div>`
         + `<details class="tat-ic" ${icon ? 'open' : ''}><summary>${icon ? 'Icon: ' + esc(tatDName(t.d)) : 'Or use any icon from the game'}</summary>${wsSyms(icon ? t.d : '', 'lkTat', 'd')}</details>`
-        + (icon ? lab('Icon size') + `<div class="seg-ctl">${Object.entries(SYM_S).map(([a, [l]]) => { const on = (t.s || 'm') === a; return `<button class="${on ? 'on' : ''}" data-act="lkTat" data-f="s" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>` : '')
+        + (icon ? lab('Icon size') + `<div class="seg-ctl">${Object.entries(SYM_S).map(([a, [l]]) => { const on = (t.s || 'm') === a; return `<button class="${on ? 'on' : ''}" data-act="lkTat" data-f="s" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>` + lab('Look') + `<div class="seg-ctl">${[['', 'Sharp'], ['1', 'Pixel']].map(([a, l]) => { const on = (t.px ? '1' : '') === a; return `<button class="${on ? 'on' : ''}" data-act="lkTat" data-f="px" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>` : '')
         + lab('Ink') + `<div class="swatches">${TAT_INK.map(c => { const on = t.c === c; return `<button class="sw ${on ? 'on' : ''}" style="background:${c}" data-act="lkTat" data-f="c" data-id="${c}" aria-label="Ink ${c}" aria-pressed="${on}"></button>`; }).join('')}${anyColour('t', t.c, 'data-lc', !TAT_INK.includes(t.c))}</div>`; },
     build: () => lab('Build') + tiles('b', 0, BODY.build) + lab('Shape') + tiles('b', 9, BODY.shape) + lab('Stance') + tiles('b', 1, BODY.stance),
     ring: () => lab('Bottoms') + tiles('b', 2, BODY.bottoms) + lab('Bottoms colour') + sws('b', 3, FACE.col, 0, 'Bottoms')
@@ -14869,7 +14904,7 @@ const CREATOR_ACTIONS = {
     lkKeep(m);
     if (f === 'add') { if (list.length >= TAT_MAX) return; list.push({ d: 'tribal', at: [], c: list[n]?.c || '#1a1a2a' }); n = list.length - 1; }
     else if (f === 'del') { list.splice(+v, 1); n = Math.max(0, Math.min(n, list.length - 1)); }
-    else { const t = list[n]; if (!t) return; if (f === 'at') t.at = t.at.includes(v) ? t.at.filter(a => a !== v) : [...t.at, v]; else if (f === 's') { if (v === 'm') delete t.s; else t.s = v; } else if (f === 'd' && !v) return; else t[f] = v; }
+    else { const t = list[n]; if (!t) return; if (f === 'at') t.at = t.at.includes(v) ? t.at.filter(a => a !== v) : [...t.at, v]; else if (f === 's') { if (v === 'm') delete t.s; else t.s = v; } else if (f === 'px') { if (v) t.px = 1; else delete t.px; } else if (f === 'd' && !v) return; else t[f] = v; }
     UI.tatSel = n; if (list.length) d.tat = { p: list }; else delete d.tat; UI.fmOpen = true; render(); },
   lkTpl(v) { const m = UI.modal; if (v === 'open') { m.lkTpl = !m.lkTpl; UI.fmOpen = true; return render(); } const x = LOOK_TPL[+v]; if (!x) return; lkKeep(m); lkApply(m.draft, lookFromTpl(m.draft, x[1])); m.lkTpl = false; render(); },
   lkMine(i) { const m = UI.modal, x = myTpls('w')[+i]; if (!x) return; lkKeep(m); lkApply(m.draft, lookFromMine(m.draft, x.b)); m.lkTpl = false; render(); },
