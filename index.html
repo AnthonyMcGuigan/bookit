@@ -4262,6 +4262,7 @@ const BR = {
   // title shots go to the top contender most of the time, a face for a heel champion (and back) when possible
   challenger(t, top) {
     const fresh = top.filter(w => !recentlyFaced([...t.holder, w.id])); if (fresh.length) top = fresh;
+    { const h0 = W(t.holder[0]), opp = h0 ? top.filter(w => w.align !== h0.align) : []; if (opp.length) top = opp; } // face vs heel whenever there's a contender for it
     const h = W(t.holder[0]), wt = top.map((w, i) => [w, [0.6, 0.25, 0.15, 0.08, 0.05, 0.03][i] * (h && w.align !== h.align ? 1 : 0.08)]);
     let x = Math.random() * sum(wt.map(p => p[1])); for (const [w, p] of wt) if ((x -= p) <= 0) return w; return top[0];
   },
