@@ -857,9 +857,7 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .tgl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tgl-body { border: 1px solid var(--accent); border-top: 0; border-radius: 0 0 var(--r) var(--r); padding: 12px; margin-bottom: 12px; }
 .btn.st-go { margin-top: 10px; border-color: var(--accent); color: var(--accent); }
-.lv-conf { position: absolute; inset: 0; pointer-events: none; }
-.lv-conf i { position: absolute; top: -10px; width: 7px; height: 11px; background: var(--c); border-radius: 2px; opacity: 0; animation: conf 1.6s ease-in forwards; }
-@keyframes conf { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: 0; transform: translate(calc(var(--x) * 40px), 160px) rotate(540deg); } }
+.fx-cv { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 90; }
 .lv-fin { text-align: center; padding: 18px 4px 6px; }
 .lv-score { font-family: var(--f-display); font-size: 84px; line-height: 1; color: #ffcf5a; text-shadow: 0 6px 30px rgba(255,190,80,.35); }
 .lv-xp { margin-top: 10px; font-weight: 800; color: #ffb547; }
@@ -874,7 +872,6 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .live .btn:not(.pri) { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
 .live .btn.st-go { color: var(--accent); border-color: var(--accent); }
 .live.skip .lv-seg, .live.skip .lv-o, .live.skip .lv-fin, .live.skip .lv-me, .live.skip .lv-st, .live.skip .lv-rank { animation-delay: 0s !important; animation-duration: .01s !important; }
-.live.skip .lv-conf { display: none; }
 /* surprise moments: a card in the feed, and the big ones as a full-screen cutscene that pauses the show */
 .live.skip .cut { animation-delay: 0s !important; animation-duration: .01s !important; }
 .live.hold .lv-body, .live.hold .lv-body * { animation-play-state: paused !important; }
@@ -5745,13 +5742,15 @@ function liveScreen(m) {
   const p = h.prog || { goals: [], trophies: [] };
   let t = 1.4; const n = h.results.length;
   const mo = h.moments || [];
+  // effects stay rare: camera flashes only for the one best non-main segment, and only when it's 85+
+  const fxTop = h.results.reduce((b, r, i) => i < n - 1 && r.rating >= 85 && (b < 0 || r.rating > h.results[b].rating) ? i : b, -1);
   const segs = h.results.map((r, i) => {
     const main = n > 1 && i === n - 1, d0 = t + (main ? 1.2 : 0), d1 = d0 + (r.seg.kind === 'match' ? 1.6 : 1.1);
     t = d1 + 1.3;
     const after = mo.map((m, j) => m.at === i ? (() => { const c = momCard(h, j, t); t += MOMENTS[m.k]?.big ? 1.2 : 1.8; return c; })() : '').join('');
     const champ = (r.notes || []).some(x => /NEW CHAMPION/i.test(x)), hurt = (r.notes || []).find(x => /injured/i.test(x));
     return `${main ? `<div class="lv-me" style="--d:${t0(d0 - 1.2)}">★ MAIN EVENT ★</div>` : ''}
-    <div class="lv-seg ${main ? 'main' : ''} k-${r.seg.kind}" style="--d:${t0(d0)}" data-lv="${i}">
+    <div class="lv-seg ${main ? 'main' : ''} k-${r.seg.kind}" style="--d:${t0(d0)}" data-lv="${i}"${(k => k ? ` data-fx="${k}" data-fxd="${d1}"` : '')(champ ? 'champ' : main && r.rating >= 75 ? 'main' : i === fxTop ? 'big' : '')}>
       ${r.seg.kind === 'angle' ? '<i class="cam tl"></i><i class="cam tr"></i><i class="cam bl"></i><i class="cam br"></i>' : ''}
       <div class="lv-k lv-kh">${kindTag(r.seg)}<span>${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${r.seg.kind === 'match' ? segTitle(r.seg) : esc(r.seg.ptype || r.seg.atype)}</span>${r.seg.kind === 'angle' ? `<span class="rec"><b></b>REC${segPlace(r.seg) ? ' · ' + esc(SEG_PLACES[segPlace(r.seg)].n) : ''}</span>` : ''}</div>
       ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>` : lvTalk(r, main)}
@@ -5761,7 +5760,6 @@ function liveScreen(m) {
         <div class="lv-crowd">${esc(r.crowd || '')}</div>
         ${champ ? `<div class="lv-champ">🏆 AND NEW CHAMPION!</div>` : ''}${(r.notes || []).filter(x => /streak|lost 4 straight/i.test(x)).map(x => `<div class="lv-streak">${esc(x)}</div>`).join('')}${hurt ? `<div class="lv-hurt">🩹 ${esc(hurt)}</div>` : ''}${storyBtn(h, i)}
       </div>
-      ${r.rating >= 85 || champ ? `<div class="lv-conf" style="--d:${t0(d1)}">${Array.from({ length: 18 }, (_, k) => `<i style="left:${(k * 37) % 100}%;--c:${['#ffb547', '#ff5a5f', '#4c8dff', '#2fbf71', '#fff'][k % 5]};--x:${(k % 3) - 1};animation-delay:calc(var(--d) + ${(k % 6) * 0.06}s)"></i>`).join('')}</div>` : ''}
     </div>${after}`;
   }).join('');
   const rk = p.rankUp != null ? RANKS[p.rankUp] : null;
@@ -5810,7 +5808,7 @@ function cutOpen(j) {
     <div class="cs-loc">${esc(M.where)} · ${esc(h.name)}</div><div class="cs-t">${esc(M.head)}</div>
     <div class="cs-f">${ws.map(w => momFace(w, ws.length > 2 ? 72 : 96)).join('')}</div><div class="cs-line">${esc(txt)}</div>
     ${ask ? `<div class="cs-q">What do you tell the producer?</div>${momBtns(M, m, j, 'cs-c')}` : `<div class="cs-c">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`}</div><div class="cs-bar"></div>`;
-  live.appendChild(el);
+  live.appendChild(el); FX.moment('big', live);
   (el.querySelector('.cs-c .btn') || el.querySelector('.cs-skip'))?.focus({ preventScroll: true });
   if (M.cheer || m.k === 'comeback' || m.k === 'chant') SFX.crowd('cheer', .9, .2); else SFX.crowd('applause', .5, .3);
   // a moment with nothing to decide moves on by itself
@@ -5872,6 +5870,68 @@ function lvTalk(r, main) {
   return `${sp.length ? `<div class="act-faces"><div class="lv-side">${sp.slice(0, 3).map(w => face(w, sz)).join('')}</div>${tg.length ? `<span class="verb">${esc(segVerb(s))}</span><div class="lv-side">${tg.slice(0, 3).map(w => face(w, sz)).join('')}</div>` : ''}</div>` : ''}
     <div class="l3"><span>${esc(s.atype)}</span>${headline}</div>${intr}`;
 }
+// ---------- big moment effects: confetti, pyro and camera flashes drawn on one canvas ----------
+// The canvas only animates while particles are alive, stops at a few hundred pieces, follows
+// Settings → Big moment effects (meta.fx: 0 off, 1 some, 2 lots) and stays off with Less motion.
+const FX_LV = () => [0, 1, 2].includes(meta.fx) ? meta.fx : 1;
+const FX = (() => {
+  let cv = null, cx = null, P = [], E = [], raf = 0, last = 0, W = 0, H = 0, flash = 0, flashC = '255,255,255';
+  const R = (a, b) => a + Math.random() * (b - a), MAX = 320;
+  const PY = ['255,214,120', '255,170,60', '255,240,200', '255,120,40'], CF = ['#ffd36b', '#f4f1e8', '#c9952b', '#ff5a5f', '#4c8dff'];
+  const add = p => { if (P.length < MAX) P.push(p); };
+  const mount = host => {
+    if (!cv) { cv = document.createElement('canvas'); cv.className = 'fx-cv'; cv.setAttribute('aria-hidden', 'true'); cx = cv.getContext('2d'); }
+    if (cv.parentNode !== host) host.appendChild(cv);
+    const d = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; cx.setTransform(d, 0, 0, d, 0, 0);
+  };
+  const spark = (x, y, a, v) => add({ t: 's', x, y, px: x, py: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: R(.9, 1.5), age: 0, r: R(1.4, 2.6), col: PY[(Math.random() * 4) | 0] });
+  const paper = (x, y, vx, vy, col) => add({ t: 'p', x, y, vx, vy, life: R(4.5, 6), age: 0, w: R(7, 12), h: R(4, 6), a: R(0, 6.3), va: R(-8, 8), f: R(0, 6.3), vf: R(6, 12), col });
+  const bulb = (x, y, wait) => add({ t: 'w', x, y, life: R(.3, .5), age: -wait, s: R(6, 16) });
+  // crowd flashbulbs: most along the top (the hard cam side), the rest down the edges
+  const bulbs = (n, over) => { for (let i = 0; i < n; i++) { const top = Math.random() < .6, y = top ? R(H * .02, H * .2) : R(H * .2, H * .95);
+    bulb(top ? R(0, W) : Math.random() < .5 ? R(0, W * .1) : R(W * .9, W), y, R(0, over)); } };
+  const step = dt => {
+    for (const e of E) { e.age += dt; if (e.age < 0 || e.age > e.dur) continue; e.acc += e.rate * dt;
+      while (e.acc >= 1) { e.acc--; spark(e.x + R(-3, 3), e.y, -Math.PI / 2 + R(-.07, .07), e.v * R(.8, 1.05)); } }
+    E = E.filter(e => e.age <= e.dur); flash = Math.max(0, flash - dt * 1.6);
+    for (const p of P) { p.age += dt; if (p.age < 0) continue;
+      if (p.t === 's') { p.px = p.x; p.py = p.y; p.vy += 900 * dt; p.vx *= 1 - .6 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+      else if (p.t === 'p') { p.vy += 520 * dt; p.vx *= 1 - 2.4 * dt; p.vy *= 1 - 2.2 * dt; p.vy = Math.min(p.vy, 150); p.x += (p.vx + Math.sin(p.f) * 30) * dt; p.y += p.vy * dt; p.a += p.va * dt; p.f += p.vf * dt; } }
+    P = P.filter(p => p.age < p.life && p.y < H + 40);
+  };
+  const draw = () => { cx.clearRect(0, 0, W, H);
+    if (flash > 0) { cx.fillStyle = `rgba(${flashC},${flash})`; cx.fillRect(0, 0, W, H); }
+    cx.globalCompositeOperation = 'lighter'; cx.lineCap = 'round';
+    for (const p of P) { if (p.age < 0) continue; const k = 1 - p.age / p.life;
+      if (p.t === 's') { cx.strokeStyle = `rgba(${p.col},${k})`; cx.lineWidth = p.r * .7; cx.beginPath(); cx.moveTo(p.x - (p.x - p.px) * 3, p.y - (p.y - p.py) * 3); cx.lineTo(p.x, p.y); cx.stroke();
+        cx.fillStyle = `rgba(${p.col},${k * .12})`; cx.beginPath(); cx.arc(p.x, p.y, p.r * 2.2, 0, 6.3); cx.fill(); }
+      else if (p.t === 'w') { const s = p.s * (k < .7 ? k / .7 : 1), g = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, s);
+        g.addColorStop(0, `rgba(255,255,255,${k})`); g.addColorStop(.25, `rgba(230,240,255,${k * .6})`); g.addColorStop(1, 'rgba(200,220,255,0)'); cx.fillStyle = g; cx.beginPath(); cx.arc(p.x, p.y, s, 0, 6.3); cx.fill();
+        cx.strokeStyle = `rgba(255,255,255,${k * .8})`; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(p.x - s * 1.6, p.y); cx.lineTo(p.x + s * 1.6, p.y); cx.moveTo(p.x, p.y - s * 1.6); cx.lineTo(p.x, p.y + s * 1.6); cx.stroke(); } }
+    cx.globalCompositeOperation = 'source-over';
+    for (const p of P) { if (p.t !== 'p' || p.age < 0) continue;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.a); cx.scale(1, Math.cos(p.f)); cx.globalAlpha = Math.min(1, (p.life - p.age) / .6); cx.fillStyle = p.col; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); cx.restore(); }
+  };
+  const tick = now => { const dt = Math.min(.05, (now - last) / 1000); last = now;
+    // the show closed or was skipped: drop everything
+    if (!cv.isConnected) return api.stop();
+    step(dt); draw();
+    if (P.length || E.length || flash > 0) raf = requestAnimationFrame(tick); else { raf = 0; cx.clearRect(0, 0, W, H); } };
+  const api = {
+    // k: 'champ' (a new champion: confetti drop), 'main' (the main event: pyro), 'big' (a great segment or a surprise moment: camera flashes)
+    moment(k, host) {
+      const lv = FX_LV(); if (!lv || reduceMotion() || !host?.isConnected || (k === 'big' && lv < 2)) return;
+      mount(host); const lots = lv > 1;
+      if (k === 'champ') { for (let i = 0, n = lots ? 170 : 110; i < n; i++) paper(R(-.05, 1.05) * W, -R(10, H * .9), R(-40, 40), R(40, 120), CF[i % CF.length]); bulbs(lots ? 30 : 16, 1.4); }
+      else if (k === 'main') { const xs = lots ? [.06, .32, .68, .94] : [.07, .93], v = Math.sqrt(2 * 900 * H * (lots ? .62 : .52));
+        xs.forEach((x, i) => E.push({ x: W * x, y: H + 4, v, age: -i * .08, dur: lots ? 1.4 : 1.1, rate: 70, acc: 0 })); flash = lots ? .28 : .18; flashC = '255,180,80'; }
+      else { bulbs(lots ? 40 : 24, 1.4); flash = .22; flashC = '255,255,255'; }
+      if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+    },
+    stop() { cancelAnimationFrame(raf); raf = 0; P = []; E = []; flash = 0; if (cx) cx.clearRect(0, 0, W, H); },
+  };
+  return api;
+})();
 function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
   const box = document.querySelector('.live .lv-body'); if (!box || box.closest('.skip')) return;
@@ -5884,6 +5944,9 @@ function startLive() {
   box.querySelectorAll('.lv-fin').forEach(el => at(el, dOf(el), () => { SFX.bell(1); if (NATIVE) buzz(12); SFX.show(+el.dataset.rating); }));
   // keep the newest segment in view as it comes in
   box.querySelectorAll('.lv-seg, .lv-fin, .cut').forEach(el => at(el, dOf(el) + .05, () => el.scrollIntoView({ behavior: 'smooth', block: 'center' })));
+  // big moment effects as the result comes in: confetti for a new champion, pyro for a 75+ main event, camera flashes for the best 85+ segment
+  FX.stop(); const live = box.closest('.live');
+  box.querySelectorAll('.lv-seg[data-fx]').forEach(el => at(el, parseFloat(el.dataset.fxd) || 0, () => FX.moment(el.dataset.fx, live)));
   // the big surprise moments stop the show for a cutscene
   box.querySelectorAll('.cut[data-cs]').forEach(el => at(el, dOf(el) + .7, () => cutOpen(+el.dataset.mom)));
 }
@@ -7538,6 +7601,7 @@ const displaySettings = () => `
     <label class="f"><span>Music volume</span><input type="range" min="0" max="100" step="5" data-in="musicVol" value="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}" aria-valuetext="${Math.round((meta.musicVol == null ? .35 : meta.musicVol) * 100)}%" ${meta.sound === false || meta.music === false ? 'disabled' : ''}></label>
     <label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}">${l}</button>`).join('')}</div></label>
     <label class="f"><span>Motion</span><select data-in="motion"><option value="">Match my device</option><option value="reduce" ${meta.motion === 'reduce' ? 'selected' : ''}>Less motion (skip animations)</option><option value="full" ${meta.motion === 'full' ? 'selected' : ''}>Full animations</option></select></label>
+    <label class="f"><span>🎆 Big moment effects</span><select data-in="fx">${[[0, 'Off'], [1, 'Some: title wins, main events'], [2, 'Lots: plus the best segment']].map(([v, l]) => `<option value="${v}" ${FX_LV() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="f"><span>Wrestlers without a photo</span><select data-in="faces"><option value="pixel">Pixel faces</option><option value="initials" ${meta.faces === 'initials' ? 'selected' : ''}>Initials</option></select></label>
     <label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>
     ${sbOn() ? `<div class="small muted" style="margin:14px 0 8px">Privacy</div>
@@ -8812,7 +8876,7 @@ const A = {
     const cs = document.querySelector('.live .cs'); if (cs) { cs.querySelector('.cs-c').outerHTML = `<div class="cs-c" style="animation-delay:0s">${momFx(m)}<button class="btn pri" data-act="cutGo" style="align-items:center">Back to the show</button></div>`; cs.querySelector('.cs-skip').textContent = 'Continue ›'; cs.querySelector('.cs-q')?.remove(); cs.querySelector('.cs-c .btn')?.focus({ preventScroll: true }); LV.auto = setTimeout(() => cutClose(), 6000); }
   },
   cutGo() { cutClose(); },
-  liveSkip() { document.querySelector('.live .cs')?.remove(); clearTimeout(LV.auto); LV.at = 0; document.querySelector('.live')?.classList.remove('hold'); liveTimers.forEach(clearTimeout); const l = document.querySelector('.live'); if (l) { l.classList.add('skip'); l.querySelector('.lv-fin')?.scrollIntoView({ block: 'start' }); } },
+  liveSkip() { FX.stop(); document.querySelector('.live .cs')?.remove(); clearTimeout(LV.auto); LV.at = 0; document.querySelector('.live')?.classList.remove('hold'); liveTimers.forEach(clearTimeout); const l = document.querySelector('.live'); if (l) { l.classList.add('skip'); l.querySelector('.lv-fin')?.scrollIntoView({ block: 'start' }); } },
   liveRecap() { liveTimers.forEach(clearTimeout); clearTimeout(LV.auto); momSettle(); openModal({ type: 'recap', wk: UI.modal.wk }); },
   trophies() { openModal({ type: 'trophies' }); },
   carTab(t) { UI.carTab = t; render(); },
@@ -14281,6 +14345,7 @@ document.addEventListener('change', e => {
     }
     else if (k === 'faces') { meta.faces = el.value === 'initials' ? 'initials' : 'pixel'; ls.set(META, JSON.stringify(meta)); render(); }
     else if (k === 'theme') { meta.theme = ['light', 'auto'].includes(el.value) ? el.value : 'dark'; applyTheme(); ls.set(META, JSON.stringify(meta)); }
+    else if (k === 'fx') { meta.fx = clamp(+el.value || 0, 0, 2); ls.set(META, JSON.stringify(meta)); if (!meta.fx) FX.stop(); }
     else if (k === 'motion') { meta.motion = ['reduce', 'full'].includes(el.value) ? el.value : ''; applyTheme(); ls.set(META, JSON.stringify(meta)); }
     else if (k === 'statsMine') { meta.statsOwner = !el.checked; ls.set(META, JSON.stringify(meta)); if (el.checked) PLAYLOG.start(); toast(el.checked ? 'Your play on this device now counts.' : 'Your play on this device is no longer counted.'); }
     else if (k === 'statsOn') { meta.stats = el.checked; if (!el.checked) PLAYLOG.off(); ls.set(META, JSON.stringify(meta)); if (el.checked) PLAYLOG.start(); }
@@ -14472,8 +14537,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.69';
+const VERSION = '1.9.70';
 const WHATS_NEW = [
+  ['🎆 Big moment effects', 'Big moments on the live show now light up: confetti falls for a new champion and pyro goes off for a strong main event. Set it to Lots for camera flashes on the best segment of the night and on big surprise moments too, or turn it off. Find it in Menu → Big moment effects. Less motion turns it off as well.'],
   ['🎤 Cheaper guest promos', 'Per-appearance stars now charge a tenth of their fee for a promo or angle. Their full fee is only for matches. Promos have a new Remote spot under Where: the promo is sent in by video, and a per-appearance star who likes you does it for free.'],
   ['📅 Calendar settings', 'Menu → Settings has a new Calendar section. Start weeks on Sunday, shrink the calendar to this week or hide it, show week numbers, and pick which shows appear. Choose which weekend of the month big events air on, turn off weekly shows on big event weeks, and book up to 26 weeks ahead. Planning helpers add a big event countdown, rival big events and holidays on your calendar, and when the "book the big event" reminder comes.'],
   ['🎆 Book the big event', 'Tapping Book the card on the big event panel, or a big event reminder, now opens the big event. Before, it opened the weekly show that airs the same week.'],
