@@ -153,6 +153,12 @@ button.item:active { background: var(--card2); }
 .alert .ic { font-size: 18px; line-height: 1.2; }
 .news { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; display: flex; gap: 10px; }
 .news:last-child { border-bottom: 0; }
+.ch-row { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); color: inherit; text-align: left; font: inherit; cursor: pointer; align-items: flex-start; }
+.ch-row:last-child { border-bottom: 0; }
+.st-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-chips button { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.st-chips button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.ch-row .tag { flex: none; }
 .dirt-mast { text-align: center; padding: 6px 4px 10px; border-bottom: 3px double var(--line); margin-bottom: 8px; }
 .dirt-name { font-family: var(--f-display); font-size: clamp(26px, 9vw, 36px); line-height: 1; letter-spacing: .03em; text-transform: uppercase; }
 
@@ -821,6 +827,8 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .pr-who .av { border-radius: 50% !important; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
 .bub { position: relative; flex: 1; min-width: 0; background: #f4efff; color: #1b1330; border-radius: 16px 16px 16px 4px; padding: 9px 12px; font-weight: 700; font-style: italic; font-size: 14.5px; line-height: 1.3; overflow-wrap: anywhere; }
 .bub::before { content: ''; position: absolute; left: -7px; top: 16px; border: 8px solid transparent; border-right-color: #f4efff; border-left: 0; }
+.bub.a-bub { margin-top: 8px; border-radius: 16px; }
+.bub.a-bub::before { display: none; }
 .bub small { display: block; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; color: #5d43a3; margin-top: 5px; text-transform: uppercase; }
 .bub .muted-b { font-style: normal; color: #5d43a3; }
 .tgt, .lv-int { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; font-weight: 800; color: rgba(255,255,255,.75); margin: 2px 0 4px; }
@@ -1939,6 +1947,105 @@ function momStory(a, b, heat, why, extra = {}) {
   news(`🔥 New storyline: "${title}". ${why}`, 'story');
   return `🔥 New feud: ${title}`;
 }
+// ---------- the storyline bible and program: what the booker writes feeds the show ----------
+const ST_WHY = { shot: ['Stolen title shot', 'cost {B} a title shot'], betray: ['Betrayal', 'turned on {B}'], jealous: ['Jealousy', 'is jealous of {B}'], respect: ['Disrespect', 'disrespected {B}'],
+  family: ['Family', 'and {B} have years of family history'], hurt: ['Injury', 'put {B} on the shelf'], money: ['Money', 'and {B} are fighting over money'], custom: ['Your own', ''] };
+const ST_ROLES = { hero: 'Hero', villain: 'Villain', underdog: 'Underdog', monster: 'Monster', mentor: 'Mentor', rookie: 'Rookie', coward: 'Coward' };
+const ROLE_ALIGN = { hero: 'face', underdog: 'face', rookie: 'face', villain: 'heel', monster: 'heel', coward: 'heel' };
+const ST_STAKES = { pride: ['Pride', 1], title: ['The title', 1.1], career: ['Career', 1.25], mask: ['Mask or hair', 1.2], leaves: ['Loser leaves', 1.25] };
+const ROLE_LINES = {
+  hero: [`I fight for every one of you, and I won't stop, {T}.`, `You can knock me down all you want, {T}. I always get back up.`],
+  villain: [`Nobody in this building can stop me, {T}.`, `I did it, {T}, and I'd do it again.`],
+  underdog: [`Nobody thought I belonged here. I'm still standing, {T}.`, `You're bigger, {T}. I'm hungrier.`],
+  monster: [`{T}. You will not walk out of here.`, `I break things, {T}. You're next.`],
+  mentor: [`I taught you everything you know, {T}. Not everything I know.`, `Some lessons hurt, {T}. This is one of them.`],
+  rookie: [`I'm new here, {T}, but I'm not scared of you.`, `Remember my name, {T}. Everyone will.`],
+  coward: [`Hey, let's not do anything crazy, {T}.`, `I'll fight you, {T}. Just not tonight.`] };
+const STAKE_LINES = { title: [`That {belt} is coming with me, {T}.`], career: [`When this is over, {T}, so is your career.`], mask: [`I'm taking everything from you, {T}. Everything.`], leaves: [`One of us is leaving this company, {T}, and it isn't me.`] };
+const stSide = (st, id) => st.a.includes(id) ? 'a' : st.b.includes(id) ? 'b' : null;
+const stOther = k => k === 'a' ? 'b' : 'a';
+const stRole = (st, k) => ST_ROLES[st['role' + (k || '').toUpperCase()]] ? st['role' + k.toUpperCase()] : '';
+const lnClean = t => String(t || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 140);
+const stLines = (st, k) => (Array.isArray(st.lines?.[k]) ? st.lines[k] : []).map(lnClean).filter(Boolean);
+// the one-line story: the booker's own words, or built from why it started
+function stSum(st) {
+  const own = String(st.sum || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 120); if (own) return own;
+  const w = ST_WHY[st.why]; return w && w[1] ? `${lnOf(st.a)} ${w[1].replace('{B}', lnOf(st.b))}` : '';
+}
+// a line for whoever is talking: their own lines first, then their role, then what's at stake
+function storyLine(st, sp, tg, first) {
+  const k = sp.map(w => stSide(st, w.id)).find(Boolean); if (!k) return '';
+  const opp = tg.length ? tg : st[stOther(k)].map(W).filter(Boolean), T = opp[0] ? lastName(opp[0]) : '';
+  const belt = st.titleId && G.titles.find(t => t.id === st.titleId), r = stRole(st, k);
+  const own = stLines(st, k), pool = own.length ? own : [...(ROLE_LINES[r] || []), ...(STAKE_LINES[st.stake] || []).filter(x => !x.includes('{belt}') || belt)];
+  if (!pool.length) return '';
+  const ln = pool[first ? 0 : (G.week + (st.log?.length || 0)) % pool.length];
+  return ln.replace(/\{T\}/g, T || 'all of you').replace(/\{belt\}/g, belt ? (belt.short || belt.name) : 'title').replace(/, all of you\./, '.');
+}
+// how the story shapes a promo or angle: the rating, a tag on the live show and a line in the results
+function storyBeat(st, d, tg, add) {
+  if (!st) return {};
+  const k = d.map(w => stSide(st, w.id)).find(Boolean), r = k && stRole(st, k), al = ROLE_ALIGN[r];
+  let x = 0;
+  if (al && d[0]) x += d[0].align === al ? add(2, `Playing the ${ST_ROLES[r].toLowerCase()}`) : add(-2, `A ${d[0].align} can't sell the ${ST_ROLES[r].toLowerCase()}`);
+  if (stLines(st, k).length) x += add(1, 'Their own words from the story');
+  return { x, tag: [st.title, r ? ST_ROLES[r] : ''].filter(Boolean).join(' · ') };
+}
+// keep only what the bible allows, and turn the line boxes into lists
+function stTidy(d) {
+  for (const k of ['a', 'b']) { const K = 'lines' + k.toUpperCase(); if (d[K] != null) { (d.lines ||= {})[k] = String(d[K]).split('\n').map(lnClean).filter(Boolean).slice(0, 6); delete d[K]; } }
+  if (!Object.hasOwn(ST_WHY, d.why || '')) delete d.why;
+  if (!Object.hasOwn(ST_STAKES, d.stake || '') || d.stake === 'pride') delete d.stake;
+  for (const k of ['roleA', 'roleB']) if (!Object.hasOwn(ST_ROLES, d[k] || '')) delete d[k];
+  d.sum = String(d.sum || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 120); if (!d.sum) delete d.sum;
+  return d;
+}
+// the program: the booker plans the feud as chapters, and one tap books the next one
+const CH_KINDS = { promo: '🎤 Promo', angle: '🎬 Angle', match: '🔔 Match' };
+const chTypes = k => Object.keys(k === 'promo' ? PROMO_TYPES : k === 'angle' ? ANGLE_TYPES : STIPS);
+const stProg = st => Array.isArray(st?.prog) ? st.prog : [];
+const chBooked = c => allCards().some(cd => cd.some(sg => sg?.chap?.c === c.id));
+const nextChap = st => stProg(st).find(c => !c.done && !chBooked(c));
+const chWk = c => c.wk ? (isBig(c.wk) ? bigName(c.wk) : 'WK ' + c.wk) : '';
+function chLine(st, c) {
+  const by = c.by === 'b' ? st.b : st.a, opp = c.by === 'b' ? st.a : st.b;
+  if (c.k === 'match') return `${lnOf(st.a)} vs ${lnOf(st.b)}${c.t !== 'Standard' ? ' · ' + c.t : ''}${c.blow ? ' · ends the feud' : ''}${c.note ? ' · ' + c.note : ''}`;
+  return c.line ? `“${c.line}”${c.note ? ' · ' + c.note : ''}` : `${lnOf(by)} ${segVerb({ kind: c.k, ptype: c.t, atype: c.t })} ${lnOf(opp)}${c.note ? ' · ' + c.note : ''}`;
+}
+function progCard(s) {
+  const P = stProg(s), nx = nextChap(s), act = s.status === 'active';
+  const row = (c, i) => { const done = !!c.done, tag = done ? `<span class="tag good">${starStr(c.r || 0)}</span>` : chBooked(c) ? '<span class="tag good">Booked</span>' : c === nx ? '<span class="tag gold">Next</span>' : '<span class="tag">Planned</span>';
+    const inner = `<span class="wk">${done ? 'WK ' + c.done : esc(chWk(c) || '#' + (i + 1))}</span><span class="sp"><b>${CH_KINDS[c.k]?.split(' ')[0] || ''} ${esc(c.t)}</b><br><span class="tiny muted">${esc(chLine(s, c))}</span></span>${tag}`;
+    return done || !act ? `<div class="news ch-row">${inner}</div>` : `<button class="news ch-row" data-act="chapEdit" data-id="${s.id}:${c.id}" aria-label="Edit chapter ${i + 1}">${inner}</button>`; };
+  return `<div class="sec">🗺️ The program</div><div class="card" style="padding:4px 14px;margin-bottom:10px">${P.length ? P.map(row).join('') : '<div class="tiny muted" style="padding:10px 0">Plan the feud as chapters: an attack, a call-out, a contract signing, the blow-off. Each one keeps its people and its line, and one tap books it.</div>'}
+    ${act && P.length < 10 ? `<div style="padding:8px 0"><button class="link" data-act="chapAdd" data-id="${s.id}">+ Add a chapter</button></div>` : ''}</div>
+    ${act && nx ? `<button class="btn pri block" style="margin-bottom:10px" data-act="chapBook" data-id="${s.id}">📅 Book the next chapter: ${esc(nx.t)}</button>` : ''}`;
+}
+function bibleCard(s) {
+  const sm = stSum(s), rA = stRole(s, 'a'), rB = stRole(s, 'b'), stake = s.stake && ST_STAKES[s.stake], nl = stLines(s, 'a').length + stLines(s, 'b').length;
+  if (!sm && !rA && !rB && !stake && !nl) return `<button class="btn block" style="margin-bottom:10px" data-act="editStory" data-id="${s.id}">📖 Write the story: why, roles, stakes and their lines</button>`;
+  return `<div class="sec">📖 The story</div><div class="card" style="margin-bottom:10px">${sm ? `<div class="small" style="margin-bottom:6px"><b>${esc(sm)}</b></div>` : ''}
+    <div class="row wrap" style="gap:6px">${rA ? `<span class="tag">${esc(lnOf(s.a))}: ${ST_ROLES[rA]}</span>` : ''}${rB ? `<span class="tag">${esc(lnOf(s.b))}: ${ST_ROLES[rB]}</span>` : ''}${stake ? `<span class="tag gold">At stake: ${esc(stake[0])}</span>` : ''}${nl ? `<span class="tag">🎤 ${nl} line${nl > 1 ? 's' : ''}</span>` : ''}</div></div>`;
+}
+function modalChapter(m) {
+  const d = m.draft, st = G.stories.find(x => x.id === m.sid); if (!st) return '';
+  const A = lnOf(st.a) || 'Side A', B = lnOf(st.b) || 'Side B', on = (a, b) => a === b ? 'on' : '';
+  const nb = Array.from({ length: 16 }, (_, i) => G.week + i);
+  let body = `<label class="f"><span>What happens</span><div class="seg-ctl" role="group" aria-label="Kind">${Object.entries(CH_KINDS).map(([k, l]) => `<button class="${on(k, d.k)}" aria-pressed="${k === d.k}" data-act="chK" data-id="${k}">${l}</button>`).join('')}</div></label>
+    <label class="f"><span>${d.k === 'match' ? 'Gimmick' : 'Type'}</span><select data-ch="t">${chTypes(d.k).map(k => `<option ${k === d.t ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select></label>`;
+  if (d.k !== 'match') body += `<label class="f"><span>Led by</span><div class="seg-ctl" role="group" aria-label="Led by"><button class="${on(d.by, 'a')}" aria-pressed="${d.by === 'a'}" data-act="chBy" data-id="a">${esc(A)}</button><button class="${on(d.by, 'b')}" aria-pressed="${d.by === 'b'}" data-act="chBy" data-id="b">${esc(B)}</button></div></label>
+    <label class="f"><span>Their line <span class="muted">(optional)</span></span><input type="text" data-ch="line" maxlength="140" value="${esc(d.line || '')}" placeholder="${esc(storyLine(st, (d.by === 'b' ? st.b : st.a).map(W).filter(Boolean), [], true) || 'Leave empty and they use the story\'s lines')}"></label>`;
+  else body += `<label class="f"><span>Blow-off</span><div class="seg-ctl" role="group" aria-label="Blow-off"><button class="${d.blow ? '' : 'on'}" aria-pressed="${!d.blow}" data-act="chBlow" data-id="0">Keep it going</button><button class="${d.blow ? 'on' : ''}" aria-pressed="${!!d.blow}" data-act="chBlow" data-id="1">🏁 End the feud here</button></div></label>`;
+  body += `<label class="f"><span>Notes <span class="muted">(optional)</span></span><input type="text" data-ch="note" maxlength="80" value="${esc(d.note || '')}" placeholder="e.g. Ends in a brawl"></label>
+    <label class="f"><span>When</span><select data-ch="wk"><option value="0">Whenever you book it</option>${nb.map(w => `<option value="${w}" ${d.wk === w ? 'selected' : ''}>Week ${w} · ${esc(wkDay(w))}${isBig(w) ? ' · ' + esc(bigName(w)) : ''}</option>`).join('')}</select></label>`;
+  return modal(m.isNew ? 'New chapter' : 'Edit chapter', `<p class="small muted" style="margin-top:0">${esc(st.title)}</p>` + body, `${m.isNew ? '<button class="btn" data-act="chapBack">Cancel</button>' : '<button class="btn bad" data-act="chapDel">Remove</button>'}<button class="btn pri" data-act="chapSave">Save</button>`);
+}
+// a booked chapter shows where it sits in the program
+function chapAlert(s) {
+  const st = s.chap && G.stories.find(x => x.id === s.chap.s), P = stProg(st), c = P.find(x => x.id === s.chap?.c); if (!c) return '';
+  return `<div class="alert good" style="margin-bottom:12px"><span class="ic">🗺️</span><div class="small"><b>Chapter ${P.indexOf(c) + 1} of ${esc(st.title)}</b>${c.note ? ': ' + esc(c.note) : ''}<br>Filled in from your program. Change anything you like.</div></div>`;
+}
+const stakeMult = st => ST_STAKES[st?.stake]?.[1] || 1;
 // ---------- storylines the booker starts from a segment, a backstage event or a surprise moment ----------
 const STORY_KINDS = ['Feud', 'Rivalry', 'Title Chase', 'Betrayal', 'Faction War', 'Redemption'];
 const stClean = t => String(t || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 50);
@@ -3247,6 +3354,7 @@ function segPlan(seg, ctx, out, people, add, addR, getR) {
 // the words on screen: the booker's own line, or one written from the topic and tone
 function segQuote(seg, sp, tg, first) {
   const own = segSay(seg); if (own) return own;
+  { const st = sp.length && (tg.length ? storyBetween(sp.map(w => w.id), tg.map(w => w.id)) : storiesTouching(sp.map(w => w.id))[0]); const sl = st && storyLine(st, sp, tg, first); if (sl) return sl; }
   if (seg.kind !== 'promo' || !sp.length) return '';
   const T = tg[0] ? lastName(tg[0]) : '', me = lastName(sp[0]), t = G.titles.find(x => x.holder.some(h => [...sp, ...tg].some(w => w.id === h)));
   const L = {
@@ -3461,6 +3569,7 @@ function simSegment(seg, ctx) {
       out.land = land;
     }
     out.text_extra = out.land >= 4 ? ' The crowd ate it up.' : out.land <= -4 ? ' It fell flat.' : '';
+    { const b = storyBeat(st, speakers, tg, add); r += b.x || 0; out.stTag = b.tag; }
     out.story = st; out.pt = pt;
     const tn2 = tg.map(w => w.name).join(' & ');
     out.text = `${speakers.map(w => w.name).join(' & ')} ${seg.ptype === 'Interview' ? 'sat down for an interview' : seg.ptype === 'Hype Promo' ? 'cut a promo' : seg.ptype === 'Face-off' ? 'went face to face with ' + tn2
@@ -3487,6 +3596,7 @@ function simSegment(seg, ctx) {
       if (tg.length && tg.every(w => w.align === 'heel') && d.some(w => w.align === 'face')) r += add(3, 'Heels crashed the party'); }
     const st = tg.length ? storyBetween(d.map(w => w.id), tg.map(w => w.id)) : storiesTouching(d.map(w => w.id))[0];
     if (st) r += add(st.heat * 0.15, 'Storyline: ' + st.title);
+    { const b = storyBeat(st, d, tg, add); r += b.x || 0; out.stTag = b.tag; }
     out.story = st; out.at = at; out.doers = d; out.targets = tg;
     out.text = {
       'Sneak Attack': `${d.map(w => w.name).join(' & ')} ambushed ${tg.map(w => w.name).join(' & ') || 'the air'}!`,
@@ -3517,6 +3627,7 @@ function simSegment(seg, ctx) {
     }
   }
   if (out.endText) { out.text += out.endText; delete out.endText; }
+  if (seg.kind !== 'match' && out.story && !ctx.proj && (seg.chap || Math.random() < .5)) { const sm = stSum(out.story); if (sm) out.text += ` This is about one thing: ${sm}.`; }
   if (seg.kind !== 'match' && !ctx.proj) { const sp = (seg.who || []).map(W).filter(Boolean); out.quote = segQuote(seg, sp.length ? sp : people, out.tg || []); }
   // shared modifiers
   if (injured.length) r += add(-8 * injured.length, 'Booked while injured: ' + injured.map(w => w.name).join(', '));
@@ -3661,6 +3772,9 @@ function applySegment(seg, res, ctx) {
     notes.push(`🔥 ${st.title} heat +${gain}`);
     const bo = feudBlowMatch(st, seg, res, ctx); if (bo) notes.push(bo);
   }
+  // a chapter of the booker's program aired
+  if (seg.chap) { const cs = G.stories.find(x => x.id === seg.chap.s), P = stProg(cs), c = P.find(x => x.id === seg.chap.c);
+    if (c && !c.done) { c.done = G.week; c.r = res.rating; if (cs.status === 'active') { cs.heat = clamp(cs.heat + 2, 0, 100); cs._touched = G.week; } notes.push(`🗺️ Chapter ${P.indexOf(c) + 1} of ${cs.title} aired as planned${cs.status === 'active' ? ' (+2 heat)' : ''}`); } }
   // the booker planned a new storyline to start here
   if (seg.nst && !st) { const pr = segPair(seg), ns = pr && startStory(pr[0], pr[1], seedHeat(res.rating), res.text, { title: seg.nst.t, type: seg.nst.k });
     if (ns) { res.newSt = ns.id; notes.push(`🔥 New storyline: ${ns.title} (${ns.heat} heat)`); } }
@@ -3927,7 +4041,7 @@ function runShow(opts = {}) {
     applySegment(seg, res, ctx);
     if (seg.tid) tResult(seg, res);
     if (veto) res.notes = [veto, ...(res.notes || [])];
-    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue, ...(res.quote ? { quote: res.quote } : {}), ...(res.ans ? { ans: res.ans } : {}), ...(res.inter ? { inter: res.inter } : {}) });
+    results.push({ seg: JSON.parse(JSON.stringify(seg)), rating: res.rating, why: res.why, text: res.text, notes: res.notes, winners: res.winners, cue, ...(res.quote ? { quote: res.quote } : {}), ...(res.stTag ? { stTag: res.stTag } : {}), ...(res.ans ? { ans: res.ans } : {}), ...(res.inter ? { inter: res.inter } : {}) });
     if (seg.kind === 'match') keys.push(segPeople(seg).slice().sort().join(','));
   });
   // overall show score
@@ -4787,7 +4901,7 @@ const feudBlowNow = (st, big) => { if (st.plan === 'blow') return (st.planWk || 
 function payoffMult(st, big, match) {
   const wk = feudWks(st), len = wk < 4 ? .5 : wk < 8 ? .75 : wk <= 18 ? 1 : .85;
   const ext = st.plan === 'extend' && big && G.week >= (st.planWk || 0) ? 1.2 : 1;
-  return (match ? (big ? 1 : .6) : .25) * len * ext;
+  return (match ? (big ? 1 : .6) : .25) * len * ext * stakeMult(st);
 }
 // the producer texts when the call on a feud changes to something worth acting on
 const FEUD_TEXT = { hot: 1, ready: 1, stale: 1, dull: 1 };
@@ -5864,13 +5978,13 @@ function lvTalk(r, main) {
   const pl = segPlace(s), place = pl ? `${SEG_PLACES[pl].ic} ${esc(SEG_PLACES[pl].n)}` : '', sz = main ? 64 : 52;
   const intr = iw ? `<div class="lv-int">${av(iw, 26, true)}<span>⚡ <span class="n-${iw.align}">${esc(iw.name)}</span> interrupted!</span></div>` : '';
   if (s.kind === 'promo') {
-    const q = r.quote || segSay(s), plan = [PROMO_TONES[s.tone] && s.tone ? PROMO_TONES[s.tone].n : '', PROMO_TOPICS[s.topic] && s.topic ? PROMO_TOPICS[s.topic].n : '', place].filter(Boolean).join(' · ');
+    const q = r.quote || segSay(s), plan = [r.stTag ? esc(r.stTag) : '', PROMO_TONES[s.tone] && s.tone ? PROMO_TONES[s.tone].n : '', PROMO_TOPICS[s.topic] && s.topic ? PROMO_TOPICS[s.topic].n : '', place].filter(Boolean).join(' · ');
     return `<div class="pr-row">${sp.length ? `<div class="pr-who">${sp.slice(0, 3).map(w => face(w, sp.length > 1 ? 40 : sz)).join('')}</div>` : ''}<div class="bub">${q ? `“${esc(q)}”` : `<span class="muted-b">${names(sp) || 'The mic is live'}</span>`}${plan ? `<small>${plan}</small>` : ''}</div></div>
       ${tg.length ? `<div class="tgt">${r.ans ? '🙋 Answered by' : '📣 ' + esc(segVerb(s).replace(/^./, c => c.toUpperCase()))} ${tg.slice(0, 3).map(w => av(w, 24, true)).join('')} ${names(tg)}</div>` : ''}${intr}`;
   }
   const headline = `${names(sp) || 'Someone'}${tg.length ? ` ${esc(segVerb(s))} ${names(tg)}` : ''}`;
   return `${sp.length ? `<div class="act-faces"><div class="lv-side">${sp.slice(0, 3).map(w => face(w, sz)).join('')}</div>${tg.length ? `<span class="verb">${esc(segVerb(s))}</span><div class="lv-side">${tg.slice(0, 3).map(w => face(w, sz)).join('')}</div>` : ''}</div>` : ''}
-    <div class="l3"><span>${esc(s.atype)}</span>${headline}</div>${intr}`;
+    <div class="l3"><span>${esc(s.atype)}${r.stTag ? ' · ' + esc(r.stTag) : ''}</span>${headline}</div>${r.quote ? `<div class="bub a-bub">“${esc(r.quote)}”</div>` : ''}${intr}`;
 }
 function startLive() {
   liveTimers.forEach(clearTimeout); liveTimers = [];
@@ -7480,6 +7594,7 @@ function renderModal() {
     case 'guest': return modalGuest(m);
     case 'story': return modalStory(m);
     case 'editStory': return modalEditStory(m);
+    case 'chapter': return modalChapter(m);
     case 'blowStory': return modalBlowStory(m);
     case 'recap': return modalRecap(m);
     case 'title': return modalTitle(m);
@@ -8021,7 +8136,7 @@ function modalSeg(m) {
     body += storyStartCtl(s);
     body += segPlanEditor(s);
   }
-  return modal(m.isNew ? `Add ${s.kind}` : `Edit ${s.kind}`, tutSegHint(s) + body, `${m.isNew ? '' : '<button class="btn bad" data-act="segDelModal">Remove</button>'}<button class="btn pri" data-act="segSave">${m.isNew ? 'Add to card' : 'Save'}</button>`);
+  return modal(m.isNew ? `Add ${s.kind}` : `Edit ${s.kind}`, tutSegHint(s) + chapAlert(s) + body, `${m.isNew ? '' : '<button class="btn bad" data-act="segDelModal">Remove</button>'}<button class="btn pri" data-act="segSave">${m.isNew ? 'Add to card' : 'Save'}</button>`);
 }
 
 // ----- wrestler picker: filters and sorts -----
@@ -8208,6 +8323,7 @@ function modalStory(m) {
   const t = s.titleId && G.titles.find(x => x.id === s.titleId);
   const body = `<div class="row wrap" style="gap:6px;margin-bottom:10px"><span class="tag">${esc(s.type)}</span><span class="tag ${s.status === 'active' ? 'good' : ''}">${s.status === 'active' ? 'Active' : 'Finished wk ' + s.ended}</span>${t ? `<span class="tag gold">🏆 ${esc(t.short)}</span>` : ''}<span class="tag">Since wk ${s.start}</span></div>
    ${s.status === 'active' ? feudNote(s, true) : ''}<div class="card"><div class="side" style="border-style:solid"><div class="lbl">Side A</div>${nmList(s.a, ', ')}</div><div style="text-align:center" class="vs">VS</div><div class="side" style="border-style:solid;margin-bottom:10px"><div class="lbl">Side B</div>${nmList(s.b, ', ')}</div>${heatBar(s.heat)}</div>
+   ${bibleCard(s)}${progCard(s)}
    ${s.status === 'active' ? `<div class="grid2" style="margin-bottom:10px"><button class="btn" data-act="storySeg" data-id="match">+ Match for this</button><button class="btn" data-act="storySeg" data-id="promo">+ Promo for this</button></div>` : ''}
    <div class="sec">Your notes</div><textarea data-in="sNotes" data-id="${s.id}" placeholder="Where is this going? Who wins in the end?">${esc(s.notes)}</textarea>
    <div class="sec">Story so far</div><div class="card" style="padding:4px 14px">${s.log.map(l => `<div class="news"><span class="wk">WK ${l.wk}</span><span>${esc(l.text)}</span></div>`).join('') || '<div class="empty">Nothing has happened yet. Put both sides on a show.</div>'}</div>`;
@@ -8225,12 +8341,29 @@ function modalBlowStory(m) {
     ${opt('end', 'End it now, no match', 'Only a small payoff')}</div>`;
   return modal('Blow off "' + esc(s.title) + '"', body, `<button class="btn" data-act="closeModal">Cancel</button>`);
 }
+// the story bible in the storyline sheet: why, roles, stakes and each side's words
+function storyBible(d) {
+  const A = d.a.length ? lnOf(d.a) : 'Side A', B = d.b.length ? lnOf(d.b) : 'Side B', chip = (act, k, l, on) => `<button class="${on ? 'on' : ''}" aria-pressed="${on}" data-act="${act}" data-id="${k}">${esc(l)}</button>`;
+  const roleSel = k => `<label class="f"><span>${esc(k === 'a' ? A : B)} is the</span><select data-es="role${k.toUpperCase()}"><option value="">Not set</option>${Object.entries(ST_ROLES).map(([v, l]) => `<option value="${v}" ${d['role' + k.toUpperCase()] === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  const lines = k => d['lines' + k.toUpperCase()] ?? (d.lines?.[k] || []).join('\n');
+  const ex = stSum({ ...d, sum: '' });
+  return `<div class="sec" style="margin-top:4px">📖 The story</div>
+   <label class="f"><span>Why it started</span><div class="st-chips" role="group" aria-label="Why it started">${Object.entries(ST_WHY).map(([k, [l]]) => chip('esWhy', k, l, d.why === k)).join('')}</div></label>
+   <label class="f"><span>In one line <span class="muted">(used on the show)</span></span><input type="text" data-es="sum" maxlength="120" value="${esc(d.sum || '')}" placeholder="${esc(ex || `e.g. ${A} cost ${B} a title shot`)}"></label>
+   <div class="grid2">${roleSel('a')}${roleSel('b')}</div>
+   <label class="f"><span>What's at stake</span><div class="st-chips" role="group" aria-label="What's at stake">${Object.entries(ST_STAKES).map(([k, [l]]) => chip('esStake', k, l, (d.stake || 'pride') === k)).join('')}</div><div class="tiny muted" style="margin-top:4px">Bigger stakes, bigger payoff when the feud is blown off.</div></label>
+   <div class="side" style="border-style:solid;border-color:var(--accent)"><div class="lbl">🎤 Their words · promos and angles use these lines</div>
+    <label class="f" style="margin-bottom:8px"><span>${esc(A)} says <span class="muted">(one line per row)</span></span><textarea data-es="linesA" rows="2" maxlength="700" placeholder="${esc(`e.g. That shot was never yours, ${B}.`)}">${esc(lines('a'))}</textarea></label>
+    <label class="f" style="margin-bottom:0"><span>${esc(B)} says</span><textarea data-es="linesB" rows="2" maxlength="700" placeholder="${esc(`e.g. You took my shot. Now I take everything.`)}">${esc(lines('b'))}</textarea></label>
+    <div class="tiny muted" style="margin-top:6px">Leave them empty and the game writes lines from their role and what's at stake.</div></div>`;
+}
 function modalEditStory(m) {
   const d = m.draft;
   const body = `<label class="f"><span>Title</span><input type="text" data-es="title" value="${esc(d.title)}" maxlength="50" placeholder="e.g. Brothers at War"></label>
    <label class="f"><span>Type</span><select data-es="type">${['Feud', 'Title Chase', 'Faction War', 'Betrayal', 'Redemption', 'Rivalry'].map(k => `<option ${k === d.type ? 'selected' : ''}>${k}</option>`).join('')}</select></label>
    <div class="side"><div class="lbl">Side A</div>${chipsFor(d.a, 'a', 5)}</div>
    <div class="side"><div class="lbl">Side B</div>${chipsFor(d.b, 'b', 5)}</div>
+   ${storyBible(d)}
    <label class="f"><span>Championship involved (optional)</span><select data-es="titleId"><option value="">None</option>${G.titles.map(t => `<option value="${t.id}" ${d.titleId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
    <label class="f" style="margin-top:10px"><span>Notes</span><textarea data-es="notes" placeholder="The plan for this story">${esc(d.notes)}</textarea></label>`;
   const fr = m.from ? `<div class="alert good" style="margin-bottom:12px"><span class="ic">🔥</span><div class="small">From <b>${esc(m.from)}</b>${m.fromTxt ? ': ' + esc(m.fromTxt) : ''}<br>It starts at <b>${Math.round(d.heat)} heat</b>.${m.fromSeg ? ' A better segment starts it hotter (15 to 40).' : ''}</div></div>` : '';
@@ -8794,7 +8927,7 @@ const A = {
     toast('Move buttons are on. Tap Done when you finish.');
   },
   brief() { autoTodo('brief'); save(); openModal({ type: 'brief' }); },
-  dupLast() { const h = lastRec(); if (!h) return; const segs = h.results.map(r => ({ ...JSON.parse(JSON.stringify(r.seg)), id: uid(), nst: undefined })).filter(s => { removeGone(s); return segPeople(s).length; }).slice(0, roomLeft(UI.selWeek, BK())); if (!segs.length) return toast(fullMsg(UI.selWeek)); BK().push(...segs); commit(`Copied ${segs.length} segments from last week.`); },
+  dupLast() { const h = lastRec(); if (!h) return; const segs = h.results.map(r => ({ ...JSON.parse(JSON.stringify(r.seg)), id: uid(), nst: undefined, chap: undefined })).filter(s => { removeGone(s); return segPeople(s).length; }).slice(0, roomLeft(UI.selWeek, BK())); if (!segs.length) return toast(fullMsg(UI.selWeek)); BK().push(...segs); commit(`Copied ${segs.length} segments from last week.`); },
   runShow() {
     const inj = G.card.flatMap(segPeople).filter(id => W(id)?.injury > 0);
     const go = () => { ding(); runShow(); };
@@ -9290,6 +9423,31 @@ const A = {
   openStory(id) { openModal({ type: 'story', id }); },
   newStory() { openModal({ type: 'editStory', isNew: true, draft: { id: uid(), title: '', type: 'Feud', a: [], b: [], titleId: null, heat: 10, start: G.week, status: 'active', notes: '', log: [], autoEnd: true } }); },
   ideaStory(ids) { const [a, b] = ids.split(','); A.newStory(); UI.modal.draft.a = [a]; UI.modal.draft.b = [b]; UI.modal.draft.title = `${shortOf(a)} vs ${shortOf(b)}`; render(); },
+  chapAdd(sid) { openModal({ type: 'chapter', sid, isNew: true, draft: { id: uid(), k: 'promo', t: 'Call-out', by: 'a', line: '', note: '', wk: 0 } }); },
+  chapEdit(v) { const [sid, cid] = String(v).split(':'), c = stProg(G.stories.find(x => x.id === sid)).find(x => x.id === cid); if (c) openModal({ type: 'chapter', sid, draft: JSON.parse(JSON.stringify(c)) }); },
+  chK(k) { const d = UI.modal.draft; if (!CH_KINDS[k]) return; d.k = k; d.t = chTypes(k)[0]; if (k === 'promo') d.t = 'Call-out'; if (k === 'angle') d.t = 'Sneak Attack'; if (k !== 'match') delete d.blow; render(); },
+  chBy(k) { UI.modal.draft.by = k === 'b' ? 'b' : 'a'; render(); },
+  chBlow(v) { if (+v) UI.modal.draft.blow = true; else delete UI.modal.draft.blow; render(); },
+  chapBack() { UI.modal = { type: 'story', id: UI.modal.sid }; render(); },
+  chapSave() {
+    const m = UI.modal, d = m.draft, st = G.stories.find(x => x.id === m.sid); if (!st) return closeModal();
+    const k = CH_KINDS[d.k] ? d.k : 'promo', c = { id: d.id || uid(), k, t: chTypes(k).includes(d.t) ? d.t : chTypes(k)[0], by: d.by === 'b' ? 'b' : 'a', wk: clamp(Math.round(+d.wk || 0), 0, G.week + 52) };
+    if (k !== 'match' && lnClean(d.line)) c.line = lnClean(d.line); if (lnClean(d.note)) c.note = lnClean(d.note).slice(0, 80); if (k === 'match' && d.blow) c.blow = true;
+    const P = st.prog = stProg(st).slice(), i = P.findIndex(x => x.id === c.id);
+    if (i >= 0) P[i] = { ...P[i], ...c, line: c.line, note: c.note, blow: c.blow }; else if (P.length < 10) P.push(c);
+    UI.modal = { type: 'story', id: st.id }; commit('Chapter saved.');
+  },
+  chapDel() { const m = UI.modal, st = G.stories.find(x => x.id === m.sid); if (st) st.prog = stProg(st).filter(x => x.id !== m.draft.id); UI.modal = { type: 'story', id: m.sid }; commit('Chapter removed.'); },
+  chapBook(sid) {
+    const st = G.stories.find(x => x.id === sid), c = nextChap(st); if (!c) return;
+    const ok = id => W(id)?.contract, A2 = st.a.filter(ok), B2 = st.b.filter(ok), d = blankSeg(c.k);
+    if (c.k === 'match') { const n = Math.min(A2.length, B2.length, 3) || 1; d.mtype = sizeMT(n); d.sides = [A2.slice(0, n), B2.slice(0, n)]; if (Object.hasOwn(STIPS, c.t)) { d.stip = c.t; d.finish = finOf(d); }
+      if (st.titleId) { const t = G.titles.find(x => x.id === st.titleId); if (t && tsz(t) === n) d.title = t.id; } if (c.blow) d.blow = true; }
+    else { const lead = c.by === 'b' ? B2 : A2, opp = c.by === 'b' ? A2 : B2; d[c.k === 'promo' ? 'ptype' : 'atype'] = c.t; d.who = lead.slice(0, 1); d.target = opp.slice(0, 1); if (c.line) d.line = c.line; if (c.k === 'promo' && (st.why || st.sum)) d.topic = 'personal'; }
+    d.chap = { s: st.id, c: c.id }; UI.tab = 'book'; openModal({ type: 'seg', isNew: true, draft: d });
+  },
+  esWhy(k) { const d = UI.modal.draft; d.why = d.why === k ? '' : k; render(); },
+  esStake(k) { UI.modal.draft.stake = k; render(); },
   storyBack() { UI.modal = UI.modal?.back || null; render(); },
   storyFrom(v) { const [wk, i] = String(v).split(':').map(Number), h = histFor(wk), r = h?.results?.[i], pr = r && freshPair(segPair(r.seg));
     if (!pr) return toast('They already have a storyline together.');
@@ -9308,6 +9466,7 @@ const A = {
     const d = UI.modal.draft;
     if (!d.a.length || !d.b.length) return toast('Each side needs at least one wrestler.');
     if (!d.title.trim()) d.title = `${shortOf(d.a[0])} vs ${shortOf(d.b[0])}`;
+    stTidy(d);
     const i = G.stories.findIndex(s => s.id === d.id);
     if (i >= 0) G.stories[i] = d; else { G.stories.push(d); news(`🔥 New storyline: "${d.title}" (${d.a.map(nameOf).join(' & ')} vs ${d.b.map(nameOf).join(' & ')}).`, 'story'); }
     UI.modal = i < 0 && UI.modal.back ? UI.modal.back : { type: 'story', id: d.id }; commit(i >= 0 ? 'Saved.' : 'Storyline created.');
@@ -14146,6 +14305,7 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.in === 'musicVol') { meta.musicVol = clamp(+el.value / 100, 0, 1); el.setAttribute('aria-valuetext', el.value + '%'); MUSIC.sync(); return; }
   if (el.dataset.wz === 'ppv') { UI.wiz.ppv = el.value; return; }
+  if (el.dataset.ch != null && UI.modal?.type === 'chapter') { const k = el.dataset.ch; UI.modal.draft[k] = k === 'wk' ? +el.value || 0 : el.value; return; }
   if (el.hasAttribute('data-segst') && UI.modal?.draft?.nst) { UI.modal.draft.nst.t = stClean(el.value); return; }
   if (el.hasAttribute('data-segln') && UI.modal?.draft) { const v = el.value.replace(/[<>`"]/g, '').slice(0, 140); if (v.trim()) UI.modal.draft.line = v; else delete UI.modal.draft.line; return; }
   if (el.dataset.wz === 'month') { (UI.wiz.months ||= Array(12).fill(''))[+el.dataset.i] = el.value; return; }
@@ -14193,13 +14353,14 @@ document.addEventListener('input', e => {
     if (el.type === 'range') { slPaint(el); const o = document.getElementById('ewv-' + k); if (o) o.textContent = el.value; const ov = document.getElementById('ew-ovr'); if (ov) ov.textContent = overall(d); }
     if (el.type === 'range' || k === 'age' || k === 'askSet') { const ak = document.getElementById('ew-ask'); if (ak && G) ak.innerHTML = iconize(askLine(d)); }
   }
-  if (el.dataset.es != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
+  if (el.dataset.es != null && el.type !== 'checkbox' && UI.modal?.draft) { UI.modal.draft[el.dataset.es] = el.value || (el.dataset.es === 'titleId' ? null : ''); }
   if (el.dataset.et != null && el.type !== 'checkbox') { UI.modal.draft[el.dataset.et] = el.value; }
   if (el.dataset.bt != null && el.type !== 'checkbox' && UI.modal?.draft?.belt) { const d = UI.modal.draft; d.belt = beltClean({ ...d.belt, [el.dataset.bt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = titleArt(d, 'bd-belt'); }
   if (el.dataset.tt === 'name' && UI.modal?.draft?.titles?.[+el.dataset.i]) UI.modal.draft.titles[+el.dataset.i].name = el.value;
 });
 document.addEventListener('change', e => {
   const el = e.target;
+  if (el.dataset.ch != null && UI.modal?.type === 'chapter') { const k = el.dataset.ch; UI.modal.draft[k] = k === 'wk' ? +el.value || 0 : el.value; return; }
   if (el.dataset.wz && UI.wiz) {
     const z = UI.wiz, k = el.dataset.wz;
     if (k === 'slot') z.slot = +el.value;
@@ -14294,7 +14455,7 @@ document.addEventListener('change', e => {
     else if (['promoName', 'showName', 'bigEvents', 'notebook', 'wNotes', 'sNotes'].includes(k)) { save(); render(); }
   }
   if (el.dataset.ew != null && UI.modal?.draft) { UI.modal.draft[el.dataset.ew] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value; if (el.type === 'checkbox' || el.tagName === 'SELECT') render(); }
-  if (el.dataset.es != null) { if (el.type === 'checkbox') UI.modal.draft.autoEnd = el.checked; else if (el.dataset.es === 'titleId') UI.modal.draft.titleId = el.value || null; else UI.modal.draft[el.dataset.es] = el.value; }
+  if (el.dataset.es != null && UI.modal?.draft) { if (el.type === 'checkbox') UI.modal.draft.autoEnd = el.checked; else if (el.dataset.es === 'titleId') UI.modal.draft.titleId = el.value || null; else UI.modal.draft[el.dataset.es] = el.value; }
   if (el.dataset.rr && el.tagName === 'SELECT') { A.rrMove(el.dataset.rr, el.value); return; }
   if (el.dataset.tt && el.tagName === 'SELECT' && UI.modal?.draft?.titles?.[+el.dataset.i]) { const t = UI.modal.draft.titles[+el.dataset.i]; if (el.dataset.tt === 'holder') t.holder = el.value; else { const n = el.value === 'trios' ? 3 : el.value === 'tag' ? 2 : 0; if (n) { if (t.n !== n) t.hn = ''; t.n = n; t.mid = true; t.div = ''; t.holder = ''; } else { if (t.n) { t.hn = ''; delete t.n; } t.mid = el.value === 'mid'; t.div = el.value === 'women' ? "Women's" : ''; } if (/ (World|Television|Women's|Tag Team|Trios) Championship$/.test(t.name)) t.name = t.name.replace(/(World|Television|Women's|Tag Team|Trios) Championship$/, n === 3 ? 'Trios Championship' : n === 2 ? 'Tag Team Championship' : t.div ? "Women's Championship" : t.mid ? 'Television Championship' : 'World Championship'); } render(); return; }
   if (el.dataset.bt === 'ring' && UI.modal?.draft?.belt) { const m = UI.modal; bdKeep(m); m.draft.belt = beltClean({ ...m.draft.belt, ring: el.checked ? 1 : 0 }, m.draft); render(); return; }
