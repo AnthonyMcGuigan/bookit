@@ -11642,7 +11642,7 @@ function faceMaker(d) {
       + row('Eyes', chips(10, FACE.eyes)) + row('Brows', chips(11, FACE.brows)) + row('Mouth', chips(12, FACE.mouth))
       + (women || at(15) ? row('Make-up', chips(15, FACE.makeup)) : ''),
     hair: () => hood ? `<p class="small muted fm-row">The ${esc(FACE.face[F].toLowerCase())} covers the hair. Pick another face on Paint &amp; masks to show it.</p>`
-      : row('Hair', chips(1, FACE.hair)) + row('Hair colour', sws(2, FACE.hairC, 0, 'Hair')) + (women && !at(3) ? '' : row('Facial hair', chips(3, FACE.beard))),
+      : row('Hair', chips(1, FACE.hair)) + row('Hair colour', sws(2, FACE.hairC, 0, 'Hair')) + row('Facial hair', chips(3, FACE.beard)),
     paint: () => row('Face', chips(4, FACE.face)) + (FACE_MASKS.has(F) ? row('Mask colour', sws(8, FACE.col, 1, 'Mask')) + row('Mask trim', sws(9, FACE.col, 1, 'Trim')) : '')
       + row('Paint colour <span class="muted">· also the gear</span>', sws(6, FACE.col, 0, 'Paint')),
     gear: () => row('Headwear', chips(13, FACE.hat)) + (at(13) ? row('Headwear colour', sws(14, FACE.col, 0, 'Headwear')) : '')
@@ -16601,7 +16601,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.89';
+const VERSION = '1.9.90';
 const WHATS_NEW = [
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
