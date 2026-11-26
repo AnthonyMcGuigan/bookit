@@ -1120,6 +1120,13 @@ body { --ic: var(--gold); }
 .mg-hol { position: absolute; top: 1px; left: 3px; font-size: 10px; line-height: 1; z-index: 1; pointer-events: none; }
 .mg-rv { display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; }
 .mg-rv i { font: 800 8px/1.2 var(--f-cond, sans-serif); font-style: normal; letter-spacing: .02em; text-transform: uppercase; padding: 1px 2px; border-radius: 3px; color: var(--ink); background: color-mix(in srgb, var(--rc, #888) 35%, var(--bg2)); border: 1px solid color-mix(in srgb, var(--rc, #888) 70%, transparent); max-width: 100%; overflow: hidden; }
+.hs-strip { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; margin: 0 0 10px; color: var(--ink); }
+.hs-strip .sp { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.hs-strip.on { border-color: color-mix(in srgb, var(--gold, #e8b64a) 45%, var(--line)); }
+.hs-strip .hs-go { color: var(--accent-t); white-space: nowrap; font-weight: 700; }
+.hs-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.hs-row:last-of-type { border-bottom: 0; }
+.hs-tour { margin-bottom: 4px; }
 .cal-cd { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: linear-gradient(100deg, color-mix(in srgb, var(--gold, #e8b64a) 18%, var(--card)), var(--card) 75%); border: 1px solid color-mix(in srgb, var(--gold, #e8b64a) 45%, var(--line)); border-radius: var(--r); padding: 8px 10px; margin-bottom: 8px; color: var(--ink); font-size: 13px; }
 .cal-cd-n { min-width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; background: var(--gold, #e8b64a); color: var(--gold-ink, #111); font: 400 20px/1 var(--f-display, sans-serif); }
 .cal-cd-go { font: 700 11px/1 var(--f-cond, sans-serif); letter-spacing: .06em; text-transform: uppercase; color: var(--gold, #e8b64a); white-space: nowrap; }
@@ -4634,6 +4641,7 @@ function endOfWeek(card, world = true) {
   // contracts (frozen when contracts are off: nobody's deal runs down and nobody walks out)
   endLoans(); mediaWeek();
   trainWeek();
+  houseWeek(booked); // house shows and tours: after the week's rest, so the road's fatigue carries into next week
   for (const w of CON() ? signed().filter(w => !w.loan) : []) {
     w.contract.weeks--;
     const wl = w.contract.weeks;
@@ -8444,7 +8452,7 @@ function viewBookCard() {
   </div>` : `<div class="cal">
     <div class="cal-h"><button class="iconbtn sm" data-act="calNav" data-id="-1" aria-label="Previous month">‹</button><b>${monthLabel(mk)}</b>${wk !== G.week || UI.calMonth != null ? '<button class="btn sm" data-act="calToday">Tonight</button>' : ''}<button class="iconbtn sm" data-act="calNav" data-id="1" aria-label="Next month">›</button></div>
     ${monthGrid(mk, wk, tile)}
-  </div>`);
+  </div>`) + houseStrip();
   const statusBar = `<div class="kpis"><span>👥 ${kfmt(G.fans)} fans</span><span>⭐ ${Math.round(G.promo.prestige)} prestige</span>${last ? `<span>Last: <b class="stars">${starStr(last.rating)}</b></span>` : ''}${attAll.length ? `<button class="${att.length ? 'kpi-alert' : 'kpi-ok'}" data-act="brief">${att.length ? '⚠️ ' : ''}Briefing · ${attAll.length} ›</button>` : '<button class="kpi-ok" data-act="brief">Briefing ›</button>'}</div>`;
 
   // ----- past show: results on the same screen -----
@@ -8915,6 +8923,7 @@ function renderModal() {
     case 'phone': return modalPhone();
     case 'sit': return modalSit(UI.modal);
     case 'media': return modalMedia(m);
+    case 'house': return modalHouse(m);
     case 'staff': return modalStaff(m);
     case 'tgoal': return modalGoal(m);
     case 'trainee': return modalTrainee(m);
@@ -9342,6 +9351,8 @@ function helpHTML() {
   <p>1. Tap a week on the calendar.<br>2. Add matches, promos and angles, or tap Auto-fill.<br>3. Tap <b>Run</b> and watch the results.<br>4. Check the <b>Briefing</b> and the <b>Office</b>.</p>
   <h3>Training and staff</h3>
   <p>Everyone trains every week. Young wrestlers grow fastest, up to their potential, and they learn from better workers they wrestle. Pick a training focus, a goal or a veteran mentor on a wrestler's profile. <b>Office → Training</b> shows everyone's goals, your Head Trainer's calls when someone hits a wall, and, from company level 2, a training school for your own rookies. Hire staff in <b>Office → Staff</b>. Turn on <b>Deep sim</b> in Settings to see every skill.</p>
+  <h3>House shows and tours</h3>
+  <p>Tap the line under the calendar. House shows aren't on TV: up to 3 a week, booked automatically from your crew rule. They earn some money, give newer wrestlers experience and chemistry, and keep people who missed TV happy, but they add fatigue and a small injury risk. A <b>tour</b> is a named run of 3 to 5 shows a week for a few weeks: bigger crowds and a prestige bump at the end, harder on bodies. Injured, worn-out and limited-dates wrestlers stay home.</p>
   <h3>Big events</h3>
   <p><b>Plan the big event first.</b> Tap its week on the calendar and book its main matches before the weekly shows. Those matches are announced, and every weekly show that puts both sides together builds hype. More hype means better ratings and more buys.</p>
   <p>Plans can change. If a story gets hotter than expected, the Road to card offers to add it, or you can edit the big event's card any time before the show.</p>
@@ -12589,6 +12600,7 @@ function worldCo(r) {
   if (r.months?.some(Boolean)) c.months = cleanMonths(r.months);
   if (r.wkShows?.length) { c.wkShows = r.wkShows.map(x => ({ name: x.name, day: x.day, ...(safeColor(x.col) ? { col: x.col } : {}) })); c.split = !!r.split; if (safeColor(r.scol)) c.scol = r.scol; }
   if (r.sigs?.length) c.sigs = r.sigs.map(x => ({ name: x.name, mt: x.mt || '', gm: x.gm || '' }));
+  if (r.house) c.house = { n: clamp(Math.floor(+r.house.n) || 0, 0, HS_MAX), crew: Object.hasOwn(HS_CREW, r.house.crew) ? r.house.crew : 'dev' };
   // tag teams, trios teams and factions travel as member ids from this company's roster
   const ids = new Set(c.roster.map(w => w.id)), grp = (a, n) => (Array.isArray(a) ? a : []).filter(g => g && g.members?.filter(id => ids.has(id)).length >= n);
   c.teams = grp(r.teams, 2).filter(t => t.members.every(id => ids.has(id))).slice(0, WORLD_TEAMS).map(t => ({ id: t.id, name: t.name, ...(isTrios(t) ? { kind: 'trios' } : {}), members: t.members.slice() }));
@@ -12608,6 +12620,7 @@ function coAsRival(g) {
   if (monthMode(g.bigMonths, g.settings || G.settings)) r.months = cleanMonths(g.bigMonths);
   r.wkShows = shs.slice(1, MAX_SHOWS).map(x => ({ name: x.name || 'Weekly Show', day: clamp(+x.day || 0, 0, 6), ...(safeColor(x.col) ? { col: x.col } : {}) })); r.split = !!g.split;
   if (safeColor(shs[0].col)) r.scol = shs[0].col; // brand colours come along with the brands
+  if (g.house?.n || (g.house?.crew && g.house.crew !== 'dev')) r.house = { n: g.house.n || 0, crew: g.house.crew || 'dev' }; // its house show plan
   r.sigs = (g.ppvSig || []).filter(x => x && (x.mt || x.gm)).slice(0, 24).map(x => ({ name: x.name, mt: x.mt || '', gm: x.gm || '' }));
   const a = k => avg(ros.map(w => +w[k] || 0));
   r.phil = a('ring') > a('cha') + 6 ? 'work' : a('cha') + a('mic') > a('ring') * 2 + 8 ? 'ent' : avg(ros.map(w => +w.age || 28)) < 27 ? 'stars' : 'vets';
@@ -12679,6 +12692,7 @@ function cleanWorld(raw) {
     if (!r.wkShows.length) { delete r.wkShows; delete r.split; } else r.split = !!r.split;
     r.sigs = (Array.isArray(r.sigs) ? r.sigs : []).slice(0, 24).map(x => ({ name: ppvList(x?.name)[0] || '', mt: cmName(x?.mt), gm: cmName(x?.gm) })).filter(x => x.name && (x.mt || x.gm));
     if (!r.sigs.length) delete r.sigs;
+    if (r.house && typeof r.house === 'object') r.house = { n: clamp(Math.floor(+r.house.n) || 0, 0, HS_MAX), crew: Object.hasOwn(HS_CREW, r.house.crew) ? r.house.crew : 'dev' }; else delete r.house;
     if (Array.isArray(r.prizes) && r.prizes.length) r.prizes = worldPrizes(r.prizes, onR); else delete r.prizes;
     return r;
   });
@@ -13177,6 +13191,7 @@ function wizTake(z, take) {
   z.mode = mo ? 'month' : 'weeks'; z.months = mo ? cleanMonths(take.months) : Array(12).fill(''); z.ppv = mo ? '' : (take.ppvs || []).join('\n');
   z.extra = (take.wkShows || []).slice(0, MAX_SHOWS - 1).map(x => ({ name: x.name, day: clamp(+x.day || 0, 0, 6), ...(safeColor(x.col) ? { col: x.col } : {}) })); z.split = !!take.split && z.extra.length > 0; z.showCol = safeColor(take.scol);
   z.sig = Object.fromEntries((take.sigs || []).map(x => [x.name, x.mt ? 'mt:' + x.mt : 'gm:' + x.gm]));
+  if (take.house && typeof take.house === 'object') z.house = { n: take.house.n, crew: take.house.crew }; else delete z.house;
   z.step = 'budget';
 }
 // a company taken over from a shared world keeps its brand rosters and title brands, which travel by show position.
@@ -13305,6 +13320,7 @@ function scrubGame(raw) {
   const fixCard = c => Array.isArray(c) ? c.map(fixSeg).filter(Boolean) : [];
   // per-company parts, for the active company and any others in the same world
   const fixCo = g => {
+    houseClean(g);
     g.card = fixCard(g.card);
     const fut = {}; if (g.future && typeof g.future === 'object') for (const k of Object.keys(g.future)) if (/^\d{1,6}$/.test(k)) fut[k] = fixCard(g.future[k]); g.future = fut;
     g.history = (Array.isArray(g.history) ? g.history : []).filter(h => h && typeof h === 'object').map(h => ({ ...h, results: (Array.isArray(h.results) ? h.results : []).filter(r => r && fixSeg(r.seg)) }));
@@ -15334,6 +15350,228 @@ Object.assign(A, {
     UI.modal = null; UI.picker = null; commit(msg);
   }
 });
+// ---------- house shows and tours: untelevised nights on the road ----------
+// They earn a little money and give wrestlers reps: experience, learned chemistry and morale for people off TV.
+// The price is fatigue and a small injury risk. Every card is booked automatically from the crew rule.
+// G.house = { n: shows a week (0-3), crew: 'dev'|'mix'|'stars', tour: {name, from, wks, n} | undefined, log: [...], tours: [...] }
+const HS_MAX = 3, TOUR_N = [3, 4, 5], TOUR_WKS = [2, 3, 4, 6], HS_LOG = 6, HS_TOURS = 8;
+const HS_CREW = {
+  dev: ['Develop', 'Newer and under-used wrestlers get the reps. One or two names on top to sell tickets.'],
+  mix: ['Mix', 'A bit of everyone: a few stars, the midcard and the newer talent.'],
+  stars: ['Draw', 'Your biggest names headline. Bigger crowds and more money, but your TV stars get tired.']
+};
+const HS_TOWNS = ['Akron', 'Allentown', 'Amarillo', 'Bangor', 'Billings', 'Boise', 'Erie', 'Evansville', 'Fargo', 'Flint', 'Fort Wayne', 'Fresno', 'Green Bay', 'Hamilton', 'Hartford', 'Knoxville', 'Laredo',
+  'Lubbock', 'Macon', 'Moncton', 'Peoria', 'Pueblo', 'Quad Cities', 'Reno', 'Roanoke', 'Rockford', 'Saginaw', 'Scranton', 'Sioux Falls', 'Spokane', 'Sudbury', 'Syracuse', 'Tulsa', 'Utica', 'Waco', 'Wichita',
+  'Windsor', 'Youngstown', 'Lansing', 'Saskatoon', 'Shreveport', 'Duluth', 'Mobile', 'Chattanooga', 'Halifax', 'Kelowna', 'Topeka', 'Cedar Rapids'];
+const TOUR_NAMES = ['Road Warriors Tour', 'Summer Heat Tour', 'Back Roads Tour', 'Northern Lights Tour', 'Heartland Tour', 'Coast to Coast Tour', 'Holiday Tour', 'Spring Fever Tour'];
+function house(g = G) {
+  const H = g.house && typeof g.house === 'object' && !Array.isArray(g.house) ? g.house : (g.house = {});
+  H.n = clamp(Math.floor(+H.n) || 0, 0, HS_MAX); if (!Object.hasOwn(HS_CREW, H.crew)) H.crew = 'dev';
+  if (!Array.isArray(H.log)) H.log = []; if (!Array.isArray(H.tours)) H.tours = [];
+  return H;
+}
+// a save from outside: keep only sane numbers and short names
+function houseClean(g) {
+  if (g.house == null) return;
+  if (typeof g.house !== 'object' || Array.isArray(g.house)) { delete g.house; return; }
+  const H = g.house, txt = (v, n) => String(v || '').replace(/[<>&"'`\u0000-\u001f]/g, '').slice(0, n);
+  const t = H.tour && typeof H.tour === 'object' ? H.tour : null;
+  const o = { n: clamp(Math.floor(+H.n) || 0, 0, HS_MAX), crew: Object.hasOwn(HS_CREW, H.crew) ? H.crew : 'dev' };
+  if (t) o.tour = { name: txt(t.name, 40) || 'The Tour', from: Math.max(1, Math.floor(+t.from) || 1), wks: TOUR_WKS.includes(+t.wks) ? +t.wks : 3, n: TOUR_N.includes(+t.n) ? +t.n : 3, shows: Math.max(0, Math.floor(+t.shows) || 0), net: Math.round(+t.net || 0), inj: Math.max(0, Math.floor(+t.inj) || 0) };
+  o.tours = (Array.isArray(H.tours) ? H.tours : []).filter(x => x && typeof x === 'object').slice(0, HS_TOURS).map(x => ({ name: txt(x.name, 40) || 'Tour', from: Math.floor(+x.from) || 0, wks: Math.floor(+x.wks) || 0, shows: Math.floor(+x.shows) || 0, net: Math.round(+x.net || 0), inj: Math.floor(+x.inj) || 0 }));
+  const id = v => typeof v === 'string' ? v.slice(0, 40) : '';
+  o.log = (Array.isArray(H.log) ? H.log : []).filter(x => x && typeof x === 'object').slice(0, HS_LOG).map(x => ({
+    wk: Math.floor(+x.wk) || 0, net: Math.round(+x.net || 0), tour: txt(x.tour, 40),
+    shows: (Array.isArray(x.shows) ? x.shows : []).filter(s => s && typeof s === 'object').slice(0, 5).map(s => ({ town: txt(s.town, 30), crowd: Math.max(0, Math.floor(+s.crowd) || 0), net: Math.round(+s.net || 0), r: clamp(Math.round(+s.r) || 0, 0, 100), top: (Array.isArray(s.top) ? s.top : []).slice(0, 2).map(id), n: clamp(Math.floor(+s.n) || 0, 0, 20) })),
+    inj: (Array.isArray(x.inj) ? x.inj : []).slice(0, 10).map(id), grew: (Array.isArray(x.grew) ? x.grew : []).slice(0, 12).filter(Array.isArray).map(a => [id(a[0]), clamp(Math.floor(+a[1]) || 0, 0, 9)]),
+    chem: (Array.isArray(x.chem) ? x.chem : []).slice(0, 4).filter(Array.isArray).map(a => [id(a[0]), id(a[1])]), off: Math.max(0, Math.floor(+x.off) || 0)
+  }));
+  g.house = o;
+}
+// the tour running in a given week, if any
+const tourOn = (wk = G.week, g = G) => { const t = g.house?.tour; return t && wk >= t.from && wk < t.from + t.wks ? t : null; };
+const tourAhead = (g = G) => { const t = g.house?.tour; return t && G.week < t.from ? t : null; };
+const hsCount = (wk = G.week) => { const t = tourOn(wk); return t ? t.n : house().n; };
+const hsTired = () => 70 - staffQ('doctor') * 2;
+// who can work a house show this week: signed, healthy, here, and not too tired. Limited-dates deals and loans stay home.
+function hsPool() {
+  return signed().filter(w => inRing(w) && !w.loan && !w.away && !offTV(w) && !(w.injury > 0) && (w.fatigue || 0) < hsTired() && !(+w.contract?.dates >= 1));
+}
+// the crew for one night: the crew rule decides who's first in line
+function hsCrew(pool, used, rule, size) {
+  const need = w => Math.min(4, G.week - (w.lastBooked || 0)) * 3 + (used.get(w.id) || 0) * -9 - (w.fatigue || 0) * 0.15;
+  const score = rule === 'stars' ? w => w.pop * 1.2 + need(w) : rule === 'mix' ? w => w.pop * 0.4 + need(w) * 2 + rnd(0, 12)
+    : w => (100 - w.pop) * 0.5 + Math.max(0, 27 - (+w.age || 27)) * 2 + need(w) * 2 + rnd(0, 8);
+  const sorted = pool.slice().sort((a, b) => score(b) - score(a));
+  const crew = sorted.slice(0, size);
+  // Develop still puts a name or two on top to sell tickets
+  if (rule === 'dev') { const top = pool.filter(w => !crew.includes(w)).sort((a, b) => b.pop - a.pop).slice(0, 2); crew.splice(Math.max(0, crew.length - top.length), top.length, ...top); }
+  return crew;
+}
+// a house show card: face vs heel where it can, the biggest name in the last match
+function hsCard(crew) {
+  const fc = crew.filter(w => w.align === 'face').sort((a, b) => a.pop - b.pop), hl = crew.filter(w => w.align !== 'face').sort((a, b) => a.pop - b.pop), ms = [];
+  while (fc.length && hl.length) ms.push([[fc.shift()], [hl.shift()]]);
+  const rest = [...fc, ...hl];
+  while (rest.length >= 4 && ms.length < 5) ms.push([[rest.shift(), rest.shift()], [rest.shift(), rest.shift()]]);
+  while (rest.length >= 2) ms.push([[rest.shift()], [rest.shift()]]);
+  return ms.sort((a, b) => Math.max(...a.flat().map(w => w.pop)) - Math.max(...b.flat().map(w => w.pop)));
+}
+// how good a house show match is: work rate, natural and learned chemistry, and a little luck
+function hsRate(sides) {
+  const ws = sides.flat(), base = avg(ws.map(w => (+w.ring || 50) * 0.7 + (+w.psych || +w.ring || 50) * 0.15 + (+w.stam || 50) * 0.15));
+  let ch = 0, n = 0;
+  for (const a of sides[0]) for (const b of sides[1]) { ch += chem(a, b); const h = BR.history(a, b); if (h && h[0] >= 2) ch += (h[1] - 60) / 8; n++; }
+  return clamp(Math.round(base * 0.85 + (n ? ch / n : 0) * 1.4 + 10 + rnd(-7, 7)), 20, 95);
+}
+// chemistry is learned on the road too (no power-ranking change: nobody sees these results)
+function hsChem(sides, rating) {
+  for (const a of sides[0]) for (const b of sides[1]) for (const [x, y] of [[a, b], [b, a]]) {
+    const c = x.chx && typeof x.chx === 'object' ? x.chx : (x.chx = {}), h = Array.isArray(c[y.id]) ? c[y.id] : [0, 0], k = Math.min(h[0], 5);
+    c[y.id] = [h[0] + 1, Math.round((h[1] * k + rating) / (k + 1))];
+    const ks = Object.keys(c); if (ks.length > 16) delete c[ks.sort((p, q) => c[p][0] - c[q][0])[0]];
+  }
+}
+// roughly what one house show brings in: crowd, gate and merch, less the building, travel and the crew's road pay
+function hsMoney(crew, i, tour) {
+  const draw = avg(crew.map(w => w.pop).sort((a, b) => b - a).slice(0, 3)) / 60;
+  const sat = [1, 0.85, 0.72, 0.62, 0.55][i] || 0.5; // the same week, the same markets: each extra night draws a bit less
+  const crowd = Math.round(Math.min(tour ? 3200 : 2600, G.fans * 0.025 * (0.6 + draw * 0.5) * (0.8 + G.promo.prestige / 250) * sat * (tour ? 1.35 : 1)) * rnd(0.9, 1.1));
+  const gate = crowd * (tour ? 22 : 20), merch = Math.round(sum(crew.map(w => w.pop * w.pop)) / 60 * (perk('merch') ? 1.15 : 1));
+  const cost = 4000 + crowd * 3 + crew.length * (tour ? 550 : 500); // the building, travel and road pay for the crew
+  return { crowd, gate: Math.round(gate * DF().income), merch: Math.round(merch * DF().income), cost };
+}
+// a quick look before you commit: what a week of house shows might do
+function hsEstimate(n, rule, tour) {
+  const pool = hsPool(); if (!n || pool.length < 4) return null;
+  const size = Math.min(pool.length, tour ? 10 : 9), used = new Map(); let net = 0;
+  for (let i = 0; i < n; i++) { const crew = hsCrew(pool, used, rule, size); crew.forEach(w => used.set(w.id, (used.get(w.id) || 0) + 1)); const m = hsMoney(crew, i, tour); net += m.gate + m.merch - m.cost; }
+  return { net: Math.round(net / 1000) * 1000, people: used.size };
+}
+// the week's house shows: run once, after the company's last TV show of the week
+function houseWeek(tvBooked) {
+  const H = house(), tour = tourOn(), n = hsCount();
+  if (!n) { hsTourEnd(); return; }
+  const pool = hsPool();
+  if (pool.length < 4) { if (tour) news(`🗺️ The ${tour.name} skipped this week: not enough healthy wrestlers to fill a card.`, 'office'); hsTourEnd(); return; }
+  const size = Math.min(pool.length, tour ? 10 : 9), used = new Map(), rec = { wk: G.week, shows: [], net: 0, inj: [], grew: [], chem: [], off: 0, ...(tour ? { tour: tour.name } : {}) };
+  const grewBy = new Map(), towns = shuffle(HS_TOWNS);
+  for (let i = 0; i < n; i++) {
+    const crew = hsCrew(pool.filter(w => !(w.injury > 0)), used, H.crew, size); if (crew.length < 4) break;
+    const card = hsCard(crew), m = hsMoney(crew, i, tour);
+    let best = null; const rs = [];
+    for (const sides of card) {
+      const r = hsRate(sides), ws = sides.flat(); rs.push(r);
+      hsChem(sides, r); learnFromMatch(ws);
+      if (!best || r > best.r) best = { r, ids: sides.map(s => s[0].id) };
+      if (r >= 72 && sides[0].length === 1 && rec.chem.length < 4 && !rec.chem.some(p => p.includes(ws[0].id) || p.includes(ws[1].id))) rec.chem.push([ws[0].id, ws[1].id]);
+      for (const w of ws) {
+        // the reps: newer and younger wrestlers learn the most on the road
+        const a = ageGrow(+w.age || 27) * (w.pop < 50 ? 1.2 : 0.7);
+        let g = 0; for (const k of ['ring', 'psych', 'cons']) g += grow(w, k, 0.07 * a) || 0;
+        if (g > 0) grewBy.set(w.id, (grewBy.get(w.id) || 0) + g);
+        w.fatigue = clamp((w.fatigue || 0) + (6 + (tour ? 2 : 0)) * (1.4 - (+w.stam || 50) / 100), 0, 100);
+        if (!tvBooked.has(w.id)) { w.morale = clamp((w.morale || 60) + 1.5, 0, 100); if (w.pop < 40) addPop(w, 0.08); }
+        // house shows are lighter work than TV: a quarter of the match risk, through the medical room's injury types
+        if (G.settings.injuries && Math.random() < clamp((0.003 + (w.fatigue || 0) / 3000) * DF().inj * injMult(w, ws) * ageMult(w) * ihpMult(w) * injLv()[2], 0, .5)) {
+          const r = hurtW(w, rollInjury(w), 'House show');
+          if (r) { ihpTrack(w, r); rec.inj.push(w.id); news(`🩹 ${w.name} got hurt at a house show in ${towns[i % towns.length]}: ${INJ[r.k][0].toLowerCase()}, out about ${r.wks} week${r.wks === 1 ? '' : 's'}.`, 'injury'); }
+        }
+      }
+    }
+    crew.forEach(w => used.set(w.id, (used.get(w.id) || 0) + 1));
+    const net = m.gate + m.merch - m.cost; rec.net += net;
+    rec.shows.push({ town: towns[i % towns.length], crowd: m.crowd, net, r: Math.round(avg(rs)), top: best ? best.ids : [], n: crew.length });
+    G.fans += Math.round(m.crowd * 0.015 * (tour ? 1.5 : 1));
+  }
+  if (!rec.shows.length) return;
+  rec.off = [...used.keys()].filter(id => !tvBooked.has(id)).length;
+  rec.grew = [...grewBy.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+  if (MON()) G.money += rec.net;
+  H.log.unshift(rec); if (H.log.length > HS_LOG) H.log.length = HS_LOG;
+  if (tour) { tour.shows = (tour.shows || 0) + rec.shows.length; tour.net = (tour.net || 0) + rec.net; tour.inj = (tour.inj || 0) + rec.inj.length; }
+  hsTourEnd();
+}
+// a tour that just finished gets a write-up and moves to the tour history
+function hsTourEnd() {
+  const H = house(), t = H.tour; if (!t || G.week < t.from + t.wks - 1) return;
+  delete H.tour;
+  if (!t.shows) return;
+  H.tours.unshift({ name: t.name, from: t.from, wks: t.wks, shows: t.shows, net: t.net || 0, inj: t.inj || 0 }); if (H.tours.length > HS_TOURS) H.tours.length = HS_TOURS;
+  G.promo.prestige = clamp(G.promo.prestige + Math.min(2, t.shows * 0.12), 1, 100);
+  news(`🗺️ The ${t.name} wrapped up: ${t.shows} shows in ${t.wks} weeks${MON() ? `, ${t.net >= 0 ? '+' : ''}${money(t.net)}` : ''}${t.inj ? `, ${t.inj} injur${t.inj === 1 ? 'y' : 'ies'}` : ', nobody hurt'}. Your name travels.`, 'office');
+}
+// the line under the calendar: what's on the road this week
+function houseStrip() {
+  const H = house(), t = tourOn(), nx = tourAhead(), last = H.log[0], n = hsCount();
+  const what = t ? `<b>${esc(t.name)}</b> · week ${G.week - t.from + 1} of ${t.wks} · ${t.n} shows this week`
+    : n ? `<b>${n} house show${n === 1 ? '' : 's'}</b> this week · ${HS_CREW[H.crew][0]} crew` : '<b>No house shows</b> · run some for money and reps';
+  const sub = [nx ? `${esc(nx.name)} starts week ${nx.from}` : '', last && last.wk >= G.week - 1 ? `Last week: ${last.shows.length} show${last.shows.length === 1 ? '' : 's'}${MON() ? `, ${last.net >= 0 ? '+' : ''}${money(last.net)}` : ''}${last.inj.length ? `, ${last.inj.length} hurt` : ''}` : ''].filter(Boolean).join(' · ');
+  return `<button class="hs-strip${t ? ' on' : ''}" data-act="houseOpen">${ic(t ? 'map' : 'ticket')}<span class="sp"><span class="small">${what}</span>${sub ? `<span class="tiny muted">${sub}</span>` : ''}</span><span class="tiny hs-go">${n || t ? 'Manage' : 'Set up'} ›</span></button>`;
+}
+function modalHouse(m) {
+  const H = house(), t = tourOn(), nx = tourAhead(), cur = t || nx;
+  const chip = (act, v, on, lbl) => `<button class="chip ${on ? 'on' : ''}" data-act="${act}" data-id="${v}" aria-pressed="${on}">${lbl}</button>`;
+  if (m.plan) {
+    const p = m.plan, est = hsEstimate(p.n, H.crew, true), clash = []; for (let w = p.from; w < p.from + p.wks; w++) if (bigWk(w)) clash.push(w);
+    const weeks = Array.from({ length: 8 }, (_, i) => G.week + 1 + i);
+    const body = `<p class="small muted" style="margin-top:0">A tour is a run of house shows in new towns: more nights a week, bigger crowds and a prestige bump when it's done. It's hard on bodies.</p>
+      <label class="f"><span>Tour name</span><input type="text" data-hs="name" maxlength="40" value="${esc(p.name)}"></label>
+      <div class="sec">Starts</div><div class="chips">${weeks.map(w => chip('hsPlan', 'from|' + w, p.from === w, `Week ${w}`)).join('')}</div>
+      <div class="sec">Length</div><div class="chips">${TOUR_WKS.map(k => chip('hsPlan', 'wks|' + k, p.wks === k, `${k} weeks`)).join('')}</div>
+      <div class="sec">Shows a week</div><div class="chips">${TOUR_N.map(k => chip('hsPlan', 'n|' + k, p.n === k, String(k))).join('')}</div>
+      <div class="card" style="margin-top:12px"><div class="small">${p.n * p.wks} shows, weeks ${p.from} to ${p.from + p.wks - 1}.${est && MON() ? ` About <b>${money(est.net)}</b> a week` : ''}${est ? ` with about ${est.people} wrestlers on the road.` : ''}</div>
+        <div class="tiny muted" style="margin-top:4px">${HS_CREW[H.crew][0]} crew. TV shows still air as normal. Expect more fatigue on the road.</div>
+        ${clash.length ? `<div class="tiny" style="color:var(--warn);margin-top:4px">${ic('alert')} Runs through a big event week (${clash.join(', ')}). Tired wrestlers there rate lower.</div>` : ''}</div>`;
+    return modal(`${ic('map')} Plan a tour`, body, `<button class="btn" data-act="hsPlanBack">Back</button><button class="btn pri" data-act="hsPlanGo">Book the tour</button>`);
+  }
+  const est = hsEstimate(t ? t.n : H.n, H.crew, !!t), last = H.log[0];
+  const tourCard = cur ? `<div class="card hs-tour"><div class="row">${ic('map')}<div class="sp"><b>${esc(cur.name)}</b><div class="tiny muted">${t ? `Week ${G.week - t.from + 1} of ${t.wks} · ${t.n} shows a week · ${t.shows || 0} shows so far${MON() && t.shows ? `, ${t.net >= 0 ? '+' : ''}${money(t.net)}` : ''}` : `Starts week ${cur.from} · ${cur.wks} weeks · ${cur.n} shows a week`}</div></div>
+      <button class="btn sm" data-act="hsCancel">${t ? 'End early' : 'Cancel'}</button></div></div>`
+    : `<button class="btn block" data-act="hsPlanOpen">${ic('map')} Plan a tour</button>`;
+  const showRow = s => `<div class="hs-row"><span class="sp"><b>${esc(s.town)}</b> <span class="tiny muted">${s.crowd.toLocaleString()} fans · ${s.n} wrestlers${s.top.length === 2 ? ` · main event ${esc(nameOf(s.top[0]))} vs ${esc(nameOf(s.top[1]))}` : ''}</span></span>${MON() ? `<span class="tiny ${s.net >= 0 ? 'good' : 'bad'}">${s.net >= 0 ? '+' : ''}${money(s.net)}</span>` : ''}</div>`;
+  const report = last ? `<div class="sec">Week ${last.wk} on the road${last.tour ? ` · ${esc(last.tour)}` : ''}</div><div class="card">${last.shows.map(showRow).join('')}
+      <div class="tiny muted" style="margin-top:6px">${last.off} wrestler${last.off === 1 ? '' : 's'} who weren't on TV got work${MON() ? ` · total ${last.net >= 0 ? '+' : ''}${money(last.net)}` : ''}</div>
+      ${last.grew.length ? `<div class="tiny" style="margin-top:6px">${ic('trend')} Learning on the road: ${last.grew.slice(0, 6).map(([id, k]) => `${esc(nameOf(id))} +${k}`).join(', ')}</div>` : ''}
+      ${last.chem.length ? `<div class="tiny" style="margin-top:4px">${ic('sparkles')} Clicking in the ring: ${last.chem.map(([a, b]) => `${esc(nameOf(a))} &amp; ${esc(nameOf(b))}`).join(', ')}</div>` : ''}
+      ${last.inj.length ? `<div class="tiny" style="margin-top:4px;color:var(--bad)">${ic('medical')} Hurt: ${last.inj.map(id => esc(nameOf(id))).join(', ')}</div>` : ''}</div>` : '';
+  const past = H.tours.length ? `<div class="sec">Past tours</div><div class="list">${H.tours.map(x => `<div class="hs-row"><span class="sp"><b>${esc(x.name)}</b> <span class="tiny muted">weeks ${x.from}-${x.from + x.wks - 1} · ${x.shows} shows${x.inj ? ` · ${x.inj} hurt` : ''}</span></span>${MON() ? `<span class="tiny">${x.net >= 0 ? '+' : ''}${money(x.net)}</span>` : ''}</div>`).join('')}</div>` : '';
+  const body = `<p class="small muted" style="margin-top:0">House shows aren't on TV. They earn a little money, and the wrestlers on them pick up experience, chemistry with each other and morale. Every card books itself. The cost is fatigue and a small injury risk.</p>
+    ${tourCard}
+    <div class="sec">House shows each week${t ? ' (after the tour)' : ''}</div><div class="chips">${Array.from({ length: HS_MAX + 1 }, (_, k) => chip('hsN', k, H.n === k, k ? String(k) : 'None')).join('')}</div>
+    <div class="sec">Who goes on the road</div><div class="chips">${Object.entries(HS_CREW).map(([k, [l]]) => chip('hsCrew', k, H.crew === k, l)).join('')}</div>
+    <div class="tiny muted" style="margin-top:4px">${HS_CREW[H.crew][1]} Injured, worn-out (${hsTired()}%+ tired) and limited-dates wrestlers stay home.</div>
+    ${est ? `<div class="card" style="margin-top:10px"><div class="small">This week: ${hsCount()} show${hsCount() === 1 ? '' : 's'}, about ${est.people} wrestlers${MON() ? `, about <b>${est.net >= 0 ? '+' : ''}${money(est.net)}</b>` : ''}.</div></div>` : ''}
+    ${report}${past}`;
+  return modal(`${ic('ticket')} House shows &amp; tours`, body);
+}
+Object.assign(A, {
+  houseOpen() { openModal({ type: 'house' }); },
+  hsN(v) { house().n = clamp(Math.floor(+v) || 0, 0, HS_MAX); commit(); },
+  hsCrew(v) { if (Object.hasOwn(HS_CREW, v)) { house().crew = v; commit(); } },
+  hsPlanOpen() { const used = new Set(house().tours.map(x => x.name)); UI.modal = { type: 'house', plan: { name: TOUR_NAMES.find(n => !used.has(n)) || pick(TOUR_NAMES), from: G.week + 1, wks: 3, n: 3 } }; render(); },
+  hsPlanBack() { UI.modal = { type: 'house' }; render(); },
+  hsPlan(v) {
+    const p = UI.modal?.plan; if (!p) return; const [k, x] = String(v).split('|'), n = Math.floor(+x);
+    if (k === 'from' && n > G.week && n <= G.week + 8) p.from = n; else if (k === 'wks' && TOUR_WKS.includes(n)) p.wks = n; else if (k === 'n' && TOUR_N.includes(n)) p.n = n; else return;
+    render();
+  },
+  hsPlanGo() {
+    const p = UI.modal?.plan; if (!p) return;
+    const name = String(p.name || '').replace(/[<>&"'`\u0000-\u001f]/g, '').trim().slice(0, 40) || 'The Tour';
+    house().tour = { name, from: p.from, wks: p.wks, n: p.n, shows: 0, net: 0, inj: 0 };
+    news(`🗺️ ${G.promo.name} announced the ${name}: ${p.n * p.wks} shows starting week ${p.from}.`, 'office');
+    UI.modal = { type: 'house' }; commit(`${name} booked: weeks ${p.from} to ${p.from + p.wks - 1}.`);
+  },
+  hsCancel() {
+    const H = house(), t = H.tour; if (!t) return;
+    if (tourOn()) { t.wks = G.week - t.from; if (t.wks < 1 || !t.shows) delete H.tour; else { t.wks = Math.max(1, t.wks); hsTourEnd(); delete H.tour; } }
+    else delete H.tour;
+    commit(`${t.name} called off.`);
+  }
+});
+document.addEventListener('input', e => { const el = e.target; if (el.dataset?.hs === 'name' && UI.modal?.plan) UI.modal.plan.name = el.value.slice(0, 40); });
+
 // =====================================================================
 //  Deeper skills, training, the training school and staff
 //  Every wrestler carries these plain 1-99 numbers (other code, like the match ratings, reads them):
@@ -16512,7 +16750,7 @@ function wizFinish() {
   G.promo.day = z.day; G.promo.color = z.color; G.rivals = z.rivals || shuffle(RIVALS).slice(0, 2);
   // only the big events this booker named: nothing pre-filled shows up on a company they built
   if (!host) G.settings.bigMode = z.mode === 'month' ? 'month' : 'weeks';
-  G.bigMonths = cleanMonths(z.months); G.bigEvents = wzNames(z); G.ppvSig = sigsFromWiz(z); G.sigSeeded = []; if (!host && [3, 4, 5, 6, 8].includes(+z.every)) G.settings.bigEvery = +z.every;
+  G.bigMonths = cleanMonths(z.months); G.bigEvents = wzNames(z); G.ppvSig = sigsFromWiz(z); G.sigSeeded = []; if (z.house) { const H = house(); H.n = clamp(Math.floor(+z.house.n) || 0, 0, HS_MAX); if (Object.hasOwn(HS_CREW, z.house.crew)) H.crew = z.house.crew; } if (!host && [3, 4, 5, 6, 8].includes(+z.every)) G.settings.bigEvery = +z.every;
   delete G.shows; delete G.showId; migrateShows(G);
   G.news = []; G.todos = [];
   if (z.source === 'draft') {
@@ -17314,9 +17552,10 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.95';
+const VERSION = '1.9.96';
 const WHATS_NEW = [
   ['🌍 Update a shared world', 'Share a world again with the same name and you can update the first one instead of listing a second copy. It keeps its listing, likes and player count, and new players get the latest version. Games already started in it carry on as they are. Pick Share as new if you want both.'],
+  ['🎟️ House shows and tours', 'Tap the On the road line under the calendar to run up to 3 untelevised house shows a week, or plan a named tour of 3 to 5 shows a week. Cards book themselves from your crew rule (Develop, Mix or Draw). They earn some money, give newer wrestlers experience, build chemistry between pairs and keep people off TV happy. The cost is fatigue and a small injury risk, so watch your TV stars.'],
   ['🩺 The medical room', 'Injuries now have a name and a size, from a bruised rib to a torn ACL. Hardcore matches, big spots, stiff opponents, tired or older wrestlers and wrestling more than once a week all raise the risk. Office → Medical shows everyone hurt: pick Rest, Rehab or Surgery, or rush them back early and risk getting hurt again. Hire a Physio (company level 2), let your Doctor run the room, and some wrestlers earn an Injury prone or Injury resistant tag. Returning stars get a comeback pop. Set how often and how bad in Settings → Wrestlers & locker room.'],
   ['📖 Career memories', 'Wrestlers now remember the big moments of their careers: titles won and lost, feuds, betrayals, classic matches and big event main events. They\'re on every profile. Promos quote them ("I took that title from you once"), and a new feud between two wrestlers with history starts hotter. In the promo editor, Bring up the past picks the memory a promo is about. In contract talks, big moments push the asking price up, and you can remind a wrestler of a great night you gave them. Bring up a bad one and they\'ll throw it back at you.'],
   ['🎨 One workshop for every design', 'Wrestler looks, championship belts and trophies now share the same editor: a live preview on top, then Templates, Surprise me and Undo, then tabs. The pixel face and full body are one editor now, with game templates (Luchador, Rock star, Royalty and more), your own saved looks, a teammate\'s look to copy, Undo, and any colour at all for skin, hair, gear, masks, headwear, bottoms and boots. Every icon in the game is now a symbol you can use: on a belt\'s centre or side plates, on a trophy or on top of it, and on a wrestler\'s chest, trunks or forehead. Trophies also get the belts\' engravings, ornate detail, a ring of gems, any base colour, and strap colours for a belt on a stand. Existing designs look exactly the same.'],
