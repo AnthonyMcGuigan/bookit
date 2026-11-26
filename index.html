@@ -1240,6 +1240,7 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 <div id="modals"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <noscript>BookIt needs JavaScript turned on.</noscript>
+<script src="lib/howler.core.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -7646,7 +7647,7 @@ function renderModal() {
       <p class="small muted">A free, fan-made wrestling booking game. Everything built in is fictional.</p>
       <p class="small muted">Player-made rosters are unofficial and not tied to any wrestling company. Names belong to their owners.</p>
       <p class="small muted">Saves stay in this browser. Back them up from the menu.</p>
-      <p class="tiny muted">Music: "Summon the Rawk", "Raw" and "Take the Lead" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 3.0 (creativecommons.org/licenses/by/3.0). Crowd recordings from Wikimedia Commons (public domain and CC0).</p>
+      <p class="tiny muted">Music: "Summon the Rawk", "Raw" and "Take the Lead" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 3.0 (creativecommons.org/licenses/by/3.0). Crowd recordings from Wikimedia Commons (public domain and CC0). Sound plays through howler.js (MIT License).</p>
       <p><button class="link" data-act="privacy">Privacy &amp; terms</button> · <button class="link" data-act="whatsNew">What's new</button> · <button class="link" data-act="feedback">Send feedback</button></p></div>`, '<button class="btn" data-act="support">❤️ Support</button><button class="btn pri" data-act="closeModal">Close</button>');
     case 'help': return modal('How to play', helpHTML());
     case 'brief': return modal('Briefing', viewHome());
@@ -14656,21 +14657,37 @@ const reduceMotion = () => meta.motion === 'reduce' || (meta.motion !== 'full' &
 applyTheme();
 addEventListener('resize', () => { clearTimeout(applyTheme.t); applyTheme.t = setTimeout(applyTheme, 150); });
 
-// ---------- sound: made on the fly with Web Audio, no files ----------
+// ---------- sound: Howler.js (lib/howler.core.min.js, MIT, bundled so it works offline) ----------
+// Howler owns the one audio context: it unlocks sound on the first tap on iPhones and Android,
+// and its master volume is where the Sound switch mutes everything. The bell is still made on
+// the fly (no file); the crowd clips (public domain / CC0, see README) play through Howler.
+const AUDIO = (() => {
+  const H = window.Howler;
+  // autoSuspend would put the context to sleep while menu music plays through it (it only counts
+  // Web Audio sounds as playing), so it stays off, as it was before Howler
+  if (H) { H.autoSuspend = false; H.html5PoolSize = 4; }
+  return {
+    ok: !!H,
+    ctx() { if (!H || !H.usingWebAudio) return null; if (!H.ctx) H.volume(H.volume()); const c = H.ctx; if (c && c.state === 'suspended') c.resume().catch(() => {}); return c; },
+    out() { return H?.masterGain || this.ctx()?.destination || null; },
+    // keep Howler's master mute in step with the Sound setting
+    sync() { const m = meta.sound === false; if (H && H._muted !== m) H.mute(m); },
+  };
+})();
 const SFX = (() => {
-  let ctx = null, loading = false;
-  const CLIPS = ['cheer', 'applause'], bufs = {};
+  let loading = false;
+  const CLIPS = ['cheer', 'applause'], howls = {};
   const on = () => meta.sound !== false;
-  const ac = () => { if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); } if (ctx.state === 'suspended') ctx.resume(); return ctx; };
-  const tone = (f, t, d, type = 'sine', v = .2, f2) => { const c = ac(); if (!c) return; const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, c.currentTime + t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, c.currentTime + t + d); g.gain.setValueAtTime(0, c.currentTime + t); g.gain.linearRampToValueAtTime(v, c.currentTime + t + .01); g.gain.exponentialRampToValueAtTime(.0008, c.currentTime + t + d); o.connect(g).connect(c.destination); o.start(c.currentTime + t); o.stop(c.currentTime + t + d + .05); };
+  const tone = (f, t, d, type = 'sine', v = .2, f2) => { const c = AUDIO.ctx(), out = AUDIO.out(); if (!c || !out) return; const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, c.currentTime + t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, c.currentTime + t + d); g.gain.setValueAtTime(0, c.currentTime + t); g.gain.linearRampToValueAtTime(v, c.currentTime + t + .01); g.gain.exponentialRampToValueAtTime(.0008, c.currentTime + t + d); o.connect(g).connect(out); o.start(c.currentTime + t); o.stop(c.currentTime + t + d + .05); };
   return {
     bell(n = 3) { if (!on()) return; for (let i = 0; i < n; i++) { tone(1568, i * .32, 1.1, 'sine', .22); tone(2350, i * .32, .7, 'sine', .08); tone(3920, i * .32, .25, 'triangle', .04); } },
     tap() { if (!on()) return; tone(880, 0, .05, 'sine', .04); },
-    // recorded crowd clips (public domain / CC0, see README), fetched once and kept
-    load() { if (!on() || loading) return; const c = ac(); if (!c) return; loading = true;
-      for (const k of CLIPS) fetch('sounds/' + k + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => new Promise((ok, no) => c.decodeAudioData(b, ok, no))).then(b => { bufs[k] = b; }).catch(() => {}); },
-    crowd(k, v = 1, t = 0) { if (!on()) return; const c = ac(), b = bufs[k]; if (!c || !b) return; const T = c.currentTime + t, s = c.createBufferSource(), g = c.createGain();
-      s.buffer = b; s.playbackRate.value = .96 + Math.random() * .08; g.gain.value = Math.max(0, Math.min(1, v)) * .7; s.connect(g).connect(c.destination); s.start(T); },
+    // recorded crowd clips, loaded once and kept (Web Audio buffers, so they start instantly)
+    load() { if (!on() || loading || !AUDIO.ok) return; loading = true;
+      for (const k of CLIPS) howls[k] = new Howl({ src: ['sounds/' + k + '.mp3'], preload: true, onloaderror: () => { delete howls[k]; } }); },
+    crowd(k, v = 1, t = 0) { if (!on()) return; const h = howls[k]; if (!h || h.state() !== 'loaded') return;
+      const go = () => { if (!on()) return; const id = h.play(); h.rate(.96 + Math.random() * .08, id); h.volume(Math.max(0, Math.min(1, v)) * .7, id); };
+      if (t > 0) setTimeout(go, t * 1000); else go(); },
     // one reaction for the whole show, by its final rating: a big pop for a great show, applause for a good one, quiet for a weak one
     show(x) { if (!on() || !(x >= 0)) return;
       if (x >= 85) { this.crowd('cheer', 1, .3); this.crowd('applause', .8, 1.5); } else if (x >= 70) this.crowd('cheer', .8, .3); else if (x >= 55) this.crowd('applause', .7, .3); else if (x >= 45) this.crowd('applause', .35, .3); },
@@ -14680,37 +14697,47 @@ const SFX = (() => {
 // ---------- menu music: a rotating playlist of recorded tracks (credits in README and About) ----------
 // Never starts before the player taps or presses a key, stays off when sound is muted,
 // fades out for the live show (bell and crowd take over) and pauses when the app is hidden.
+// Tracks stream through Howler's HTML5 audio (no big decode in memory), and each one is routed
+// into Howler's audio context through a gain node, because iPhones ignore an audio element's volume.
 const MUSIC = (() => {
   const SRC = ['sounds/music-summon-the-rawk.mp3', 'sounds/music-raw.mp3', 'sounds/music-take-the-lead.mp3'];
-  let el = null, gain = null, unlocked = false, want = false, fadeT = 0, cur = Math.floor(Math.random() * SRC.length);
+  const tracks = [];
+  let gain = null, unlocked = false, want = false, starting = false, fadeT = 0, lvl = 0, cur = Math.floor(Math.random() * SRC.length);
   const on = () => meta.sound !== false && meta.music !== false;
   const vol = () => clamp(meta.musicVol == null ? .35 : +meta.musicVol, 0, 1);
   const quiet = () => document.hidden || UI.modal?.type === 'live';
-  const level = v => { if (gain) gain.gain.value = v; else if (el) el.volume = v; };
-  const make = () => { if (el) return el; el = new Audio(); el.src = SRC[cur]; el.preload = 'none'; el.setAttribute('playsinline', '');
-    // when a track ends, the next one starts (at full music volume, no fade needed)
-    el.addEventListener('ended', () => { cur = (cur + 1) % SRC.length; el.src = SRC[cur]; if (want) el.play().catch(() => {}); });
-    // route through Web Audio where possible, because iPhones ignore the volume of a plain audio element
-    try { const C = window.AudioContext || window.webkitAudioContext; if (C) { const c = MUSIC.ctx || (MUSIC.ctx = new C()); gain = c.createGain(); c.createMediaElementSource(el).connect(gain).connect(c.destination); } } catch (e) { gain = null; }
-    return el; };
-  const fade = (to, ms, done) => { clearInterval(fadeT); const from = gain ? gain.gain.value : el.volume, t0 = Date.now();
+  const howl = () => tracks[cur];
+  const level = v => { lvl = v; if (gain) gain.gain.value = v; else howl()?.volume(v); };
+  // send this track's audio element through the shared gain node (once per element)
+  const route = h => { try { const c = AUDIO.ctx(), el = h._sounds[0]?._node; if (!c || !el || el._bkRouted) return;
+    if (!gain) { gain = c.createGain(); gain.gain.value = lvl; gain.connect(AUDIO.out()); }
+    c.createMediaElementSource(el).connect(gain); el._bkRouted = 1; h.volume(1); } catch (e) {} };
+  const make = () => { if (!AUDIO.ok) return null; if (tracks[cur]) return tracks[cur];
+    const i = cur, h = new Howl({ src: [SRC[i]], html5: true, preload: false, volume: gain ? 1 : lvl,
+      // when a track ends, the next one starts (at full music volume, no fade needed)
+      onend: () => { cur = (i + 1) % SRC.length; if (want) { const n = make(); if (n) { route(n); n.play(); } } },
+      onplay: () => { starting = false; route(h); }, onplayerror: () => { starting = false; }, onloaderror: () => { starting = false; } });
+    tracks[i] = h; return h; };
+  const fade = (to, ms, done) => { clearInterval(fadeT); const from = lvl, t0 = Date.now();
     fadeT = setInterval(() => { const k = Math.min(1, (Date.now() - t0) / ms); level(from + (to - from) * k); if (k >= 1) { clearInterval(fadeT); done && done(); } }, 40); };
   return {
     // called after every screen change and setting change
-    sync() { want = unlocked && on() && !quiet() && vol() > 0;
-      if (want) { const a = make(); if (MUSIC.ctx?.state === 'suspended') MUSIC.ctx.resume(); if (a.paused) { level(0); a.play().then(() => fade(vol(), 1200)).catch(() => {}); } else fade(vol(), 300); }
-      else if (el && !el.paused) fade(0, 700, () => { if (!want) el.pause(); }); },
+    sync() { AUDIO.sync(); want = unlocked && on() && !quiet() && vol() > 0;
+      const h = howl();
+      if (want) { const a = make(); if (!a) return; AUDIO.ctx(); if (!a.playing()) { if (!starting) { starting = true; level(0); a.once('play', () => fade(vol(), 1200)); a.play(); } } else fade(vol(), 300); }
+      else if (h && h.playing()) fade(0, 700, () => { if (!want) h.pause(); }); },
     unlock() { if (unlocked) return; unlocked = true; this.sync(); },
-    get playing() { return !!el && !el.paused; },
+    get playing() { return !!howl()?.playing(); },
   };
 })();
 ['pointerdown', 'keydown'].forEach(t => addEventListener(t, () => MUSIC.unlock(), { capture: true, passive: true }));
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.72';
+const VERSION = '1.9.73';
 const WHATS_NEW = [
   ['🎯 Training goals and a Training tab', 'Office has a new Training tab with goals, the school and who is training what. Give a wrestler an Easy, Stretch or Dream goal from their profile. Hit it for a morale and popularity boost. Your Head Trainer texts you when someone hits a wall, and stats that reach 80 through training earn badges.'],
+  ['🔊 Sturdier sound', 'The bell, the crowd and the menu music now run on a proper game audio engine, so sound starts more reliably on the first tap on iPhone and Android and the music streams instead of loading all at once. When and how often you hear them is unchanged.'],
   ['🎆 Big moment effects', 'The biggest moments on the live show now light up: confetti falls when a world title (or the top women\'s title) changes hands, and pyro goes off when a big event\'s main event rates 85 or more. Set it to Lots for camera flashes on a 90+ segment too, or turn it off. Find it in Menu → Big moment effects. Less motion turns it off as well.'],
   ['🎤 Cheaper guest promos', 'Per-appearance stars now charge a tenth of their fee for a promo or angle. Their full fee is only for matches. Promos have a new Remote spot under Where: the promo is sent in by video, and a per-appearance star who likes you does it for free.'],
   ['📅 Calendar settings', 'Menu → Settings has a new Calendar section. Start weeks on Sunday, shrink the calendar to this week or hide it, show week numbers, and pick which shows appear. Choose which weekend of the month big events air on, turn off weekly shows on big event weeks, and book up to 26 weeks ahead. Planning helpers add a big event countdown, rival big events and holidays on your calendar, and when the "book the big event" reminder comes.'],
