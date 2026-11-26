@@ -137,6 +137,7 @@ button.item:active { background: var(--card2); }
 .item .t { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item .d { font-size: 12.5px; color: var(--dim); }
 .av { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 14px; flex: none; color: #fff; }
+.med-bar { height: 6px; border-radius: 99px; background: var(--line); margin-top: 6px; overflow: hidden; } .med-bar i { display: block; height: 100%; background: var(--good); border-radius: 99px; }
 .tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
 .tag.face { color: var(--face); border-color: color-mix(in srgb, var(--face) 45%, transparent); }
 .tag.heel { color: var(--heel); border-color: color-mix(in srgb, var(--heel) 45%, transparent); }
@@ -4092,6 +4093,7 @@ function simSegment(seg, ctx) {
   if (seg.kind !== 'match' && !ctx.proj) { const sp = (seg.who || []).map(W).filter(Boolean); out.quote = segQuote(seg, sp.length ? sp : people, out.tg || []); }
   // shared modifiers
   if (injured.length) r += add(-8 * injured.length, 'Booked while injured: ' + injured.map(w => w.name).join(', '));
+  { const back = people.filter(w => w.cb && !(w.injury > 0)); if (back.length) r += add(Math.min(6, 3 * back.length), 'Back from injury: ' + back.map(w => w.name).join(', ')); }
   if (tired > 30) r += add(-(tired - 30) * 0.25, 'Tired wrestlers');
   if (unhappy) r += add(-3 * unhappy, 'Unhappy talent phoning it in');
   if (ctx.big) r += add(5, 'Big event atmosphere');
@@ -4119,16 +4121,15 @@ function applySegment(seg, res, ctx) {
     w.lastBooked = G.week;
     addPop(w, goodness * (ctx.big ? 1.3 : 1) * 0.5);
     w.morale = clamp(w.morale + 2 + (ctx.main ? 2 : 0), 0, 100);
+    if (w.cb && !(w.injury > 0)) { addPop(w, 1.5); news(`📣 ${w.name} made ${pn(w).their} return after ${w.cb} weeks out, and the crowd let ${pn(w).them} know they missed ${pn(w).them}.`, 'injury'); delete w.cb; }
   }
   const notes = [];
   if (seg.kind === 'match') {
     const stip = res.stip || {};
     for (const w of ws) {
       w.fatigue = clamp(w.fatigue + (16 + (stip.fat || 0)) * (1.4 - w.stam / 100) * (res.ffa ? 0.5 : 1) * (res.elim ? 1.15 : 1) * (res.prod?.fat || 1), 0, 100);
-      if (G.settings.injuries && Math.random() < (0.012 + w.fatigue / 900 + (stip.inj || 0) + (res.prod?.risk || 0) + (w.injury > 0 ? 0.15 : 0)) * DF().inj * injMult(w, ws)) {
-        const weeks = rint(1, w.injury > 0 ? 8 : 6); w.injury = Math.max(w.injury, weeks);
-        notes.push(`🩹 ${w.name} was injured (${weeks} wk).`); news(`🩹 ${w.name} got hurt and will be out about ${weeks} week${weeks > 1 ? 's' : ''}.`, 'injury');
-      }
+      (w.mx ||= []).push(G.week); if (w.mx.length > 8) w.mx = w.mx.slice(-8);
+      const hurtNote = matchInjury(w, ws, stip, res.prod); if (hurtNote) notes.push(hurtNote);
     }
     if (res.winners.length) {
       const F = res.fin || FINISHES.Clean, [wm, wp] = F.win || [8, 1.2], [lm, lp] = F.lose || [-6, -0.6];
@@ -4612,8 +4613,7 @@ function endOfWeek(card, world = true) {
   for (const w of G.wrestlers) {
     if (!world && !w.contract) continue;
     if (!booked.has(w.id)) w.fatigue = clamp(w.fatigue - 18, 0, 100); else w.fatigue = clamp(w.fatigue - 6, 0, 100);
-    if (w.injury > 0 && !booked.has(w.id)) { w.injury--; if (w.injury === 0 && w.contract) news(`✅ ${w.name} is cleared to compete.`, 'injury'); }
-    else if (w.injury > 0) w.injury = Math.max(0, w.injury - 0.5) | 0;
+    medHeal(w, booked.has(w.id));
     w.momentum *= 0.92;
     if (!w.contract) { if (!booked.has(w.id)) w.pop = clamp(w.pop - 0.15, 1, 100); continue; }
     if (!booked.has(w.id) && w.injury === 0 && !w.away && inRing(w) && G.week - w.lastBooked >= 2) w.morale = clamp(w.morale - 2.5, 0, 100);
@@ -8053,7 +8053,9 @@ function wTags(w) {
   if (w.loan && w.contract) t.push(`<span class="tag">🚪 Invader${RV(w.loan) ? ' · ' + esc(RV(w.loan).short) : ''}</span>`);
   if (w.away && w.contract) t.push(`<span class="tag warn">${MEDIA[w.away.k]?.ic || '🎬'} ${w.away.k === 'gig' ? 'Indie date' : `Away ${awayLeft(w)}wk`}</span>`);
   if (w.xt && PER()) t.push(`<span class="tag gold">🏆 ${esc(w.xt.p)}</span>`);
-  if (w.injury > 0) t.push(`<span class="tag bad">🩹 ${w.injury}wk</span>`);
+  if (w.injury > 0) t.push(`<span class="tag bad" title="${esc(injName(w))}">🩹 ${w.injury}wk</span>`);
+  else if (frailOn(w) && w.contract) t.push(`<span class="tag warn">${ic('alert')} ${w.frail.rush ? 'Rushed back' : 'Healing'}</span>`);
+  if (IHP[w.ihp] && w.contract && G.settings.injuries) t.push(`<span class="tag ${w.ihp === 'prone' ? 'warn' : 'good'}">${ic(w.ihp === 'prone' ? 'medical' : 'shield')} ${IHP[w.ihp][0]}</span>`);
   const sk = streakTag(w); if (sk) t.push(sk);
   if (CON() && w.contract && w.contract.weeks <= TALKS_OPEN) t.push(`<span class="tag ${w.contract.weeks <= 4 ? 'warn' : ''}">📝 ${w.contract.weeks}wk</span>`);
   if (CON() && w.courted && w.contract) t.push(`<span class="tag bad">🗞️ courted</span>`);
@@ -8465,6 +8467,11 @@ function viewBookCard() {
   const warn = [];
   const inj = [...new Set(ppl.filter(id => W(id)?.injury > 0))];
   if (inj.length) warn.push(`🩹 Injured: ${inj.map(nameOf).join(', ')}`);
+  if (G.settings.injuries) {
+    const ow = [...new Set(ppl)].map(W).filter(w => w && !(w.injury > 0) && overworked(w)), fr = [...new Set(ppl)].map(W).filter(w => w && frailOn(w));
+    if (ow.length) warn.push(`😮‍💨 Overworked, higher injury risk: ${ow.map(w => w.name).join(', ')}`);
+    if (fr.length) warn.push(`⚠️ Still healing, could get hurt again: ${fr.map(w => w.name).join(', ')}`);
+  }
   // rumbles and battle royals are roster-wide: wrestling twice or coming from another show is fine there
   const ppl1 = card.filter(s => !wideSeg(s)).flatMap(segPeople);
   const dup = [...new Set(ppl1.filter((id, i) => ppl1.indexOf(id) !== i))];
@@ -8773,7 +8780,7 @@ function officeTabs(t, fa) {
   const b = (id, label, cnt) => `<button class="${t === id ? 'on' : ''}" data-act="faTab" data-id="${id}" aria-pressed="${t === id}">${label}${cnt ? ` <span class="cnt">${cnt}</span>` : ''}</button>`;
   const lk = signed().filter(w => relMine(w) && (w.trust < 20 || w.relWarn)).length;
   const groups = [
-    ['People', [b('contracts', CON() ? 'Contracts' : 'Roster'), b('fa', 'Indie Stars', fa.length || ''), b('locker', 'Locker room', lk || ''), b('training', 'Training', (G.phone || []).some(coachOpen) ? '!' : ''), b('teams', 'Teams')]],
+    ['People', [b('contracts', CON() ? 'Contracts' : 'Roster'), b('fa', 'Indie Stars', fa.length || ''), b('locker', 'Locker room', lk || ''), b('training', 'Training', (G.phone || []).some(coachOpen) ? '!' : ''), G.settings.injuries ? b('medical', 'Medical', signed().filter(w => w.injury > 0).length || '') : '', b('teams', 'Teams')]],
     ['Shows', [b('titles', 'Titles'), b('brands', 'Brands'), b('media', 'Media')]],
     ['Business', [MON() ? b('money', 'Money') : '', b('staff', 'Staff'), b('rivals', 'Companies'), b('setup', 'Setup')]]
   ];
@@ -8794,6 +8801,7 @@ function viewOffice() {
   ${t === 'media' ? mediaView() : ''}
   ${t === 'staff' ? staffView() : ''}
   ${t === 'training' ? trainingView() : ''}
+  ${t === 'medical' ? medView() : ''}
   ${t === 'locker' ? lockerView() : ''}
   ${t === 'rivals' ? rivalsView() : ''}
   ${t === 'contracts' && !CON() ? `<div class="small muted" style="margin-bottom:8px">Contracts are off. Tap someone to release them.</div><div class="list">${signed().sort((a, b) => b.pop - a.pop).map(w => wItem(w, 'negotiate', 'tap to release')).join('')}</div>` : ''}
@@ -9083,6 +9091,7 @@ const ST_SECS = [
   { id: 'people', save: 1, ic: 'users', t: 'Wrestlers & locker room', sum: () => [PER() && 'Personalities', G.settings.injuries && 'injuries', G.settings.aging !== false && 'aging'].filter(Boolean).join(', ').replace(/^./, c => c.toUpperCase()) || 'All off', keys: ['persona', 'injuries', 'aging'], items: () => [
     ['personalities texts demands memory indie dates workhorse', `<label class="todo"><input type="checkbox" data-in="persona" ${PER() ? 'checked' : ''}><span>Personalities<br><span class="tiny muted">Texts, demands, memory, and workhorses who ask for indie dates.</span></span></label>`],
     ['injuries happen hurt', `<label class="todo"><input type="checkbox" data-in="injuries" ${G.settings.injuries ? 'checked' : ''}><span>Injuries happen</span></label>`],
+    ['injury rate often major acl realistic rare', G.settings.injuries ? `<label class="f" style="margin-top:8px"><span>How often and how bad</span><select data-in="injLv">${INJ_LV.map(([l, d], i) => `<option value="${i}" ${injLv() === INJ_LV[i] ? 'selected' : ''}>${l}: ${d}</option>`).join('')}</select></label>` : ''],
     ['aging retire age retirements', `<label class="todo"><input type="checkbox" data-in="aging" ${G.settings.aging !== false ? 'checked' : ''}><span>Wrestlers age and retire</span></label>`]] },
   { id: 'story', save: 1, ic: 'flame', t: 'Stories & events', sum: () => `Surprise moments: ${momName()}${lessList().length ? ` · ${lessList().length} seen less` : ''}`, keys: ['organic', 'moments'], items: () => [
     ['stories start on their own feuds organic', `<label class="todo"><input type="checkbox" data-in="organic" ${G.settings.organic !== false ? 'checked' : ''}><span>Stories start on their own<br><span class="tiny muted">Wrestlers who keep crossing paths start feuds without you.</span></span></label>`],
@@ -9671,6 +9680,7 @@ function modalWrestler(m) {
      <div class="row small"><span class="muted sp">Would ask for</span><b>${money(askFor(w, prefLen(w)))}/wk · ${lenLabel(prefLen(w))}</b></div>` : `<div class="row small"><span class="muted sp">Status</span><b>${w.contract ? 'On your roster' : 'Indie star'}</b></div>`}
    </div>
    ${w.retired ? '' : skillsBlock(w)}
+   ${w.retired ? '' : medBlock(w)}
    ${w.contract ? relBlock(w) + personaBlock(w) : ''}${indieBlock(w)}${datesBlock(w)}
    ${(() => { const st = STATS(w), ranks = G.titles.filter(t => !t.tag).map(t => [t, contenders(t, 10).findIndex(x => x.id === w.id)]).filter(x => x[1] >= 0);
      return cmBlock(w) + `<div class="sec">Career stats</div><div class="grid3 cstats"><div><b>${st.m}</b><span>matches</span></div><div><b>${st.m ? Math.round(st.sum / st.m) : '–'}</b><span>avg rating</span></div><div><b>${st.best || '–'}</b><span>best match</span></div><div><b>${st.tw}</b><span>title wins</span></div><div><b>${st.def}</b><span>defenses</span></div><div><b>${st.motn}</b><span>match of the night</span></div></div>
@@ -10504,7 +10514,7 @@ const A = {
       if (id === 'sandbox') { G.settings.sandbox = false; return commit('Sandbox off.'); }
       const d = PLAY_STYLES.balanced.set, set = {}; for (const k of x.keys) set[k] = d[k];
       if (id === 'money' && G.settings.deep) { set.finances = true; set.contracts = true; }
-      simApply(set); if (id === 'story') G.settings.less = {};
+      simApply(set); if (id === 'story') G.settings.less = {}; if (id === 'people') delete G.settings.injLv;
       return commit(`${x.t} back to the defaults.`);
     }
     ST_DEV_DEF[id]?.(); ls.set(META, JSON.stringify(meta)); render(); toast(`${x.t} back to the defaults.`); },
@@ -12562,7 +12572,7 @@ function worldW(w) {
   for (const k of WORLD_DROP) delete x[k];
   if (x.bi == null || !x.both) delete x.both; // bi: which of the company's weekly shows they work (0 is the main show)
   if (!safePhoto(x.photo)) x.photo = ''; // photos move to photo slots when the world is shared
-  x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
+  x.notes = ''; x.momentum = 0; x.fatigue = 0; x.injury = 0; medReset(x); x.morale = 65; x.lastBooked = 0; x.joined = 1; x.streak = 0;
   return x;
 }
 // a company's Awards & Prizes in a world: the trophies themselves, who holds them now, and past winners by name (all at week 1)
@@ -12646,7 +12656,7 @@ function cleanWorld(raw) {
   const fa = { id: 'fa', name: 'Indie stars', roster: Array.isArray(raw.fa) ? raw.fa.slice(0, 80) : [] };
   const g = scrubGame({ v: 1, promo: { name: 'World', show: 'Show' }, wrestlers: [], rivalPromos: [...raw.cos.slice(0, 10), fa] });
   const out = g.rivalPromos.filter(r => r.id !== 'fa').slice(0, 10), free = g.rivalPromos.find(r => r.id === 'fa')?.roster || [];
-  const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156);
+  const fixW = w => { w.name = String(w.name).slice(0, 40); w.nick = String(w.nick || '').slice(0, 40); w.age = clamp(+w.age || 28, 16, 70); w.injury = 0; medReset(w); w.fatigue = 0; w.momentum = 0; w.morale = 65; w.division = DIVISIONS.includes(w.division) ? w.division : 'Open'; w.record = { w: +w.record?.w || 0, l: +w.record?.l || 0, d: +w.record?.d || 0 }; w.rSal = clamp(+w.rSal || 0, 0, 1e6); w.rWeeks = clamp(+w.rWeeks || 52, 4, 156);
     if (w.rDates != null) { if (+w.rDates >= 1) w.rDates = clamp(Math.floor(+w.rDates), 1, DATES_MAX); else delete w.rDates; }
     if (w.bi != null) { w.bi = clamp(Math.floor(+w.bi) || 0, 0, MAX_SHOWS - 1); if (w.both !== true) delete w.both; } else delete w.both;
     if (w.rIndie !== true) delete w.rIndie; for (const k of WORLD_DROP) if (k !== 'brand' && k !== 'photoLocal') delete w[k];
@@ -15462,6 +15472,207 @@ function injMult(w, ws) {
   const safe = others.length ? avg(others.map(o => +ensureSkills(o).safety || 50)) : 50;
   return clamp(1.25 - safe / 200, 0.72, 1.25) * (1 - staffQ('doctor') * 0.06) * (others.some(o => hasBadge(o, 'safety')) ? 0.8 : 1);
 }
+// ---------- injuries & the medical room ----------
+// Each injury has a kind (how bad, how long), a recovery plan you pick, and after it heals a short spell
+// where coming back too soon can hurt them again. w.injury stays the weeks left, so everything that
+// skips injured wrestlers still works. w.med = { k, tot, at, plan, auto, p }, w.frail = { until, x },
+// w.mx = weeks they wrestled (last 8 matches), w.cb = weeks missed, for the comeback pop.
+// [name, severity 1-3, fewest weeks, most weeks]
+const INJ = {
+  ribs: ['Bruised ribs', 1, 1, 2], ankle: ['Sprained ankle', 1, 1, 3], stinger: ['Neck stinger', 1, 1, 2], ham: ['Pulled hamstring', 1, 2, 3], cut: ['Deep cut', 1, 1, 2],
+  conc: ['Concussion', 2, 2, 5], shoulder: ['Separated shoulder', 2, 3, 6], knee: ['Knee sprain', 2, 3, 6], back: ['Back injury', 2, 3, 6], hand: ['Broken hand', 2, 4, 6],
+  acl: ['Torn ACL', 3, 14, 26], pec: ['Torn pectoral', 3, 12, 20], neck: ['Neck injury', 3, 12, 24], leg: ['Broken leg', 3, 10, 16]
+};
+const SEV = ['', 'Minor', 'Moderate', 'Major'];
+// Settings → Wrestlers: how often injuries happen and how bad they get
+const INJ_LV = [['Rare', 'Fewer injuries, never a major one.', .55, 0, .5], ['Normal', 'Now and then, and major ones are rare.', 1, .04, .65], ['Realistic', 'More often, and a torn ACL can cost half a year.', 1.25, .08, 1]];
+const injLv = () => { const v = G?.settings?.injLv; return INJ_LV[v === 0 || v === 2 ? v : 1]; };
+const MED_PLANS = {
+  rest: ['Rest', 'Heals at the normal pace. A little risk for a few weeks after they come back.'],
+  rehab: ['Rehab', 'Heals faster with a Doctor or Physio, and they come back with no extra risk.'],
+  surg: ['Surgery', 'Takes longer, but the injury is fixed for good. For major injuries.']
+};
+const REHAB_COST = 1500;
+const medOf = w => w && w.injury > 0 ? (w.med && INJ[w.med.k] ? w.med : { k: '', tot: w.injury, at: G.week, plan: 'rest' }) : null;
+const injName = w => { const m = medOf(w); return m && INJ[m.k] ? INJ[m.k][0] : 'Injured'; };
+const injSev = w => { const m = medOf(w); return m && INJ[m.k] ? INJ[m.k][1] : (w.injury >= 8 ? 3 : w.injury >= 3 ? 2 : 1); };
+const frailOn = w => !!(w && w.frail && w.frail.until >= G.week && !(w.injury > 0));
+const medHelp = () => staffQ('physio') + staffQ('doctor');
+const rehabOk = () => medHelp() > 0;
+// matches in the last four weeks: one a week is normal, more than that starts to wear a body down
+const workload = w => (Array.isArray(w?.mx) ? w.mx : []).filter(k => k > G.week - 4).length;
+const overworked = w => workload(w) >= 6;
+function loadMult(w) { const n = workload(w); return n >= 7 ? 1.6 : n >= 6 ? 1.35 : n >= 5 ? 1.12 : 1; }
+const ageMult = w => (w.age || 30) >= 43 ? 1.3 : (w.age || 30) >= 38 ? 1.15 : 1;
+// the chance one match hurts them, before the doctor, opponents and difficulty
+function injBase(w, stip, prod) { return 0.012 + (w.fatigue || 0) / 900 + (stip?.inj || 0) + (prod?.risk || 0) + (w.injury > 0 ? 0.15 : 0) + (frailOn(w) ? w.frail.x : 0); }
+// earned tags: Injury prone (hurt often, or one bad one) and Injury resistant (a long run without a scratch)
+const IHP = { prone: ['Injury prone', 'Gets hurt more easily. A long healthy run can shake it.', 1.35], tough: ['Injury resistant', 'Rarely gets hurt and heals a little faster.', .7] };
+const ihpMult = w => IHP[w?.ihp]?.[2] || 1;
+function injChance(w, ws, stip, prod) { return clamp(injBase(w, stip, prod) * DF().inj * injMult(w, ws) * loadMult(w) * ageMult(w) * ihpMult(w) * injLv()[2], 0, .9); }
+// after each match: count the healthy run, and hand out or take away the tags
+function ihpTrack(w, r) {
+  if (r) {
+    const sev = INJ[r.k][1]; w.injN = (w.injN || 0) + 1; w.safeN = 0;
+    if (w.ihp === 'tough' && sev === 3) { delete w.ihp; news(`${w.name} isn't so indestructible after all and loses the Injury resistant tag.`, 'injury'); }
+    else if (!w.ihp && (w.injN >= 3 || (sev === 3 && Math.random() < .35) || r.again)) { w.ihp = 'prone'; news(`🩹 ${w.name} is now Injury prone. ${pn(w).They} get${pn(w).s} hurt more easily until ${pn(w).they} put${pn(w).s} together a long healthy run.`, 'injury'); }
+    return;
+  }
+  w.safeN = (w.safeN || 0) + 1;
+  if (w.safeN < 40) return;
+  w.safeN = 0;
+  if (w.ihp === 'prone') { delete w.ihp; w.injN = 0; news(`✅ ${w.name} has stayed healthy for 40 matches and is no longer Injury prone.`, 'injury'); }
+  else if (!w.ihp && (w.age || 30) < 38 && Math.random() < .3) { w.ihp = 'tough'; news(`🛡️ ${w.name} has gone 40 matches without a scratch and earned the Injury resistant tag.`, 'injury'); }
+}
+const riskWord = p => p >= .12 ? 'High' : p >= .05 ? 'Medium' : 'Low';
+// pick how bad it is: riskier spots and coming back too soon make it worse
+function rollInjury(w, heavy) {
+  const L = injLv(), was = frailOn(w) ? w.frail.sev || 1 : 0;
+  let pMaj = L[3] * (heavy ? 2 : 1) * (was ? 2 : 1), pMod = .26 + (heavy ? .1 : 0) + (was ? .15 : 0);
+  let sev = Math.random() < pMaj ? 3 : Math.random() < pMod ? 2 : 1;
+  sev = Math.max(sev, was ? Math.min(was, L[3] ? 3 : 2) : 1);
+  const k = pick(Object.keys(INJ).filter(x => INJ[x][1] === sev)), [, , lo, hi] = INJ[k];
+  let wks = rint(lo, hi); if (sev === 3) wks = Math.max(lo, Math.round(wks * L[4]));
+  if (was) wks = Math.ceil(wks * 1.3);
+  return { k, wks, again: !!was };
+}
+// hurt someone: sets the weeks out and what's wrong. Returns the injury, or null if they were already worse off.
+function hurtW(w, r, why) {
+  if (!w) return null; r = r || rollInjury(w);
+  if ((w.injury || 0) >= r.wks) return null;
+  w.injury = r.wks; w.med = { k: r.k, tot: r.wks, at: G.week, plan: 'rest', auto: 1, p: 0, ...(why ? { why: String(why).slice(0, 60) } : {}) };
+  delete w.frail; return r;
+}
+// a match: roll for an injury and say what happened
+function matchInjury(w, ws, stip, prod) {
+  if (!G.settings.injuries) return null;
+  if (Math.random() >= injChance(w, ws, stip, prod)) { ihpTrack(w, null); return null; }
+  const heavy = (stip?.inj || 0) >= .03 || (prod?.risk || 0) >= .03, again = frailOn(w), r = hurtW(w, rollInjury(w, heavy || w.injury > 0), again ? 'Came back too soon' : w.injury > 0 ? 'Wrestled hurt' : '');
+  if (!r) return null;
+  ihpTrack(w, r);
+  const nm = INJ[r.k][0].toLowerCase(), sev = INJ[r.k][1];
+  news(`🩹 ${w.name} ${r.again ? 'got hurt again, too soon after coming back' : 'got hurt'}: ${nm}, out about ${r.wks} week${r.wks > 1 ? 's' : ''}.`, 'injury');
+  return `🩹 ${w.name} was injured: ${nm} (${r.wks} wk).`;
+}
+// every week: heal, follow the plan, and clear them when they're ready
+function medHeal(w, wasBooked) {
+  if (!(w.injury > 0)) { if (w.med) delete w.med; if (w.frail && w.frail.until < G.week) delete w.frail; return; }
+  const m = w.med && INJ[w.med.k] ? w.med : null;
+  let step = (wasBooked ? 0.5 : 1) + (w.ihp === 'tough' ? 0.15 : 0);
+  if (m && m.plan === 'rehab' && !wasBooked && rehabOk()) step += 0.2 + staffQ('physio') * 0.08 + staffQ('doctor') * 0.03;
+  if (m) { m.p = (m.p || 0) + step; const n = Math.floor(m.p); m.p -= n; w.injury = Math.max(0, w.injury - n); }
+  else w.injury = Math.max(0, w.injury - (wasBooked ? 0.5 : 1)) | 0;
+  if (w.injury > 0) return;
+  // healed: how they come back depends on the plan
+  const sev = m ? INJ[m.k][1] : 1, plan = m ? m.plan : 'rest', tot = m ? m.tot : 1;
+  delete w.med;
+  if (plan === 'rest') { const x = sev === 3 ? .07 : .02 + sev * .015, wks = sev === 3 ? 10 : 1 + sev; w.frail = { until: G.week + wks, x: +(x * (1 - staffQ('physio') * .1)).toFixed(3), sev }; }
+  else if (plan === 'rehab' && !rehabOk()) w.frail = { until: G.week + 2, x: .03, sev };
+  else delete w.frail;
+  if (tot >= 4) w.cb = tot;
+  if (w.contract) news(`✅ ${w.name} is cleared to compete${tot >= 4 ? ` after ${tot} weeks out` : ''}.`, 'injury');
+}
+// rushing back: cleared now, but the weeks they skipped hang over every match for a while
+function rushRisk(w) { const m = medOf(w); if (!m) return 0; const sev = injSev(w); return clamp(.05 + sev * .04 + w.injury * .02, .06, .4); }
+const rushOk = w => !!medOf(w) && (injSev(w) < 3 || w.injury <= 4);
+function rushBack(w, quiet) {
+  if (!rushOk(w)) return false;
+  const left = w.injury, sev = injSev(w), tot = medOf(w).tot, x = rushRisk(w);
+  w.injury = 0; delete w.med; w.frail = { until: G.week + left * 2 + 2, x: +x.toFixed(3), sev, rush: 1 };
+  if (tot >= 4) w.cb = tot;
+  w.morale = clamp(w.morale + 3, 0, 100);
+  if (!quiet) news(`⚠️ ${w.name} is rushing back ${left} week${left > 1 ? 's' : ''} early, against the doctor's advice.`, 'injury');
+  return true;
+}
+// rehab costs money every week while it runs
+const medCost = () => !G || !MON() ? 0 : signed().filter(w => w.injury > 0 && w.med?.plan === 'rehab' && rehabOk()).length * REHAB_COST;
+// the Doctor's job: pick a plan for each new injury, and say who shouldn't be on the next card
+function docMed() {
+  if (!jobOn('med')) return;
+  const dn = staffName('doctor') || 'The doctor', did = [];
+  for (const w of signed()) {
+    const m = w.injury > 0 && w.med && INJ[w.med.k] ? w.med : null; if (!m || !m.auto) continue;
+    const sev = INJ[m.k][1], plan = sev === 3 ? 'surg' : (MON() && G.money < REHAB_COST * 6) ? 'rest' : 'rehab';
+    if (plan !== m.plan) { setPlan(w, plan); did.push(`${w.name}: ${MED_PLANS[plan][0].toLowerCase()} (${INJ[m.k][0].toLowerCase()})`); }
+    delete m.auto;
+  }
+  if (did.length) sLog('doctor', `${dn} set recovery plans`, did.join('. ') + '.');
+  const hurtOn = [...new Set(allCards().flatMap(c => c.flatMap(segPeople)))].map(W).filter(w => w && w.injury > 0);
+  const tired = signed().filter(w => inRing(w) && overworked(w) && bookedAhead(w));
+  if (hurtOn.length || tired.length) sLog('doctor', `${dn}'s warnings`, [hurtOn.length && `${hurtOn.map(w => w.name).join(', ')} ${hurtOn.length > 1 ? 'are' : 'is'} injured but still booked.`, tired.length && `${tired.map(w => w.name).join(', ')} ${tired.length > 1 ? 'have' : 'has'} wrestled ${workload(tired[0])}+ times in four weeks. A night off would cut the injury risk.`].filter(Boolean).join(' '));
+}
+function setPlan(w, plan) {
+  const m = w.med && INJ[w.med.k] ? w.med : (w.injury > 0 ? (w.med = { k: w.injury >= 8 ? 'knee' : 'ribs', tot: w.injury, at: G.week, plan: 'rest', p: 0 }) : null);
+  if (!m || !MED_PLANS[plan] || m.plan === plan) return false;
+  if (plan === 'surg' && INJ[m.k][1] < 3) return false;
+  if (m.plan === 'surg') return false; // surgery can't be undone
+  if (plan === 'surg') { const add = Math.ceil(w.injury * .25) + 1; w.injury += add; m.tot += add; }
+  m.plan = plan; delete m.auto; return true;
+}
+// one injured or fragile wrestler, as a card (Office → Medical and their profile)
+function medRow(w, prof) {
+  const m = medOf(w);
+  if (m) {
+    const sev = injSev(w), done = clamp(1 - w.injury / Math.max(1, m.tot), 0, 1), surg = m.plan === 'surg';
+    const chip = k => { const dis = (k === 'rehab' && !rehabOk()) || (k === 'surg' && sev < 3) || (surg && k !== 'surg'); return k === 'surg' && sev < 3 ? '' : `<button class="chip ${m.plan === k ? 'on' : ''}" data-act="medPlan" data-id="${w.id}:${k}" aria-pressed="${m.plan === k}" ${dis ? 'disabled style="opacity:.5"' : ''}>${MED_PLANS[k][0]}</button>`; };
+    const booked = bookedAhead(w), pr = (m.plan === 'rest' && sev === 3 ? 'Heals at the normal pace, but a major injury left to rest stays fragile for about 10 weeks after they come back. Surgery fixes it for good.' : MED_PLANS[m.plan][1]) + (m.plan === 'rehab' && MON() ? ` ${money(REHAB_COST)}/wk.` : '');
+    return `<div class="card med-card" style="margin-bottom:8px"><div class="row">${prof ? '' : av(w, 40)}<div class="sp" style="min-width:0;${prof ? '' : 'margin-left:8px'}">
+      ${prof ? '' : `<button class="link" data-act="openW" data-id="${w.id}"><b>${esc(w.name)}</b></button> `}<span class="tag ${sev === 3 ? 'bad' : sev === 2 ? 'warn' : ''}">${ic('medical')} ${esc(injName(w))}</span> <span class="tag">${SEV[sev]}</span>
+      <div class="tiny muted" style="margin-top:3px">Out about <b>${w.injury}</b> more week${w.injury === 1 ? '' : 's'} of ${m.tot}${m.why ? ` · ${esc(m.why)}` : ''}${booked ? ' · <b style="color:var(--bad)">still booked</b>' : ''}</div>
+      <div class="med-bar" role="img" aria-label="${Math.round(done * 100)}% healed"><i style="width:${Math.round(done * 100)}%"></i></div></div></div>
+      <div class="chips" style="margin-top:8px" role="group" aria-label="Recovery plan">${Object.keys(MED_PLANS).map(chip).join('')}</div>
+      <div class="tiny muted" style="margin-top:4px">${esc(pr)}${!rehabOk() && m.plan !== 'surg' ? ' Hire a Doctor or Physio for rehab.' : ''}</div>
+      ${rushOk(w) ? `<button class="btn sm" style="margin-top:8px" data-act="medRush" data-id="${w.id}">${ic('alert')} Rush back now</button><div class="tiny muted" style="margin-top:4px">About ${Math.round(rushRisk(w) * 100)}% more injury risk each match for ${w.injury * 2 + 2} weeks after.</div>` : sev === 3 ? `<div class="tiny muted" style="margin-top:6px">Too hurt to rush back until 4 weeks are left.</div>` : ''}</div>`;
+  }
+  if (frailOn(w)) {
+    const left = w.frail.until - G.week + 1;
+    return `<div class="card" style="margin-bottom:8px"><div class="row">${prof ? '' : av(w, 40)}<div class="sp" style="${prof ? '' : 'margin-left:8px'}">${prof ? '' : `<button class="link" data-act="openW" data-id="${w.id}"><b>${esc(w.name)}</b></button> `}<span class="tag warn">${ic('alert')} ${w.frail.rush ? 'Rushed back' : 'Still healing'}</span>
+      <div class="tiny muted" style="margin-top:3px">About ${Math.round(w.frail.x * 100)}% more injury risk each match for ${left} more week${left === 1 ? '' : 's'}. A lighter match or a promo keeps them safe.</div></div></div></div>`;
+  }
+  return '';
+}
+function medBlock(w) {
+  if (!G.settings.injuries || !w.contract) return '';
+  const r = medRow(w, true), n = workload(w), t = IHP[w.ihp];
+  const lw = inRing(w) && n >= 5 ? `<div class="card small" style="margin-bottom:8px">${ic('tired')} ${n} matches in the last four weeks: ${n >= 6 ? '<b style="color:var(--bad)">overworked</b>, injury risk is up' : 'a busy stretch'}.</div>` : '';
+  const tg = t ? `<div class="card small" style="margin-bottom:8px"><span class="tag ${w.ihp === 'prone' ? 'warn' : 'good'}">${ic(w.ihp === 'prone' ? 'medical' : 'shield')} ${t[0]}</span> <span class="muted">${t[1]}</span></div>` : '';
+  return r || lw || tg ? `<div class="sec">Medical</div>${tg}${r}${lw}` : '';
+}
+// Office → Medical
+function medView() {
+  if (!G.settings.injuries) return `<div class="card small">Injuries are off for this save. Turn them on in Menu → Settings → Wrestlers &amp; locker room.</div>`;
+  const hurt = signed().filter(w => w.injury > 0).sort((a, b) => b.injury - a.injury);
+  const frail = signed().filter(frailOn).sort((a, b) => b.frail.x - a.frail.x);
+  const busy = signed().filter(w => inRing(w) && !(w.injury > 0) && workload(w) >= 5).sort((a, b) => workload(b) - workload(a) || b.fatigue - a.fatigue);
+  const sRow = role => { const [ico, n, d, lv] = STAFF_ROLES[role], s = staffOf(role), open = roleOpen(role);
+    return `<button class="item" data-act="${open ? 'staffRole' : 'staffLocked'}" data-id="${role}" ${open ? '' : 'style="opacity:.6"'}><span class="mile-i">${ico}</span><div class="main"><div class="t">${n}${s ? ` <span class="tiny">${starRow(s.q)}</span>` : ''}</div><div class="d">${s ? `<b>${esc(s.n)}</b>${MON() ? ` · ${money(s.pay)}/wk` : ''}` : open ? 'Nobody hired · tap to hire' : `🔒 Company level ${lv}`}</div><div class="d">${d}</div></div></button>`; };
+  const J = sjobs(), dq = staffQ('doctor');
+  const job = `<label class="todo" ${dq ? '' : 'style="opacity:.55"'}><input type="checkbox" data-in="sjob" data-id="med" ${J.med && dq ? 'checked' : ''} ${dq ? '' : 'disabled'}><span><b>${ic('medical')} Doctor runs the medical room</b><div class="tiny muted">${dq ? `${esc(staffName('doctor'))} picks a plan for each new injury (surgery for major ones, rehab when you can afford it, never a rush back) and warns you about anyone injured or overworked who is still booked.` : '🔒 Hire a Doctor.'}</div></span></label>`;
+  const tip = '<div class="tiny muted" style="margin-top:8px">Hardcore matches, big spots, stiff opponents, tired or older wrestlers and more than one match a week all raise the risk. Wrestling hurt rates badly and can make it worse.</div>';
+  return `<div class="list">${sRow('doctor')}${sRow('physio')}</div>
+    <div class="card" style="margin-top:8px">${job}</div>
+    <div class="sec">${ic('medical')} Injured <span class="cnt">${hurt.length}</span></div>${hurt.map(w => medRow(w)).join('') || '<div class="empty">Nobody is injured right now.</div>'}
+    ${frail.length ? `<div class="sec">${ic('alert')} Back, still healing</div>${frail.map(w => medRow(w)).join('')}` : ''}
+    <div class="sec">${ic('tired')} Workload, last four weeks</div>${busy.length ? `<div class="list">${busy.slice(0, 10).map(w => wItem(w, 'openW', `<b>${workload(w)}</b> matches · ${Math.round(w.fatigue)}% tired · risk ${riskWord(injChance(w, [], {}, null)).toLowerCase()}${overworked(w) ? ' · <b style="color:var(--bad)">overworked</b>' : ''}`)).join('')}</div>` : '<div class="empty">Nobody has wrestled more than once a week lately.</div>'}
+    ${tip}`;
+}
+function cleanMed(g) {
+  if (g.settings && typeof g.settings === 'object' && g.settings.injLv != null) { const v = Math.floor(+g.settings.injLv); if (v === 0 || v === 2) g.settings.injLv = v; else delete g.settings.injLv; }
+  const all = [...(g.wrestlers || []), ...(Array.isArray(g.rivalPromos) ? g.rivalPromos.flatMap(r => Array.isArray(r.roster) ? r.roster : []) : [])];
+  for (const w of all) {
+    if (!w || typeof w !== 'object') continue;
+    const m = w.med;
+    if (m != null) { if (m && typeof m === 'object' && Object.hasOwn(INJ, m.k) && +w.injury > 0) w.med = { k: m.k, tot: clamp(Math.floor(+m.tot) || +w.injury, 1, 52), at: Math.floor(+m.at) || 0, plan: Object.hasOwn(MED_PLANS, m.plan) ? m.plan : 'rest', p: clamp(+m.p || 0, 0, .99), ...(m.auto ? { auto: 1 } : {}), ...(m.why ? { why: String(m.why).replace(/[\u0000-\u001f<>`"&]/g, '').slice(0, 60) } : {}) }; else delete w.med; }
+    const f = w.frail;
+    if (f != null) { if (f && typeof f === 'object' && +f.until > 0) w.frail = { until: Math.floor(+f.until), x: clamp(+f.x || 0, 0, .4), sev: clamp(Math.floor(+f.sev) || 1, 1, 3), ...(f.rush ? { rush: 1 } : {}) }; else delete w.frail; }
+    if (w.mx != null) { w.mx = (Array.isArray(w.mx) ? w.mx : []).map(x => Math.floor(+x) || 0).filter(x => x > 0).slice(-8); if (!w.mx.length) delete w.mx; }
+    if (w.ihp != null && !Object.hasOwn(IHP, w.ihp)) delete w.ihp;
+    for (const k of ['injN', 'safeN']) if (w[k] != null) { w[k] = clamp(Math.floor(+w[k]) || 0, 0, 999); if (!w[k]) delete w[k]; }
+    if (w.cb != null) { w.cb = clamp(Math.floor(+w.cb) || 0, 0, 52); if (!w.cb) delete w.cb; }
+  }
+}
+// a fresh copy (shares, worlds, the library) starts healthy
+function medReset(w) { delete w.med; delete w.frail; delete w.mx; delete w.cb; delete w.safeN; }
 // the Road Agent lays out matches: a steady little lift, more in the main event (0 to +3)
 function agentBonus(seg, ctx) {
   const q = staffQ('agent'); if (!q || !seg || seg.kind !== 'match') return 0;
@@ -15473,7 +15684,8 @@ const STAFF_ROLES = {
   booker: ['📋', 'Head Booker', 'Books Auto-fill and any show set to Auto-book, in the style you pick. Their playbook grows as your company levels up.', 1],
   trainer: ['🎓', 'Head Trainer', 'Everyone grows faster in training and at the school.', 1],
   agent: ['🤼', 'Road Agent', 'Lays out matches: better ratings, and wrestlers learn more from each match.', 1],
-  doctor: ['🩹', 'Doctor', 'Fewer injuries, and injured wrestlers come back sooner.', 1],
+  doctor: ['🩹', 'Doctor', 'Fewer injuries, and injured wrestlers come back sooner. Can run the medical room for you.', 1],
+  physio: ['🩺', 'Physio', 'Runs rehab: injured wrestlers heal faster and come back with less risk of getting hurt again.', 2],
   talent: ['👥', 'Talent Relations', 'A happier locker room, an extra sit-down each week, and they can re-sign cheaper contracts for you.', 2],
   pr: ['📣', 'Media Manager', 'Books media every week: short spots, plus tours and indie trips for wrestlers who are off TV. Fewer slip-ups.', 3],
   scout: ['🎯', 'Scout', 'Finds better rookies at tryouts. With Deep sim on, shows exact potential.', 3],
@@ -15514,7 +15726,7 @@ const staffOf = role => G && G.staff && G.staff[role] && Object.hasOwn(STAFF_ROL
 // 0 means nobody is hired; 1-5 stars otherwise
 const staffQ = role => { const s = staffOf(role); return s ? clamp(Math.round(+s.q) || 0, 0, 5) : 0; };
 const roleOpen = role => coLvl() >= STAFF_ROLES[role][3];
-const staffCost = () => !G || !G.staff ? 0 : Object.keys(STAFF_ROLES).reduce((s, r) => s + (staffOf(r) ? +staffOf(r).pay || 0 : 0), 0) + schoolCost();
+const staffCost = () => !G || !G.staff ? 0 : Object.keys(STAFF_ROLES).reduce((s, r) => s + (staffOf(r) ? +staffOf(r).pay || 0 : 0), 0) + schoolCost() + medCost();
 function staffPool() {
   if (!G.staffPool || !Array.isArray(G.staffPool.list) || G.week - (G.staffPool.wk || 0) >= 12) {
     const list = [];
@@ -15809,12 +16021,13 @@ Object.assign(A, {
 const STAFF_JOBS = {
   media: ['pr', '📣', 'Book media every week'],
   rest: ['doctor', '🩹', 'Rest worn-out wrestlers'],
+  med: ['doctor', '🩺', 'Run the medical room'],
   resign: ['talent', '👥', 'Re-sign contracts'],
   focus: ['trainer', '🎓', 'Set training focus']
 };
 const SJ_PUSH = { rising: 'Push rising stars', top: 'Top stars', all: 'Everyone' };
 const SJ_CAPS = [1000, 2500, 5000, 0];
-const SJ_DEF = { media: true, rest: true, resign: false, focus: false, push: 'rising', trips: true, cap: 2500 };
+const SJ_DEF = { media: true, rest: true, med: true, resign: false, focus: false, push: 'rising', trips: true, cap: 2500 };
 const sjobs = () => { if (!G.sjobs || typeof G.sjobs !== 'object') G.sjobs = { ...SJ_DEF }; return G.sjobs; };
 // the job is switched on and somebody is hired to do it
 const jobOn = k => !!(G && sjobs()[k] && staffQ(STAFF_JOBS[k][0]) && (k !== 'resign' || CON()));
@@ -15836,6 +16049,7 @@ const inFeud = w => (G.stories || []).some(st => st.status === 'active' && [...(
 function staffJobsWeek() {
   if (!G) return;
   try { docRest(); } catch (e) { console.warn(e); }
+  try { docMed(); } catch (e) { console.warn(e); }
   try { trainerFocus(); } catch (e) { console.warn(e); }
   try { prAuto(); } catch (e) { console.warn(e); }
   try { prTrips(); } catch (e) { console.warn(e); }
@@ -15992,6 +16206,7 @@ function staffJobsView() {
   const desc = {
     media: n => `${n} fills the short spots${J.trips ? ', and sends wrestlers who are off TV on tours or indie trips' : ''}. Champions and anyone in a feud stay home.`,
     rest: n => `${n} puts anyone over ${REST_AT}% tired on rest until they recover, and warns you if they're still booked.`,
+    med: n => `${n} picks a recovery plan for each new injury and warns you about anyone hurt or overworked who is still booked. See Office → Medical.`,
     resign: n => `${n} re-signs ${J.cap ? `anyone asking up to ${money(J.cap)}/wk` : 'anyone'} when their deal has 5 weeks left. Bigger deals stay with you.`,
     focus: n => `${n} picks a focus for anyone you haven't set one for, and rethinks it every 8 weeks. Pick one yourself and they leave it alone.`
   };
@@ -16062,6 +16277,18 @@ function modalMentor(m) {
   return modal('Choose a mentor', body);
 }
 Object.assign(A, {
+  medPlan(v) {
+    const [id, k] = String(v || '').split(':'), w = W(id); if (!w || !MED_PLANS[k]) return;
+    if (k === 'rehab' && !rehabOk()) return toast('Hire a Doctor or Physio to run rehab.');
+    if (w.med?.plan === 'surg') return toast('Surgery is done. Now it just needs time.');
+    const prev = UI.modal;
+    if (k === 'surg') return confirmBox(`Surgery for ${w.name}?`, `About ${Math.ceil(w.injury * .25) + 1} more weeks out, but the ${injName(w).toLowerCase()} is fixed for good, with no extra risk when ${pn(w).they} come${pn(w).s} back. It can't be undone.`, 'Book surgery', () => { setPlan(w, 'surg'); UI.modal = prev; commit(`${w.name} is booked for surgery.`); });
+    if (setPlan(w, k)) commit(`${w.name}: ${MED_PLANS[k][0].toLowerCase()}.`);
+  },
+  medRush(id) {
+    const w = W(id); if (!w || !rushOk(w)) return; const prev = UI.modal;
+    confirmBox(`Rush ${w.name} back?`, `${pn(w).They} skip${pn(w).s} the last ${w.injury} week${w.injury > 1 ? 's' : ''} of recovery and can wrestle this week. For ${w.injury * 2 + 2} weeks every match carries about ${Math.round(rushRisk(w) * 100)}% more risk, and getting hurt again is usually worse.`, 'Rush back', () => { rushBack(w); UI.modal = prev; commit(`${w.name} is cleared, for now.`); }, true);
+  },
   sjobOpt(v) {
     const [k, x] = String(v).split(':'), J = sjobs();
     if (k === 'push' && Object.hasOwn(SJ_PUSH, x)) J.push = x;
@@ -16106,6 +16333,7 @@ Object.assign(A, {
 // loading a save (own or shared): seed skills and keep staff and school data sane
 function cleanTraining(g, shared) {
   const txt = (v, n) => String(v || '').replace(/[<>&"'`\u0000-\u001f]/g, '').slice(0, n);
+  cleanMed(g);
   for (const w of g.wrestlers || []) { ensureSkills(w); cleanSkills(w); if (w.short != null) { w.short = txt(w.short, 20).trim(); if (!w.short) delete w.short; } }
   for (const r of Array.isArray(g.rivalPromos) ? g.rivalPromos : []) for (const w of Array.isArray(r.roster) ? r.roster : []) if (w && typeof w === 'object') ensureSkills(w);
   const st = {};
@@ -16114,7 +16342,7 @@ function cleanTraining(g, shared) {
   if (g.bstyle != null && !Object.hasOwn(HB_STYLES, g.bstyle)) delete g.bstyle;
   // jobs your staff handle (older saves: a paused PR Agent means the media job is off)
   const J = g.sjobs && typeof g.sjobs === 'object' ? g.sjobs : {}, nj = {};
-  for (const k of ['media', 'rest', 'resign', 'focus', 'trips']) nj[k] = typeof J[k] === 'boolean' ? J[k] : SJ_DEF[k];
+  for (const k of ['media', 'rest', 'med', 'resign', 'focus', 'trips']) nj[k] = typeof J[k] === 'boolean' ? J[k] : SJ_DEF[k];
   if (!g.sjobs && st.pr && st.pr.off) nj.media = false;
   nj.push = Object.hasOwn(SJ_PUSH, J.push) ? J.push : SJ_DEF.push; nj.cap = SJ_CAPS.includes(+J.cap) ? +J.cap : SJ_DEF.cap;
   g.sjobs = nj; if (st.pr) delete st.pr.off;
@@ -16862,6 +17090,7 @@ document.addEventListener('change', e => {
       commit();
     }
     else if (k === 'injuries') { G.settings.injuries = el.checked; commit(); }
+    else if (k === 'injLv') { const v = clamp(+el.value || 0, 0, 2); if (v === 1) delete G.settings.injLv; else G.settings.injLv = v; commit(); }
     else if (k === 'organic') { G.settings.organic = el.checked; commit(); }
     else if (k === 'moments') { G.settings.moments = clamp(+el.value || 0, 0, 2); commit(); }
     else if (k === 'aging') { G.settings.aging = el.checked; commit(); }
@@ -17085,9 +17314,10 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.94';
+const VERSION = '1.9.95';
 const WHATS_NEW = [
   ['🌍 Update a shared world', 'Share a world again with the same name and you can update the first one instead of listing a second copy. It keeps its listing, likes and player count, and new players get the latest version. Games already started in it carry on as they are. Pick Share as new if you want both.'],
+  ['🩺 The medical room', 'Injuries now have a name and a size, from a bruised rib to a torn ACL. Hardcore matches, big spots, stiff opponents, tired or older wrestlers and wrestling more than once a week all raise the risk. Office → Medical shows everyone hurt: pick Rest, Rehab or Surgery, or rush them back early and risk getting hurt again. Hire a Physio (company level 2), let your Doctor run the room, and some wrestlers earn an Injury prone or Injury resistant tag. Returning stars get a comeback pop. Set how often and how bad in Settings → Wrestlers & locker room.'],
   ['📖 Career memories', 'Wrestlers now remember the big moments of their careers: titles won and lost, feuds, betrayals, classic matches and big event main events. They\'re on every profile. Promos quote them ("I took that title from you once"), and a new feud between two wrestlers with history starts hotter. In the promo editor, Bring up the past picks the memory a promo is about. In contract talks, big moments push the asking price up, and you can remind a wrestler of a great night you gave them. Bring up a bad one and they\'ll throw it back at you.'],
   ['🎨 One workshop for every design', 'Wrestler looks, championship belts and trophies now share the same editor: a live preview on top, then Templates, Surprise me and Undo, then tabs. The pixel face and full body are one editor now, with game templates (Luchador, Rock star, Royalty and more), your own saved looks, a teammate\'s look to copy, Undo, and any colour at all for skin, hair, gear, masks, headwear, bottoms and boots. Every icon in the game is now a symbol you can use: on a belt\'s centre or side plates, on a trophy or on top of it, and on a wrestler\'s chest, trunks or forehead. Trophies also get the belts\' engravings, ornate detail, a ring of gems, any base colour, and strap colours for a belt on a stand. Existing designs look exactly the same.'],
   ['🧍 Pronouns for every wrestler', 'Pick any wrestler\'s pronouns in their editor: he/him, she/her, they/them, he/they, she/they, any pronouns, or your own custom set (like xe/xem). Pronouns are separate from the division, so anyone can be in any division. Backstage events, texts, news, the Dirt Sheet, contract talks, Story Mode and more now use each wrestler\'s own pronouns. Usual follows the division (Women\'s she/her, Men\'s he/him, Open they/them). Pronouns go with shares, worlds and imports (add a Pronouns column), and you can add yours to your Community profile.'],
