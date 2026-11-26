@@ -1167,6 +1167,15 @@ body { --ic: var(--gold); }
 .mv { font-size: 11px; font-weight: 700; color: var(--dim); margin-left: 4px; }
 .mv.up { color: var(--good); } .mv.dn { color: var(--bad); } .mv.new { color: var(--info); }
 .rec-t { display: flex; align-items: center; gap: 8px; margin: 16px 0 4px; }
+.rb-cover { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 14px 10px 16px; margin-bottom: 10px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.rb-cover b { font-size: 20px; }
+.rb-k { font-family: var(--f-cond); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; color: var(--accent-t); display: flex; align-items: center; gap: 6px; }
+.rb-ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent-t); }
+.rb-ic .i { width: 20px; height: 20px; }
+.rb-back { margin: -4px 0 8px -4px; }
+button.rb-sh { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); color: inherit; text-align: left; font: inherit; font-size: 14px; cursor: pointer; }
+.h2h-r .av + .main { min-width: 0; }
+.rb-rec { align-self: center; white-space: nowrap; flex: none; }
 .aw { margin-bottom: 10px; }
 .aw-r { display: flex; flex-direction: column; padding: 6px 0; border-top: 1px solid var(--line); }
 .aw-r:first-of-type { border-top: 0; }
@@ -3765,7 +3774,7 @@ function bookRecord(seg, res, rating) {
       if (w.streak <= -4) { addPop(w, -0.5); if (w.streak === -4) notes.push(`🥶 ${w.name} has lost 4 straight. Fans are losing faith.`); }
     }
     for (const id of res.winners) { const w = W(id); if (!w) continue;
-      formOf(w).unshift('W'); w.streak = Math.max(0, w.streak || 0) + 1;
+      formOf(w).unshift('W'); w.streak = Math.max(0, w.streak || 0) + 1; STATS(w).bs = Math.max(STATS(w).bs || 0, w.streak);
       if ([5, 10, 15, 20].includes(w.streak)) { notes.push(`🔥 ${w.name} is on a ${w.streak}-match win streak!`); news(`🔥 ${w.name} has won ${w.streak} in a row.`, 'show'); }
     }
   }
@@ -4577,7 +4586,7 @@ function runShow(opts = {}) {
   if (!big) buildHype(results, G.week);
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
   const rec = { wk: G.week, name: showTitle(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true, spT, spMiss, spHit } : {}) };
-  G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift();
+  RB(); G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift(); rbAdd(rec);
   datesShow(new Set(card.flatMap(segPeople)));
   PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
   if (special) news(spMiss ? `📉 The ${specialName()} missed the network's target of ${spT}. Your reputation took a hit (${spHit} prestige) and the network wants ${SPECIAL_GAP_MISS} weeks before another special.` : `📺 The ${specialName()} beat the network's target of ${spT}. +${spHit} prestige.`, 'show');
@@ -8821,7 +8830,7 @@ function viewOffice() {
   <div class="tiny muted" style="margin-top:8px">Tap a title to set its division, pick contenders or see its history. The #1 contender makes the best title match.</div>
   ${(G.tourneys || []).length ? `<div class="sec">Tournaments</div><div class="list">${G.tourneys.slice().reverse().map(T => `<button class="item" data-act="openTourney" data-id="${T.id}"><div class="main"><div class="t">🏆 ${esc(T.name)}</div><div class="d">${T.done ? `Won by <b>${esc(nameOf(T.won))}</b> · week ${T.done}` : `${roundName(T, T.rounds.length - 1)} · ${T.ents.length} wrestlers`}</div></div></button>`).join('')}</div>` : ''}
   <button class="btn block" style="margin-top:12px" data-act="beltPhotos">📷 Import belt photos</button>
-  <div class="grid2" style="margin-top:8px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records" data-id="titles">📖 History &amp; awards</button></div>
+  <div class="grid2" style="margin-top:8px"><button class="btn" data-act="newTourney">🏆 Run a tournament</button><button class="btn" data-act="records">📖 Record book</button></div>
   <button class="btn block" style="margin-top:8px" data-act="trophies">🏅 Booker career &amp; achievements</button>
   <button class="btn block" style="margin-top:8px" data-act="editTitle" data-id="">+ Create a championship</button>` : ''}`;
 }
@@ -9371,7 +9380,7 @@ function helpHTML() {
   <h3>Teams and tournaments</h3>
   <p>Office → <b>Teams</b> pairs up 2 to 4 wrestlers as a team, or groups up to 8 as a faction. A faction can hold whole tag teams, and any 2 or more of its members on one side fight as the faction. Teams get better the more they win, and you can pick a whole team in one tap. Office → Titles → <b>Run a tournament</b> builds a 4, 8 or 16 person bracket for a vacant title, a title shot or bragging rights. Add each round to a show.</p>
   <h3>History and rankings</h3>
-  <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Bring a legend back from Office → Titles → History &amp; awards. Aging can be switched off in Settings.</p>
+  <p>Every title keeps its full list of reigns. Roster → <b>Rankings</b> shows the top 10 in each division and the top teams. At the end of each year (week 52) the awards are handed out, everyone ages a year, and older wrestlers may retire. Office → Titles → <b>Record book</b> keeps every title history, the all-time records, head to head records, the greatest matches, every show's rating, the awards and the legends. Bring a legend back from its Legends page. Aging can be switched off in Settings.</p>
   <h3>Changed your mind?</h3>
   <p>Right after a show you can <b>Undo</b> it and book it again. <b>Copy as text</b> shares a card or results anywhere.</p>
   <h3>Contracts</h3>
@@ -9696,6 +9705,7 @@ function modalWrestler(m) {
    ${(() => { const st = STATS(w), ranks = G.titles.filter(t => !t.tag).map(t => [t, contenders(t, 10).findIndex(x => x.id === w.id)]).filter(x => x[1] >= 0);
      return cmBlock(w) + `<div class="sec">Career stats</div><div class="grid3 cstats"><div><b>${st.m}</b><span>matches</span></div><div><b>${st.m ? Math.round(st.sum / st.m) : '–'}</b><span>avg rating</span></div><div><b>${st.best || '–'}</b><span>best match</span></div><div><b>${st.tw}</b><span>title wins</span></div><div><b>${st.def}</b><span>defenses</span></div><div><b>${st.motn}</b><span>match of the night</span></div></div>
      ${ranks.length ? `<div class="small" style="margin-top:6px">${ranks.map(([t, i]) => `🏆 <b>#${i + 1}</b> contender for the ${esc(t.short)} title`).join('<br>')}</div>` : ''}${shotsOf(w.id).length ? `<div class="small" style="margin-top:6px">${shotsOf(w.id).map(x => esc(shotLine(x))).join('<br>')}</div>` : ''}`; })()}
+   ${h2hBlock(w)}
    ${(() => { const fcs = factionsOfW(w.id); return fcs.length ? `<div class="sec">Faction</div><div class="list">${fcs.map(f => `<button class="item" data-act="editFaction" data-id="${f.id}"><div class="main"><div class="t">👑 ${esc(f.name)}${f.leader === w.id ? ' <span class="tag gold">Leader</span>' : ''}</div><div class="d">${f.members.length} members · ${teamRec(f)}</div></div></button>`).join('')}</div>` : ''; })()}
    ${(() => { const rs = reignsOfW(w.id), tms = (G.teams || []).filter(t => t.members.includes(w.id));
      return (rs.length ? `<div class="sec">Title reigns (${rs.length})</div><div class="card" style="padding:4px 12px">${rs.map(({ t, r }) => `<div class="news"><span class="sp">🏆 <b>${esc(t.name)}</b>${r.to ? '' : ' <span class="tag gold">Now</span>'}<br><span class="tiny muted">${r.old ? 'Before the takeover' : `Week ${r.from}${r.to ? '–' + r.to : ' to now'} · ${reignLen(r)} wk · ${reignDef(t, r)} defenses`}</span></span></div>`).join('')}</div>` : '')
@@ -9936,13 +9946,150 @@ function modalRankings(m) {
   body += '<div class="tiny muted" style="margin-top:8px">Ranked by wins over strong opponents, recent form, popularity and match quality. Idle and injured wrestlers slide. Arrows show the change since the last show.</div>';
   return modal('Rankings', body);
 }
+// ---------- the record book: a small ledger kept for the life of the company ----------
+// G.history only keeps the last 150 shows, so the book keeps its own compact copy of what matters:
+// G.rb = { v, fill, h2h: {'a|b': [a wins, b wins, draws, last week]}, m: [best matches], sh: [[wk, rating, big, name, bid]] }
+const RB_H2H = 1500, RB_M = 60, RB_SH = 1560;
+const rbKey = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+function RB() {
+  if (!G.rb || typeof G.rb !== 'object' || !G.rb.h2h || !Array.isArray(G.rb.m) || !Array.isArray(G.rb.sh)) G.rb = { v: 1, h2h: {}, m: [], sh: [] };
+  const b = G.rb; if (!b.fill) { b.fill = 1; G.history.slice().sort((x, y) => x.wk - y.wk).forEach(h => rbAdd(h, true)); }
+  return b;
+}
+// one show into the book: its rating, every two-sided match's head to head, and any match good enough for the all-time list
+function rbAdd(h, quiet) {
+  const b = quiet ? G.rb : RB(), wk = h.wk;
+  b.sh.push([wk, h.rating, h.big ? 1 : 0, h.big || h.special ? String(h.name || '').slice(0, 60) : '', h.bid || '']);
+  if (b.sh.length > RB_SH) b.sh.splice(0, b.sh.length - RB_SH);
+  for (const r of h.results || []) {
+    const s = r.seg; if (s.kind !== 'match' || !Array.isArray(s.sides)) continue;
+    const win = r.winners || [];
+    if (s.sides.length === 2 && !isFFA(s)) for (const x of s.sides[0]) for (const y of s.sides[1]) {
+      if (x === y) continue;
+      const k = rbKey(x, y), e = b.h2h[k] ||= [0, 0, 0, 0], xa = x < y;
+      if (win.includes(x)) e[xa ? 0 : 1]++; else if (win.includes(y)) e[xa ? 1 : 0]++; else e[2]++;
+      e[3] = wk;
+    }
+    const low = b.m.length >= RB_M ? b.m.at(-1).r : 0;
+    if (r.rating > low && r.rating >= 60) {
+      const t = s.title && G.titles.find(x => x.id === s.title);
+      b.m.push({ wk, r: r.rating, s: String(h.big ? h.name : h.sname || h.name || '').slice(0, 60), l: plainText(vsLine(s)).slice(0, 160), ids: segPeople(s).slice(0, 40), w: win.slice(0, 20), ...(t ? { t: t.name } : {}), ...(s.mtype && s.mtype !== 'Singles' ? { mt: String(s.mtype).slice(0, 40) } : {}), ...(h.big ? { big: 1 } : {}) });
+      b.m.sort((x, y) => y.r - x.r || x.wk - y.wk); if (b.m.length > RB_M) b.m.length = RB_M;
+    }
+  }
+  const ks = Object.keys(b.h2h);
+  if (ks.length > RB_H2H * 1.1) ks.sort((x, y) => b.h2h[x][3] - b.h2h[y][3]).slice(0, ks.length - RB_H2H).forEach(k => delete b.h2h[k]);
+}
+// a shared or loaded book, checked: numbers are numbers, names are short strings
+function rbClean(g) {
+  const b = g.rb; if (!b || typeof b !== 'object') { delete g.rb; return; }
+  const n = v => Math.max(0, Math.floor(+v) || 0), str = (v, k) => String(v ?? '').slice(0, k);
+  const h2h = {}; for (const [k, v] of Object.entries(b.h2h && typeof b.h2h === 'object' ? b.h2h : {}).slice(-RB_H2H)) if (/^[\w-]{1,24}\|[\w-]{1,24}$/.test(k) && Array.isArray(v)) h2h[k] = [n(v[0]), n(v[1]), n(v[2]), n(v[3])];
+  const m = (Array.isArray(b.m) ? b.m : []).filter(x => x && typeof x === 'object').slice(0, RB_M).map(x => ({ wk: n(x.wk), r: clamp(+x.r || 0, 0, 100), s: str(x.s, 60), l: str(x.l, 160), ids: (Array.isArray(x.ids) ? x.ids : []).slice(0, 40).map(i => str(i, 24)), w: (Array.isArray(x.w) ? x.w : []).slice(0, 20).map(i => str(i, 24)), ...(x.t ? { t: str(x.t, 80) } : {}), ...(x.mt ? { mt: str(x.mt, 40) } : {}), ...(x.big ? { big: 1 } : {}) }));
+  const sh = (Array.isArray(b.sh) ? b.sh : []).filter(Array.isArray).slice(-RB_SH).map(x => [n(x[0]), clamp(+x[1] || 0, 0, 100), x[2] ? 1 : 0, str(x[3], 60), str(x[4], 24)]);
+  g.rb = { v: 1, fill: b.fill ? 1 : 0, h2h, m, sh };
+}
+// head to head between two people: [wins for a, wins for b, draws]
+const h2hOf = (a, b) => { const e = RB().h2h[rbKey(a, b)]; if (!e) return null; return a < b ? [e[0], e[1], e[2], e[3]] : [e[1], e[0], e[2], e[3]]; };
+// everyone a wrestler has faced, most meetings first
+function h2hFor(id) {
+  const out = [];
+  for (const [k, e] of Object.entries(RB().h2h)) { const [a, b] = k.split('|'); if (a !== id && b !== id) continue; const o = a === id ? b : a, me = a === id;
+    out.push({ o, w: me ? e[0] : e[1], l: me ? e[1] : e[0], d: e[2], last: e[3] }); }
+  return out.sort((x, y) => (y.w + y.l + y.d) - (x.w + x.l + x.d) || y.last - x.last);
+}
+const h2hStr = x => `${x.w}–${x.l}${x.d ? '–' + x.d : ''}`;
+const rbYear = wk => Math.max(1, Math.ceil(wk / 52));
+// everyone who has wrestled on your shows: on the roster, retired, or gone elsewhere
+const rbPeople = () => G.wrestlers.filter(w => STATS(w).m > 0);
+// all-time leader boards, worked out from career stats and title reigns
+function rbLeaders() {
+  const ps = rbPeople(), top = (f, ok = () => true, n = 5) => ps.filter(w => ok(w) && f(w) > 0).map(w => [w, f(w)]).sort((a, b) => b[1] - a[1]).slice(0, n);
+  const reigns = {}, days = {}; for (const t of G.titles) for (const r of ensureReigns(t)) if (!r.old) for (const id of r.rh || []) { reigns[id] = (reigns[id] || 0) + 1; days[id] = Math.max(days[id] || 0, reignLen(r)); }
+  const pct = w => Math.round(winPct(w) * 1000) / 10, avgR = w => { const s = STATS(w); return s.m ? Math.round(s.sum / s.m) : 0; };
+  return [
+    ['trophy', 'Most wins', top(w => w.record?.w || 0), v => v + ' wins'],
+    ['trend', 'Best win rate', top(pct, w => STATS(w).m >= 10), v => v + '%', '10+ matches'],
+    ['flame', 'Longest win streak', top(w => Math.max(STATS(w).bs || 0, w.streak || 0)), v => v + ' in a row'],
+    ['star', 'Best average match', top(avgR, w => STATS(w).m >= 10), v => v + ' avg', '10+ matches'],
+    ['crown', 'Most title reigns', top(w => reigns[w.id] || 0), v => v + ' reign' + (v === 1 ? '' : 's')],
+    ['calendar', 'Longest title reign', top(w => days[w.id] || 0), v => v + ' wk'],
+    ['shield', 'Most title defenses', top(w => STATS(w).def || 0), v => v + ' defense' + (v === 1 ? '' : 's')],
+    ['medal', 'Most match of the night', top(w => STATS(w).motn || 0), v => v + '×'],
+    ['wrestle', 'Most matches', top(w => STATS(w).m), v => v + ' matches']
+  ];
+}
+const rbRow = (w, i, val, act = 'openW') => `<button class="item rk" data-act="${act}" data-id="${w.id}"><span class="rk-n">${i + 1}</span>${av(w, 32)}<div class="main"><div class="t">${esc(w.name)}${w.retired ? ' <span class="tag">Legend</span>' : !w.contract ? ' <span class="tag">Gone</span>' : ''}</div></div><b class="small">${esc(val)}</b></button>`;
+const RB_CH = [
+  ['titles', 'crown', 'Title histories', () => `${G.titles.length} title${G.titles.length === 1 ? '' : 's'} · ${G.titles.reduce((a, t) => a + ensureReigns(t).length, 0)} reigns`],
+  ['leaders', 'trophy', 'All-time records', () => { const l = rbLeaders()[0][2][0]; return l ? `Most wins: ${l[0].name} (${l[1]})` : 'Records start with your first match'; }],
+  ['h2h', 'swap', 'Head to head', () => { const n = Object.keys(RB().h2h).length; return n ? `${n} matchups on record` : 'Every one-on-one and tag record'; }],
+  ['matches', 'star', 'Greatest matches', () => { const m = RB().m[0]; return m ? `Best: ${m.l} (${m.r})` : 'The best matches you ever booked'; }],
+  ['shows', 'tv', 'Show history', () => { const s = RB().sh; return s.length ? `${s.length} shows · ${Math.round(avg(s.map(x => x[1])))} average` : 'Every show you run'; }],
+  ['awards', 'medal', 'Year-end awards', () => (G.awards || []).length ? `${G.awards.length} year${G.awards.length === 1 ? '' : 's'} of awards` : `First awards in ${52 - (G.week - 1) % 52} weeks`],
+  ['legends', 'users', 'Legends', () => { const n = G.wrestlers.filter(w => w.retired).length; return n ? `${n} retired` : 'Nobody has retired yet'; }]
+];
+function rbYears(list, cur) {
+  const ys = [...new Set(list)].sort((a, b) => b - a); if (ys.length < 2) return '';
+  return `<div class="filters" role="group" aria-label="Pick a year"><button class="${cur ? '' : 'on'}" aria-pressed="${!cur}" data-act="rbYear" data-id="0">All time</button>${ys.map(y => `<button class="${cur === y ? 'on' : ''}" aria-pressed="${cur === y}" data-act="rbYear" data-id="${y}">Year ${y}</button>`).join('')}</div>`;
+}
+function rbTitles() {
+  return G.titles.map(t => `<div class="rec-t">${titleArt(t, 'belt-sm')}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
+}
+function rbLeadersView() {
+  const ls = rbLeaders().filter(x => x[2].length);
+  return ls.length ? ls.map(([icn, lbl, rows, fmt, note]) => `<div class="sec">${ic(icn)} ${lbl}${note ? ` <span class="tiny muted">${note}</span>` : ''}</div><div class="list">${rows.map(([w, v], i) => rbRow(w, i, fmt(v))).join('')}</div>`).join('')
+    : '<div class="empty">Book some matches and the record holders show up here.</div>';
+}
+function rbH2HView(m) {
+  const ps = rbPeople().sort((a, b) => a.name.localeCompare(b.name)), sel = W(m.wid) ? m.wid : '';
+  let body = `<label class="f"><span>Pick a wrestler</span><select data-in="rbWho"><option value="">Biggest rivalries</option>${ps.map(w => `<option value="${w.id}" ${sel === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></label>`;
+  if (sel) {
+    const list = h2hFor(sel).filter(x => W(x.o)), me = W(sel);
+    body += list.length ? `<div class="sec">${esc(me.name)} against everyone (${list.length})</div><div class="list">${list.slice(0, 60).map(x => { const o = W(x.o), lead = x.w > x.l ? 'good' : x.w < x.l ? 'bad' : ''; return `<button class="item" data-act="openW" data-id="${o.id}">${av(o, 32)}<div class="main"><div class="t">${esc(o.name)}</div><div class="d">${x.w + x.l + x.d} meeting${x.w + x.l + x.d === 1 ? '' : 's'} · last week ${x.last}</div></div><span class="tag rb-rec ${lead}">${h2hStr(x)}</span></button>`; }).join('')}</div><div class="tiny muted" style="margin-top:6px">Wins–losses${list.some(x => x.d) ? '–draws' : ''} for ${esc(me.name)}. Tag matches count for everyone on each side.</div>` : `<div class="empty">${esc(me.name)} has no head to head record yet.</div>`;
+  } else {
+    const all = Object.entries(RB().h2h).map(([k, e]) => { const [a, b] = k.split('|'); return { a, b, e, n: e[0] + e[1] + e[2] }; }).filter(x => W(x.a) && W(x.b) && x.n >= 2).sort((x, y) => y.n - x.n || y.e[3] - x.e[3]).slice(0, 20);
+    body += all.length ? `<div class="sec">Most-met rivals</div><div class="list">${all.map(x => { const A = W(x.a), B = W(x.b), lead = x.e[0] === x.e[1] ? 'Even' : x.e[0] > x.e[1] ? `${A.name} leads` : `${B.name} leads`; return `<div class="item h2h-r">${av(A, 32)}<div class="main"><div class="t">${esc(A.name)} vs ${esc(B.name)}</div><div class="d">${x.n} meetings · ${esc(lead)} ${Math.max(x.e[0], x.e[1])}–${Math.min(x.e[0], x.e[1])}${x.e[2] ? ` · ${x.e[2]} draw${x.e[2] === 1 ? '' : 's'}` : ''}</div></div>${av(B, 32)}</div>`; }).join('')}</div>` : '<div class="empty">Rivalries show up once two wrestlers have met twice.</div>';
+  }
+  return body;
+}
+function rbMatchesView(m) {
+  const all = RB().m, list = all.filter(x => !m.yr || rbYear(x.wk) === m.yr);
+  return rbYears(all.map(x => rbYear(x.wk)), m.yr) + (list.length ? `<div class="card" style="padding:4px 12px">${list.slice(0, 30).map((x, i) => `<div class="news"><span class="wk">#${i + 1}</span><span class="sp"><b>${esc(x.l)}</b>${x.t ? `<br><span class="tiny">${ic('crown')} ${esc(x.t)}</span>` : ''}${x.mt ? `<span class="tiny muted">${x.t ? ' · ' : '<br>'}${esc(x.mt)}</span>` : ''}<br><span class="tiny muted">${esc(x.s)} · week ${x.wk}${x.w.length ? ` · won by ${esc(x.w.map(nameOf).join(' & '))}` : ''}</span></span><span class="stars tiny" title="Score ${x.r}">${starStr(x.r)}<br><b>${x.r}</b></span></div>`).join('')}</div>` : '<div class="empty">Matches that score 60 or more go in the book.</div>');
+}
+function rbShowsView(m) {
+  const all = RB().sh, ys = [...new Set(all.map(x => rbYear(x[0])))].sort((a, b) => b - a);
+  if (!all.length) return '<div class="empty">Run your first show and it starts here.</div>';
+  const yr = m.yr && ys.includes(m.yr) ? m.yr : 0;
+  const nm = x => x[3] || brandName(x[4]) || G.promo.show, row = x => { const h = G.history.find(h => h.wk === x[0] && (h.bid || '') === x[4] && ownRec(h)); return `<${h ? `button class="news rb-sh" data-act="recap" data-id="${x[0]}"` : 'div class="news"'}><span class="wk">WK ${x[0]}</span><span class="sp">${x[2] ? ic('ticket') + ' <b>' + esc(nm(x)) + '</b>' : esc(nm(x))}</span><span class="stars tiny">${starStr(x[1])} <b>${x[1]}</b></span></${h ? 'button' : 'div'}>`; };
+  let body = rbYears(all.map(x => rbYear(x[0])), yr);
+  if (!yr) body += `<div class="sec">Year by year</div><div class="list">${ys.map(y => { const s = all.filter(x => rbYear(x[0]) === y), best = s.reduce((a, x) => x[1] > a[1] ? x : a, s[0]); return `<button class="item" data-act="rbYear" data-id="${y}"><div class="main"><div class="t">Year ${y}</div><div class="d">${s.length} shows · ${Math.round(avg(s.map(x => x[1])))} average · best ${esc(nm(best))} (${best[1]})</div></div>${ic('calendar')}</button>`; }).join('')}</div>`
+    + `<div class="sec">Best shows ever</div><div class="card" style="padding:4px 12px">${all.slice().sort((a, b) => b[1] - a[1]).slice(0, 10).map(row).join('')}</div>`;
+  else { const s = all.filter(x => rbYear(x[0]) === yr); body += `<div class="small muted" style="margin:6px 0">${s.length} shows · ${Math.round(avg(s.map(x => x[1])))} average · ${s.filter(x => x[2]).length} big events</div><div class="card" style="padding:4px 12px">${s.slice().reverse().map(row).join('')}</div>`; }
+  return body + '<div class="tiny muted" style="margin-top:6px">Tap a recent show to see its full results.</div>';
+}
+function rbAwardsView() {
+  return (G.awards || []).slice().reverse().map(a => `<div class="card aw"><div class="review-h">Year ${a.yr} awards · week ${a.wk}</div>${a.list.map(x => `<div class="aw-r"><span class="tiny muted">${esc(x.lbl)}</span><b>${esc(x.nm)}</b><span class="tiny muted">${esc(x.det || '')}</span></div>`).join('') || '<div class="tiny muted">No shows that year.</div>'}</div>`).join('') || `<div class="empty">Awards are handed out at the end of every year (week 52). ${52 - (G.week - 1) % 52} weeks to go.</div>`;
+}
+function rbLegendsView() {
+  const legends = G.wrestlers.filter(w => w.retired).sort((a, b) => b.retired - a.retired);
+  return legends.length ? `<div class="list">${legends.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">Retired week ${w.retired} at ${w.age} · ${recStr(w)} · ${reignsOfW(w.id).length} title reigns${guestDeal(w.id) ? ` · ${money(guestDeal(w.id).fee)}/show` : ''}</div></div></button>`).join('')}</div>${CON() ? '<div class="tiny muted" style="margin-top:8px">Open a legend to book them for a few appearances without bringing them out of retirement.</div>' : ''}` : '<div class="empty">No one has retired yet. Older wrestlers start to slow down after 34 and may retire from 38.</div>';
+}
+// the book opens on its contents page; each chapter has a back button to the contents
 function modalRecords(m) {
-  const tab = m.tab || 'titles', legends = G.wrestlers.filter(w => w.retired).sort((a, b) => b.retired - a.retired);
-  let body = tabsOf([['titles', 'Title history'], ['awards', 'Awards'], ['legends', 'Legends']], tab, 'recTab');
-  if (tab === 'titles') body += G.titles.map(t => `<div class="rec-t">${titleArt(t, 'belt-sm')}<b>${esc(t.name)}</b></div>${lineage(t).replace(/^<div class="sec">[^<]*<\/div>/, '')}`).join('') || '<div class="empty">No titles yet.</div>';
-  if (tab === 'awards') body += (G.awards || []).slice().reverse().map(a => `<div class="card aw"><div class="review-h">Year ${a.yr} awards · week ${a.wk}</div>${a.list.map(x => `<div class="aw-r"><span class="tiny muted">${esc(x.lbl)}</span><b>${esc(x.nm)}</b><span class="tiny muted">${esc(x.det || '')}</span></div>`).join('') || '<div class="tiny muted">No shows that year.</div>'}</div>`).join('') || `<div class="empty">Awards are handed out at the end of every year (week 52). ${52 - (G.week - 1) % 52} weeks to go.</div>`;
-  if (tab === 'legends') body += legends.length ? `<div class="list">${legends.map(w => `<button class="item" data-act="openW" data-id="${w.id}">${av(w)}<div class="main"><div class="t">${esc(w.name)}</div><div class="d">Retired week ${w.retired} at ${w.age} · ${recStr(w)} · ${reignsOfW(w.id).length} title reigns${guestDeal(w.id) ? ` · 💰 ${money(guestDeal(w.id).fee)}/show` : ''}</div></div></button>`).join('')}</div>${CON() ? '<div class="tiny muted" style="margin-top:8px">Open a legend to book them for a few appearances without bringing them out of retirement.</div>' : ''}` : '<div class="empty">No one has retired yet. Older wrestlers start to slow down after 34 and may retire from 38.</div>';
-  return modal('History', body);
+  const tab = RB_CH.some(c => c[0] === m.tab) ? m.tab : 'home';
+  if (tab === 'home') {
+    const body = `<div class="rb-cover"><div class="rb-k">${ic('book')} The record book</div><b>${esc(G.promo.name)}</b><span class="tiny muted">Week ${G.week} · year ${rbYear(G.week)}</span></div>
+      <div class="list">${RB_CH.map(([k, icn, lbl, sub]) => `<button class="item rb-ch" data-act="recTab" data-id="${k}"><span class="rb-ic">${ic(icn)}</span><div class="main"><div class="t">${lbl}</div><div class="d clip">${esc(sub())}</div></div></button>`).join('')}</div>`;
+    return modal('Record book', body);
+  }
+  const ch = RB_CH.find(c => c[0] === tab), V = { titles: rbTitles, leaders: rbLeadersView, h2h: rbH2HView, matches: rbMatchesView, shows: rbShowsView, awards: rbAwardsView, legends: rbLegendsView }[tab];
+  return modal(ch[2], `<button class="link rb-back" data-act="recTab" data-id="home">‹ Record book</button>${V(m)}`);
+}
+// the wrestler profile's head to head: the people they've met most
+function h2hBlock(w) {
+  const list = h2hFor(w.id).filter(x => W(x.o)).slice(0, 5); if (!list.length) return '';
+  return `<div class="sec">Head to head</div><div class="card" style="padding:4px 12px">${list.map(x => `<div class="news"><span class="sp">${esc(nameOf(x.o))}<br><span class="tiny muted">${x.w + x.l + x.d} meeting${x.w + x.l + x.d === 1 ? '' : 's'} · last week ${x.last}</span></span><span class="tag rb-rec ${x.w > x.l ? 'good' : x.w < x.l ? 'bad' : ''}">${h2hStr(x)}</span></div>`).join('')}</div><button class="link small" data-act="rbH2H" data-id="${w.id}">See every opponent in the record book</button>`;
 }
 function modalEditTeam(m) {
   const d = m.draft;
@@ -11241,8 +11388,10 @@ const A = {
     commit(`Added to ${bigName(big)}. The story's heat gave it a head start on hype.`);
   },
   rankTab(t) { UI.modal.tab = t; render(); },
-  records(t) { liveTimers.forEach(clearTimeout); openModal({ type: 'records', tab: t || 'titles' }); },
-  recTab(t) { UI.modal.tab = t; render(); },
+  records(t) { liveTimers.forEach(clearTimeout); openModal({ type: 'records', tab: t || 'home' }); },
+  recTab(t) { UI.modal.tab = t; delete UI.modal.yr; render(); },
+  rbYear(y) { UI.modal.yr = +y || 0; render(); },
+  rbH2H(id) { openModal({ type: 'records', tab: 'h2h', wid: id }); },
   editTeam(id, el) { const t = id && TM(id); openModal({ type: 'editTeam', isNew: !t, draft: t ? JSON.parse(JSON.stringify(t)) : { id: uid(), name: '', members: [], w: 0, l: 0, d: 0, ...(el?.dataset?.k === 'trios' ? { kind: 'trios' } : {}) } }); },
   teamKind(v) { const d = UI.modal.draft; if (v === 'trios') d.kind = 'trios'; else delete d.kind; render(); },
   saveTeam() {
@@ -13356,7 +13505,7 @@ function scrubGame(raw) {
 }
 function sanitizeGame(g) {
   g = scrubGame(g); migrate(g);
-  suClean(g);
+  suClean(g); rbClean(g);
   if (!g || typeof g !== 'object' || !g.promo || !Array.isArray(g.wrestlers)) throw 0;
   g.wrestlers = g.wrestlers.filter(w => w && typeof w === 'object');
   g.promo.name = String(g.promo.name || 'Shared Promotion').slice(0, 40); g.promo.show = String(g.promo.show || 'Weekly Show').slice(0, 40);
@@ -17309,6 +17458,7 @@ document.addEventListener('change', e => {
   if (el.dataset.in) {
     const k = el.dataset.in;
     if (k === 'rosterSort') { UI.rosterSort = el.value; render(); }
+    else if (k === 'rbWho' && UI.modal?.type === 'records') { UI.modal.wid = el.value; render(); }
     else if ((k === 'buzzW' || k === 'buzzR') && UI.modal?.type === 'buzz') { UI.modal[k === 'buzzW' ? 'wid' : 'rid'] = el.value; render(); }
     else if (k === 'rtBtTitle') { const b = UI.modal?.bbatch, it = b?.items[b.i]; if (it) { it.tid = G.titles.some(x => x.id === el.value) ? el.value : ''; render(); } }
     else if (k === 'bdSort') { UI.bdSort = el.value; try { localStorage.setItem('bookit-bdSort', el.value); } catch (e) { } render(); }
@@ -17552,9 +17702,10 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.96';
+const VERSION = '1.9.97';
 const WHATS_NEW = [
   ['🌍 Update a shared world', 'Share a world again with the same name and you can update the first one instead of listing a second copy. It keeps its listing, likes and player count, and new players get the latest version. Games already started in it carry on as they are. Pick Share as new if you want both.'],
+  ['📖 The record book', 'Office → Titles → Record book is the history of your company: every title\'s lineage, all-time records (most wins, longest streak, longest reign and more), head to head records for every pair who have met, the greatest matches you ever booked, every show\'s rating year by year, the year-end awards and your legends. Wrestler profiles now show who they\'ve faced most. Records kept from today on go back as far as your saved shows do.'],
   ['🎟️ House shows and tours', 'Tap the On the road line under the calendar to run up to 3 untelevised house shows a week, or plan a named tour of 3 to 5 shows a week. Cards book themselves from your crew rule (Develop, Mix or Draw). They earn some money, give newer wrestlers experience, build chemistry between pairs and keep people off TV happy. The cost is fatigue and a small injury risk, so watch your TV stars.'],
   ['🩺 The medical room', 'Injuries now have a name and a size, from a bruised rib to a torn ACL. Hardcore matches, big spots, stiff opponents, tired or older wrestlers and wrestling more than once a week all raise the risk. Office → Medical shows everyone hurt: pick Rest, Rehab or Surgery, or rush them back early and risk getting hurt again. Hire a Physio (company level 2), let your Doctor run the room, and some wrestlers earn an Injury prone or Injury resistant tag. Returning stars get a comeback pop. Set how often and how bad in Settings → Wrestlers & locker room.'],
   ['📖 Career memories', 'Wrestlers now remember the big moments of their careers: titles won and lost, feuds, betrayals, classic matches and big event main events. They\'re on every profile. Promos quote them ("I took that title from you once"), and a new feud between two wrestlers with history starts hotter. In the promo editor, Bring up the past picks the memory a promo is about. In contract talks, big moments push the asking price up, and you can remind a wrestler of a great night you gave them. Bring up a bad one and they\'ll throw it back at you.'],
