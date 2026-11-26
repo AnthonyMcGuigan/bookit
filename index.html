@@ -360,6 +360,7 @@ button.mrow:active { background: var(--card2); }
 .addrow b { font-weight: 900; }
 .ghost { border-top: 1px dashed var(--line); padding: 9px 12px; font-size: 12px; color: var(--faint); text-align: center; }
 .runbar { position: sticky; bottom: calc(62px + env(safe-area-inset-bottom)); padding: 8px 0; background: linear-gradient(transparent, var(--bg) 30%); z-index: 4; }
+.below-card { margin-top: 14px; }
 .runbar .btn { min-height: 52px; font-size: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
 .runproj { font-weight: 600; opacity: .8; font-size: 13px; }
 @media (max-width: 360px) { .cal-n { font-size: 17px; } .mw { font-size: 13px; } }
@@ -1213,7 +1214,11 @@ html[data-nw="2"] .cal-now { font-size: 8.5px; letter-spacing: 0; } html[data-nw
 .seg-ctl.tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-ctl.quad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .seg-ctl.quad.tri { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.seg-ctl.office-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.seg-ctl.office-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg-ctl.office-tabs button { flex: 1 1 auto; }
+.office-groups { display: grid; gap: 6px; margin: 0 0 12px; }
+.og { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 6px; }
+.og-k { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .rel-n { font-size: 20px; }
 .rel-big { font-size: 26px; color: var(--accent); }
 .rel-row { padding: 10px 12px; margin-bottom: 8px; }
@@ -7903,7 +7908,9 @@ function viewBookCard() {
   let bestIx = -1;
   if (card.length > 2) { const live = prs.map((r, i) => card[i].kind === 'match' ? r.rating : -1), mx = Math.max(...live.slice(0, -1)); if (mx > 0 && (card[card.length - 1].kind !== 'match' || live[live.length - 1] < mx - 5)) bestIx = live.indexOf(mx); }
   const isNow = wk === G.week;
-  return `${statusBar}${isNow ? eventAlert() + gigAlert() + dirtAlert() : ''}${datesAlert()}${isNow ? bkBar : ""}${cal}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
+  // tonight's card comes first: the calendar, the newsletter and reminders sit under it (the tutorial keeps the calendar up top, it points at it)
+  const calTop = !isNow || tutOn(), extras = (isNow ? gigAlert() + dirtAlert() : '') + datesAlert() + (isNow ? bkBar : '');
+  return `${statusBar}${isNow ? eventAlert() : ''}${calTop ? extras + cal : ''}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
   <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showTitle(wk))}</h2>
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
@@ -7930,6 +7937,7 @@ function viewBookCard() {
   ${card.length || !isNow ? `<div class="runbar">${isNow
     ? `<button class="btn pri block" data-act="runShow">🔔 Run ${esc(showName(wk))} <span class="runproj">· ${starStr(proj)}</span></button>`
     : `<div class="small muted" style="text-align:center;padding:4px 0">Books ahead for week ${wk}. <button class="link" data-act="calToday">Back to tonight</button></div>`}</div>` : ''}
+  ${!calTop ? `<div class="below-card">${extras}${cal}</div>` : ''}
   ${isNow ? `<div class="later">${tourneyCard()}${eventCard()}${roadCard()}${storyCard()}${goalCard()}</div>` : ''}`;
 }
 function tourneyCard() {
@@ -8188,6 +8196,17 @@ function moneyView(last, payroll) {
   </div><div class="tiny muted" style="margin-top:6px">Money is off for this game. Turn on Deep sim in Menu → Settings to use it.</div>`}
   ${last && MON() ? `<details class="card" style="margin-top:12px" open><summary><b>Last show money breakdown ▾</b></summary><div style="margin-top:8px">${Object.entries(last.fin).map(([k, v]) => `<div class="row small"><span class="sp muted">${{ gate: 'Ticket sales', tv: 'TV deal', ppv: 'Pay-per-view', merch: 'Merchandise', payroll: 'Payroll', production: 'Production', staff: 'Staff and school', guests: 'Per-appearance fees' }[k]}</span><b style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${money(v)}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Big events earn the most. Tickets grow with fans and hot stories.</div></details>` : ''}`;
 }
+// Office tabs in three groups, so twelve tabs read as three short lists. Money only shows when money is on.
+function officeTabs(t, fa) {
+  const b = (id, label, cnt) => `<button class="${t === id ? 'on' : ''}" data-act="faTab" data-id="${id}" aria-pressed="${t === id}">${label}${cnt ? ` <span class="cnt">${cnt}</span>` : ''}</button>`;
+  const lk = signed().filter(w => relMine(w) && (w.trust < 20 || w.relWarn)).length;
+  const groups = [
+    ['People', [b('contracts', CON() ? 'Contracts' : 'Roster'), b('fa', 'Indie Stars', fa.length || ''), b('locker', 'Locker room', lk || ''), b('training', 'Training', (G.phone || []).some(coachOpen) ? '!' : ''), b('teams', 'Teams')]],
+    ['Shows', [b('titles', 'Titles'), b('brands', 'Brands'), b('media', 'Media')]],
+    ['Business', [MON() ? b('money', 'Money') : '', b('staff', 'Staff'), b('rivals', 'Companies'), b('setup', 'Setup')]]
+  ];
+  return `<div class="office-groups">${groups.map(([n, bs]) => `<div class="og"><span class="og-k">${n}</span><div class="seg-ctl wrap office-tabs" role="group" aria-label="${n}">${bs.join('')}</div></div>`).join('')}</div>`;
+}
 function viewOffice() {
   const last = G.history[G.history.length - 1];
   const payroll = sum(signed().map(w => w.contract.salary));
@@ -8195,7 +8214,7 @@ function viewOffice() {
   const exp = signed().slice().sort((a, b) => a.contract.weeks - b.contract.weeks);
   const fa = freeAgents().sort((a, b) => b.pop - a.pop);
   return `
-  <div class="seg-ctl quad wrap office-tabs" style="margin:0 0 12px"><button class="${t === 'contracts' ? 'on' : ''}" data-act="faTab" data-id="contracts">${CON() ? 'Contracts' : 'Roster'}</button><button class="${t === 'fa' ? 'on' : ''}" data-act="faTab" data-id="fa">Indie Stars${fa.length ? ` <span class="cnt">${fa.length}</span>` : ''}</button><button class="${t === 'titles' ? 'on' : ''}" data-act="faTab" data-id="titles">Titles</button><button class="${t === 'teams' ? 'on' : ''}" data-act="faTab" data-id="teams">Teams</button><button class="${t === 'brands' ? 'on' : ''}" data-act="faTab" data-id="brands">Brands</button><button class="${t === 'money' ? 'on' : ''}" data-act="faTab" data-id="money">Money</button><button class="${t === 'rivals' ? 'on' : ''}" data-act="faTab" data-id="rivals">Companies</button><button class="${t === 'media' ? 'on' : ''}" data-act="faTab" data-id="media">Media</button><button class="${t === 'staff' ? 'on' : ''}" data-act="faTab" data-id="staff">Staff</button><button class="${t === 'training' ? 'on' : ''}" data-act="faTab" data-id="training">Training${(G.phone || []).some(coachOpen) ? ' <span class="cnt">!</span>' : ''}</button><button class="${t === 'locker' ? 'on' : ''}" data-act="faTab" data-id="locker">Locker room${(() => { const n = signed().filter(w => relMine(w) && (w.trust < 20 || w.relWarn)).length; return n ? ` <span class="cnt">${n}</span>` : ''; })()}</button><button class="${t === 'setup' ? 'on' : ''}" data-act="faTab" data-id="setup">Setup</button></div>
+  ${officeTabs(t, fa)}
   ${t === 'money' ? moneyView(last, payroll) : ''}
   ${t === 'brands' ? brandsView() : ''}
   ${t === 'teams' ? teamsView() : ''}
@@ -8747,7 +8766,7 @@ function helpHTML() {
   <h3>Rank and goals</h3>
   <p>Shows earn XP toward your booker rank. Weekly goals give bonus XP. Backstage moments pop up between shows. Pick what happens.</p>
   <h3>Stats</h3>
-  <p><b>Popularity</b>: how much fans care.<br><b>In-ring</b>, <b>Mic</b>, <b>Charisma</b>: match, promo and angle quality.<br><b>Fatigue</b>: lowers ratings and raises injury risk. Rest to recover.<br><b>Morale</b>: unhappy wrestlers do worse and may leave.<br><b>Momentum</b>: grows with wins.</p>
+  <p><b>Popularity</b>: how much fans care.<br><b>In-ring</b>, <b>Mic</b>, <b>Charisma</b>: match, promo and angle quality.<br><b>Fatigue</b>: lowers ratings and raises injury risk. Rest to recover.<br><b>Mood</b>: how happy they are right now (wins, pay, TV time). Unhappy wrestlers do worse and may leave. <b>Relationship</b> (Office → Locker room) is how they feel about you, and moves slowly.<br><b>Momentum</b>: grows with wins.</p>
   <h3>Matches</h3>
   <p>Pick the type, stipulation, winner and finish. Face vs heel works best. Records matter: streaks draw fans and contenders make better title matches. Avoid repeats. The last segment is the main event.</p>
   <h3>Storylines</h3>
@@ -9059,7 +9078,7 @@ function modalWrestler(m) {
    ${w.bio ? `<p class="small muted" style="margin:6px 0 10px">${esc(w.bio)}</p>` : ''}
    <div class="card">
      ${statLine('Popularity', w.pop)}${statLine('In-ring', w.ring)}${statLine('Mic', w.mic)}${statLine('Charisma', w.cha)}${statLine('Stamina', w.stam)}
-     ${statLine('Morale', w.morale, w.morale < 35 ? 'var(--bad)' : 'var(--good)')}${statLine('Fatigue', w.fatigue, w.fatigue >= 60 ? 'var(--bad)' : 'var(--info)')}
+     ${statLine('Mood', w.morale, w.morale < 35 ? 'var(--bad)' : 'var(--good)')}${statLine('Fatigue', w.fatigue, w.fatigue >= 60 ? 'var(--bad)' : 'var(--info)')}
      <div class="row small" style="margin-top:8px"><span class="muted sp">Record</span><b>${w.record.w}W – ${w.record.l}L${w.record.d ? ' – ' + w.record.d + 'D' : ''} · ${Math.round(winPct(w) * 100)}%</b></div>
      <div class="row small"><span class="muted sp">Last 5</span>${formChips(w)}${w.streak >= 2 ? ` <b style="margin-left:6px;color:var(--good)">W${w.streak}</b>` : w.streak <= -2 ? ` <b style="margin-left:6px;color:var(--bad)">L${-w.streak}</b>` : ''}</div>
      ${splitOn() && w.contract ? `<div class="row small"><span class="muted sp">Show</span><select data-in="wBrand" data-id="${w.id}" style="width:auto;padding:4px 8px">${SHOWS().map(x => `<option value="${esc(x.id)}" ${!w.both && brandOf(w) === x.id ? 'selected' : ''}>${esc(brandName(x.id))}</option>`).join('')}<option value="*" ${w.both ? 'selected' : ''}>Free agent (${allBrands(0)})</option></select></div>` : ''}
@@ -9110,7 +9129,7 @@ function modalNegotiate(m) {
   const indieBox = iw.length ? `<div class="card" style="margin-top:10px"><div class="small" style="margin-bottom:8px"><b>🤼 Indie dates clause</b><div class="tiny muted">${esc(iw.map(x => lastName(x)).join(' & '))} ${iw.length === 1 ? 'is a Workhorse and wants' : 'are Workhorses and want'} to keep wrestling outside shows on nights off. It gives a small boost and they might win titles elsewhere. Now and then a booking lands on your show night, and you'd have to say no.</div></div>
      <div class="seg-ctl"><button class="${m.indie ? 'on' : ''}" data-act="negIndie" data-id="1">Allow indie dates</button><button class="${m.indie ? '' : 'on'}" data-act="negIndie" data-id="0">No outside bookings</button></div>
      <div class="tiny ${m.indie ? 'muted' : ''}" style="margin-top:6px${m.indie ? '' : ';color:var(--bad)'}">${m.indie ? 'They\'re more likely to say yes.' : 'Harder to sign, and they\'ll remember you said no.'}</div></div>` : '';
-  const body = `${!w.contract ? paSwitch(w, false) : ''}<div class="row" style="margin-bottom:12px">${team ? ws.map(x => av(x, 44)).join('') : av(w, 48)}<div class="sp"><b>${team ? esc(tm?.name || ws.map(x => x.name).join(' & ')) : esc(w.name)}</b><div class="small muted">${team ? ws.map(x => `${esc(lastName(x))}: pop ${Math.round(x.pop)}, asks ${money(askFor(x, m.weeks))}`).join(' · ') : `Pop ${Math.round(w.pop)} · Morale ${Math.round(w.morale)} · Age ${w.age}`}</div></div></div>
+  const body = `${!w.contract ? paSwitch(w, false) : ''}<div class="row" style="margin-bottom:12px">${team ? ws.map(x => av(x, 44)).join('') : av(w, 48)}<div class="sp"><b>${team ? esc(tm?.name || ws.map(x => x.name).join(' & ')) : esc(w.name)}</b><div class="small muted">${team ? ws.map(x => `${esc(lastName(x))}: pop ${Math.round(x.pop)}, asks ${money(askFor(x, m.weeks))}`).join(' · ') : `Pop ${Math.round(w.pop)} · Mood ${Math.round(w.morale)}${relMine(w) ? ` · ${relLv(w).n} with you` : ''} · Age ${w.age}`}</div></div></div>
    <div class="card"><div class="row small"><span class="sp muted">Current deal</span><b>${w.contract ? money(w.contract.salary) + '/wk · ' + lenLabel(w.contract.weeks) + ' left' + (indieOn(w) ? ' · indie dates' : '') + (datesFor(w) ? ` · ${datesFor(w)} dates a month` : '') : 'None (indie star)'}</b></div>
    ${team && w.contract ? ps.map(p => `<div class="row small"><span class="sp muted">${esc(lastName(p))}'s deal</span><b>${money(p.contract.salary)}/wk · ${lenLabel(p.contract.weeks)} left</b></div>`).join('') : ''}
    ${w.contract ? `<div class="row small"><span class="sp muted">Signed through</span><b>Week ${G.week + w.contract.weeks} · ${showDate(G.week + w.contract.weeks).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</b></div>` : ''}
