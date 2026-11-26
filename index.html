@@ -711,6 +711,24 @@ img.tr-big { object-fit: contain; }
 .lk-face { width: 128px; height: 128px; border-radius: 14px; display: block; box-shadow: 0 8px 18px rgba(0,0,0,.35); }
 .lk-body { width: 72px; height: 144px; border-radius: 10px; display: block; box-shadow: 0 8px 18px rgba(0,0,0,.35); }
 .bd-grid.lk-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+.tat-list { display: grid; gap: 6px; margin-top: 8px; }
+.tat-row { display: flex; align-items: stretch; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card2); }
+.tat-row.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card2)); }
+.tat-pick, .tat-del, .tat-add { background: none; border: 0; font: inherit; }
+.tat-pick { flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 10px; text-align: left; min-width: 0; color: var(--ink); }
+.tat-pick span { display: flex; flex-direction: column; min-width: 0; } .tat-pick small { color: var(--dim); font-size: 12px; }
+.tat-dot { width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1.5px var(--line); }
+.tat-del { width: 44px; display: grid; place-items: center; color: var(--dim); } .tat-del .i { width: 18px; height: 18px; }
+.tat-list .tat-add { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed var(--line); color: var(--accent-t); font-weight: 700; }
+.tat-add span { color: var(--dim); font-weight: 600; font-size: 12px; }
+.tat-where { display: flex; gap: 12px; align-items: flex-start; }
+.tat-map { width: 96px; height: 192px; border-radius: 10px; flex: none; cursor: pointer; box-shadow: 0 0 0 1.5px var(--line); touch-action: manipulation; }
+.tat-spots { flex: 1; display: grid; grid-template-columns: 1fr auto 1fr; gap: 5px 6px; align-items: center; }
+.tat-spots > span { font-size: 12px; font-weight: 700; color: var(--dim); text-align: center; }
+.tat-spots .chip { justify-content: center; padding-left: 6px; padding-right: 6px; }
+.bd-grid.tat-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+.tat-sw { width: 42px; height: 30px; border-radius: 6px; display: block; }
+.tat-ic { margin-top: 10px; } .tat-ic > summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--accent-t); padding: 6px 0; }
 .lk-grid .bd-tile img { width: 54px; height: 54px; border-radius: 8px; display: block; }
 .lk-grid.lk-tall .bd-tile img { width: 40px; height: 80px; }
 .lk-grid .bd-tile img.lk-tpl { width: 64px; height: 64px; }
@@ -8344,7 +8362,16 @@ function faceGrid(code, align, wcol, women, lx) {
   if (X === 9) { rect(18, 17, 4, 2, '#efe3c8'); set(19, 17, '#d6c7a6'); set(20, 18, '#d6c7a6'); }
   // tattoos on bare skin: the face has its own small designs, the neck and chest use the style's pattern
   const TT = lx?.tat;
-  if (TT) { const ink = TT.c, sk2 = (x, y) => g[y]?.[x] === sk || g[y]?.[x] === sd, dot = (x, y) => { if (sk2(x, y)) g[y][x] = ink; };
+  if (TT && TT.p) { const sk2 = (x, y) => g[y]?.[x] === sk || g[y]?.[x] === sd, face = [];
+    const ti = tatPaint(g, TT.p, sk2, (x, y) => y < 23 ? null : (x < 16 ? 'l' : 'r') + (y < 28 ? 'nk' : Math.abs(x - 15.5) > 9 ? 'sh' : 'pc'), 0, N);
+    // the face keeps small hand-placed designs, drawn for the right side and mirrored for the left
+    const FP = { tribal: [[21, 16], [20, 17], [21, 18], [20, 19]], bands: [[17, 8], [18, 8], [19, 8], [20, 8]], script: [[20, 17], [20, 19], [19, 21]],
+      sleeve: Array.from({ length: 6 * 15 }, (_, i) => [17 + i % 6, 7 + Math.floor(i / 6)]).filter(([x, y]) => (x * 3 + y * 2) % 5 < 2 && !(y >= 13 && y <= 16 && x >= 17 && x <= 21)) };
+    for (const t of TT.p) for (const side of ['l', 'r']) { if (!t.at.includes(side + 'fc')) continue;
+      if (t.d.startsWith('ic-')) { face.push({ k: t.d, c: t.c, x: side === 'l' ? 11 : 21, y: 18.5, r: 1.8 * ({ s: .75, l: 1.3 }[t.s] || 1) }); continue; }
+      FP[{ jagged: 'tribal', swirl: 'tribal', ink: 'sleeve', band: 'bands', barbed: 'bands', stars: 'script' }[t.d] || t.d]?.forEach(([x, y]) => { if (side === 'l') x = 31 - x; if (sk2(x, y)) g[y][x] = t.c; }); }
+    g.tatIc = { icons: [...face, ...ti.icons], clip: ti.clip }; g.tatFace = face; }
+  else if (TT) { const ink = TT.c, sk2 = (x, y) => g[y]?.[x] === sk || g[y]?.[x] === sd, dot = (x, y) => { if (sk2(x, y)) g[y][x] = ink; };
     if (TT.at.includes('face')) ({ tribal: [[10, 16], [11, 17], [10, 18], [11, 19], [21, 16], [20, 17], [21, 18], [20, 19]], bands: [[11, 8], [12, 8], [13, 8], [14, 8], [17, 8], [18, 8], [19, 8], [20, 8]], script: [[20, 17], [20, 19], [19, 21]],
       sleeve: Array.from({ length: 6 * 15 }, (_, i) => [17 + i % 6, 7 + Math.floor(i / 6)]).filter(([x, y]) => (x * 3 + y * 2) % 5 < 2 && !(y >= 13 && y <= 16 && x >= 17 && x <= 21)) })[TT.st].forEach(([x, y]) => dot(x, y));
     for (let y = 23; y < N; y++) for (let x = 0; x < N; x++) { const z = y < 28 ? 'neck' : 'chest'; if (TT.at.includes(z) && sk2(x, y) && tatPat(TT.st, x, y)) g[y][x] = ink; } }
@@ -8363,9 +8390,9 @@ function pixRects(out) {
   return s;
 }
 function faceSVG(code, align, wcol, women, tight, lx) {
-  const out = pixOutline(faceGrid(code, align, wcol, women, lx));
+  const fg = faceGrid(code, align, wcol, women, lx), out = pixOutline(fg);
   const bg = align === 'heel' ? '#4a0d14' : '#0d2a5c', bl = faceShade(bg, .25);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}` + pixRects(out) + symOn(lx?.sym, { head: [16, 9.5, 2.4, 4], chest: [16, 28.6, 2.6, 6] }) + '</svg>';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tight ? '4 3 24 24' : '0 0 32 32'}" shape-rendering="crispEdges"><rect width="32" height="32" fill="${bg}"/>${[8, 16, 24].map(y => `<rect y="${y}" width="32" height="1" fill="${bl}"/>`).join('')}` + pixRects(out) + tatIcons(fg.tatIc, 'tk') + symOn(lx?.sym, { head: [16, 9.5, 2.4, 4], chest: [16, 28.6, 2.6, 6] }) + '</svg>';
 }
 const FACE_CACHE = new Map();
 // tight: a closer crop for small round avatars, so the face fills the circle
@@ -8418,14 +8445,69 @@ const SYM_AT = [['head', 'Forehead'], ['chest', 'Chest'], ['trunks', 'Trunks'], 
 const SYM_X = [['l', 'Left'], ['c', 'Centre'], ['r', 'Right']], SYM_S = { s: ['Small', .75], m: ['Medium', 1], l: ['Large', 1.35] };
 const SYM_COLS = ['#f2c94c', '#f4f4f4', '#111111', '#c8102e', '#1f4fbf', '#1f8a3b', '#7b2cbf', '#ff6b00', '#0891b2', '#e23a8a'];
 function symClean(o) { if (!o || typeof o !== 'object' || !symOK(o.k)) return undefined; return { k: o.k, at: SYM_AT.some(([a]) => a === o.at) ? o.at : 'chest', c: isHex(o.c) ? String(o.c).toLowerCase() : '#f2c94c', ...(o.x === 'l' || o.x === 'r' ? { x: o.x } : {}), ...(o.s === 's' || o.s === 'l' ? { s: o.s } : {}) }; }
-// tattoos: ink drawn on bare skin, so gear covers them. w.tat = { at: [places], st: style, c: ink }
+// tattoos: ink drawn on bare skin, so gear covers them. w.tat = { p: [{ d: design or 'ic-name', at: [spots], c: ink, s?: icon size }] }, up to 6.
+// The first version, { at: [places], st: style, c: ink }, still draws exactly as it did until the tattoos are edited.
 const TAT_AT = [['face', 'Face'], ['neck', 'Neck'], ['chest', 'Chest'], ['stomach', 'Stomach'], ['larm', 'Left arm'], ['rarm', 'Right arm'], ['legs', 'Legs']];
 const TAT_ST = [['tribal', 'Tribal'], ['sleeve', 'Full ink'], ['bands', 'Bands'], ['script', 'Script']];
 const TAT_INK = ['#1a1a2a', '#1f3f8f', '#8a1020', '#1f6b3b', '#5a2a7a', '#e8e8e8'];
-function tatClean(o) { if (!o || typeof o !== 'object' || !Array.isArray(o.at)) return undefined; const at = TAT_AT.map(([a]) => a).filter(a => o.at.includes(a)); if (!at.length) return undefined;
+// the body map: each part has a left and a right spot (as you look at them), plus the stomach
+const TAT_PART = [['fc', 'Face'], ['nk', 'Neck'], ['sh', 'Shoulder'], ['pc', 'Chest'], ['up', 'Upper arm'], ['fo', 'Forearm'], ['th', 'Thigh'], ['ca', 'Calf']];
+const TAT_SPOTS = [...TAT_PART.flatMap(([k]) => ['l' + k, 'r' + k]), 'st'];
+const TAT_FACE_SPOTS = ['lfc', 'rfc', 'lnk', 'rnk', 'lsh', 'rsh', 'lpc', 'rpc'];
+const TAT_D = [['tribal', 'Tribal'], ['jagged', 'Jagged'], ['swirl', 'Swirl'], ['ink', 'Full ink'], ['band', 'Band'], ['barbed', 'Barbed wire'], ['script', 'Script'], ['stars', 'Stars']];
+const TAT_MAX = 6;
+const tatOne = t => { if (!t || typeof t !== 'object' || !Array.isArray(t.at)) return null; const at = TAT_SPOTS.filter(a => t.at.includes(a)), d = TAT_D.some(([a]) => a === t.d) || symOK(t.d) ? t.d : null;
+  if (!d) return null; const x = { d, at, c: isHex(t.c) ? String(t.c).toLowerCase() : '#1a1a2a' }; if (d.startsWith('ic-') && (t.s === 's' || t.s === 'l')) x.s = t.s; return x; };
+function tatClean(o) { if (!o || typeof o !== 'object') return undefined;
+  if (Array.isArray(o.p)) { const p = o.p.slice(0, TAT_MAX).map(tatOne).filter(t => t && t.at.length); return p.length ? { p } : undefined; }
+  if (!Array.isArray(o.at)) return undefined; const at = TAT_AT.map(([a]) => a).filter(a => o.at.includes(a)); if (!at.length) return undefined;
   return { at, st: TAT_ST.some(([a]) => a === o.st) ? o.st : 'tribal', c: isHex(o.c) ? String(o.c).toLowerCase() : '#1a1a2a' }; }
-// is this skin pixel inked, for a style
+// the editor's list, with tattoos still waiting for a spot; a first-version tattoo becomes one list entry per style
+function tatList(o) { if (!o || typeof o !== 'object') return [];
+  if (Array.isArray(o.p)) return o.p.slice(0, TAT_MAX).map(tatOne).filter(Boolean);
+  const T = tatClean(o); if (!T) return []; const m = { face: ['lfc', 'rfc'], neck: ['lnk', 'rnk'], chest: ['lsh', 'rsh', 'lpc', 'rpc'], stomach: ['st'], larm: ['lsh', 'lup', 'lfo'], rarm: ['rsh', 'rup', 'rfo'], legs: ['lth', 'rth', 'lca', 'rca'] };
+  return [{ d: { tribal: 'tribal', sleeve: 'ink', bands: 'band', script: 'script' }[T.st], at: TAT_SPOTS.filter(a => T.at.some(z => m[z].includes(a))), c: T.c }]; }
+const tatSpotName = a => a === 'st' ? 'Stomach' : (a[0] === 'l' ? 'Left ' : 'Right ') + TAT_PART.find(([k]) => k === a.slice(1))[1].toLowerCase();
+// "Right shoulder, right chest" or "Both forearms"
+function tatWhere(at) { if (!at.length) return 'Pick where it goes'; const out = [];
+  for (const [k, l] of TAT_PART) { const L = at.includes('l' + k), R = at.includes('r' + k); if (L && R) out.push(k === 'fc' || k === 'nk' ? l + ', both sides' : 'Both ' + (k === 'pc' ? 'sides of the chest' : l.toLowerCase() + 's')); else if (L || R) out.push(tatSpotName((L ? 'l' : 'r') + k)); }
+  if (at.includes('st')) out.push('Stomach'); const t = out.join(', '); return t[0].toUpperCase() + t.slice(1); }
+const tatDName = d => d.startsWith('ic-') ? (symName(d.slice(3)) || 'Icon') : (TAT_D.find(([a]) => a === d) || [, 'Tattoo'])[1];
+// is this skin pixel inked, for a style (first version)
 const tatPat = (st, x, y) => st === 'sleeve' ? (x * 3 + y * 2) % 5 < 2 : st === 'bands' ? y % 6 < 2 : st === 'script' ? y % 5 === 0 && x % 2 === 0 : (x + y) % 5 === 0 || ((x - y + 60) % 5 === 0 && y % 2 === 0);
+// the designs, inside the spots a tattoo covers: y0/ym are the top and middle row, cx/cy its centre
+function tatOn(d, x, y, y0, ym, cx, cy) {
+  if (d === 'tribal') return ((y + Math.round(2.5 * Math.sin(x * .6 + y * .3))) % 6 + 6) % 6 < 3;
+  if (d === 'jagged') { const v = ((Math.round(x - y * .6) % 7) + 7) % 7; return v < 2 || (v < 4 && y % 4 < 2); }
+  if (d === 'swirl') return ((Math.round(Math.hypot(x - cx, y - cy) + 1.5 * Math.sin(Math.atan2(y - cy, x - cx) * 5)) % 4) + 4) % 4 < 2;
+  if (d === 'ink') return (x * 3 + y * 2) % 5 < 2;
+  if (d === 'band') return Math.abs(y - ym) <= 1;
+  if (d === 'barbed') return y === ym || (Math.abs(y - ym) === 1 && x % 3 === 1);
+  if (d === 'script') return (y - y0) % 3 === 1 && (x * 7 + y) % 5 < 3 && y - y0 < 8;
+  if (d === 'stars') { const h = (x * 7 + y * 13) % 19; return h === 0 || (h === 1 && y % 2 === 0); }
+  return false;
+}
+// inks every tattoo's design onto the skin of its spots. Icons come back to be drawn crisp on top, with a clip path of the skin so they stay on it.
+function tatPaint(g, list, isSkin, spotAt, y0, y1) {
+  let clip = ''; const icons = [], W0 = g[0].length;
+  for (let y = y0; y < y1; y++) for (let x = 0; x < W0; x++) if (isSkin(x, y)) clip += `M${x} ${y}h1v1h-1z`;
+  for (const t of list) { const px = []; for (let y = y0; y < y1; y++) for (let x = 0; x < W0; x++) if (isSkin(x, y) && t.at.includes(spotAt(x, y))) px.push([x, y]);
+    if (!px.length) continue; const cx = px.reduce((a, q) => a + q[0], 0) / px.length + .5, cy = px.reduce((a, q) => a + q[1], 0) / px.length + .5;
+    if (t.d.startsWith('ic-')) { icons.push({ k: t.d, c: t.c, x: cx, y: cy, r: Math.max(2.2, Math.sqrt(px.length) / 2.2) * ({ s: .7, l: 1.3 }[t.s] || 1) }); continue; }
+    const ys = px.map(q => q[1]), a = Math.min(...ys), ym = Math.round((a + Math.max(...ys)) / 2);
+    for (const [x, y] of px) if (tatOn(t.d, x, y, a, ym, cx, cy)) g[y][x] = t.c; }
+  return { icons, clip };
+}
+// a small patch of skin with the design on it, for the design tiles
+function tatSwatch(d, c) { const g = Array.from({ length: 10 }, () => Array(14).fill('#d8a874')), on = (x, y) => tatOn(d, x, y, 31, 35, 27, 35);
+  for (let y = 0; y < 10; y++) for (let x = 0; x < 14; x++) if (on(x + 20, y + 30)) g[y][x] = c;
+  return `<svg class="tat-sw" viewBox="0 0 14 10" shape-rendering="crispEdges" aria-hidden="true">${pixRects(g)}</svg>`; }
+function tatIcons(ti, id) {
+  if (!ti || !ti.icons.length) return '';
+  return `<defs><clipPath id="${id}"><path d="${ti.clip}"/></clipPath></defs><g clip-path="url(#${id})" shape-rendering="geometricPrecision" opacity=".92">` + ti.icons.map(i => {
+    const si = symInner(i.k); if (!si) return ''; const sc = i.r * 2 / 24;
+    return `<g transform="translate(${(i.x - 12 * sc).toFixed(2)} ${(i.y - 12 * sc).toFixed(2)}) scale(${sc.toFixed(3)})" fill="${i.c}">${si.replace(/stroke="currentColor"/g, `stroke="${i.c}"`)}</g>`; }).join('') + '</g>';
+}
 // a whole pixel look (a saved look template): face code, body code, colours and symbol
 function lookClean(o) { o = o && typeof o === 'object' ? o : {}; const x = {}; if (faceOK(o.look)) x.look = o.look; if (bodyOK(o.body)) x.body = o.body; const lc = lcClean(o.lc), sy = symClean(o.sym), tt = tatClean(o.tat); if (lc) x.lc = lc; if (sy) x.sym = sy; if (tt) x.tat = tt; return x; }
 // a symbol drawn as the real icon (crisp, not pixels) on top of a pixel face or body: spots = { place: [x, y, r, side step] }
@@ -8437,15 +8519,16 @@ function symOn(sym, spots) {
   return `<g shape-rendering="geometricPrecision">${xs.map(cx => symDraw(sym.k, cx, y, r, sym.c, edge, .5, .45)).join('')}</g>`;
 }
 const lookKey = w => (w.lc ? JSON.stringify(w.lc) : '') + (w.sym ? JSON.stringify(w.sym) : '') + (w.tat ? JSON.stringify(w.tat) : '');
-function bodySVG(w, holds) {
+// opts.map: the tattoo body map, spots tinted and the picked ones gold; opts.spots: just the spot of each pixel (for taps on the map)
+function bodySVG(w, holds, opts) {
   const [BU, ST, BO, BC, BT, BTC, PD, HA, BE, SH, CH] = [...bodyCode(w)].map(d => parseInt(d, 36));
   const fc = faceCode(w), women = looksWomen(w), Wd = 48, H = 96;
   const LC = lcClean(w.lc) || {}, SY = symClean(w.sym), TT = tatClean(w.tat);
   const head = faceGrid(fc, w.align, w.color, women, { lc: LC, tat: TT }), { sk, sd, hc, hd, gc } = head.pal;
   const GR = parseInt(fc[5], 36);
   const g = Array.from({ length: H }, () => Array(Wd).fill(null));
-  let armTag = null; const mk = Array.from({ length: H }, () => Array(Wd).fill(null));
-  const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < Wd && y >= 0 && y < H && c) { g[y][x] = c; mk[y][x] = armTag; } };
+  let armTag = null, armSeg = 'up'; const mk = Array.from({ length: H }, () => Array(Wd).fill(null)), mk2 = Array.from({ length: H }, () => Array(Wd).fill(null));
+  const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < Wd && y >= 0 && y < H && c) { g[y][x] = c; mk[y][x] = armTag; mk2[y][x] = armTag ? armTag[0] + armSeg : null; } };
   const rect = (x, y, w2, h2, c) => { for (let j = y; j < y + h2; j++) for (let i = x; i < x + w2; i++) set(i, j, c); };
   const span = (y, hw, c) => rect(24 - hw, y, hw * 2, 1, c);
   const bc = LC.b3 || (BC ? FACE.col[BC] : safeColor(w.color) || '#c8102e'), bcd = faceShade(bc, -.3);
@@ -8518,7 +8601,7 @@ function bodySVG(w, holds) {
   const drawArm = ([s, e, hnd]) => {
     const r = at / 2, segs = [[s, e, 0], [e, hnd, .5]];
     armTag = s === L ? 'larm' : 'rarm';
-    for (const [a, b, t0] of segs) { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2) || 1; for (let k = 0; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, tt = t0 + t / 2; const c = tt < sleeve ? gc : sk, cd = tt < sleeve ? gd : sd; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r + .5) set(x + i, y + j, j >= r - .5 || i >= r - .5 ? cd : c); } }
+    for (const [a, b, t0] of segs) { armSeg = t0 ? 'fo' : 'up'; const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2) || 1; for (let k = 0; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, tt = t0 + t / 2; const c = tt < sleeve ? gc : sk, cd = tt < sleeve ? gd : sd; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r + .5) set(x + i, y + j, j >= r - .5 || i >= r - .5 ? cd : c); } }
     armTag = null;
     const [hx, hy] = hnd, f = Math.max(2, Math.round(at * .8));
     const hc2 = HA === 2 ? '#1b1b20' : sk;
@@ -8530,7 +8613,18 @@ function bodySVG(w, holds) {
   // crossed arms: the left arm goes in front
   if (ST === 3) { drawArm(arms[1]); drawArm(arms[0]); } else arms.forEach(drawArm);
   // tattoos on bare skin (the face's own come with the head)
-  if (TT) for (let y = 26; y < 88; y++) for (let x = 0; x < Wd; x++) { if (g[y][x] !== sk && g[y][x] !== sd) continue;
+  const skin = (x, y) => g[y][x] === sk || g[y][x] === sd;
+  // which body-map spot a pixel is in: arms by the segment they were drawn with, the rest by height
+  const spotOf = (x, y) => { const a = mk2[y][x], lr = x < 24 ? 'l' : 'r';
+    if (a) return a[1] === 'u' && y < 37 ? a[0] + 'sh' : a;
+    if (y >= 29 && y < 34 && Math.abs(x - 23.5) < 5) return lr + 'nk'; if (y >= 31 && y < 45) return y < 36 && Math.abs(x - 23.5) > sw - 4 ? lr + 'sh' : lr + 'pc';
+    if (y >= 45 && y < 53) return 'st'; if (y >= 58 && y < 73) return lr + 'th'; if (y >= 73 && y < 88) return lr + 'ca'; return null; };
+  let TI = null;
+  if (opts?.spots) return Array.from({ length: H }, (_, y) => Array.from({ length: Wd }, (_, x) => skin(x, y) ? spotOf(x, y) : null));
+  if (opts?.map) { const tone = ['#5f5976', '#7d7698'];
+    for (let y = 29; y < 88; y++) for (let x = 0; x < Wd; x++) if (skin(x, y)) { const a = spotOf(x, y); if (a) g[y][x] = opts.map.includes(a) ? (g[y][x] === sd ? '#c99a1e' : '#f6c544') : tone[(TAT_SPOTS.indexOf(a) >> 1) % 2 ^ (a[0] === 'r' ? 1 : 0)]; } }
+  else if (TT && TT.p) { TI = tatPaint(g, TT.p, skin, (x, y) => y >= 29 ? spotOf(x, y) : null, 0, 88); TI.icons.push(...(head.tatFace || []).map(i => ({ ...i, x: i.x + 8, y: i.y + 6 }))); }
+  else if (TT) for (let y = 26; y < 88; y++) for (let x = 0; x < Wd; x++) { if (g[y][x] !== sk && g[y][x] !== sd) continue;
     const z = mk[y][x] || (y < 31 ? 'neck' : y < 45 ? 'chest' : y < 53 ? 'stomach' : y >= 58 ? 'legs' : null);
     if (z && TT.at.includes(z) && tatPat(TT.st, x, y)) g[y][x] = TT.c; }
   // their title: round the waist, or held up high in the Victory stance
@@ -8545,9 +8639,10 @@ function bodySVG(w, holds) {
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wd} ${H}" shape-rendering="crispEdges"><rect width="${Wd}" height="${H}" fill="${bg}"/>`;
   s += [38, 50, 62].map(y => `<rect y="${y}" width="${Wd}" height="2" fill="${rope}"/><rect y="${y + 2}" width="${Wd}" height="1" fill="${faceShade(rope, -.45)}"/>`).join('');
   s += `<rect y="90" width="${Wd}" height="6" fill="#c9ccd6"/><rect y="90" width="${Wd}" height="1" fill="#e9ebf1"/><rect x="10" y="90" width="28" height="2" fill="#9ea3b2"/>`;
-  return s + pixRects(out) + symOn(SY, { head: [24, 15.5, 2.6, 4], chest: [24, 40, 4.4, 5.5], trunks: [24, 56, 3.2, 4.5], boots: [[legX(-1) + lt, legX(1) + lt], 81, 2.7, 0] }) + '</svg>';
+  return s + pixRects(out) + tatIcons(TI, 'tk') + symOn(SY, { head: [24, 15.5, 2.6, 4], chest: [24, 40, 4.4, 5.5], trunks: [24, 56, 3.2, 4.5], boots: [[legX(-1) + lt, legX(1) + lt], 81, 2.7, 0] }) + '</svg>';
 }
 const BODY_CACHE = new Map();
+const tatMapURL = (w, sel) => 'data:image/svg+xml,' + encodeURIComponent(bodySVG({ ...w, tat: undefined, sym: undefined }, false, { map: sel }));
 function bodyURL(w) {
   const holds = !!(G?.titles && titlesOf(w.id).length);
   const k = faceCode(w) + bodyCode(w) + w.align + (looksWomen(w) ? 'w' : 'm') + (safeColor(w.color) || '') + (holds ? 'c' : '') + lookKey(w);
@@ -12726,11 +12821,20 @@ function lookMaker(d) {
         + lab('Size') + `<div class="seg-ctl">${Object.entries(SYM_S).map(([a, [l]]) => { const on = (SY.s || 'm') === a; return `<button class="${on ? 'on' : ''}" data-act="lkSym" data-f="s" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>`
         + lab('Symbol colour') + `<div class="swatches">${SYM_COLS.map(c => `<button class="sw ${SY.c === c ? 'on' : ''}" style="background:${c}" data-act="lkSym" data-f="c" data-id="${c}" aria-label="Symbol colour ${c}" aria-pressed="${SY.c === c}"></button>`).join('')}${anyColour('s', SY.c, 'data-lc', !SYM_COLS.includes(SY.c))}</div>` : '')
       + lab('Symbol') + wsSyms(SY?.k || '', 'lkSym', 'k', 'None'),
-    tat: () => { const T = tatClean(d.tat), at = T?.at || [];
-      return `<p class="small muted" style="margin-top:8px">Ink on bare skin, so gear covers it. Pick as many places as you like.</p>` + lab('Where')
-        + `<div class="chips">${TAT_AT.filter(([a]) => body || ['face', 'neck', 'chest'].includes(a)).map(([a, l]) => `<button class="chip ${at.includes(a) ? 'on' : ''}" data-act="lkTat" data-f="at" data-id="${a}" aria-pressed="${at.includes(a)}">${l}</button>`).join('')}</div>`
-        + lab('Style') + `<div class="seg-ctl">${TAT_ST.map(([a, l]) => { const on = (T?.st || 'tribal') === a; return `<button class="${on ? 'on' : ''}" data-act="lkTat" data-f="st" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>`
-        + lab('Ink') + `<div class="swatches">${TAT_INK.map(c => { const on = (T?.c || '#1a1a2a') === c; return `<button class="sw ${on ? 'on' : ''}" style="background:${c}" data-act="lkTat" data-f="c" data-id="${c}" aria-label="Ink ${c}" aria-pressed="${on}"></button>`; }).join('')}${anyColour('t', T?.c || '#1a1a2a', 'data-lc', !!T && !TAT_INK.includes(T.c))}</div>`; },
+    tat: () => { const list = tatList(d.tat), n = Math.max(0, Math.min(UI.tatSel || 0, list.length - 1)), t = list[n];
+      const rows = `<div class="tat-list">${list.map((x, i) => `<div class="tat-row ${i === n ? 'on' : ''}"><button class="tat-pick" data-act="lkTat" data-f="sel" data-id="${i}" aria-pressed="${i === n}"><i class="tat-dot" style="background:${x.c}"></i><span><b>${esc(tatDName(x.d))}</b><small>${esc(tatWhere(x.at))}</small></span></button><button class="tat-del" data-act="lkTat" data-f="del" data-id="${i}" aria-label="Remove the ${esc(tatDName(x.d))} tattoo">${ic('xc')}</button></div>`).join('')}`
+        + (list.length < TAT_MAX ? `<button class="tat-add" data-act="lkTat" data-f="add">+ Add a tattoo <span>${list.length} of ${TAT_MAX}</span></button>` : '') + '</div>';
+      const intro = `<p class="small muted" style="margin-top:8px">Up to ${TAT_MAX} tattoos, each with its own design, spots and ink. Ink only shows on bare skin, so gear covers it.</p>`;
+      if (!t) return intro + rows;
+      const spots = body ? TAT_SPOTS : TAT_FACE_SPOTS, sp = (a, l) => { const on = t.at.includes(a); return `<button class="chip ${on ? 'on' : ''}" data-act="lkTat" data-f="at" data-id="${a}" aria-pressed="${on}" aria-label="${tatSpotName(a)}">${l}</button>`; };
+      const grid = `<div class="tat-spots">${TAT_PART.filter(([k]) => spots.includes('l' + k)).map(([k, l]) => sp('l' + k, 'Left') + `<span>${l}</span>` + sp('r' + k, 'Right')).join('')}${body ? `<i></i>${sp('st', 'Stomach')}<i></i>` : ''}</div>`;
+      const icon = t.d.startsWith('ic-');
+      return intro + rows + lab(`Where it goes <span class="muted">· ${body ? 'tap the map or the buttons' : 'as you look at them'}</span>`)
+        + (body ? `<div class="tat-where"><img class="tat-map px" alt="Body map: tap a spot to add or take it off this tattoo" src="${tatMapURL(d, t.at)}">${grid}</div>` : grid)
+        + lab('Design') + `<div class="bd-grid tat-grid">${TAT_D.map(([a, l]) => { const on = t.d === a; return `<button class="bd-tile ${on ? 'on' : ''}" data-act="lkTat" data-f="d" data-id="${a}" aria-pressed="${on}">${tatSwatch(a, t.c)}<span>${l}</span></button>`; }).join('')}</div>`
+        + `<details class="tat-ic" ${icon ? 'open' : ''}><summary>${icon ? 'Icon: ' + esc(tatDName(t.d)) : 'Or use any icon from the game'}</summary>${wsSyms(icon ? t.d : '', 'lkTat', 'd')}</details>`
+        + (icon ? lab('Icon size') + `<div class="seg-ctl">${Object.entries(SYM_S).map(([a, [l]]) => { const on = (t.s || 'm') === a; return `<button class="${on ? 'on' : ''}" data-act="lkTat" data-f="s" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>` : '')
+        + lab('Ink') + `<div class="swatches">${TAT_INK.map(c => { const on = t.c === c; return `<button class="sw ${on ? 'on' : ''}" style="background:${c}" data-act="lkTat" data-f="c" data-id="${c}" aria-label="Ink ${c}" aria-pressed="${on}"></button>`; }).join('')}${anyColour('t', t.c, 'data-lc', !TAT_INK.includes(t.c))}</div>`; },
     build: () => lab('Build') + tiles('b', 0, BODY.build) + lab('Shape') + tiles('b', 9, BODY.shape) + lab('Stance') + tiles('b', 1, BODY.stance),
     ring: () => lab('Bottoms') + tiles('b', 2, BODY.bottoms) + lab('Bottoms colour') + sws('b', 3, FACE.col, 0, 'Bottoms')
       + lab('Boots') + tiles('b', 4, BODY.boots) + (ba(4) === 4 ? '' : lab('Boots colour') + sws('b', 5, FACE.col, 0, 'Boots', '#1b1b20'))
@@ -14065,8 +14169,8 @@ function scrubGame(raw) {
   let budget = 4000000; // values, not characters: a 2,000-wrestler save with years of history needs well over a million
   // a few short keys are ids or numbers almost everywhere but text inside these objects (by the key that holds them):
   // a storyline's own promo lines {a, b}, Dirt Sheet reviews and takes {h, b}, a storyline's one-line summary,
-  // who sent a phone text, the crowd cue's mood and a backfire's story. Without this they came back as random ids or 0.
-  const TXT_IN = new Set(['lines', 'revs', 'take']), STR_IN = { sum: new Set(['stories']), from: new Set(['phone']), m: new Set(['cue']), d: new Set(['bfq']) };
+  // who sent a phone text, the crowd cue's mood, a backfire's story and a tattoo's design. Without this they came back as random ids or 0.
+  const TXT_IN = new Set(['lines', 'revs', 'take']), STR_IN = { sum: new Set(['stories']), from: new Set(['phone']), m: new Set(['cue']), d: new Set(['bfq', 'p']) };
   const clean = (v, k, depth, inId, pk) => {
     if (--budget < 0 || depth > 14) return undefined;
     if (v === null || typeof v === 'boolean') return v;
@@ -14760,15 +14864,21 @@ const CREATOR_ACTIONS = {
     if (f === 'k') { if (symOK(v)) d.sym = { at: 'chest', c: '#f2c94c', ...(symClean(d.sym) || {}), k: v }; else delete d.sym; }
     else if (d.sym) d.sym = symClean({ ...d.sym, [f]: v });
     UI.fmOpen = true; render(); },
-  lkTat(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f, T = d.tat && typeof d.tat === 'object' ? { at: [], st: 'tribal', c: '#1a1a2a', ...d.tat } : { at: [], st: 'tribal', c: '#1a1a2a' }; lkKeep(m);
-    if (f === 'at') T.at = T.at.includes(v) ? T.at.filter(a => a !== v) : [...T.at, v]; else T[f] = v;
-    d.tat = { ...T }; if (!tatClean(T)) d.tat = { at: [], st: T.st, c: T.c }; UI.fmOpen = true; render(); },
+  lkTat(v, el) { const m = UI.modal, d = m.draft, f = el.dataset.f, list = tatList(d.tat); let n = Math.max(0, Math.min(UI.tatSel || 0, list.length - 1));
+    if (f === 'sel') { UI.tatSel = +v; UI.fmOpen = true; return render(); }
+    lkKeep(m);
+    if (f === 'add') { if (list.length >= TAT_MAX) return; list.push({ d: 'tribal', at: [], c: list[n]?.c || '#1a1a2a' }); n = list.length - 1; }
+    else if (f === 'del') { list.splice(+v, 1); n = Math.max(0, Math.min(n, list.length - 1)); }
+    else { const t = list[n]; if (!t) return; if (f === 'at') t.at = t.at.includes(v) ? t.at.filter(a => a !== v) : [...t.at, v]; else if (f === 's') { if (v === 'm') delete t.s; else t.s = v; } else if (f === 'd' && !v) return; else t[f] = v; }
+    UI.tatSel = n; if (list.length) d.tat = { p: list }; else delete d.tat; UI.fmOpen = true; render(); },
   lkTpl(v) { const m = UI.modal; if (v === 'open') { m.lkTpl = !m.lkTpl; UI.fmOpen = true; return render(); } const x = LOOK_TPL[+v]; if (!x) return; lkKeep(m); lkApply(m.draft, lookFromTpl(m.draft, x[1])); m.lkTpl = false; render(); },
   lkMine(i) { const m = UI.modal, x = myTpls('w')[+i]; if (!x) return; lkKeep(m); lkApply(m.draft, lookFromMine(m.draft, x.b)); m.lkTpl = false; render(); },
   lkCopy(id) { const m = UI.modal, w = W(id); if (!w) return; lkKeep(m); lkApply(m.draft, lookFromMine(m.draft, lkLook(w))); m.lkTpl = false; render(); },
   lkRand() { const m = UI.modal, d = m.draft; lkKeep(m); d.look = faceRandom(Math.random(), looksWomen(d), true); d.body = bodyRandom(d, Math.random()); delete d.lc;
     if (Math.random() < .2) d.sym = { k: 'ic-' + pick(symList()), at: pick(bodiesOn() ? ['chest', 'chest', 'trunks', 'head', 'boots'] : ['chest', 'head']), c: pick(SYM_COLS) }; else delete d.sym;
-    if (Math.random() < .25) d.tat = { at: pick([['larm'], ['rarm'], ['larm', 'rarm'], ['chest'], ['neck', 'chest'], ['face'], ['larm', 'rarm', 'chest']]), st: pick(TAT_ST)[0], c: pick(TAT_INK.slice(0, 5)) }; else delete d.tat; UI.fmOpen = true; render(); },
+    delete d.tat; if (Math.random() < .25) { const P = [['rsh', 'rpc', 'rup'], ['lsh', 'lpc', 'lup'], ['lsh', 'lup', 'lfo'], ['rsh', 'rup', 'rfo'], ['lup', 'rup'], ['lfo'], ['rfo'], ['lnk'], ['rnk'], ['lpc'], ['rpc'], ['st'], ['lth'], ['rca'], ['rfc'], ['lsh', 'rsh']];
+      const p = Array.from({ length: Math.random() < .35 ? 2 : 1 }, () => ({ d: Math.random() < .25 ? 'ic-' + pick(symList()) : pick(TAT_D)[0], at: pick(P).filter(a => bodiesOn() || TAT_FACE_SPOTS.includes(a)), c: pick(TAT_INK.slice(0, 5)) })).filter(t => t.at.length);
+      if (p.length) d.tat = { p }; } UI.fmOpen = true; render(); },
   lkUndo() { const m = UI.modal; if (m.lkUndo?.length) { lkApply(m.draft, m.lkUndo.pop()); UI.fmOpen = true; render(); } },
   fmTog(v, el) { UI.fmOpen = !el.parentElement.open; },
   bPx(v, el) { pxSet(PX, el.dataset.f, v); applyPX(); render(); },
@@ -18203,6 +18313,13 @@ document.addEventListener('click', e => {
   const b = e.target.closest?.('.sl-st'); if (!b || e.detail) return;
   const r = b.closest('.sl')?.querySelector('input[type=range]'); if (r && slSet(r, +r.value + (+b.dataset.slStep || 1))) r.dispatchEvent(new Event('change', { bubbles: true }));
 });
+// a tap on the tattoo body map adds or takes off the spot under it (a near miss on a thin arm still counts)
+document.addEventListener('click', e => {
+  const im = e.target.closest?.('.tat-map'); if (!im || !UI.modal?.draft) return; const r = im.getBoundingClientRect(), x = Math.floor((e.clientX - r.left) / r.width * 48), y = Math.floor((e.clientY - r.top) / r.height * 96);
+  const g = bodySVG({ ...UI.modal.draft, tat: undefined, sym: undefined }, false, { spots: 1 }); let a = g[y]?.[x];
+  if (!a) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]) if ((a = g[y + dy]?.[x + dx])) break;
+  if (a) A.lkTat(a, { dataset: { f: 'at' } });
+});
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   if (el.dataset.bg && e.target !== el) return; // clicks inside a modal don't close it
@@ -18270,7 +18387,7 @@ document.addEventListener('input', e => {
   if (el.type === 'color' && !el._kept && UI.modal?.draft && (el.dataset.pt != null || el.dataset.bt != null)) { el._kept = 1; (el.dataset.pt != null ? pdKeep : bdKeep)(UI.modal); }
   if (el.dataset.pt != null && el.type !== 'checkbox' && UI.modal?.draft?.look) { const d = UI.modal.draft; d.look = trophyClean({ ...d.look, [el.dataset.pt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = prizeArt(d, 'tr-big'); }
   if (el.dataset.lc != null && UI.modal?.draft && isHex(el.value)) { const m = UI.modal, d = m.draft, k = el.dataset.lc; if (!el._kept) { lkKeep(m); el._kept = 1; }
-    if (k === 's') { if (d.sym) d.sym = symClean({ ...d.sym, c: el.value }); } else if (k === 't') d.tat = { at: [], st: 'tribal', ...(d.tat || {}), c: el.value.toLowerCase() }; else d.lc = { ...(d.lc || {}), [k]: el.value.toLowerCase() };
+    if (k === 's') { if (d.sym) d.sym = symClean({ ...d.sym, c: el.value }); } else if (k === 't') { const list = tatList(d.tat), t = list[Math.max(0, Math.min(UI.tatSel || 0, list.length - 1))]; if (t) { t.c = el.value.toLowerCase(); d.tat = { p: list }; } } else d.lc = { ...(d.lc || {}), [k]: el.value.toLowerCase() };
     const f = document.querySelector('.lk-prev .lk-face'), b = document.querySelector('.lk-prev .lk-body'); if (f) f.src = faceURL(d); if (b) b.src = bodyURL(d); }
   if (el.dataset.bt != null && el.type === 'range') { const o = document.getElementById('bdv-' + el.dataset.bt); if (o) o.textContent = el.value + '%'; }
   if (el.dataset.bt != null && el.type !== 'checkbox' && UI.modal?.draft?.belt) { const d = UI.modal.draft; d.belt = beltClean({ ...d.belt, [el.dataset.bt]: el.value }, d); const pv = document.querySelector('.bd-prev'); if (pv) pv.innerHTML = titleArt(d, 'bd-belt'); }
@@ -18565,7 +18682,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.102';
+const VERSION = '1.9.103';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
