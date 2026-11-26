@@ -400,6 +400,11 @@ button.mrow:active { background: var(--card2); }
 .hero-w .bm-hero { width: 132px; height: 264px; }
 .hc-facts { margin: 10px 0; display: grid; gap: 4px; }
 .hc-f { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; } .hc-f span { color: var(--dim); } .hc-f b { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-wrap { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin: 6px 0 8px; }
+.tt-side { display: grid; justify-items: center; gap: 2px; font-size: 12px; color: var(--dim); text-align: center; min-width: 0; flex: 1; }
+.tt-side b { font-size: 14px; color: var(--ink); }
+.tt-body { width: 84px; height: 168px; border-radius: 10px; box-shadow: 0 0 0 2px var(--line); }
+.tt-mid { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--f-cond); font-weight: 800; letter-spacing: 2px; color: var(--accent); font-size: 13px; align-self: center; }
 .fm-tabs { margin-top: 10px; }
 .bm-big { width: 36px; height: 72px; border-radius: 8px; flex: none; box-shadow: 0 0 0 2px var(--line); }
 .bm-tiles .fm-tile img { width: 40px; height: 80px; }
@@ -1614,7 +1619,8 @@ const ANGLE_TYPES = {
   'Backstage Skit': { desc: 'Comedy or character bit. Low stakes, raises morale.', morale: 4 },
   'Brawl': { desc: 'A wild fight that security can barely break up. Big heat, but both sides get tired.', heat: 12, needT: true, brawl: true },
   'Hype Video': { desc: 'A pre-taped video package. Safe, and builds popularity.', pop: 3, taped: true },
-  'Celebration': { desc: 'Party in the ring. Great for a new champion or a big win. Heels love to crash it.', pop: 2, morale: 3, party: true }
+  'Celebration': { desc: 'Party in the ring. Great for a new champion or a big win. Heels love to crash it.', pop: 2, morale: 3, party: true },
+  'Tale of the Tape': { desc: 'Both rivals side by side, sized up for the fans. Only works for a really hot feud. Bigger on a TV special or a go-home show.', heat: 8, needT: true, tape: true }
 };
 // where a promo or angle happens, how long it runs and how it ends. Empty = the old behavior.
 const SEG_PLACES = {
@@ -3738,6 +3744,9 @@ function segQuote(seg, sp, tg, first) {
     'Open Challenge': [`Anybody. Anytime. Come and take your shot!`], 'Sit-down Debate': [`Let's settle this like adults${T ? ', ' + T : ''}. Then I'll beat you like a child.`] }[seg.ptype];
   const arr = L || tone || gen || [`You'll see.`]; return first ? arr[0] : pick(arr);
 }
+// tale of the tape: a feud needs this much heat
+const TAPE_HOT = 60;
+const tapeStat = w => { const f = [w.height, w.weight].filter(Boolean).join(', '); return f ? ` (${f})` : ''; };
 function simSegment(seg, ctx) {
   const why = []; const add = (v, t) => { if (Math.abs(v) >= 1) why.push([Math.round(v), t]); return v; };
   const people = segPeople(seg).map(W).filter(Boolean);
@@ -3967,6 +3976,17 @@ function simSegment(seg, ctx) {
       if (tg.length && tg.every(w => w.align === 'heel') && d.some(w => w.align === 'face')) r += add(3, 'Heels crashed the party'); }
     const st = tg.length ? storyBetween(d.map(w => w.id), tg.map(w => w.id)) : storiesTouching(d.map(w => w.id))[0];
     if (st) r += add(st.heat * 0.15, 'Storyline: ' + st.title);
+    // tale of the tape: the rivals sized up side by side. Dead without a hot feud, a big hype piece on a special or go-home show
+    if (at.tape && tg.length) {
+      if (!st) r += add(-14, 'No feud between them to hype');
+      else if (st.heat < TAPE_HOT) r += add(-(TAPE_HOT - st.heat) * 0.3, `Feud is not hot enough yet (needs ${TAPE_HOT} heat)`);
+      else r += add(3 + (st.heat - TAPE_HOT) * 0.25, 'Red-hot feud: everyone wants to see this fight');
+      const wk = ctx.wk ?? G.week, when = isSpecial(wk) ? 'TV special' : isGoHome(wk) ? 'Go-home show' : '';
+      if (st && st.heat >= TAPE_HOT && when) { r += add(8, when + ': the perfect place to sell the fight'); out.tapeHeat = 5; }
+      const facts = [...d, ...tg].every(w => w.height && w.weight);
+      if (facts) r += add(2, 'Real heights and weights on screen');
+      out.tape = true;
+    }
     { const b = storyBeat(st, d, tg, add); r += b.x || 0; out.stTag = b.tag; }
     out.story = st; out.at = at; out.doers = d; out.targets = tg;
     out.text = {
@@ -3978,7 +3998,8 @@ function simSegment(seg, ctx) {
       'Backstage Skit': `${d.map(w => w.name).join(' & ')} had a fun backstage moment.`,
       'Brawl': `${d.map(w => w.name).join(' & ')} and ${tg.map(w => w.name).join(' & ') || 'nobody'} brawled all over the building!`,
       'Hype Video': `A hype video for ${d.map(w => w.name).join(' & ')} played on the big screen.`,
-      'Celebration': `${d.map(w => w.name).join(' & ')} threw a party in the ring${tg.length ? ', until ' + tg.map(w => w.name).join(' & ') + ' crashed it' : ''}.`
+      'Celebration': `${d.map(w => w.name).join(' & ')} threw a party in the ring${tg.length ? ', until ' + tg.map(w => w.name).join(' & ') + ' crashed it' : ''}.`,
+      'Tale of the Tape': `The tale of the tape: ${d.map(w => w.name + tapeStat(w)).join(' & ')} against ${tg.map(w => w.name + tapeStat(w)).join(' & ') || 'nobody'}.`
     }[seg.atype] || 'Something happened.';
   }
   // promos and angles: where it happens, how long it runs, how it ends
@@ -3986,7 +4007,7 @@ function simSegment(seg, ctx) {
   // promos and angles with a target: someone gets the upper hand (the booker can choose)
   if (seg.kind !== 'match') {
     const a = (seg.who || []).map(W).filter(Boolean), b = out.tg || (seg.target || []).map(W).filter(Boolean);
-    if (a.length && b.length) {
+    if (a.length && b.length && !out.tape) {
       let e = seg.edge;
       if (e == null || e < 0) { const sc = s2 => avg(s2.map(w => w.pop * .4 + w.mic * .3 + w.cha * .2 + (w.momentum || 0) * .3 + (ctx.proj ? 0 : rnd(0, 30)))); e = seg.kind === 'angle' && seg.atype === 'Sneak Attack' && !ctx.proj && Math.random() < .7 ? 0 : sc(a) >= sc(b) ? 0 : 1; }
       if (e === 0 || e === 1) {
@@ -4140,7 +4161,7 @@ function applySegment(seg, res, ctx) {
   // storyline heat
   const st = res.story;
   if (st) {
-    let gain = (seg.kind === 'match' ? 6 : (seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) + (res.xHeat || 0)) * (res.heatMul || 1) * (0.6 + res.rating / 100);
+    let gain = (seg.kind === 'match' ? 6 : (seg.kind === 'promo' ? (res.pt?.heat ?? 4) + (res.pHeat || 0) : (res.at?.heat ?? 5)) + (res.xHeat || 0) + (res.tapeHeat || 0)) * (res.heatMul || 1) * (0.6 + res.rating / 100);
     if (res.fin) gain += res.fin.heat; if (res.stip?.heat) gain += res.stip.heat;
     gain = Math.round(gain * (1 + staffQ('writer') * 0.04));
     // one side winning every time kills the drama: the third straight win for the same side barely adds heat
@@ -6589,6 +6610,11 @@ function lvTalk(r, main) {
       ${tg.length ? `<div class="tgt">${r.ans ? '🙋 Answered by' : '📣 ' + esc(segVerb(s).replace(/^./, c => c.toUpperCase()))} ${tg.slice(0, 3).map(w => av(w, 24, true)).join('')} ${names(tg)}</div>` : ''}${intr}`;
   }
   const headline = `${names(sp) || 'Someone'}${tg.length ? ` ${esc(segVerb(s))} ${names(tg)}` : ''}`;
+  if (s.atype === 'Tale of the Tape' && sp.length && tg.length && facesOn()) {
+    const col = w => `<div class="tt-side"><img class="px tt-body" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"><b class="n-${w.align}">${esc(w.name)}</b>${[w.height, w.weight, w.hometown].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}<span>${w.record ? `${w.record.w}-${w.record.l}` : ''}</span></div>`;
+    return `<div class="tt-wrap">${col(sp[0])}<div class="tt-mid">TALE OF THE TAPE</div>${col(tg[0])}</div>
+    <div class="l3"><span>${esc(s.atype)}${r.stTag ? ' · ' + esc(r.stTag) : ''}</span>${headline}</div>${intr}`;
+  }
   return `${sp.length ? `<div class="act-faces"><div class="lv-side">${sp.slice(0, 3).map(w => face(w, sz)).join('')}</div>${tg.length ? `<span class="verb">${esc(segVerb(s))}</span><div class="lv-side">${tg.slice(0, 3).map(w => face(w, sz)).join('')}</div>` : ''}</div>` : ''}
     <div class="l3"><span>${esc(s.atype)}${r.stTag ? ' · ' + esc(r.stTag) : ''}</span>${headline}</div>${r.quote ? `<div class="bub a-bub">“${esc(r.quote)}”</div>` : ''}${intr}`;
 }
@@ -6872,6 +6898,8 @@ const sameDiv = (a, b) => !a || !b || !a.division || !b.division || a.division =
 // a TV special (company level 8): one weekly show turned into a one-off special. G.special is its week, G.specialSid its show.
 const SPECIAL_NAMES = ['Prime Time Special', 'Holiday Spectacular', 'Saturday Night Special', 'Throwback Night', 'Championship Night', 'Fan Appreciation Night', 'Super Showdown Special', 'Battle of the Brands', 'Ladies of the Ring', 'New Blood Night'];
 const SPECIAL_GAP = 8;
+// a go-home show: a weekly show in a big event week, or the week before one when big weeks have no weekly show
+const isGoHome = wk => !!G && !onEv() && (bigWk(wk) || !goHomeOn() && bigWk(wk + 1));
 const isSpecial = wk => !!G && G.special === wk && !isBig(wk) && !onEv() && (!G.specialSid || G.specialSid === G.showId);
 const specialName = () => G.specialName || 'TV special';
 // the network's target for a special: a bit above your recent shows. Miss it and your reputation takes the hit.
@@ -9641,7 +9669,7 @@ function modalEditStory(m) {
 // what a promo or angle does to its target, in place of VS
 function segVerb(s) {
   if (s.kind === 'promo') return { 'Call-out': 'calls out', 'Face-off': 'face to face', Interview: 'with', 'Hype Promo': 'hypes up', 'Open Challenge': 'answered by', 'Sit-down Debate': 'debates' }[s.ptype] || 'with';
-  return { 'Sneak Attack': 'attacks', 'Contract Signing': 'signs with', Brawl: 'brawls with', Celebration: 'crashed by', 'Turn Heel': 'turns on', 'Turn Face': 'stands with', 'Hype Video': 'featuring' }[s.atype] || 'with';
+  return { 'Sneak Attack': 'attacks', 'Contract Signing': 'signs with', Brawl: 'brawls with', Celebration: 'crashed by', 'Tale of the Tape': 'vs', 'Turn Heel': 'turns on', 'Turn Face': 'stands with', 'Hype Video': 'featuring' }[s.atype] || 'with';
 }
 const KIND_TAG = { match: ['m', 'Match'], promo: ['p', '🎤 Promo'], angle: ['a', '🎬 Angle'] };
 const kindTag = s => { const [c, n] = KIND_TAG[s.kind] || KIND_TAG.match; return `<span class="kp ${c}">${n}</span>`; };
@@ -16569,7 +16597,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.87';
+const VERSION = '1.9.88';
 const WHATS_NEW = [
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
