@@ -2335,6 +2335,8 @@ const stakeMult = st => ST_STAKES[st?.stake]?.[1] || 1;
 const STORY_KINDS = ['Feud', 'Rivalry', 'Title Chase', 'Betrayal', 'Faction War', 'Redemption'];
 const stClean = t => String(t || '').replace(/[\u0000-\u001f<>`"]/g, '').trim().slice(0, 50);
 // the two sides of a segment, or null when it has no clear two sides (a battle royal, a promo with no target)
+// how many of the last 6 shows had these two leads together
+const pairRuns = (a, b) => { const k = [a, b].sort(); return G.history.filter(ownRec).slice(-6).filter(h => (h.results || []).some(x => { const q = segPair(x.seg); return q && q[0] === k[0] && q[1] === k[1]; })).length; };
 function segPair(seg) {
   if (!seg) return null;
   if (seg.kind === 'match') { if (isFFA(seg)) return null; const sd = (seg.sides || []).map(x => x.filter(id => W(id))).filter(x => x.length); return sd.length >= 2 ? [sd[0], sd.slice(1).flat()] : null; }
@@ -2675,6 +2677,12 @@ function momDo(m, i = 0) {
 // anything left unanswered when the show closes plays out as the producer sees fit
 function momSettle() { for (const h of G.history.slice(-6)) { for (const m of h.moments || []) if (!m.done) momDo(m, 0); (h.calls || []).forEach((c, j) => { if (!c.done) callDo(h, j); }); } }
 function storiesTouching(ids) { return G.stories.filter(s => s.status === 'active' && [...s.a, ...s.b].some(x => ids.includes(x))); }
+// the two leads of a segment (one from each side, or speaker and target), sorted: used to spot overexposure
+function segPair(seg) {
+  if (!seg) return null;
+  const a = seg.kind === 'match' ? seg.sides?.[0]?.[0] : seg.who?.[0], b = seg.kind === 'match' ? seg.sides?.[1]?.[0] : seg.target?.[0] || seg.who?.[1];
+  return a && b && a !== b ? [a, b].sort() : null;
+}
 function recentlyFaced(ids) {
   // same opponents booked in the last 2 weeks
   const key = ids.slice().sort().join(',');
@@ -3739,7 +3747,7 @@ function simSegment(seg, ctx) {
       r += turnedSoon(tw) ? add(-4, tw.name + ' turned again too soon') : add(5 + tw.pop * 0.08, tw.name + ' turns ' + (tw.align === 'face' ? 'heel' : 'face') + '!');
       if (sides.some(sd => sd.length > 1 && sd.some(w => w.id === tw.id))) r += add(3, 'Betrayed a partner');
     }
-    if (recentlyFaced(people.map(w => w.id))) r += add(-6, 'Same match was booked recently');
+    if (recentlyFaced(people.map(w => w.id))) r += add(-9, 'Same match was booked recently');
     else if (!ffa) r += add(BR.overdone(segPeople(seg), st), 'Fans have seen this match a lot lately');
     if (!ffa && (sides.length > 2 || sides[0].length > 1)) r += add(2, 'Multi-person chaos');
     const elim = elimOn(seg) && people.length > 2;
@@ -3939,6 +3947,11 @@ function simSegment(seg, ctx) {
   { const bb = badgeBonus(seg, ctx, people); if (bb) r += add(bb, 'Training badges: ' + people.filter(w => (w.badges || []).some(k => hasBadge(w, k))).map(w => shortOf(w.id)).join(', ')); }
   { const re = relEffort(people); if (re) r += add(re, re > 0 ? 'Working hard for you' : 'Coasting: unhappy with you'); }
   if (!ctx.proj) { const luck = BR.luck(people); r += add(luck, luck > 0 ? 'Crowd was hot' : 'Crowd was flat'); }
+  // the same two people sharing a segment show after show wears the crowd out, story or not
+  { const pr = segPair(seg); if (pr) { const n = G.history.filter(ownRec).slice(-6).filter(h => (h.results || []).some(x => { const q = segPair(x.seg); return q && q[0] === pr[0] && q[1] === pr[1]; })).length;
+    if (n >= 3) r += add(-(n - 2) * 3, `Fans see ${shortOf(pr[0])} and ${shortOf(pr[1])} together every week`); } }
+  // near the top every point is harder to earn: five stars should be rare
+  if (r > 85) r += add(-(r - 85) * 0.5, 'Only the very best reach five stars');
   out.rating = clamp(Math.round(r), 5, 100);
   return out;
 }
@@ -4082,7 +4095,7 @@ function applySegment(seg, res, ctx) {
 // projected ratings (no luck) so the booker can see how a card shapes up before running it
 function projectFull(seg, i, card, wk) { try { return simSegment(seg, { big: isBig(wk), main: i === card.length - 1 && card.length > 1, proj: true, i, card, wk }); } catch (e) { return { rating: 0, why: [] }; } }
 const HINTS = [[/Same alignment/, 'Same alignment'], [/recently/, 'Rematch'], [/Styles clashed/, 'Styles clash'], [/squash/, 'Squash'], [/nobody to call out|needs a target/, 'Needs a target'], [/Stamina/, 'Low stamina'], [/injured/, 'Injured'], [/Tired/, 'Tired'], [/Unhappy/, 'Unhappy talent'], [/Cheap finish/, 'Cheap finish'], [/too soon/, 'Turned too soon'], [/face who cheats/, 'Face cheating']];
-function hintsOf(why) { const out = []; for (const [v, t] of why || []) { if (v > -3 || /^Base/.test(t)) continue; const h = HINTS.find(([re]) => re.test(t)); const l = h ? h[1] : t; if (!out.includes(l)) out.push(l); } return out.slice(0, 2); }
+function hintsOf(why) { const out = []; for (const [v, t] of why || []) { if (v > -3 || /^Base|five stars/.test(t)) continue; const h = HINTS.find(([re]) => re.test(t)); const l = h ? h[1] : t; if (!out.includes(l)) out.push(l); } return out.slice(0, 2); }
 function projectSeg(seg, i, card, wk) { try { return simSegment(seg, { big: isBig(wk), main: i === card.length - 1 && card.length > 1, proj: true, i, card, wk }).rating; } catch (e) { return 0; } }
 function projectShow(card, wk) {
   const segs = card.filter(s => segPeople(s).length); if (!segs.length) return 0;
@@ -4291,7 +4304,7 @@ const BR = {
   }
 };
 // new booking hints for the card preview
-HINTS.push([/lacks star power/, 'Needs bigger stars'], [/wasted early/, 'Star booked too early'], [/match tonight/, 'Repeat gimmick'], [/seen this match/, 'Overdone match'], [/Back-to-back/, 'Two talk segments in a row'], [/worn out/, 'Too many brutal matches'], [/close every show/, 'Overexposed']);
+HINTS.push([/lacks star power/, 'Needs bigger stars'], [/wasted early/, 'Star booked too early'], [/match tonight/, 'Repeat gimmick'], [/seen this match/, 'Overdone match'], [/Back-to-back/, 'Two talk segments in a row'], [/worn out/, 'Too many brutal matches'], [/close every show/, 'Overexposed'], [/together every week/, 'Overexposed pairing']);
 // the calendar: week 1 is the first Monday of the promotion's first year
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const BASE = Date.UTC(2027, 0, 4);
@@ -6858,6 +6871,7 @@ function autoFillOnce(wk, card, big, target, H, notes) {
   for (const st of G.stories.filter(s => s.status === 'active').sort((a, b) => b.heat - a.heat).slice(0, H.stories)) {
     const A = st.a.filter(id => avail().some(w => w.id === id)), B = st.b.filter(id => avail().some(w => w.id === id));
     if (!A.length || !B.length || segs.length >= target - (H.sty === 'story' ? 1 : 2)) continue;
+    if (!big && pairRuns(A[0], B[0]) >= 3 && Math.random() < 0.7) continue; // give a hot feud a week off now and then
     const size = Math.min(A.length, B.length, 3);
     if ((H.build ? BR.storyMatch(st, big) : big || Math.random() < 0.5) && (big || !recentlyFaced([...A.slice(0, size), ...B.slice(0, size)])) && !ppvSaved([...A.slice(0, size), ...B.slice(0, size)])) {
       const mtype = size === 1 ? 'Singles' : size === 2 ? 'Tag Team' : 'Six-Person Tag';
