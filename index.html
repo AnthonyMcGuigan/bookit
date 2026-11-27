@@ -8177,7 +8177,7 @@ const FACE = {
   hairC: ['#1b1410', '#3b2414', '#6b3f1e', '#b8792f', '#e3c06a', '#d8d8d8', '#a3261f', '#2d5fd0', '#9b3fd0', '#e23a8a', '#f4ebc8', '#2fa84f', '#17a2a2', '#e46b12'],
   beard: ['None', 'Stubble', 'Goatee', 'Full', 'Moustache', 'Horseshoe', 'Chops', 'Long', 'Soul patch', 'Braided', 'Van Dyke', 'Handlebar', 'Chin strap', 'Fu Manchu', 'Boxed', 'Bushy', 'Pencil', 'Viking braids', 'Stubble & tache'],
   face: ['Plain', 'Eye black', 'War paint', 'Half paint', 'Skull', 'Mask', 'Tribal', 'Star eye', 'Demon', 'Jester', 'Stripes', 'Open mask', 'Hood mask', 'Eye mask', 'Lightning', 'Tears', 'Split colour', 'Blackout eyes', 'Dots'],
-  gear: ['Bare', 'Singlet', 'Tee', 'Jacket', 'Hood', 'Tank top', 'Vest', 'Suit', 'Crop top', 'Robe'],
+  gear: ['Bare', 'Singlet', 'Tee', 'Jacket', 'Hood', 'Tank top', 'Vest', 'Suit', 'Crop top', 'Robe', 'Rash guard', 'Hoodie', 'Cape', 'Leather jacket', 'Gi top'],
   col: ['', '#c8102e', '#1f4fbf', '#111111', '#f2b705', '#1f8a3b', '#7b2cbf', '#f4f4f4', '#ff6b00', '#0891b2', '#e23a8a', '#9aa3ad', '#6b3f1e'],
   extra: ['None', 'Headband', 'Shades', 'Earring', 'Nose ring', 'Glasses', 'Eye patch', 'Chain', 'Scar', 'Bandage', 'Gold tooth', 'Toothpick', 'Brow ring', 'Hoops', 'Monocle', 'Bandana mask', 'Mouthguard', 'Visor'],
   eyes: ['Normal', 'Narrow', 'Wide', 'Glare', 'Sleepy', 'Wild', 'Closed', 'Big', 'Squint', 'Side-eye', 'Cat eyes'],
@@ -8265,13 +8265,18 @@ function faceGrid(code, align, wcol, women, lx) {
   for (let y = 26; y < N; y++) { set(15, y, sd); set(16, y, sd); }
   if (GR === 1) { for (let y = 25; y < N; y++) { rect(9, y, 3, 1, gc); rect(20, y, 3, 1, gc); } rect(9, 29, 14, 3, gc); }
   if (GR === 2) { for (let y = 26; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); rect(12, 26, 8, 1, sk); rect(13, 27, 6, 1, sk); }
-  if (GR === 3) { for (let y = 25; y < N; y++) { rect(15 - sh(y), y, sh(y) - 2, 1, gc); rect(21, y, sh(y) - 3, 1, gc); } for (let y = 24; y < 29; y++) { set(35 - y, y, gd); set(y - 4, y, gd); } rect(3, 30, 2, 2, '#e9c46a'); rect(27, 30, 2, 2, '#e9c46a'); }
+  if (GR === 3 || GR === 13) { for (let y = 25; y < N; y++) { rect(15 - sh(y), y, sh(y) - 2, 1, gc); rect(21, y, sh(y) - 3, 1, gc); } for (let y = 24; y < 29; y++) { set(35 - y, y, gd); set(y - 4, y, gd); } rect(3, 30, 2, 2, '#e9c46a'); rect(27, 30, 2, 2, '#e9c46a'); }
   if (GR === 4) { for (let y = 4; y < N; y++) for (let x = 3; x < 29; x++) { const inH = (x - 16) ** 2 / 64 + (y - 13) ** 2 / 110 < 1; if (y > 24 ? Math.abs(x - 15.5) <= sh(y) + 1 : inH) set(x, y, x > 22 ? gd : gc); } rect(13, 25, 6, 7, sk); }
   if (GR === 5) { for (let y = 26; y < N; y++) rect(10, y, 12, 1, gc); rect(10, 24, 2, 2, gc); rect(20, 24, 2, 2, gc); rect(13, 26, 6, 1, sk); rect(14, 27, 4, 1, sk); rect(19, 26, 3, 6, gd); }
   if (GR === 6) { for (let y = 25; y < N; y++) { rect(9, y, 5, 1, gc); rect(18, y, 5, 1, gc); } for (let y = 25; y < N; y++) { set(13, y, gd); set(18, y, gd); } for (const [x, y] of [[10, 27], [10, 30], [21, 27], [21, 30]]) set(x, y, '#dcdcdc'); }
   if (GR === 7) { for (let y = 24; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); for (let y = 24; y < N; y++) { const w = Math.max(1, 6 - (y - 24)); rect(16 - w, y, w * 2, 1, y < 31 ? '#f4f4f4' : gc); } for (let y = 24; y < 30; y++) { set(15 - Math.max(1, 6 - (y - 24)), y, gd); set(16 + Math.max(1, 6 - (y - 24)) - 1, y, gd); } const tie = GC === 1 || (!GC && /^#c/i.test(gc)) ? '#1f4fbf' : '#c8102e'; rect(15, 25, 2, 1, tie); rect(15, 26, 2, 4, tie); set(15, 30, faceShade(tie, -.3)); set(16, 30, faceShade(tie, -.3)); }
   if (GR === 8) { rect(9, 28, 14, 3, gc); rect(9, 30, 14, 1, gd); rect(11, 25, 1, 3, gc); rect(20, 25, 1, 3, gc); rect(15, 28, 2, 1, gd); }
   if (GR === 9) { for (let y = 25; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, (y * 3 + 15 - sh(y)) % 4 ? gc : faceShade(gc, .35)); for (let y = 25; y < N; y++) for (let x = 0; x < N; x++) if (g[y][x] === gc && (x + y) % 5 === 0) set(x, y, faceShade(gc, .45)); rect(12, 26, 8, 6, sk); for (let y = 23; y < 28; y++) { rect(8 - (y - 23), y, 4, 1, '#f4f4f4'); rect(20 + (y - 23), y, 4, 1, '#f4f4f4'); } }
+  if (GR === 10) { for (let y = 25; y < N; y++) { rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); set(17 - sh(y), y, faceShade(gc, .4)); set(14 + sh(y), y, faceShade(gc, .4)); } rect(12, 25, 8, 1, gd); rect(13, 26, 6, 1, sk); }
+  if (GR === 11) { for (let y = 26; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); for (let y = 23; y < 27; y++) { rect(9, y, 3, 1, gd); rect(20, y, 3, 1, gd); } rect(12, 26, 8, 1, gd); rect(13, 27, 6, 1, sk); for (const x of [13, 18]) for (let y = 28; y < 31; y++) set(x, y, '#f4f4f4'); }
+  if (GR === 12) { for (let y = 24; y < N; y++) { const e = 15 - sh(y); rect(e, y, 3, 1, gc); rect(14 + sh(y) - 1, y, 3, 1, gd); } rect(7, 20, 3, 6, gc); rect(22, 20, 3, 6, gd); set(7, 19, gc); set(24, 19, gd); rect(11, 26, 10, 1, gold); set(11, 26, goldD); set(20, 26, goldD); }
+  if (GR === 13) { for (const [x, y] of [[5, 28], [7, 27], [9, 26], [22, 26], [24, 27], [26, 28]]) set(x, y, '#dcdcdc'); for (let y = 27; y < N; y++) set(21, y, '#b8b8b8'); }
+  if (GR === 14) { for (let y = 25; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); for (let y = 25; y < N; y++) { const w = Math.max(0, 5 - (y - 25)); if (w) rect(16 - w, y, w * 2, 1, sk); set(15 - w - 1, y, gd); set(16 + w, y, gd); set(15 - w - 2, y, gd); } }
   // head, ears
   const tap = y => JW === 1 ? (y > 21 ? 1 : 0) : JW === 2 ? (y > 20 ? y - 20 : 0) - (y >= 17 && y <= 20 ? 1 : 0) : JW === 3 ? (y > 17 ? Math.min(5, y - 17) : 0) : y > 19 ? y - 18 : 0;
   for (let y = 6; y < 23; y++) { const i = y < 8 ? 2 : tap(y); rect(9 + i, y, 14 - i * 2, 1, sk); }
@@ -8548,20 +8553,27 @@ function faceURL(w, tight) {
 // Every option is open to every wrestler: "Usual" only picks a starting look from their division, the player can always change it.
 const BODY = {
   build: ['Lean', 'Athletic', 'Muscular', 'Heavy', 'Giant'],
-  stance: ['Ready', 'Relaxed', 'Flex', 'Arms crossed', 'Hands on hips', 'Point', 'Victory'],
-  bottoms: ['Trunks', 'Tights', 'Shorts', 'Pants'],
-  boots: ['Boots', 'Kick pads', 'Short boots', 'Sneakers', 'Barefoot'],
+  stance: ['Ready', 'Relaxed', 'Flex', 'Arms crossed', 'Hands on hips', 'Point', 'Victory', 'Wide', 'One fist up', 'Guard'],
+  bottoms: ['Trunks', 'Tights', 'Shorts', 'Pants', 'Long trunks', 'Kilt', 'Skirt', 'Baggy pants'],
+  boots: ['Boots', 'Kick pads', 'Short boots', 'Sneakers', 'Barefoot', 'Knee-high', 'Foot wraps'],
   pads: ['None', 'Knee pads', 'Elbow pads', 'Both'],
-  hands: ['Bare', 'Wrist tape', 'Gloves', 'Wristbands'],
+  hands: ['Bare', 'Wrist tape', 'Gloves', 'Wristbands', 'MMA gloves', 'Taped fists', 'Spiked bands'],
   belt: ['When champion', 'Never'],
   shape: ['Usual', 'Straight', 'Curvy'],
   chest: ['Usual', 'Bare', 'Sports top'],
   // a design on the legs of tights, shorts and pants; Usual is what each one had before (tights: a gold side stripe)
   legs: ['Usual', 'Plain', 'Side stripe', 'Double stripe', 'Flames', 'Stars', 'Two-tone', 'Diamonds', 'Lightning', 'Checks', 'Racing stripe', 'Fade'],
   legC: ['#f2c94c', '#f4f4f4', '#111111', '#c8102e', '#1f4fbf', '#1f8a3b', '#7b2cbf', '#ff6b00', '#0891b2', '#e23a8a', '#9aa3ad', '#c0c0c0'],
+  // muscle lines and body hair on bare skin, gear on the arms, a design on the boots
+  def: ['Usual', 'Smooth', 'Defined', 'Shredded'],
+  bhair: ['None', 'Light', 'Hairy'],
+  arm: ['None', 'Armbands', 'Elbow sleeves', 'One sleeve', 'Both sleeves', 'Forearm tape'],
+  bootD: ['Usual', 'Stripe', 'Flames', 'Stars', 'Laces', 'Two-tone', 'Fringe'],
 };
-const BODY_LEN = 13;
-const BODY_MAX = [BODY.build, BODY.stance, BODY.bottoms, FACE.col, BODY.boots, FACE.col, BODY.pads, BODY.hands, BODY.belt, BODY.shape, BODY.chest, BODY.legs, BODY.legC].map(a => a.length);
+// bottoms that take a leg design
+const BODY_LEGD = new Set([1, 2, 3, 4, 7]);
+const BODY_LEN = 19;
+const BODY_MAX = [BODY.build, BODY.stance, BODY.bottoms, FACE.col, BODY.boots, FACE.col, BODY.pads, BODY.hands, BODY.belt, BODY.shape, BODY.chest, BODY.legs, BODY.legC, BODY.def, BODY.bhair, BODY.arm, FACE.col, BODY.bootD, BODY.legC].map(a => a.length);
 // [shoulder half-width, waist half-width, arm thickness, leg half-width, belly]
 const BODY_BUILD = [[9, 6, 3, 3, 0], [11, 7, 4, 4, 0], [13, 7, 5, 4, 0], [12, 10, 5, 5, 3], [15, 11, 6, 5, 1]];
 const bodyOK = c => typeof c === 'string' && c.length >= 9 && c.length <= BODY_LEN && /^[0-9a-z]+$/.test(c) && [...c].every((d, i) => parseInt(d, 36) < BODY_MAX[i]);
@@ -8580,7 +8592,7 @@ function bodyRandom(w, seed) {
 const bodyCode = w => (bodyOK(w.body) ? w.body : bodyRandom(w)).padEnd(BODY_LEN, '0');
 // any colour at all for a colour place of the look: w.lc = { f0: skin, f2: hair, f6: gear and paint, f8: mask, f9: mask trim, f14: headwear, b3: bottoms, b5: boots }.
 // A place with no entry uses the colour picked from the swatches in the look code, so older looks draw exactly as before.
-const LC_KEYS = ['f0', 'f2', 'f6', 'f8', 'f9', 'f14', 'f16', 'f17', 'f18', 'b3', 'b5', 'b12'];
+const LC_KEYS = ['f0', 'f2', 'f6', 'f8', 'f9', 'f14', 'f16', 'f17', 'f18', 'b3', 'b5', 'b12', 'b16', 'b18'];
 const isHex = v => /^#[0-9a-f]{6}$/i.test(String(v));
 function lcClean(o) { if (!o || typeof o !== 'object') return undefined; const x = {}; for (const k of LC_KEYS) if (isHex(o[k])) x[k] = String(o[k]).toLowerCase(); return Object.keys(x).length ? x : undefined; }
 // a symbol from the game's icon pack on the wrestler: w.sym = { k: 'ic-star', at: chest | trunks | head, c: colour }
@@ -8669,7 +8681,7 @@ function symOn(sym, spots) {
 const lookKey = w => (w.lc ? JSON.stringify(w.lc) : '') + (w.sym ? JSON.stringify(w.sym) : '') + (w.tat ? JSON.stringify(w.tat) : '');
 // opts.map: the tattoo body map, spots tinted and the picked ones gold; opts.spots: just the spot of each pixel (for taps on the map)
 function bodySVG(w, holds, opts) {
-  const [BU, ST, BO, BC, BT, BTC, PD, HA, BE, SH, CH, LD, LDC] = [...bodyCode(w)].map(d => parseInt(d, 36));
+  const [BU, ST, BO, BC, BT, BTC, PD, HA, BE, SH, CH, LD, LDC, DF, BH, AR, ARC, BD, BDC] = [...bodyCode(w)].map(d => parseInt(d, 36));
   const fc = faceCode(w), women = looksWomen(w), Wd = 48, H = 96;
   const LC = lcClean(w.lc) || {}, SY = symClean(w.sym), TT = tatClean(w.tat);
   const head = faceGrid(fc, w.align, w.color, women, { lc: LC, tat: TT }), { sk, sd, hc, hd, gc } = head.pal;
@@ -8687,7 +8699,7 @@ function bodySVG(w, holds, opts) {
   if (curvy) sw = Math.max(8, sw - 1);
   const hipW = ww + (curvy ? 2 : 1);
   const top = CH ? CH === 2 : women;
-  const spread = [2, 0, 2, 1, 2, 1, 2][ST] ?? 1;
+  const spread = [2, 0, 2, 1, 2, 1, 2, 3, 1, 2][ST] ?? 1;
   // the torso's half-width at each row
   const tw = y => y < 30 ? 0 : y === 30 ? sw - 3 : y === 31 ? sw - 1 : y < 52 ? Math.round(sw + (ww - sw) * Math.min(1, (y - 32) / 18) + (belly && y > 40 ? belly * Math.sin(Math.PI * (y - 40) / 13) : 0)) : hipW;
   const legX = side => side < 0 ? 24 - 1 - spread - lt * 2 : 24 + 1 + spread;
@@ -8700,8 +8712,12 @@ function bodySVG(w, holds, opts) {
   if (BO === 1) { for (let y = 52; y < 60; y++) span(y, hipW, bc); legPaint(58, 86, bc); span(52, hipW, faceShade(bc, .35)); if (!LD) for (const s of [-1, 1]) for (let y = 56; y < 86; y++) set(s < 0 ? legX(s) : legX(s) + lt * 2 - 1, y, '#f2c94c'); }
   if (BO === 2) { for (let y = 52; y < 60; y++) span(y, hipW + 1, bc); legPaint(58, 70, bc, 1); span(52, hipW + 1, '#111'); if (!LD) for (const s of [-1, 1]) rect(s < 0 ? legX(s) - 1 : legX(s) + lt * 2 - 1, 62, 1, 8, faceShade(bc, .4)); }
   if (BO === 3) { for (let y = 52; y < 60; y++) span(y, hipW + 1, bc); legPaint(58, 86, bc, 1); span(52, hipW + 1, '#2a2a2a'); set(22, 52, '#c9a227'); if (!LD) for (const s of [-1, 1]) for (let y = 62; y < 86; y += 3) set(legX(s) + lt, y, bcd); }
+  if (BO === 4) { for (let y = 52; y < 60; y++) span(y, hipW, bc); legPaint(58, 66, bc); span(52, hipW, faceShade(bc, .35)); if (!LD) for (const s of [-1, 1]) rect(legX(s), 65, lt * 2, 1, faceShade(bc, .35)); }
+  if (BO === 5) { const sp2 = y => hipW + 1 + Math.floor(Math.max(0, y - 58) / 4); for (let y = 52; y < 71; y++) for (let x = 24 - sp2(y); x < 24 + sp2(y); x++) set(x, y, x % 4 === 0 || y % 4 === 0 ? faceShade(bc, -.35) : (x + y) % 4 === 2 ? faceShade(bc, .3) : bc); span(52, hipW + 1, '#151515'); span(70, sp2(70), bcd); rect(22, 56, 4, 5, '#6b3f1e'); rect(22, 56, 4, 1, '#4a2a14'); set(23, 58, '#f2c94c'); set(24, 58, '#f2c94c'); }
+  if (BO === 6) { const sp2 = y => hipW + 1 + Math.floor(Math.max(0, y - 57) / 3); for (let y = 52; y < 67; y++) for (let x = 24 - sp2(y); x < 24 + sp2(y); x++) set(x, y, y > 56 && (x - 24 + 60) % 3 === 0 ? bcd : bc); span(52, hipW + 1, faceShade(bc, .35)); span(66, sp2(66), bcd); }
+  if (BO === 7) { for (let y = 52; y < 60; y++) span(y, hipW + 2, bc); legPaint(58, 88, bc, 2); span(52, hipW + 2, bcd); set(22, 53, '#f4f4f4'); set(25, 53, '#f4f4f4'); if (!LD) for (const s of [-1, 1]) for (let y = 62; y < 87; y += 5) { set(legX(s) + lt - 1, y, bcd); set(legX(s) + lt, y + 1, bcd); } }
   // a design on the legs (tights, shorts, pants), in its own colour; boots and pads go over it
-  if (BO && LD > 1) { const dc = LC.b12 || BODY.legC[LDC] || '#f2c94c', dl = faceShade(dc, .35), ext = BO === 1 ? 0 : 1, ya = 58, yb = Math.min(BO === 2 ? 70 : 86, BT === 1 ? 66 : BT === 0 ? 76 : BT === 2 ? 82 : 86);
+  if (BODY_LEGD.has(BO) && LD > 1) { const dc = LC.b12 || BODY.legC[LDC] || '#f2c94c', dl = faceShade(dc, .35), ext = BO === 1 || BO === 4 ? 0 : BO === 7 ? 2 : 1, ya = 58, yb = Math.min(BO === 2 ? 70 : BO === 4 ? 66 : 86, BT === 1 ? 66 : BT === 0 ? 76 : BT === 5 ? 74 : BT === 2 ? 82 : 86);
     for (const s of [-1, 1]) { const x0 = legX(s) - ext, wd = lt * 2 + ext * 2;
       for (let y = ya; y < yb; y++) for (let i = 0; i < wd; i++) { const x = x0 + i, o = s < 0 ? i : wd - 1 - i, f = y - ya, up = yb - y; let c = null;
         if (LD === 2) c = o === 0 || o === 1 ? dc : null;
@@ -8717,16 +8733,34 @@ function bodySVG(w, holds, opts) {
         if (c && g[y]?.[x]) set(x, y, c); } } }
   // pads and boots
   if (PD === 1 || PD === 3) for (const s of [-1, 1]) { rect(legX(s) - 1, 69, lt * 2 + 2, 5, bt); rect(legX(s) - 1, 69, lt * 2 + 2, 1, btl); }
-  if (BT === 0 || BT === 1) for (const s of [-1, 1]) { const x0 = legX(s); rect(x0, 76, lt * 2, 12, bt); for (let y = 77; y < 87; y += 2) set(x0 + lt, y, btl); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 2, bt); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, '#e8e8e8'); }
+  if (BT === 0 || BT === 1 || BT === 5) for (const s of [-1, 1]) { const x0 = legX(s); if (BT === 5) { rect(x0, 74, lt * 2, 2, bt); rect(x0, 74, lt * 2, 1, btl); } rect(x0, 76, lt * 2, 12, bt); for (let y = 77; y < 87; y += 2) set(x0 + lt, y, btl); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 2, bt); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, '#e8e8e8'); }
   if (BT === 1) for (const s of [-1, 1]) { const x0 = legX(s) - 1; rect(x0, 66, lt * 2 + 2, 14, bt); rect(x0, 66, lt * 2 + 2, 1, btl); rect(x0 + 1, 70, lt * 2, 1, faceShade(bt, .25)); rect(x0 + 1, 74, lt * 2, 1, faceShade(bt, .25)); }
   if (BT === 2) for (const s of [-1, 1]) { const x0 = legX(s); rect(x0, 82, lt * 2, 6, bt); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 2, bt); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, '#e8e8e8'); }
   if (BT === 3) for (const s of [-1, 1]) { const x0 = legX(s); rect(s < 0 ? x0 - 2 : x0, 85, lt * 2 + 2, 4, bt); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, '#f4f4f4'); rect(s < 0 ? x0 - 1 : x0 + 1, 86, 3, 1, '#f4f4f4'); }
-  if (BT === 4) for (const s of [-1, 1]) { const x0 = legX(s); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 3, sk); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, sd); }
+  if (BT === 4 || BT === 6) for (const s of [-1, 1]) { const x0 = legX(s); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 3, sk); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, sd); }
+  if (BT === 6) for (const s of [-1, 1]) { const x0 = legX(s), wr = '#f1ece0'; rect(x0, 83, lt * 2, 4, wr); rect(s < 0 ? x0 - 1 : x0 + 1, 87, lt * 2, 2, wr); for (let y = 84; y < 89; y += 2) set(x0 + (y % 4 ? 1 : lt), y, '#cfc8b6'); }
+  // a design on the boots, in its own colour (the soles stay white)
+  if (BD && BT !== 4 && BT !== 6) { const dc = LC.b18 || BODY.legC[BDC] || '#f2c94c', dl = faceShade(dc, .35), top = BT === 1 ? 66 : BT === 5 ? 74 : BT === 2 ? 82 : BT === 3 ? 85 : 76, isB = c => c === bt || c === btd || c === btl;
+    for (const s of [-1, 1]) { const x0 = legX(s), wd = lt * 2;
+      if (BD === 6) for (let y = top; y < top + 4; y++) { set(s < 0 ? x0 - 1 : x0 + wd, y, y % 2 ? dc : dl); if (y > top) set(s < 0 ? x0 - 2 : x0 + wd + 1, y + 1, dc); }
+      for (let y = top; y < 89; y++) for (let x = x0 - 2; x < x0 + wd + 2; x++) { if (!isB(g[y]?.[x])) continue; const i = x - x0, o = s < 0 ? i : wd - 1 - i, f = y - top, up = 88 - y; let c = null;
+        if (BD === 1) c = o === 0 ? dc : null;
+        else if (BD === 2) c = up <= 3 + Math.round(3 * Math.abs(Math.sin(i * 1.3 + (s < 0 ? 0 : 2)))) ? (up <= 2 ? dl : dc) : null;
+        else if (BD === 3) c = (f % 5 === 2 && i === Math.floor(wd / 2)) || (f % 5 === 2 && Math.abs(i - wd / 2 + .5) === 1.5 && false) ? dc : null;
+        else if (BD === 4) c = i >= Math.floor(wd / 2) - 1 && i <= Math.floor(wd / 2) && f % 2 === 0 && y < 86 ? dc : null;
+        else if (BD === 5) c = f < (88 - top) / 2 ? dc : null;
+        if (c) set(x, y, c); } } }
   // torso
   for (let y = 30; y < 52; y++) span(y, tw(y), sk);
   for (let y = 32; y < 52; y++) set(23 + tw(y), y, sd);
-  const bareChest = [0, 3, 6].includes(GR) && !top;
-  if (bareChest) {
+  const bareChest = [0, 3, 6, 12, 13].includes(GR) && !top;
+  if (bareChest && DF) {
+    for (let x = 24 - sw + 3; x < 22; x++) set(x, 40, sd); for (let x = 26; x < 24 + sw - 3; x++) set(x, 40, sd); set(23, 39, sd); set(24, 39, sd);
+    if (DF >= 2) { for (const y of DF === 3 ? [43, 46, 49] : [44, 47]) { set(21, y, sd); set(22, y, sd); set(25, y, sd); set(26, y, sd); } for (let y = 41; y < 51; y++) { set(23, y, sd); set(24, y, sd); } }
+    if (DF === 3) { for (let y = 43; y < 51; y += 2) { set(24 - tw(y) + 2, y, sd); set(23 + tw(y) - 2, y, sd); } for (let x = 24 - sw + 4; x < 22; x += 2) set(x, 37, sd); for (let x = 27; x < 24 + sw - 4; x += 2) set(x, 37, sd); }
+    if (belly) { set(23, 48, sd); set(24, 48, sd); }
+  }
+  else if (bareChest) {
     for (let x = 24 - sw + 3; x < 22; x++) set(x, 40, sd); for (let x = 26; x < 24 + sw - 3; x++) set(x, 40, sd); set(23, 39, sd); set(24, 39, sd);
     if (BU === 2 || BU === 4) for (const y of [43, 46, 49]) { set(21, y, sd); set(22, y, sd); set(25, y, sd); set(26, y, sd); }
     for (let y = 41; y < 51; y++) if (BU === 2) { set(23, y, sd); set(24, y, sd); }
@@ -8741,12 +8775,17 @@ function bodySVG(w, holds, opts) {
   if (GR === 0 && top) { for (let y = 36; y < 44; y++) span(y, tw(y), gc); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); span(43, tw(43), gd); }
   if (GR === 1) { for (let y = 38; y < 61; y++) span(y, y > 51 ? hipW : tw(y), gc); rect(24 - sw + 3, 30, 3, 8, gc); rect(21 + sw - 3, 30, 3, 8, gc); for (const s of [-1, 1]) rect(s < 0 ? 24 - hipW : 24 + hipW - 2, 38, 2, 22, gd); }
   if (GR === 2) { fullTop(gc); rect(21, 30, 6, 2, sk); rect(22, 32, 4, 1, sk); sleeve = .35; }
-  if (GR === 3) { for (let y = 30; y < 53; y++) { const hw = tw(y); rect(24 - hw, y, hw - 3, 1, gc); rect(27, y, hw - 3, 1, gc); set(20, y, gd); set(27, y, gd); } rect(18, 30, 3, 4, gd); rect(27, 30, 3, 4, gd); sleeve = 1; }
+  if (GR === 12) { for (let y = 30; y < 86; y++) { const hw = (y < 52 ? tw(y) : hipW) + 3 + Math.floor((y - 30) / 7); for (let x = 24 - hw; x < 24 + hw; x++) if (!g[y][x]) set(x, y, x > 24 + hw - 4 ? gd : gc); } rect(17, 26, 2, 6, gc); rect(29, 26, 2, 6, gd); set(20, 31, '#f2c94c'); set(27, 31, '#f2c94c'); rect(21, 31, 6, 1, '#f2c94c'); }
+  if (GR === 3 || GR === 13) { for (let y = 30; y < 53; y++) { const hw = tw(y); rect(24 - hw, y, hw - 3, 1, gc); rect(27, y, hw - 3, 1, gc); set(20, y, gd); set(27, y, gd); } rect(18, 30, 3, 4, gd); rect(27, 30, 3, 4, gd); sleeve = 1; }
   if (GR === 4) { fullTop(gc); rect(20, 44, 8, 5, gd); rect(21, 45, 6, 3, gc); rect(23, 30, 2, 8, gd); sleeve = 1; }
   if (GR === 5) { for (let y = 32; y < 53; y++) span(y, tw(y) - 2, gc); rect(24 - sw + 4, 30, 2, 3, gc); rect(22 + sw - 4, 30, 2, 3, gc); rect(21, 32, 6, 2, sk); }
   if (GR === 6) { for (let y = 30; y < 51; y++) { const hw = tw(y); rect(24 - hw, y, hw - 4, 1, gc); rect(28, y, hw - 4, 1, gc); } for (const [x, y] of [[18, 36], [18, 42], [29, 36], [29, 42]]) set(x, y, '#dcdcdc'); }
   if (GR === 7) { fullTop(gc); for (let y = 30; y < 44; y++) { const hw = Math.max(0, 5 - Math.floor((y - 30) / 3)); if (hw) span(y, hw, '#f4f4f4'); } rect(23, 31, 2, 12, '#c8102e'); set(23, 43, '#8a0b1f'); set(24, 43, '#8a0b1f'); for (let y = 30; y < 40; y++) { set(23 - Math.max(1, 6 - Math.floor((y - 30) / 2)), y, gd); set(24 + Math.max(1, 6 - Math.floor((y - 30) / 2)), y, gd); } sleeve = 1; }
   if (GR === 8) { for (let y = 36; y < 43; y++) span(y, tw(y), gc); span(42, tw(42), gd); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); }
+  if (GR === 13) { for (const [x, y] of [[24 - sw + 1, 31], [24 - sw + 3, 30], [23 + sw - 1, 31], [23 + sw - 3, 30]]) set(x, y, '#dcdcdc'); for (let y = 33; y < 52; y++) set(28, y, '#b8b8b8'); }
+  if (GR === 10) { fullTop(gc); rect(21, 30, 6, 1, gd); for (let y = 32; y < 52; y++) { set(24 - tw(y) + 1, y, faceShade(gc, .4)); set(22 + tw(y), y, faceShade(gc, .4)); } sleeve = 1; }
+  if (GR === 11) { fullTop(gc); rect(19, 28, 10, 3, gd); rect(21, 31, 6, 1, sk); for (let y = 31; y < 37; y++) { set(22, y, '#f4f4f4'); set(25, y, '#f4f4f4'); } rect(19, 45, 10, 5, gd); rect(20, 46, 8, 3, gc); sleeve = 1; }
+  if (GR === 14) { fullTop(gc); for (let y = 30; y < 42; y++) { const hw = Math.max(0, 6 - Math.floor((y - 30) / 2)); if (hw) span(y, hw, sk); set(23 - hw, y, gd); set(24 + hw, y, gd); set(22 - hw, y, gd); } for (const y of [49, 50]) span(y, tw(y), '#151515'); rect(22, 51, 1, 4, '#151515'); rect(25, 51, 1, 4, '#151515'); sleeve = .5; }
   if (GR === 9) { const gl = faceShade(gc, .4); for (let y = 30; y < 82; y++) { const hw = y < 52 ? tw(y) + 1 : hipW + 2 + Math.floor((y - 52) / 6); rect(24 - hw, y, hw - 4, 1, (y + 24 - hw) % 5 ? gc : gl); rect(28, y, hw - 4, 1, (y + 28) % 5 ? gc : gl); } for (let y = 28; y < 36; y++) { rect(24 - sw - 1 + (y - 28) / 2, y, 4, 1, '#f4f4f4'); rect(20 + sw - (y - 28) / 2, y, 4, 1, '#f4f4f4'); } sleeve = 1; }
   // arms: shoulder to elbow to hand, with a fist; sleeves recolour the arm up to their length
   const L = [24 - sw + 1, 33], R = [23 + sw - 1, 33];
@@ -8759,22 +8798,37 @@ function bodySVG(w, holds, opts) {
     4: s => [[s[0] - 7 * (s === L ? 1 : -1), 43], [s === L ? 24 - hipW : 23 + hipW, 52]],
     5: s => s === L ? [[s[0] - 2, 45], [s[0] - 2, 56]] : [[s[0] + 5, 25], [s[0] + 8, 13]],
     6: s => [[s[0] - 5 * (s === L ? 1 : -1), 21], [s[0] - 4 * (s === L ? 1 : -1), 8]],
+    7: s => [[s[0] - 6 * (s === L ? 1 : -1), 42], [s[0] - 10 * (s === L ? 1 : -1), 50]],
+    8: s => s === L ? [[s[0] - 2, 45], [s[0] - 2, 56]] : [[s[0] + 4, 24], [s[0] + 3, 12]],
+    9: s => [[s[0] + (s === L ? 1 : -1), 44], [s === L ? 20 : 27, 31]],
   }[ST] || (s => [[s[0], 45], [s[0], 56]]);
   const arms = [[L, ...pose(L)], [R, ...pose(R)]].map(([s, e, hnd]) => [s, lim(...e), lim(...hnd)]);
+  // arm gear: armbands, elbow sleeves, compression sleeves or forearm tape, by how far down the arm (0 shoulder, 1 hand)
+  const ac = LC.b16 || (ARC ? FACE.col[ARC] : safeColor(w.color) || '#c8102e'), acd = faceShade(ac, -.3), tp = ['#f1ece0', '#cfc8b6'];
+  const armGear = (tt, left) => AR === 1 ? (tt >= .28 && tt < .36 ? [ac, acd] : null) : AR === 2 ? (tt >= .42 && tt < .6 ? [ac, acd] : null) : AR === 3 ? (left && tt >= .06 && tt < .93 ? [ac, acd] : null)
+    : AR === 4 ? (tt >= .06 && tt < .93 ? [ac, acd] : null) : AR === 5 ? (tt >= .64 && tt < .95 ? tp : null) : null;
   const drawArm = ([s, e, hnd]) => {
     const r = at / 2, segs = [[s, e, 0], [e, hnd, .5]];
     armTag = s === L ? 'larm' : 'rarm';
-    for (const [a, b, t0] of segs) { armSeg = t0 ? 'fo' : 'up'; const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2) || 1; for (let k = 0; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, tt = t0 + t / 2; const c = tt < sleeve ? gc : sk, cd = tt < sleeve ? gd : sd; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r + .5) set(x + i, y + j, j >= r - .5 || i >= r - .5 ? cd : c); } }
+    for (const [a, b, t0] of segs) { armSeg = t0 ? 'fo' : 'up'; const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2) || 1; for (let k = 0; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, tt = t0 + t / 2; const ag = tt >= sleeve && armGear(tt, s === L); const c = tt < sleeve ? gc : ag ? ag[0] : sk, cd = tt < sleeve ? gd : ag ? ag[1] : sd; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r + .5) set(x + i, y + j, j >= r - .5 || i >= r - .5 ? cd : c); } }
     armTag = null;
     const [hx, hy] = hnd, f = Math.max(2, Math.round(at * .8));
-    const hc2 = HA === 2 ? '#1b1b20' : sk;
-    rect(Math.round(hx - f / 2), Math.round(hy - f / 2), f + 1, f + 1, hc2); set(hx + f / 2, hy + f / 2, HA === 2 ? '#000' : sd);
-    if (HA === 1 || HA === 3) { const wy = Math.round(hy + (e[1] < hy ? -1 : 1) * (f / 2 + 1)); rect(Math.round(hx - at / 2), wy, at + 1, 2, HA === 1 ? '#f1ece0' : bc); }
+    const hc2 = HA === 2 || HA === 4 ? '#1b1b20' : HA === 5 ? '#f1ece0' : sk;
+    rect(Math.round(hx - f / 2), Math.round(hy - f / 2), f + 1, f + 1, hc2); set(hx + f / 2, hy + f / 2, HA === 2 || HA === 4 ? '#000' : HA === 5 ? '#cfc8b6' : sd);
+    if (HA === 4) rect(Math.round(hx - f / 2), Math.round(hy - f / 2), f + 1, 1, sk);
+    if (HA === 1 || HA === 3 || HA === 4 || HA === 6) { const wy = Math.round(hy + (e[1] < hy ? -1 : 1) * (f / 2 + 1)); rect(Math.round(hx - at / 2), wy, at + 1, 2, HA === 1 ? '#f1ece0' : HA === 4 ? '#c8102e' : HA === 6 ? '#1b1b20' : bc);
+      if (HA === 6) { set(Math.round(hx - at / 2) - 1, wy, '#dcdcdc'); set(Math.round(hx + at / 2) + 1, wy, '#dcdcdc'); set(Math.round(hx), wy - 1, '#dcdcdc'); } }
     if (PD >= 2) rect(Math.round(e[0] - at / 2), Math.round(e[1] - 1), at + 1, 3, bt);
     if (ST === 5 && s === R) rect(Math.round(hx), Math.round(hy - f / 2 - 3), 1, 3, HA === 2 ? '#1b1b20' : sk);
   };
   // crossed arms: the left arm goes in front
   if (ST === 3) { drawArm(arms[1]); drawArm(arms[0]); } else arms.forEach(drawArm);
+  // body hair on bare skin: the chest and a trail down the stomach, forearms too when hairy
+  if (BH) { const hr = '#' + [1, 3, 5].map(o => Math.round(parseInt(sk.slice(o, o + 2), 16) * .35 + parseInt(hc.slice(o, o + 2), 16) * .65).toString(16).padStart(2, '0')).join(''), isS = (x, y) => g[y][x] === sk || g[y][x] === sd;
+    for (let y = 33; y < 88; y++) for (let x = 0; x < Wd; x++) { if (!isS(x, y)) continue; const a = mk2[y][x];
+      const hs = ((x * 73856093 ^ y * 19349663) >>> 0) % 7;
+      const on = a ? BH === 2 && a[1] === 'f' && hs < 2 : y < 45 ? Math.abs(x - 23.5) < (BH === 2 ? sw - 3 : 5) && y > (BH === 2 ? 34 : 36) && hs < (BH === 2 ? 2 : 1) : y < 53 ? Math.abs(x - 23.5) < (BH === 2 ? 2 : 1) && hs < 4 : BH === 2 && y >= 60 && hs < 1;
+      if (on) set(x, y, hr); } }
   // tattoos on bare skin (the face's own come with the head)
   const skin = (x, y) => g[y][x] === sk || g[y][x] === sd;
   // which body-map spot a pixel is in: arms by the segment they were drawn with, the rest by height
@@ -13004,12 +13058,15 @@ function lookMaker(d) {
         + `<details class="tat-ic" ${icon ? 'open' : ''}><summary>${icon ? 'Icon: ' + esc(tatDName(t.d)) : 'Or use any icon from the game'}</summary>${wsSyms(icon ? t.d : '', 'lkTat', 'd')}</details>`
         + (icon ? lab('Icon size') + `<div class="seg-ctl">${Object.entries(SYM_S).map(([a, [l]]) => { const on = (t.s || 'm') === a; return `<button class="${on ? 'on' : ''}" data-act="lkTat" data-f="s" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>` + lab('Look') + `<div class="seg-ctl">${[['', 'Sharp'], ['1', 'Pixel']].map(([a, l]) => { const on = (t.px ? '1' : '') === a; return `<button class="${on ? 'on' : ''}" data-act="lkTat" data-f="px" data-id="${a}" aria-pressed="${on}">${l}</button>`; }).join('')}</div>` : '')
         + lab('Ink') + `<div class="swatches">${TAT_INK.map(c => { const on = t.c === c; return `<button class="sw ${on ? 'on' : ''}" style="background:${c}" data-act="lkTat" data-f="c" data-id="${c}" aria-label="Ink ${c}" aria-pressed="${on}"></button>`; }).join('')}${anyColour('t', t.c, 'data-lc', !TAT_INK.includes(t.c))}</div>`; },
-    build: () => lab('Build') + tiles('b', 0, BODY.build) + lab('Shape') + tiles('b', 9, BODY.shape) + lab('Stance') + tiles('b', 1, BODY.stance),
+    build: () => lab('Build') + tiles('b', 0, BODY.build) + lab('Shape') + tiles('b', 9, BODY.shape) + lab('Stance') + tiles('b', 1, BODY.stance)
+      + lab('Muscle definition <span class="muted">· on a bare chest</span>') + tiles('b', 13, BODY.def) + lab('Body hair') + tiles('b', 14, BODY.bhair),
     ring: () => lab('Bottoms') + tiles('b', 2, BODY.bottoms) + lab('Bottoms colour') + sws('b', 3, FACE.col, 0, 'Bottoms')
-      + (ba(2) ? lab('Leg design') + tiles('b', 11, BODY.legs) + (ba(11) > 1 ? lab('Design colour') + sws('b', 12, BODY.legC, 0, 'Design', '#f2c94c', 'gold') : '') : '')
-      + lab('Boots') + tiles('b', 4, BODY.boots) + (ba(4) === 4 ? '' : lab('Boots colour') + sws('b', 5, FACE.col, 0, 'Boots', '#1b1b20'))
+      + (BODY_LEGD.has(ba(2)) ? lab('Leg design') + tiles('b', 11, BODY.legs) + (ba(11) > 1 ? lab('Design colour') + sws('b', 12, BODY.legC, 0, 'Design', '#f2c94c', 'gold') : '') : '')
+      + lab('Boots') + tiles('b', 4, BODY.boots) + (ba(4) === 4 || ba(4) === 6 ? '' : lab('Boots colour') + sws('b', 5, FACE.col, 0, 'Boots', '#1b1b20')
+        + lab('Boot design') + tiles('b', 17, BODY.bootD) + (ba(17) ? lab('Boot design colour') + sws('b', 18, BODY.legC, 0, 'Boot design', '#f2c94c', 'gold') : ''))
       + lab('Pads') + tiles('b', 6, BODY.pads) + lab('Hands') + tiles('b', 7, BODY.hands)
-      + ([0, 3, 6].includes(fa(5)) ? lab('Chest') + tiles('b', 10, BODY.chest) : '')
+      + lab('Arm gear') + tiles('b', 15, BODY.arm) + (ba(15) && ba(15) < 5 ? lab('Arm gear colour') + sws('b', 16, FACE.col, 0, 'Arm gear') : '')
+      + ([0, 3, 6, 12, 13].includes(fa(5)) ? lab('Chest') + tiles('b', 10, BODY.chest) : '')
       + lab('Title belt') + `<div class="seg-ctl">${BODY.belt.map((l, j) => `<button class="${ba(8) === j ? 'on' : ''}" data-act="lkSet" data-f="b8" data-id="${j}" aria-pressed="${ba(8) === j}">${l}</button>`).join('')}</div>`
       + '<p class="tiny muted" style="margin-top:8px">The top half wears the gear from the Gear tab.</p>',
   };
@@ -18853,7 +18910,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.109';
+const VERSION = '1.9.110';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
