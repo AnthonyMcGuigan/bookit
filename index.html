@@ -2188,6 +2188,8 @@ function migrate(g) {
   if (g.sponsor && (typeof g.sponsor !== 'object' || !(+g.sponsor.pay >= 0))) g.sponsor = null;
   if (g.sponsor) g.sponsor = { n: String(g.sponsor.n || 'Sponsor').replace(/[<>&"'`]/g, '').slice(0, 30), pay: clamp(+g.sponsor.pay || 0, 0, 1e6), T: clamp(+g.sponsor.T || 60, 1, 100), left: clamp(Math.floor(+g.sponsor.left) || 0, 0, 52), paidWk: +g.sponsor.paidWk || 0 };
   for (const w of g.wrestlers) { w.notes ??= ''; w.lastBooked ??= 0; w.record ||= { w: 0, l: 0, d: 0 }; w.trust = clamp(isFinite(+w.trust) && w.trust !== null ? +w.trust : 50, 0, 100); if (!Array.isArray(w.mem)) w.mem = []; } // never clear a photo here: photoGen can be stale on a real photo
+  // there's no Usual pronoun choice any more: anyone without a set keeps what Usual gave them (Women's she/her, Men's he/him, Open they/them)
+  for (const w of [...g.wrestlers, ...(g.cos || []).flatMap(c => c.roster || []), ...(g.rivalPromos || []).flatMap(r => r.roster || [])]) if (w && typeof w === 'object' && !proClean(w.pro)) w.pro = proUsual(w);
   for (const s of g.stories) { s.notes ??= ''; s.log ||= []; }
   for (const c of [g.card, ...Object.values(g.future || {})]) if (Array.isArray(c)) for (const x of c) if (x && OLD_FIN[x.finish]) x.finish = OLD_FIN[x.finish];
   g.settings.aging ??= true; g.settings.persona ??= false;
@@ -2313,13 +2315,14 @@ function newGame(opts) {
 const W = id => G.wrestlers.find(w => w.id === id);
 const rivalW = id => { for (const r of G.rivalPromos || []) { const w = r.roster.find(x => x.id === id); if (w) return w; } return null; };
 // ---- pronouns: each wrestler's own, separate from their division ----
-// w.pro: '' = Usual (Women's she/her, Men's he/him, Open they/them), 'he', 'she', 'they', 'he/they', 'she/they', 'any',
-// or custom forms 'xe/xem/xyr/xyrs/xemself', with '/p' on the end when they take verbs the way "they" does ("xe are")
+// w.pro: 'he', 'she', 'they', 'he/they', 'she/they', 'any',
+// or custom forms 'xe/xem/xyr/xyrs/xemself', with '/p' on the end when they take verbs the way "they" does ("xe are").
+// Every wrestler gets a set. One with none (an old save, a new signing, a paste) starts from proUsual: a starting pick, never a limit.
 const PRO_BASE = { he: ['he', 'him', 'his', 'his', 'himself', 0], she: ['she', 'her', 'her', 'hers', 'herself', 0], they: ['they', 'them', 'their', 'theirs', 'themselves', 1] };
-const PRO_PICK = [['', 'Usual'], ['he', 'he/him'], ['she', 'she/her'], ['they', 'they/them'], ['he/they', 'he/they'], ['she/they', 'she/they'], ['any', 'Any pronouns'], ['custom', 'Custom']];
+const PRO_PICK = [['he', 'he/him'], ['she', 'she/her'], ['they', 'they/them'], ['he/they', 'he/they'], ['she/they', 'she/they'], ['any', 'Any pronouns'], ['custom', 'Custom']];
 const PRO_ALIAS = { 'he/him': 'he', 'he/his': 'he', 'him': 'he', 'she/her': 'she', 'she/hers': 'she', 'her': 'she', 'they/them': 'they', 'them': 'they', 'any/all': 'any', 'all': 'any', 'he/she/they': 'any', 'he/she': 'any', 'she/he': 'any', 'they/he': 'he/they', 'they/she': 'she/they' };
 const proWord = v => /^[a-z][a-z'-]{0,11}$/.test(v);
-// a pronoun setting from a save, a paste, a spreadsheet or another player: a known one, a custom set, or '' (Usual)
+// a pronoun setting from a save, a paste, a spreadsheet or another player: a known one, a custom set, or '' (none given)
 function proClean(v) {
   const s = String(v ?? '').trim().toLowerCase().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ''); if (!s || s.length > 70) return '';
   if (['he', 'she', 'they', 'he/they', 'she/they', 'any'].includes(s)) return s;
@@ -2328,6 +2331,7 @@ function proClean(v) {
   return '';
 }
 const proCustom = k => k.split('/').length >= 5;
+// the starting pronouns for a wrestler with none set yet
 const proUsual = w => w?.division === "Women's" ? 'she' : w?.division === "Men's" ? 'he' : 'they';
 // the pronoun set a wrestler's text uses (he/they reads as he, any reads as they)
 const proKey = w => !w ? 'they' : proClean(w.pro) || proUsual(w);
@@ -12285,7 +12289,7 @@ const A = {
       d.pro = forms.join('/') + ((d.proCp ?? old[5] === 'p') ? '/p' : '');
     }
     for (const i of [0, 1, 2, 3, 4, 'p']) delete d['proC' + i];
-    d.pro = proClean(d.pro); if (!d.pro) delete d.pro;
+    d.pro = proClean(d.pro) || proUsual(d);
     if (!d.photo && !faceOK(d.look)) d.look = faceCode(d); // keep the face they saw, even once a new wrestler gets an id
     { const lc = lcClean(d.lc), sy = symClean(d.sym), tt = tatClean(d.tat); if (lc) d.lc = lc; else delete d.lc; if (sy) d.sym = sy; else delete d.sym; if (tt) d.tat = tt; else delete d.tat; }
     if (SANDBOX() && +d.askSet > 0) d.askSet = clamp(Math.round(+d.askSet / 100) * 100, 100, 10000000); else if (SANDBOX() || !(+d.askSet > 0)) delete d.askSet;
@@ -12782,7 +12786,7 @@ function cleanW(o) {
   if (faceOK(o.look)) w.look = o.look;
   if (bodyOK(o.body)) w.body = o.body;
   { const lc = lcClean(o.lc), sy = symClean(o.sym), tt = tatClean(o.tat); if (lc) w.lc = lc; if (sy) w.sym = sy; if (tt) w.tat = tt; }
-  const pr = proClean(o.pro ?? o.pronouns); if (pr) w.pro = pr;
+  w.pro = proClean(o.pro ?? o.pronouns) || proUsual(w);
   if (typeof o.gimK === 'string' && o.gimK && Object.hasOwn(RPK_CHARS, o.gimK)) w.gimK = o.gimK;
   { const gs = gimsClean(o.gims); if (gs.length) w.gims = gs; }
   { const mz = merchClean(o.merch); if (mz.length) w.merch = mz.map(x => ({ ...x, wk: G?.week || 1, sold: 0, earned: 0, lw: 0 })); }
@@ -13223,12 +13227,11 @@ function lookMaker(d) {
 }
 // pronouns in the wrestler editor: a quick pick, or their own words for custom pronouns
 function proPicker(d) {
-  const k = d.pro === 'custom' || proCustom(proClean(d.pro)) ? 'custom' : proClean(d.pro), p = proCustom(proClean(d.pro)) ? proClean(d.pro).split('/') : [];
+  const k = d.pro === 'custom' || proCustom(proClean(d.pro)) ? 'custom' : proClean(d.pro) || proUsual(d), p = proCustom(proClean(d.pro)) ? proClean(d.pro).split('/') : [];
   const f = (i, l, ph) => `<label class="f pro-f"><span>${l}</span><input type="text" data-ew="proC${i}" value="${esc(d['proC' + i] ?? p[i] ?? '')}" maxlength="12" placeholder="${ph}" autocapitalize="none" autocomplete="off" spellcheck="false"></label>`;
   const pl = d.proCp ?? p[5] === 'p';
-  const usual = PRO_PICK.find(x => x[0] === proUsual(d))[1];
-  return `<div class="f pro-box"><span id="proLbl">Pronouns</span><div class="chips pro-chips" role="group" aria-labelledby="proLbl">${PRO_PICK.map(([v, l]) => `<button class="chip ${k === v ? 'on' : ''}" data-act="bSet" data-f="pro" data-id="${v}" aria-pressed="${k === v}">${v ? esc(l) : `${l} <span class="muted">· ${usual}</span>`}</button>`).join('')}</div>
-    <div class="tiny muted" style="margin-top:4px">${k === 'custom' ? 'Type each form the way it reads in a sentence.' : k ? 'Commentary, news, texts and storylines use these.' : `Usual follows the division: ${usual}. Pick any pronouns for anyone.`}${k === 'he/they' || k === 'she/they' ? ` Text uses ${k.split('/')[0]}.` : k === 'any' ? ' Text uses they.' : ''}</div>
+  return `<div class="f pro-box"><span id="proLbl">Pronouns</span><div class="chips pro-chips" role="group" aria-labelledby="proLbl">${PRO_PICK.map(([v, l]) => `<button class="chip ${k === v ? 'on' : ''}" data-act="bSet" data-f="pro" data-id="${v}" aria-pressed="${k === v}">${esc(l)}</button>`).join('')}</div>
+    <div class="tiny muted" style="margin-top:4px">${k === 'custom' ? 'Type each form the way it reads in a sentence.' : 'Commentary, news, texts and storylines use these. Pick any pronouns for anyone.'}${k === 'he/they' || k === 'she/they' ? ` Text uses ${k.split('/')[0]}.` : k === 'any' ? ' Text uses they.' : ''}</div>
     ${k === 'custom' ? `<div class="grid2 pro-grid" style="margin-top:8px">${f(0, 'They', 'xe')}${f(1, 'Them', 'xem')}${f(2, 'Their', 'xyr')}${f(3, 'Theirs', 'xyrs')}${f(4, 'Themself', 'xemself')}</div>
       <label class="todo" style="margin-top:2px"><input type="checkbox" data-ew="proCp" ${pl ? 'checked' : ''}><span>Reads like "they are"<br><span class="tiny muted">Off reads like "she is"</span></span></label>` : ''}</div>`;
 }
@@ -14634,7 +14637,7 @@ function sanitizeGame(g) {
     if (w.lc != null) { const lc = lcClean(w.lc); if (lc) w.lc = lc; else delete w.lc; }
     if (w.sym != null) { const sy = symClean(w.sym); if (sy) w.sym = sy; else delete w.sym; }
     if (w.tat != null) { const tt = tatClean(w.tat); if (tt) w.tat = tt; else delete w.tat; }
-    if (w.pro != null) { const pr = proClean(w.pro); if (pr) w.pro = pr; else delete w.pro; }
+    w.pro = proClean(w.pro) || proUsual(w);
     if (w.merch != null) { const mz = merchClean(w.merch); if (mz.length) w.merch = mz; else delete w.merch; }
     for (const k of ['pop', 'ring', 'mic', 'cha', 'stam', 'morale', 'fatigue']) w[k] = clamp(+w[k] || 0, 0, 100);
     w.age = clamp(+w.age || 25, 16, 70); w.injury = clamp(+w.injury || 0, 0, 52); w.momentum = clamp(+w.momentum || 0, -50, 50);
@@ -19057,7 +19060,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.113';
+const VERSION = '1.9.114';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
@@ -19069,7 +19072,7 @@ const WHATS_NEW = [
   ['🩺 The medical room', 'Injuries now have a name and a size, from a bruised rib to a torn ACL. Hardcore matches, big spots, stiff opponents, tired or older wrestlers and wrestling more than once a week all raise the risk. Office → Medical shows everyone hurt: pick Rest, Rehab or Surgery, or rush them back early and risk getting hurt again. Hire a Physio (company level 2), let your Doctor run the room, and some wrestlers earn an Injury prone or Injury resistant tag. Returning stars get a comeback pop. Set how often and how bad in Settings → Wrestlers & locker room.'],
   ['📖 Career memories', 'Wrestlers now remember the big moments of their careers: titles won and lost, feuds, betrayals, classic matches and big event main events. They\'re on every profile. Promos quote them ("I took that title from you once"), and a new feud between two wrestlers with history starts hotter. In the promo editor, Bring up the past picks the memory a promo is about. In contract talks, big moments push the asking price up, and you can remind a wrestler of a great night you gave them. Bring up a bad one and they\'ll throw it back at you.'],
   ['🎨 One workshop for every design', 'Wrestler looks, championship belts and trophies now share the same editor: a live preview on top, then Templates, Surprise me and Undo, then tabs. The pixel face and full body are one editor now, with game templates (Luchador, Rock star, Royalty and more), your own saved looks, a teammate\'s look to copy, Undo, and any colour at all for skin, hair, gear, masks, headwear, bottoms and boots. Every icon in the game is now a symbol you can use: on a belt\'s centre or side plates, on a trophy or on top of it, and on a wrestler\'s chest, trunks or forehead. Trophies also get the belts\' engravings, ornate detail, a ring of gems, any base colour, and strap colours for a belt on a stand. Existing designs look exactly the same.'],
-  ['🧍 Pronouns for every wrestler', 'Pick any wrestler\'s pronouns in their editor: he/him, she/her, they/them, he/they, she/they, any pronouns, or your own custom set (like xe/xem). Pronouns are separate from the division, so anyone can be in any division. Backstage events, texts, news, the Dirt Sheet, contract talks, Story Mode and more now use each wrestler\'s own pronouns. Usual follows the division (Women\'s she/her, Men\'s he/him, Open they/them). Pronouns go with shares, worlds and imports (add a Pronouns column), and you can add yours to your Community profile.'],
+  ['🧍 Pronouns for every wrestler', 'Pick any wrestler\'s pronouns in their editor: he/him, she/her, they/them, he/they, she/they, any pronouns, or your own custom set (like xe/xem). Pronouns are separate from the division, so anyone can be in any division. Backstage events, texts, news, the Dirt Sheet, contract talks, Story Mode and more now use each wrestler\'s own pronouns. Pronouns go with shares, worlds and imports (add a Pronouns column), and you can add yours to your Community profile.'],
   ['🏠 A new main menu', 'The start screen now has four tabs along the bottom. Play has Continue, Story Mode, New company and your other saves. Community has shared worlds and your wrestler library. Career shows your booker level, achievements and next unlock. Account has sign-in, cloud saves, BookIt Supporter, your Community profile, Settings and help, all in one place.'],
   ['🔧 A tougher, fairer game', 'New companies no longer crash at the end of the draft. Money and contracts are on by default, money gets tight, perfect scores are rare, and the same pairing every week wears thin. Title matches follow the belt, Auto-fill keeps your main event and your big event plans, and contract talks can end in a counter-offer.'],
   ['📅 Limited dates for veterans', 'Older wrestlers (and a few big part-time stars) can ask for a limited dates clause in contract talks: a set number of shows a month. Give them what they ask for and they are easier to sign. Once their month is used up, the picker and Auto-fill skip them, and booking them anyway upsets them. Their profile shows the dates left this month.'],
