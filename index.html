@@ -7013,7 +7013,7 @@ function lvTalk(r, main) {
       ${tg.length ? `<div class="tgt">${r.ans ? '🙋 Answered by' : '📣 ' + esc(segVerb(s).replace(/^./, c => c.toUpperCase()))} ${tg.slice(0, 3).map(w => av(w, 24, true)).join('')} ${names(tg)}</div>` : ''}${intr}`;
   }
   const headline = `${names(sp) || 'Someone'}${tg.length ? ` ${esc(segVerb(s))} ${names(tg)}` : ''}`;
-  if (s.atype === 'Tale of the Tape' && sp.length && tg.length && bodiesOn()) {
+  if (s.atype === 'Tale of the Tape' && sp.length && tg.length && bodiesOn() && !safePhoto(sp[0].photo) && !safePhoto(tg[0].photo)) {
     const col = w => `<div class="tt-side"><img class="px tt-body" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"><b class="n-${w.align}">${esc(w.name)}</b>${[w.height, w.weight, w.hometown].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}<span>${w.record ? `${w.record.w}-${w.record.l}` : ''}</span></div>`;
     return `<div class="tt-wrap">${col(sp[0])}<div class="tt-mid">TALE OF THE TAPE</div>${col(tg[0])}</div>
     <div class="l3"><span>${esc(s.atype)}${r.stTag ? ' · ' + esc(r.stTag) : ''}</span>${headline}</div>${intr}`;
@@ -10425,9 +10425,9 @@ function modalWrestler(m) {
   const recent = G.history.slice(-8).reverse().flatMap(h => h.results.filter(r => segPeople(r.seg).includes(w.id)).map(r => ({ wk: h.wk, r })));
   const nameTags = `<div style="font-size:19px;font-weight:800">${esc(w.name)}</div>${w.nick ? `<div class="muted small">“${esc(w.nick)}”</div>` : ''}<div class="row wrap" style="gap:4px;margin-top:4px">${wTags(w)}<span class="tag">${esc(w.style)}</span>${w.division ? `<span class="tag">${esc(w.division)}</span>` : ''}<span class="tag" title="Pronouns">${esc(proLabel(w))}</span><span class="tag">Age ${w.age}</span>${AGING() && !w.retired && !isNW(w) ? `<span class="tag st-${ageStage(w).k}" title="${esc(ageStage(w).d)}">${esc(ageStage(w).n)}</span>` : ''}<span class="tag gold">OVR ${overall(w)}</span></div>`;
   // the hero card: their full pixel body beside the name and the facts people check first
-  const hero = bodiesOn() && w.name;
+  const hero = bodiesOn() && w.name && !safePhoto(w.photo);
   const fact = (l, v) => v ? `<div class="hc-f"><span>${l}</span><b>${esc(String(v))}</b></div>` : '';
-  const top = hero ? `<div class="hero-w"><button class="hero-body" data-act="editBody" data-id="${w.id}" aria-label="Edit ${esc(w.name)}'s full body"><img class="bm-hero px" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"></button><div class="sp" style="min-width:0">${safePhoto(w.photo) ? `<div style="margin-bottom:6px">${av(w, 48)}</div>` : ''}${nameTags}
+  const top = hero ? `<div class="hero-w"><button class="hero-body" data-act="editBody" data-id="${w.id}" aria-label="Edit ${esc(w.name)}'s full body"><img class="bm-hero px" alt="${esc(w.name)}, full body" src="${bodyURL(w)}"></button><div class="sp" style="min-width:0">${nameTags}
       <div class="hc-facts">${fact('Height', w.height)}${fact('Weight', w.weight)}${fact('From', w.hometown)}${fact('Popularity', Math.round(w.pop))}${fact('In-ring', Math.round(w.ring))}${fact('Mic', Math.round(w.mic))}</div>
       <button class="btn sm" data-act="editBody" data-id="${w.id}">${ic('user')} Edit look</button></div></div>`
     : `<div class="row" style="margin-bottom:10px">${av(w, 56)}<div class="sp">${nameTags}</div></div>`;
@@ -12983,7 +12983,7 @@ function modalBuilder(m) {
    </div>
    ${d.photo ? `<div style="text-align:center;margin:-4px 0 6px"><button class="link" data-act="bPhotoDel">Remove photo${facesOn() ? ' and use a pixel face' : ''}</button></div>` : ''}
    ${pxPanel(d)}
-   ${facesOn() && (!d.photo || bodiesOn()) ? lookMaker(d) : ''}
+   ${facesOn() && !d.photo ? lookMaker(d) : ''}
    <div class="bd-lab">Their colour <span class="muted">· any gear set to "their colour", their badge and new merch</span></div>
    <div class="swatches">${SWATCHES.map(c => `<button class="sw ${d.color === c ? 'on' : ''}" style="background:${c}" data-act="bColor" data-id="${c}" aria-label="Their colour ${c}" aria-pressed="${d.color === c}"></button>`).join('')}</div>
 
@@ -18785,7 +18785,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.107';
+const VERSION = '1.9.108';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
@@ -19027,9 +19027,11 @@ function merchRun(crew, wsh, share) {
 const mWeekly = w => Math.round(sum(mSplit(w).map(p => p.v)) * DF().income);
 
 // ---- the drawing: one SVG per product, 100 x 100 ----
+// a photo wins over the pixel look wherever a wrestler is drawn
+const wPic = w => safePhoto(w.photo) || faceURL(w, true), wPx = w => safePhoto(w.photo) ? '' : ' style="image-rendering:pixelated"';
 function merchArt(w, it, cls) {
   const K = MERCH_K[it.k] || MERCH_K.shirt, c = it.col, a = it.acc, nm = esc(String(lastName(w) || '').toUpperCase().slice(0, 12)), tx = esc(String(it.txt || '').toUpperCase());
-  const face = it.face && w ? `<image href="${esc(faceURL(w, true))}" ${'x="35" y="30" width="30" height="30"'} style="image-rendering:pixelated"/>` : '';
+  const face = it.face && w ? `<image href="${esc(wPic(w))}" ${'x="35" y="30" width="30" height="30"'}${wPx(w)}/>` : '';
   const sym = (cx, cy, r) => it.sym ? symDraw(it.sym, cx, cy, r, a, c === '#111111' ? '#000' : '#00000066') : '';
   const T = (s, x, y, sz, col, wt) => s ? `<text x="${x}" y="${y}" text-anchor="middle" font-family="Impact,Arial Black,sans-serif" font-weight="${wt || 800}" font-size="${sz}" fill="${col}" textLength="${Math.min(s.length * sz * .62, 60)}" lengthAdjust="spacingAndGlyphs">${s}</text>` : '';
   let g = '';
@@ -19038,11 +19040,11 @@ function merchArt(w, it, cls) {
   else if (it.k === 'cap') g = `<path d="M18 62 Q18 26 50 24 Q82 26 82 62 Z" fill="${c}" stroke="#0006" stroke-width="1.5"/><path d="M14 62 L92 62 Q96 72 80 72 L14 70 Z" fill="${a}" stroke="#0006" stroke-width="1.5"/><circle cx="50" cy="25" r="3" fill="${a}"/>`
     + (it.sym ? sym(50, 44, 11) : face ? face.replace('x="35" y="30" width="30" height="30"', 'x="38" y="32" width="24" height="24"') : T(nm.slice(0, 6), 50, 50, 12, a)) + T(tx, 50, 86, 8, 'var(--ink, #888)');
   else if (it.k === 'poster') g = `<rect x="18" y="8" width="64" height="84" rx="2" fill="${c}" stroke="#0006" stroke-width="1.5"/><rect x="22" y="12" width="56" height="58" fill="#0003"/>`
-    + (face ? `<image href="${esc(faceURL(w, true))}" x="28" y="14" width="44" height="44" style="image-rendering:pixelated"/>` : sym(50, 40, 18)) + `<rect x="18" y="70" width="64" height="12" fill="${a}"/>` + T(nm, 50, 80, 9, c) + T(tx, 50, 90, 6, a);
+    + (face ? `<image href="${esc(wPic(w))}" x="28" y="14" width="44" height="44"${wPx(w)}/>` : sym(50, 40, 18)) + `<rect x="18" y="70" width="64" height="12" fill="${a}"/>` + T(nm, 50, 80, 9, c) + T(tx, 50, 90, 6, a);
   else if (it.k === 'sign') g = `<path d="M20 14 h60 v52 h-60 z" fill="${c}" stroke="${a}" stroke-width="3"/><rect x="45" y="66" width="10" height="28" fill="#c9a36b" stroke="#0006"/>`
     + T(tx || nm, 50, 38, 12, a) + (it.sym ? sym(50, 54, 8) : face ? face.replace('x="35" y="30" width="30" height="30"', 'x="42" y="46" width="16" height="16"') : T(tx ? nm : '', 50, 58, 8, a));
   else if (it.k === 'figure') g = `<rect x="22" y="6" width="56" height="88" rx="4" fill="${c}" stroke="#0006" stroke-width="1.5"/><rect x="28" y="18" width="44" height="58" rx="3" fill="#ffffff22" stroke="${a}" stroke-width="1.5"/>`
-    + (w ? `<image href="${esc(bodiesOn() ? bodyURL(w) : faceURL(w, true))}" x="31" y="20" width="38" height="54" preserveAspectRatio="xMidYMax meet" style="image-rendering:pixelated"/>` : '') + T(nm, 50, 15, 8, a) + T(tx || 'ACTION FIGURE', 50, 87, 6.5, a) + (it.sym ? sym(66, 82, 4) : '');
+    + (w ? `<image href="${esc(safePhoto(w.photo) || (bodiesOn() ? bodyURL(w) : faceURL(w, true)))}" x="31" y="20" width="38" height="54" preserveAspectRatio="xMidYMax meet"${wPx(w)}/>` : '') + T(nm, 50, 15, 8, a) + T(tx || 'ACTION FIGURE', 50, 87, 6.5, a) + (it.sym ? sym(66, 82, 4) : '');
   else if (it.k === 'belt') g = `<path d="M4 44 Q50 34 96 44 L96 62 Q50 52 4 62 Z" fill="${c}" stroke="#0006" stroke-width="1.5"/><ellipse cx="50" cy="50" rx="20" ry="18" fill="#e9c35a" stroke="#8a6a1c" stroke-width="2"/><ellipse cx="50" cy="50" rx="14" ry="12" fill="${a}" opacity=".9"/>`
     + `<rect x="20" y="44" width="8" height="12" rx="2" fill="#e9c35a" stroke="#8a6a1c"/><rect x="72" y="44" width="8" height="12" rx="2" fill="#e9c35a" stroke="#8a6a1c"/>` + (it.sym ? sym(50, 50, 8) : T(nm.slice(0, 7), 50, 53, 7, '#3a2a08')) + T(tx, 50, 82, 7, 'var(--ink, #888)');
   return `<svg class="${cls || 'mz'}" viewBox="0 0 100 100" role="img" aria-label="${esc(K.n)}">${g}</svg>`;
