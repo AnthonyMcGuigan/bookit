@@ -67,7 +67,7 @@ Codemagic's free tier gives 500 build minutes a month on Mac minis, plenty for t
 ```sh
 cd ios-app
 npm ci
-npm run sync      # copies index.html, icons and sounds into the app
+npm run sync      # copies index.html, icons, sounds and fonts into the app
 npm run open      # opens Xcode
 ```
 

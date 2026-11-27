@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-style="pixel">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,6 +10,8 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap">
+<link rel="preload" href="fonts/jersey-10-normal-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/atkinson-hyperlegible-normal-400.woff2" as="font" type="font/woff2" crossorigin>
 <meta name="description" content="Run your own pro wrestling promotion: draft a roster, book weekly shows, build storylines, sign contracts. Free, works offline.">
 <meta property="og:title" content="BookIt: Wrestling Booking Sim">
 <meta property="og:description" content="Run your own pro wrestling promotion: draft a roster, book weekly shows, build storylines, sign contracts.">
@@ -1532,6 +1534,94 @@ img, svg, video, canvas, input, select, textarea { max-width: 100%; }
 .st-pc.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .st-hit { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 10px 2px 6px; }
 .pro-box{display:block;margin-bottom:12px}.pro-box>span{display:block;font-size:12px;font-weight:700;color:var(--dim);margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;font-family:var(--f-cond)}.pro-lbl{font-size:13px;font-weight:600;color:var(--muted);margin-left:4px}.pro-chips .chip{margin:0}.pro-chips{gap:6px}.pro-grid .f{margin-bottom:6px}
+/* ---------- look styles (meta.style, html[data-style]): Pixel Ring is the default; Classic is the old look ----------
+   Fonts are bundled in fonts/ (all SIL Open Font License, see fonts/OFL.txt). Shapes only; colours stay on the theme tokens
+   except a few dark-mode tweaks, so light mode and the contrast checks still hold. */
+@font-face { font-family: "BK Jersey 10"; font-style: normal; font-weight: 400; font-display: swap; size-adjust: 118%; src: url(fonts/jersey-10-normal-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Jersey 15"; font-style: normal; font-weight: 400; font-display: swap; size-adjust: 112%; src: url(fonts/jersey-15-normal-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Atkinson Hyperlegible"; font-style: italic; font-weight: 400; font-display: swap; src: url(fonts/atkinson-hyperlegible-italic-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Atkinson Hyperlegible"; font-style: italic; font-weight: 700; font-display: swap; src: url(fonts/atkinson-hyperlegible-italic-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/atkinson-hyperlegible-normal-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/atkinson-hyperlegible-normal-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Alfa Slab One"; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/alfa-slab-one-normal-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Big Shoulders Display"; font-style: normal; font-weight: 700 900; font-display: swap; src: url(fonts/big-shoulders-display-normal-700-900.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Archivo"; font-style: italic; font-weight: 400 700; font-display: swap; src: url(fonts/archivo-italic-400-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Archivo"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(fonts/archivo-normal-400-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira Extra Condensed"; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/saira-extra-condensed-normal-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira Extra Condensed"; font-style: normal; font-weight: 800; font-display: swap; src: url(fonts/saira-extra-condensed-normal-800.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira Extra Condensed"; font-style: normal; font-weight: 900; font-display: swap; src: url(fonts/saira-extra-condensed-normal-900.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira Condensed"; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/saira-condensed-normal-500.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira Condensed"; font-style: normal; font-weight: 600; font-display: swap; src: url(fonts/saira-condensed-normal-600.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira Condensed"; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/saira-condensed-normal-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira Condensed"; font-style: normal; font-weight: 800; font-display: swap; src: url(fonts/saira-condensed-normal-800.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira"; font-style: italic; font-weight: 400 700; font-display: swap; src: url(fonts/saira-italic-400-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "BK Saira"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(fonts/saira-normal-400-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* PIXEL RING: jersey pixel type that matches the pixel wrestlers, stepped pixel frames (four hard shadows, empty corners) */
+html[data-style="pixel"] { --f-display: "BK Jersey 10", "Arial Narrow", sans-serif; --f-cond: "BK Jersey 15", "Arial Narrow", sans-serif; --f-body: "BK Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --r: 0px; --px: var(--line); --pxs: rgba(28,23,38,.22); }
+html[data-style="pixel"][data-theme="dark"] { --px: #4a4166; --pxs: #000; }
+@media (prefers-color-scheme: dark) { html[data-style="pixel"]:not([data-theme]) { --px: #4a4166; --pxs: #000; } }
+html[data-style="pixel"] body { font-family: var(--f-body); }
+html[data-style="pixel"] *, html[data-style="pixel"] *::before, html[data-style="pixel"] *::after { border-radius: 0 !important; }
+html[data-style="pixel"] :is(.card, .item, .mcard, .stat, .dr-row, .wz-preview, .btn, .iconbtn, .sort-rev, .hm-row) {
+  border-color: transparent !important; box-shadow: 0 -3px 0 0 var(--px), 0 3px 0 0 var(--px), -3px 0 0 0 var(--px), 3px 0 0 0 var(--px), 3px 6px 0 0 var(--pxs) !important; }
+html[data-style="pixel"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) { border-width: 2px !important; }
+html[data-style="pixel"] .btn { font-weight: 400 !important; font-size: 20px; letter-spacing: .05em; line-height: 1.05; }
+html[data-style="pixel"] .btn.sm { font-size: 17px; }
+html[data-style="pixel"] .btn.pri { --px: #1a1306; box-shadow: 0 -3px 0 0 #1a1306, 0 3px 0 0 #1a1306, -3px 0 0 0 #1a1306, 3px 0 0 0 #1a1306, inset 0 -5px 0 0 color-mix(in srgb, var(--accent) 62%, #000), inset 0 4px 0 0 color-mix(in srgb, var(--accent) 60%, #fff), 3px 7px 0 0 var(--pxs) !important; background: var(--accent) !important; }
+html[data-style="pixel"] .grid4 .btn.tool { font-size: 15px; letter-spacing: 0; white-space: nowrap; padding-left: 4px; padding-right: 4px; }
+html[data-style="pixel"] .tag { font-family: var(--f-cond); font-weight: 400; font-size: 14px; letter-spacing: .05em; text-transform: uppercase; border-width: 2px; padding: 0 6px; }
+html[data-style="pixel"] :is(h1, h2, h3) { letter-spacing: .02em; }
+html[data-style="pixel"] nav.tabs :is(button, a, span) { font-weight: 400 !important; letter-spacing: .06em; }
+html[data-style="pixel"] .hm-row.gold { --px: var(--accent); }
+html[data-style="pixel"] .hm-row .hm-m b { font-family: var(--f-display); font-weight: 400; font-size: 21px; letter-spacing: .03em; line-height: 1.05; }
+html[data-style="pixel"] .hero h1 { font-size: 54px; }
+html[data-style="pixel"] .home .hero h1, html[data-style="pixel"] .wz .hero h1 { font-size: 54px !important; letter-spacing: .04em; }
+html[data-style="pixel"] .top-logo { box-shadow: 0 -2px 0 0 #1a1306, 0 2px 0 0 #1a1306, -2px 0 0 0 #1a1306, 2px 0 0 0 #1a1306 !important; font-size: 17px; }
+
+/* FIGHT NIGHT POSTER: slab-serif headlines, square corners, hard print shadows, faint halftone */
+html[data-style="poster"] { --f-display: "BK Alfa Slab One", Georgia, serif; --f-cond: "BK Big Shoulders Display", "Arial Narrow", sans-serif; --f-body: "BK Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --r: 0px; --pst: #e2483d; --pss: rgba(28,23,38,.25); --dot: rgba(28,23,38,.05); }
+html[data-style="poster"][data-theme="dark"] { --bg: #16120d; --bg2: #1e1912; --card: #221c14; --card2: #2c2419; --line: #5a4a33; --ink: #f5ead6; --dim: #cbbb9f; --faint: #a8977b; --pss: #000; --dot: rgba(245,234,214,.05); }
+@media (prefers-color-scheme: dark) { html[data-style="poster"]:not([data-theme]) { --bg: #16120d; --bg2: #1e1912; --card: #221c14; --card2: #2c2419; --line: #5a4a33; --ink: #f5ead6; --dim: #cbbb9f; --faint: #a8977b; --pss: #000; --dot: rgba(245,234,214,.05); } }
+html[data-style="poster"] body { font-family: var(--f-body); background-image: radial-gradient(var(--dot) 1px, transparent 1.4px); background-size: 6px 6px; }
+html[data-style="poster"] *, html[data-style="poster"] *::before, html[data-style="poster"] *::after { border-radius: 0 !important; }
+html[data-style="poster"] :is(.card, .item, .mcard, .stat, .dr-row, .wz-preview, .btn, .iconbtn, .sort-rev, .hm-row) { border-width: 2px !important; box-shadow: 4px 4px 0 var(--pss) !important; }
+html[data-style="poster"] .btn { font-weight: 900 !important; font-size: 16px; letter-spacing: .04em; }
+html[data-style="poster"] .btn.pri { background: var(--accent) !important; border-color: #1a1306 !important; box-shadow: 4px 4px 0 var(--pst) !important; }
+html[data-style="poster"] .grid4 .btn.tool { font-size: 14px; letter-spacing: .02em; padding-left: 4px; padding-right: 4px; }
+html[data-style="poster"] .tag { font-family: var(--f-cond); font-weight: 800; font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; }
+html[data-style="poster"] .hm-row.gold { border-color: var(--accent) !important; box-shadow: 4px 4px 0 var(--pst) !important; }
+html[data-style="poster"] .hm-row .hm-m b { font-family: var(--f-display); font-weight: 400; font-size: 17px; letter-spacing: .01em; }
+html[data-style="poster"] header.top { border-bottom: 3px double var(--line); }
+html[data-style="poster"] .top-logo { box-shadow: 3px 3px 0 var(--pst) !important; }
+
+/* PRIME TIME BROADCAST: heavy italic TV-graphics type, slanted buttons and tags, cut-corner cards with a coloured edge */
+html[data-style="broadcast"] { --f-display: "BK Saira Extra Condensed", "Arial Narrow", sans-serif; --f-cond: "BK Saira Condensed", "Arial Narrow", sans-serif; --f-body: "BK Saira", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --r: 2px; --tvb: #1a66b3; }
+html[data-style="broadcast"][data-theme="dark"] { --bg: #080b16; --bg2: #0e1324; --card: #111831; --card2: #18213f; --line: #2a3768; --ink: #eef2ff; --dim: #a9b3d6; --faint: #8a95bd; --tvb: #3d7bff; }
+@media (prefers-color-scheme: dark) { html[data-style="broadcast"]:not([data-theme]) { --bg: #080b16; --bg2: #0e1324; --card: #111831; --card2: #18213f; --line: #2a3768; --ink: #eef2ff; --dim: #a9b3d6; --faint: #8a95bd; --tvb: #3d7bff; } }
+html[data-style="broadcast"] body { font-family: var(--f-body); }
+html[data-style="broadcast"] :is(.hero h1, .dirt-name, h1) { font-style: italic; }
+html[data-style="broadcast"] :is(.card, .item, .mcard, .stat, .dr-row, .wz-preview, .hm-row) { border-radius: 0 !important; border-left: 5px solid var(--tvb) !important; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); box-shadow: none !important; }
+html[data-style="broadcast"] .hm-row.gold { border-left-color: var(--accent) !important; }
+html[data-style="broadcast"] .btn { border-radius: 0 !important; clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%); font-family: var(--f-display); font-style: italic; font-weight: 900 !important; font-size: 18px; letter-spacing: .05em; padding-left: 18px; padding-right: 18px; }
+html[data-style="broadcast"] .btn.pri { box-shadow: none !important; }
+html[data-style="broadcast"] .grid4 .btn.tool { font-size: 15px; padding-left: 10px; padding-right: 10px; letter-spacing: .02em; }
+html[data-style="broadcast"] .tag { border-radius: 0 !important; clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%); padding-left: 10px; padding-right: 10px; font-family: var(--f-cond); font-style: italic; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+html[data-style="broadcast"] .hm-row .hm-m b { font-family: var(--f-display); font-style: italic; font-weight: 900; font-size: 19px; text-transform: uppercase; letter-spacing: .02em; }
+html[data-style="broadcast"] header.top { border-bottom: 3px solid var(--tvb); }
+html[data-style="broadcast"] .top-logo { border-radius: 0 !important; clip-path: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%); box-shadow: none !important; }
+/* font style picker in Settings → Look: each choice is written in its own font */
+.fs-f { margin-bottom: 12px; }
+.fs-f > span { display: block; font-size: 12px; font-weight: 700; color: var(--dim); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+.fs-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.fs-opt { text-align: left; padding: 10px 12px; min-height: 64px; border: 2px solid var(--line); background: var(--card2); color: var(--ink); border-radius: 10px; display: flex; flex-direction: column; gap: 3px; }
+.fs-opt b { font-size: 20px; line-height: 1.05; font-weight: 400; text-transform: uppercase; letter-spacing: .02em; }
+.fs-opt span { font-size: 12.5px; line-height: 1.3; color: var(--dim); }
+.fs-opt[aria-checked="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card2)); }
+.fs-opt[data-fs="pixel"] b { font-family: "BK Jersey 10", var(--f-display); font-size: 25px; }
+.fs-opt[data-fs="classic"] b { font-family: Anton, Impact, sans-serif; }
+.fs-opt[data-fs="poster"] b { font-family: "BK Alfa Slab One", Georgia, serif; font-size: 17px; }
+.fs-opt[data-fs="broadcast"] b { font-family: "BK Saira Extra Condensed", sans-serif; font-weight: 900; font-style: italic; font-size: 21px; }
+html[data-style="pixel"] .fs-opt { box-shadow: none !important; }
 </style>
 </head>
 <body>
@@ -10032,8 +10122,9 @@ const ST_SECS = [
   { id: 'sandbox', save: 1, ic: 'pen', t: 'Sandbox', sum: () => SANDBOX() ? 'On: edit and move anyone' : 'Off', keys: ['sandbox'], items: () => [
     ['sandbox edit move anyone world build', `<label class="todo"><input type="checkbox" data-in="sandbox" ${SANDBOX() ? 'checked' : ''}><span>Sandbox: edit and move anyone in the world<br><span class="tiny muted">For building a world to play or share. Office → Companies.</span></span></label>`],
     ...(MON() && SANDBOX() ? [['bank balance money set', `<label class="f" style="margin-top:12px"><span>Set bank balance</span><div class="row"><input type="number" id="setMoney" value="${Math.round(G.money)}" step="10000"><button class="btn" data-act="setMoney">Set</button></div></label><div class="tiny" style="color:var(--warn);margin:-4px 0 12px">Changing your bank balance can throw off the game's balance. Money stops being a challenge.</div>`]] : [])] },
-  { id: 'look', ic: 'grid', t: 'Look', sum: () => `${{ dark: 'Dark', light: 'Light', auto: 'Match my device' }[meta.theme === 'light' || meta.theme === 'auto' ? meta.theme : 'dark']} · ${{ s: 'Small', m: 'Normal', l: 'Large', xl: 'Huge' }[meta.text] || 'Normal'} text · ${facesOn() ? 'Pixel faces' + (bodiesOn() ? ' + bodies' : '') : 'Initials'}`, items: () => [
+  { id: 'look', ic: 'grid', t: 'Look', sum: () => `${{ dark: 'Dark', light: 'Light', auto: 'Match my device' }[meta.theme === 'light' || meta.theme === 'auto' ? meta.theme : 'dark']} · ${FONT_STYLES.find(f => f[0] === fontStyle())[1]} · ${{ s: 'Small', m: 'Normal', l: 'Large', xl: 'Huge' }[meta.text] || 'Normal'} text · ${facesOn() ? 'Pixel faces' + (bodiesOn() ? ' + bodies' : '') : 'Initials'}`, items: () => [
     ['theme dark light', `<label class="f"><span>Theme</span><select data-in="theme"><option value="dark">Dark</option><option value="light" ${meta.theme === 'light' ? 'selected' : ''}>Light</option><option value="auto" ${meta.theme === 'auto' ? 'selected' : ''}>Match my device</option></select></label>`],
+    ['font style fonts pixel ring classic poster broadcast typeface', `<div class="f fs-f"><span id="fsLbl">Font style</span><div class="fs-pick" role="radiogroup" aria-labelledby="fsLbl">${FONT_STYLES.map(([k, l, d]) => `<button class="fs-opt" data-fs="${k}" role="radio" aria-checked="${fontStyle() === k}" data-act="fontStyle" data-id="${k}"><b>${l}</b><span>${d}</span></button>`).join('')}</div></div>`],
     ['text size font zoom', `<label class="f"><span>Text size</span><div class="seg-ctl">${[['s', 'Small'], ['m', 'Normal'], ['l', 'Large'], ['xl', 'Huge']].map(([k, l]) => `<button class="${(meta.text || 'm') === k ? 'on' : ''}" data-act="textSize" data-id="${k}" aria-pressed="${(meta.text || 'm') === k}">${l}</button>`).join('')}</div></label>`],
     ['wrestlers without a photo pixel faces initials', `<label class="f"><span>Wrestlers without a photo</span><select data-in="faces"><option value="pixel">Pixel faces</option><option value="initials" ${meta.faces === 'initials' ? 'selected' : ''}>Initials</option></select></label>`],
     ['full body pixel wrestlers headshots tale of the tape', `<label class="todo"><input type="checkbox" data-in="bodies" ${meta.bodies === false ? '' : 'checked'} ${facesOn() ? '' : 'disabled'}><span>Full body wrestlers<br><span class="tiny muted">${facesOn() ? 'On the wrestler page and in Tale of the Tape. Turn off to keep just the headshots.' : 'Needs pixel faces turned on.'}</span></span></label>`],
@@ -10077,7 +10168,7 @@ function modalSettings(m) {
     <div class="st-hd">Look, sound &amp; calendar ${stPill(0)}</div><div class="st-sub">The same for every save on this ${/Mobi|Android|iPhone/.test(navigator.userAgent) ? 'phone' : 'device'}.</div>
     <div class="st-grp">${dev.map(stRow).join('')}</div>`);
 }
-const ST_DEV_DEF = { look: () => { meta.theme = 'dark'; meta.text = 'm'; meta.faces = 'pixel'; meta.bodies = true; meta.avBelts = true; applyTheme(); }, sound: () => { meta.sound = true; meta.music = true; meta.musicVol = .35; MUSIC.sync?.(); }, motion: () => { meta.motion = ''; meta.fx = 1; applyTheme(); }, calview: () => { meta.cal = {}; UI.calWkv = null; } };
+const ST_DEV_DEF = { look: () => { meta.theme = 'dark'; meta.font = 'pixel'; meta.text = 'm'; meta.faces = 'pixel'; meta.bodies = true; meta.avBelts = true; applyTheme(); }, sound: () => { meta.sound = true; meta.music = true; meta.musicVol = .35; MUSIC.sync?.(); }, motion: () => { meta.motion = ''; meta.fx = 1; applyTheme(); }, calview: () => { meta.cal = {}; UI.calWkv = null; } };
 function modalMenu() {
   if (!G) return modalStartMenu();
   const slots = [1, 2, 3].map(n => ({ n, info: slotInfo(n) }));
@@ -11616,6 +11707,7 @@ function confirmBox(title, text, yes, fn, danger) { UI.modal = { type: 'confirm'
 const A = {
   tab(id) { UI.tab = id; UI.modal = null; render(); pageTop(); },
   about() { openModal({ type: 'about' }); },
+  fontStyle(k) { meta.font = FONT_STYLES.some(f => f[0] === k) ? k : 'pixel'; ls.set(META, JSON.stringify(meta)); applyTheme(); render(); },
   textSize(k) { meta.text = ['s', 'm', 'l', 'xl'].includes(k) ? k : 'm'; ls.set(META, JSON.stringify(meta)); applyTheme(); render(); },
   whatsNew() { UI.modal = { type: 'whatsnew' }; render(); },
   menu() { openModal({ type: 'menu' }); },
@@ -18900,11 +18992,15 @@ window.addEventListener('storage', e => {
 function applyTheme() {
   // dark is the default; 'auto' follows the device, 'light' is an explicit pick
   const th = meta.theme === 'light' || meta.theme === 'auto' ? meta.theme : 'dark';
+  document.documentElement.dataset.style = fontStyle();
   if (th === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
   const z = { s: .9, m: 1, l: 1.15, xl: 1.3 }[meta.text] || 1; document.documentElement.style.setProperty('--zoom', z); document.body.style.zoom = z === 1 ? '' : z;
   const ew = innerWidth / z; if (z > 1 && ew <= 300) document.documentElement.dataset.nw = '2'; else if (z > 1 && ew <= 380) document.documentElement.dataset.nw = '1'; else delete document.documentElement.dataset.nw;
   if (meta.motion) document.documentElement.dataset.motion = meta.motion; else delete document.documentElement.dataset.motion;
 }
+// font style: Pixel Ring is the default, Classic is the look from before v1.9.112
+const FONT_STYLES = [['pixel', 'Pixel Ring', 'Pixel type and pixel frames that match the wrestlers'], ['classic', 'Classic', 'The original tall poster headlines and rounded cards'], ['poster', 'Fight Night Poster', 'Slab headlines, square corners, hard print shadows'], ['broadcast', 'Prime Time Broadcast', 'Slanted TV-graphics type and chyrons']];
+function fontStyle() { return FONT_STYLES.some(f => f[0] === meta.font) ? meta.font : 'pixel'; }
 const reduceMotion = () => meta.motion === 'reduce' || (meta.motion !== 'full' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 applyTheme();
 addEventListener('resize', () => { clearTimeout(applyTheme.t); applyTheme.t = setTimeout(applyTheme, 150); });
@@ -18961,7 +19057,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.111';
+const VERSION = '1.9.113';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],

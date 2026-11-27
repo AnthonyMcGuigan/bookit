@@ -1,0 +1,11 @@
+Fonts in this folder are bundled with BookIt under the SIL Open Font License, Version 1.1
+(https://openfontlicense.org). They were downloaded from Google Fonts (latin subset, woff2).
+
+- Jersey 10, Jersey 15: Copyright 2023 The Soft Type Project Authors
+- Atkinson Hyperlegible: Copyright 2020 Braille Institute of America, Inc.
+- Alfa Slab One: Copyright 2011 JM Solé
+- Big Shoulders Display: Copyright 2019 The Big Shoulders Project Authors
+- Archivo: Copyright 2017 The Archivo Project Authors
+- Saira, Saira Condensed, Saira Extra Condensed: Copyright 2016 The Saira Project Authors
+
+Each font's full license text: https://openfontlicense.org/open-font-license-official-text/

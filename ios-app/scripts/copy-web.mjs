@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url)), root = join(here, '..', '..'), www = join(here, '..', 'www');
 rmSync(www, { recursive: true, force: true });
 mkdirSync(www, { recursive: true });
-for (const f of ['index.html', 'manifest.webmanifest', 'privacy.html', 'icons', 'sounds']) {
+for (const f of ['index.html', 'manifest.webmanifest', 'privacy.html', 'icons', 'sounds', 'fonts']) {
   if (existsSync(join(root, f))) cpSync(join(root, f), join(www, f), { recursive: true });
 }
 const v = /const VERSION = '([^']+)'/.exec(readFileSync(join(root, 'index.html'), 'utf8'))?.[1] ?? '?';
