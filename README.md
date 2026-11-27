@@ -37,7 +37,8 @@ The shipped game has fictional names only. The fan-made AEW roster lives on the 
 
 | File | What it is |
 |---|---|
-| `index.html` | The whole game: one file, no libraries, about 100 KB. Loads instantly. |
+| `index.html` | The whole game: one file, no libraries, about 2 MB (about 650 KB gzipped). |
+| `tests/new-player.js` | New-player check. Plays a brand-new game (draft path and Skip setup) for 5 weeks on a phone-sized screen and fails on any crash. Run it before every release: `python3 -m http.server 8080`, then `node tests/new-player.js` (needs Playwright). |
 | `manifest.webmanifest`, `sw.js` | Make it installable and playable offline. |
 | `icons/` | App icons. |
 
