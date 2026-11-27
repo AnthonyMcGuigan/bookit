@@ -18785,7 +18785,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.106';
+const VERSION = '1.9.107';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
@@ -18886,6 +18886,8 @@ function crash(msg) {
   d.addEventListener('click', e => { const k = e.target.closest('[data-crash]')?.dataset.crash; if (!k) return; if (k === 'send') { const b = e.target.closest('[data-crash]'); b.textContent = 'Sending…'; sendFeedback({ kind: 'crash', text: 'Crash on ' + (UI.modal?.type || UI.tab || 'home'), err: msg }).then(() => { b.textContent = 'Sent. Thank you!'; }, () => { fbFallback(`BookIt ${verLabel()} crash on ${UI.modal?.type || UI.tab || 'home'}, ${navigator.userAgent.slice(0, 120)}:\n${msg}`, 'Crash details copied. Paste them into the feedback page.'); b.textContent = feedbackLink() ? 'Copied. Paste it into the feedback page.' : 'Copied. Send it to the game maker.'; }); return; } if (k === 'menu') { try { sessionStorage.setItem('rbSafe', '1'); } catch (x) {} } if (k === 'close') { d.remove(); crashShown = false; return; } location.reload(); });
   document.body.appendChild(d);
 }
+// a belt or trophy picture that fails to load (an old save's bad design or photo) is hidden, never shown as a ? box
+document.addEventListener('error', e => { const t = e.target; if (t?.tagName === 'IMG' && t.matches('.av-bt, .av-tr')) t.hidden = true; }, true);
 window.addEventListener('error', e => { if (e.message) crash(e.message + (e.lineno ? ' (line ' + e.lineno + ')' : '') + (e.error?.stack ? '\n' + String(e.error.stack).slice(0, 900) : '')); });
 
 // ---------- boot ----------
