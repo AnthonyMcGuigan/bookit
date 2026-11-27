@@ -7861,7 +7861,8 @@ const BEMBLEM = { gem: 'Gem', globe: 'Globe', star: 'Star', crown: 'Crown', bell
 const BSTRAP = { leather: 'Stitched', snake: 'Snakeskin', studs: 'Studded', plain: 'Plain' };
 const BCARVE = { none: 'Smooth', lines: 'Brushed', sunburst: 'Sunburst', scroll: 'Scrollwork', dots: 'Hammered' };
 // name, font, letter spacing, average capital width as a share of the font size (to fit text)
-const BFONT = { block: ['Block', 'Anton, Impact, sans-serif', 1.2, .5], tall: ['Condensed', '"Barlow Condensed", "Arial Narrow", sans-serif', .8, .5], serif: ['Classic serif', 'Georgia, "Times New Roman", serif', .4, .72] };
+// single quotes inside: these go into font-family="..." attributes, and a double quote there broke the belt picture on avatars (a ? on iPhone)
+const BFONT = { block: ['Block', 'Anton, Impact, sans-serif', 1.2, .5], tall: ['Condensed', "'Barlow Condensed', 'Arial Narrow', sans-serif", .8, .5], serif: ['Classic serif', "Georgia, 'Times New Roman', serif", .4, .72] };
 const BSTRAPS = ['#1a1a1f', '#3b2416', '#6e1420', '#14306b', '#0f4a2c', '#4a1b5e', '#e9e4da', '#b8862b', '#c22a2a', '#1d7fb8'];
 const BGEMS = ['#d62839', '#2f6fe0', '#1f9e5a', '#8a3fd1', '#f2f2f2', '#f2b01e', '#111111', '#ff6aa8'];
 const BENAMEL = ['#9b1020', '#123a7a', '#0c5a35', '#1a1a1f', '#5a1a7a', '#f2f2f2', '#b8862b'];
@@ -18765,7 +18766,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.104';
+const VERSION = '1.9.105';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
