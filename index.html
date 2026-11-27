@@ -755,6 +755,14 @@ img.tr-big { object-fit: contain; }
 .avw > .av { width: 100% !important; height: 100% !important; }
 .avw .av-bt { position: absolute; left: 50%; bottom: -22%; width: 126%; max-width: none; height: auto; transform: translateX(-50%); pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
 .avw .av-tr { position: absolute; right: -26%; bottom: -4%; height: 72%; width: auto; max-width: none; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.yir-c .avw:has(.av-bt) { margin-bottom: var(--btg, 0px); }
+.yir { text-align: center; } .yir-p { display: flex; gap: 4px; margin-bottom: 14px; } .yir-p i { flex: 1; height: 4px; background: var(--line); } .yir-p i.on { background: var(--accent); }
+.yir-c { min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 18px 8px; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--gold, #f6c544) 18%, transparent), transparent 70%); }
+.yir-k { font-family: var(--f-cond); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-size: 14px; }
+.yir-t { font-family: var(--f-display); font-size: 40px; line-height: 1; text-transform: uppercase; } .yir-s { color: var(--gold, #f6c544); font-size: 34px; } .yir-c p { margin: 0; color: var(--dim); max-width: 32ch; }
+.tease { background: var(--card); border: 2px solid var(--gold, #f6c544); padding: 12px; margin-bottom: 12px; }
+.tease-k { font-family: var(--f-cond); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 13px; color: var(--gold, #f6c544); }
+.tease-b { display: flex; gap: 10px; align-items: center; margin: 8px 0 10px; } .tease-b p { margin: 0; font-size: 15px; line-height: 1.35; }
 .lv-face > .avw:has(.av-bt) { margin-bottom: var(--btg, 0px); } /* the belt hangs below the face, so push the name under it instead of covering it */
 .avw .av-tr.solo { height: 76%; bottom: -10%; }
 .wz-belt { flex: none; width: 104px; padding: 0; border: 0; background: none; }
@@ -1067,6 +1075,12 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .pd-pbp { font-size: 13px; line-height: 1.45; color: #eee; margin: 6px 0; }
 .pd-l { display: flex; gap: 8px; margin-bottom: 4px; opacity: 0; animation: lvIn .45s ease-out forwards; animation-delay: var(--d); }
 .pd-l span { color: #aaa; min-width: 40px; font-variant-numeric: tabular-nums; }
+.lv-meter { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-family: var(--f-cond); font-weight: 700; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); opacity: 0; animation: lvIn .3s ease forwards; animation-delay: var(--d); }
+.lv-meter b { flex: 1; height: 10px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); overflow: hidden; }
+.lv-meter i { display: block; height: 100%; background: linear-gradient(90deg, #3b6be5, #ffb547 60%, #e53b3b); transform-origin: left; transform: scaleX(.04); animation: lvMeter var(--dur) ease-in-out forwards; animation-delay: var(--d); }
+@keyframes lvMeter { 0% { transform: scaleX(.04); } 45% { transform: scaleX(calc(var(--to) * .7)); } 65% { transform: scaleX(calc(var(--to) * .5)); } 100% { transform: scaleX(var(--to)); } }
+@media (prefers-reduced-motion: reduce) { .lv-meter i { animation: none; transform: scaleX(var(--to)); } }
+.live.skip .lv-meter, .live.skip .lv-meter i { animation-delay: 0s !important; animation-duration: .01s !important; }
 .live.skip .pd-l, .live.skip .pd-meter i { animation-delay: 0s !important; animation-duration: .01s !important; }
 .cut.call { background: linear-gradient(135deg, rgba(255,181,71,.2), rgba(20,14,10,.6)); border-color: rgba(255,181,71,.7); box-shadow: 0 10px 30px rgba(255,160,40,.14); }
 .cut.call .cut-b { background: #ffb547; color: #1a1306; --ic: #1a1306; }
@@ -4757,7 +4771,7 @@ const BR = {
     const crew = BR.crew(wk), bShow = !onMain() && !splitOn();
     if (!bShow && crew.length >= 8) { const top = crew.slice().sort((a, b) => b.pop - a.pop).slice(0, 3).map(w => w.id), on = new Set(segs.flatMap(segPeople)); if (!top.some(id => on.has(id))) push(-3, 'Your biggest stars were missing'); }
     if (big && mi.filter(x => x >= 0).length >= 3 && avg(mi.filter(x => x >= 0)) < 58) push(-3, 'Big event felt like a weekly show');
-    if (live) { const tb = tutBoost(); if (tb) push(tb, 'Opening night crowd'); }
+    if (live) { const tb = tutBoost(); if (tb) push(tb, 'Opening night crowd loved your main event'); }
     return { overall: clamp(Math.round(o), 1, 100), why };
   },
 
@@ -4953,6 +4967,7 @@ function runShow(opts = {}) {
   results.forEach(r => { const c = crowdLine(r); r.crowd = c.t; if (r.cue) r.cue.s = c.s; });
   const rec = { wk: G.week, name: showTitle(G.week), big, rating: overall, why, attendance, fin, net, fanDelta, results, keys, bid: G.showId, day: showDay(G.week), sname: G.promo.show, ...(special ? { special: true, spT, spMiss, spHit } : {}), ...(tvr ? { tvT: tvr.tgt, tvNet: tvr.nw, ...(tvr.strike ? { tvS: tvr.strike } : {}), ...(tvr.cancel ? { tvX: 1 } : {}) } : {}) };
   RB(); G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift(); rbAdd(rec);
+  try { teaseMake(rec, card); } catch (e) { delete G.tease; }
   datesShow(new Set(card.flatMap(segPeople)));
   PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
   PLAYLOG.mile('show1'); if (G.history.length >= 3) PLAYLOG.mile('show3'); if (big) PLAYLOG.mile('big1'); if (G.week >= 8) PLAYLOG.mile('wk8');
@@ -6949,6 +6964,7 @@ function liveScreen(m) {
       ${r.seg.kind === 'angle' ? '<i class="cam tl"></i><i class="cam tr"></i><i class="cam bl"></i><i class="cam br"></i>' : ''}
       <div class="lv-k lv-kh">${kindTag(r.seg)}<span>${main ? 'Main event' : i === 0 ? 'Opener' : 'Segment ' + (i + 1)} · ${r.seg.kind === 'match' ? segTitle(r.seg) : esc(r.seg.ptype || r.seg.atype)}</span>${r.seg.kind === 'angle' ? `<span class="rec"><b></b>REC${segPlace(r.seg) ? ' · ' + esc(SEG_PLACES[segPlace(r.seg)].n) : ''}</span>` : ''}</div>
       ${r.seg.kind === 'match' ? `${(tt => tt ? `<div class="lv-belt ${main ? 'main' : ''}">${titleArt(tt, 'lv-belt-art')}</div>` : '')(r.seg.title && G.titles.find(x => x.id === r.seg.title))}${(P => P ? `<div class="lv-belt lv-cup">${prizeArt(P, 'lv-cup-art')}</div>` : '')(r.seg.prz && PZ(r.seg.prz))}${lvFaces(r.seg, main)}<div class="lv-w">${segWho(r.seg)}</div>${pr ? pr.html : ''}` : lvTalk(r, main)}
+      ${pr ? '' : `<div class="lv-meter" style="--d:${t0(d0 + .4)};--dur:${t0(Math.max(.6, d1 - d0 - .4))};--to:${(clamp(r.rating, 4, 100) / 100).toFixed(2)}" aria-hidden="true"><span>Crowd</span><b><i></i></b></div>`}
       <div class="lv-o" style="--d:${t0(d1)}">
         <div class="lv-txt">${esc(r.text)}</div>
         <div class="row" style="gap:8px;align-items:center"><span class="stars lv-st">${starStr(r.rating)}</span><span class="lv-r">${r.rating}</span></div>
@@ -6968,8 +6984,9 @@ function liveScreen(m) {
     ${p.lvUp ? `<div class="lv-rank">⭐ LEVEL ${p.lvUp}!<span>${rk ? `Rank up: you're now a ${rk[1]}` : 'Your booker career moves up'}</span></div>` : rk ? `<div class="lv-rank">${rk[2]} RANK UP!<span>You're now a ${rk[1]}</span></div>` : ''}
     ${p.trophies.length || p.miles?.length ? `<div class="lv-tro">${p.trophies.map(x => `<div>${x[1]} <b>${esc(x[2])}</b> <span class="muted small">${esc(x[3])}${x[4] ? ` · +${xpScaled(x[4])} XP` : ''}</span></div>`).join('')}${(p.miles || []).map(m => `<div>${m.ic} <b>${m.tier}: ${esc(m.name)}</b> <span class="muted small">${m.n.toLocaleString()} · +${m.xp} XP</span></div>`).join('')}</div>` : ''}
     ${G.event && G.event.wk === G.week ? `<div class="lv-tease">📱 Your assistant texted you: something is happening backstage</div>` : ''}
-    ${G.awards?.length && G.awards[G.awards.length - 1].wk === h.wk ? `<button class="btn block lv-aw" data-act="records" data-id="awards">🏅 See the Year ${G.awards[G.awards.length - 1].yr} awards</button>` : ''}
+    ${G.awards?.length && G.awards[G.awards.length - 1].wk === h.wk ? `<button class="btn block pri lv-aw" data-act="yir" data-id="${G.awards[G.awards.length - 1].yr}">${ic('medal')} Your Year ${G.awards[G.awards.length - 1].yr} in review</button>` : ''}
     ${tutWin(h)}
+    ${shareWorthy(h) ? `<button class="btn block lv-aw" data-act="shareShow" data-id="${h.wk}">${ic('upload')} Share this show</button>` : ''}
     <div class="grid2" style="margin-top:14px"><button class="btn" data-act="liveRecap">Full results</button><button class="btn pri" data-act="afterShow">${esc(nextLabel(h))}</button></div>
     <div class="lv-more"><button class="link" data-act="copyResults" data-id="${h.wk}">Copy results</button>${canUndo(h.wk) ? '<button class="link" data-act="undoShow">↶ Undo this show</button>' : ''}</div>
   </div>`;
@@ -9331,7 +9348,7 @@ function viewBook() { return coBar() + viewBookCard(); }
 // ---------- the month calendar: every day of the month, Monday to Sunday ----------
 const DAY_MS = 864e5;
 // Menu → Settings → Calendar: how the calendar looks and the planning helpers are kept on this device
-const CAL_DEF = { start: 'mon', size: 'month', dates: 'date', shows: 'mine', remind: 3, auto: false, count: true, rivals: true, hol: false };
+const CAL_DEF = { start: 'mon', size: 'week', dates: 'date', shows: 'mine', remind: 3, auto: false, count: true, rivals: true, hol: false };
 const CAL_OK = { start: ['mon', 'sun'], size: ['month', 'week', 'hidden'], dates: ['date', 'week'], shows: ['this', 'mine', 'all'], remind: [0, 1, 2, 3, 4, 6, 8], auto: [true, false], count: [true, false], rivals: [true, false], hol: [true, false] };
 function CAL() { const m = meta.cal && typeof meta.cal === 'object' ? meta.cal : {}, o = {}; for (const k in CAL_DEF) o[k] = CAL_OK[k].includes(m[k]) ? m[k] : CAL_DEF[k]; return o; }
 // a few dates fans plan around (US Thanksgiving is the fourth Thursday of November)
@@ -9429,13 +9446,15 @@ function viewBookCard() {
   };
   const bkBar = bkDue ? `<div class="alert warn bk-bar"><span class="ic">💾</span><div class="sp small"><b>Back up your save.</b> ${bkDue >= G.week - 1 ? 'You haven\'t backed up yet.' : 'Last backup ' + bkDue + ' weeks ago.'} Saves live only in this browser.</div><button class="btn sm pri" data-act="export">Back up</button><button class="btn sm" data-act="bkLater">Later</button></div>` : '';
   const cs = CAL(), vw = UI.calWkv ?? wk;
-  const cal = (cs.count ? bigCountdown() : '') + (cs.size === 'hidden' ? '' : cs.size === 'week' ? `<div class="cal">
+  const cdown = cs.count ? bigCountdown() : '';
+  const calG = (cs.size === 'hidden' ? '' : cs.size === 'week' ? `<div class="cal">
     <div class="cal-h"><button class="iconbtn sm" data-act="calNav" data-id="-1" aria-label="Previous week">‹</button><b>${cs.dates === 'week' ? 'Week ' + vw : weekSpan(vw, cs)}</b>${wk !== G.week || UI.calWkv != null ? '<button class="btn sm" data-act="calToday">Tonight</button>' : ''}<button class="iconbtn sm" data-act="calNav" data-id="1" aria-label="Next week">›</button></div>
     ${weekGrid(vw, tile)}
   </div>` : `<div class="cal">
     <div class="cal-h"><button class="iconbtn sm" data-act="calNav" data-id="-1" aria-label="Previous month">‹</button><b>${monthLabel(mk)}</b>${wk !== G.week || UI.calMonth != null ? '<button class="btn sm" data-act="calToday">Tonight</button>' : ''}<button class="iconbtn sm" data-act="calNav" data-id="1" aria-label="Next month">›</button></div>
     ${monthGrid(mk, wk, tile)}
-  </div>`) + houseStrip();
+  </div>`);
+  const cal = cdown + calG + houseStrip();
   const statusBar = `<div class="kpis"><span>👥 ${kfmt(G.fans)} fans</span><span>⭐ ${Math.round(G.promo.prestige)} prestige</span>${last ? `<span>Last: <b class="stars">${starStr(last.rating)}</b></span>` : ''}${attAll.length ? `<button class="${att.length ? 'kpi-alert' : 'kpi-ok'}" data-act="brief">${att.length ? '⚠️ ' : ''}Briefing · ${attAll.length} ›</button>` : '<button class="kpi-ok" data-act="brief">Briefing ›</button>'}</div>`;
 
   // ----- past show: results on the same screen -----
@@ -9480,8 +9499,9 @@ function viewBookCard() {
   if (card.length > 2) { const live = prs.map((r, i) => card[i].kind === 'match' ? r.rating : -1), mx = Math.max(...live.slice(0, -1)); if (mx > 0 && (card[card.length - 1].kind !== 'match' || live[live.length - 1] < mx - 5)) bestIx = live.indexOf(mx); }
   const isNow = wk === G.week;
   // tonight's card comes first: the calendar, the newsletter and reminders sit under it (the tutorial keeps the calendar up top, it points at it)
-  const calTop = !isNow || tutOn(), extras = (isNow ? gigAlert() + dirtAlert() : '') + datesAlert() + (isNow ? bkBar : '');
-  return `${statusBar}${isNow ? eventAlert() : ''}${calTop ? extras + cal : ''}${isNow ? (tutOn() ? tutCard() : ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
+  // with the one-week strip (the default) the strip stays on top, so dates and tonight's card show together
+  const calTop = !isNow, stripTop = isNow && cs.size === 'week', extras = (isNow ? gigAlert() + dirtAlert() : '') + datesAlert() + (isNow ? bkBar : '');
+  return `${statusBar}${isNow ? eventAlert() : ''}${calTop ? extras + cal : stripTop ? calG : ''}${isNow ? (tutOn() ? tutCard() : teaseCard() || ppvFirst()) : ''}${big && !isNow ? `<div class="ppv-note"><b>This is the announced card.</b> Weekly shows build hype for these matches. Plans can change: swap a match any time before the show if another story gets hotter.</div>` : ''}
   <div class="show-h ${big ? 'big' : ''}"><div class="sp"><div class="show-k">${dayLabel(wk)} · Week ${wk}${isNow ? ' · Tonight' : ' · Booking ahead'}</div><h2>${esc(showTitle(wk))}</h2>
     <div class="small muted">${card.length ? `${card.length} of ${ideal[0]}–${ideal[1]} segments` : 'Nothing booked yet'}${big && !isNow ? ' · Announced card' : ''}</div></div>
     ${card.length ? `<div class="show-score"><b>${proj}</b><span class="stars">${starStr(proj)}</span><span class="tiny muted">projected</span></div>` : ''}</div>
@@ -9509,7 +9529,7 @@ function viewBookCard() {
   ${card.length || !isNow ? `<div class="runbar">${isNow
     ? `<button class="btn pri block" data-act="runShow">🔔 Run ${esc(showName(wk))} <span class="runproj">· ${starStr(proj)}</span></button>`
     : `<div class="small muted" style="text-align:center;padding:4px 0">Books ahead for week ${wk}. <button class="link" data-act="calToday">Back to tonight</button></div>`}</div>` : ''}
-  ${!calTop ? `<div class="below-card">${extras}${cal}</div>` : ''}
+  ${!calTop ? `<div class="below-card">${extras}${stripTop ? cdown + houseStrip() : cal}</div>` : ''}
   ${isNow ? `<div class="later">${tourneyCard()}${eventCard()}${roadCard()}${storyCard()}${goalCard()}</div>` : ''}`;
 }
 function tourneyCard() {
@@ -9928,6 +9948,7 @@ function renderModal() {
   modalAnim = key !== lastModalKey; lastModalKey = key;
   switch (m.type) {
     case 'menu': return modalMenu();
+    case 'yir': return modalYir(m);
     case 'settings': return modalSettings(m);
     case 'cloud': return modalCloud(m);
     case 'cos': return modalCos();
@@ -10948,7 +10969,7 @@ function modalRecap(m) {
    ${h.big ? monthReview(h) : ''}
    ${h.results.map((r, i) => `<details class="seg"><summary><div class="hd"><span class="no">${i === h.results.length - 1 && h.results.length > 1 ? '★ME' : '#' + (i + 1)}</span><span class="ttl">${segTitle(r.seg)}</span><span class="stars">${starStr(r.rating)}</span></div>
      ${r.seg.kind === 'match' ? `<div class="rwho">${segWho(r.seg)}</div>` : ''}<div class="who">${esc(r.text)}</div>${(r.notes || []).length ? `<div class="meta">${r.notes.map(esc).join('<br>')}</div>` : ''}<div class="tiny muted" style="margin-top:4px">Score ${r.rating} · tap for why ▾</div></summary>${whyList(r.why)}</details>${storyBtn(h, i)}`).join('')}`;
-  return modal(esc(h.name), body, `<button class="btn" data-act="copyResults" data-id="${h.wk}">Copy</button>${canUndo(h.wk) ? '<button class="btn" data-act="undoShow">↶ Undo</button>' : ''}<button class="btn pri" data-act="${h === G.history.at(-1) ? 'afterShow' : 'closeModal'}">${h === G.history.at(-1) ? esc(nextLabel(h)) : 'Close'}</button>`);
+  return modal(esc(h.name), body, `${shareWorthy(h) ? `<button class="btn" data-act="shareShow" data-id="${h.wk}">Share</button>` : ''}<button class="btn" data-act="copyResults" data-id="${h.wk}">Copy</button>${canUndo(h.wk) ? '<button class="btn" data-act="undoShow">↶ Undo</button>' : ''}<button class="btn pri" data-act="${h === G.history.at(-1) ? 'afterShow' : 'closeModal'}">${h === G.history.at(-1) ? esc(nextLabel(h)) : 'Close'}</button>`);
 }
 function lineage(t) {
   const rs = ensureReigns(t); if (!rs.length) return `<div class="sec">Title history</div>${lineagePre(t)}<div class="tiny muted">Nobody has held this title yet.</div>`;
@@ -18524,23 +18545,15 @@ function tutMainOk() {
   return r[r.length - 1] >= Math.max(...r.slice(0, -1)) - 5;
 }
 const TUT = [
-  { k: 'hi', t: '🔔 Your first show', btn: 'Let\'s go',
-    d: () => G.tutReplay ? `A quick walk through booking and running ${esc(showName(G.week))}. It takes about two minutes.` : `Let's book and run ${esc(showName(G.week))} together. It takes about two minutes. Opening night crowds are hot, so this one is set up to be a win.` },
-  { k: 'cal', t: '📅 Your calendar', btn: 'Next', sel: '.cal',
-    d: () => { const b = nextBig(); return `One show a week. Tonight is the glowing week. Gold weeks are big events${b ? `, and your first is <b>${esc(bigName(b))}</b> ${b - G.week === 1 ? 'next week' : `in ${b - G.week} weeks`}` : ''}.`; } },
-  { k: 'match', t: '🤼 Book a match', sel: '[data-act="addSeg"][data-id="match"]', done: () => tutCardSegs().some(s => s.kind === 'match'),
-    d: () => 'Tap <b>＋ Match</b>, pick a wrestler for each side, then tap <b>Add to card</b>. A face against a heel is a good start. The hints under the match tell you what else helps or hurts, like styles that clash.' },
+  { k: 'main', t: '⭐ Book your main event', sel: '[data-act="addSeg"][data-id="match"]', done: () => tutCardSegs().some(s => s.kind === 'match'),
+    d: () => `${G.tutReplay ? '' : 'Opening night crowds are hot, so this one is set up to be a win. '}Tap <b>＋ Match</b> and pick two of your stars. A face against a heel works best. This match closes the show, and it counts the most.` },
   { k: 'fill', t: '✨ Fill out the card', sel: '[data-act="autoFill"]', done: () => { const c = tutCardSegs(); return c.length >= 4 && new Set(c.map(s => s.kind)).size >= 2; },
-    d: () => 'A full show has 4 to 8 segments, with promos or angles mixed in. Add more yourself, or tap <b>✨ Auto-fill</b> to finish the card for you.' },
-  { k: 'main', t: '⭐ The main event', btn: 'Next', sel: () => tutMainOk() ? '.mcard .mrow.me' : '[data-act="segMain"]',
-    d: () => tutMainOk() ? 'The last segment is the main event, and it counts the most. Yours closes with a strong match. Nice.' : 'The last segment is the main event, and it counts the most. Close with your best match: tap <b>Make it the main event</b>, or use Reorder.' },
-  { k: 'proj', t: '📈 The projected rating', btn: 'Next', sel: '.show-h .show-score',
-    d: () => 'This is how the show should rate. Tap any match to change its winner, finish or type. The hints under each match show how to raise it.' },
+    d: () => 'Your main event is in. Tap <b>✨ Auto-fill</b> to book the rest of the show around it, or add segments yourself. You can tap any match to change it.' },
   { k: 'run', t: '🔔 Ring the bell', sel: '[data-act="runShow"]',
-    d: () => `Tap <b>Run</b> to go live and watch each segment play out.${G.tutReplay ? '' : ` The hot opening night crowd adds +${TUT_BONUS.rating} to the show.`}` },
+    d: () => `Tap <b>Run</b> to go live and watch each segment play out.${G.tutReplay ? '' : ` The opening night crowd adds +${TUT_BONUS.rating} for the main event you booked.`}` },
   { k: 'win', t: '🏆 Your first show is in the books', btn: 'Finish',
     d: () => { const r = G.tutRes || {}, b = nextBig();
-      return `${r.rating ? `It rated <b>${r.rating}</b> (${starStr(r.rating)}). ` : ''}From here, each week is the same: book, run, then tap <b>Briefing</b> at the top and check the Office.${b ? ` Build your stories toward <b>${esc(bigName(b))}</b>${b - G.week === 1 ? ' next week' : ` in ${b - G.week} weeks`}.` : ''} You can replay this from Menu → How to play.`; } }
+      return `${r.rating ? `It rated <b>${r.rating}</b> (${starStr(r.rating)}). ` : ''}Each week is the same: book, run, then tap <b>Briefing</b> at the top for what needs you.${b ? ` Build your stories toward <b>${esc(bigName(b))}</b>${b - G.week === 1 ? ' next week' : ` in ${b - G.week} weeks`}.` : ''} Replay this from Menu → How to play.`; } }
 ];
 const TUT_WIN = TUT.length - 1;
 const tutOn = () => G && G.tut != null && G.tut >= 0 && G.tut < TUT.length;
@@ -18550,7 +18563,11 @@ function tutStart(replay) {
 }
 function tutSync() {
   // skip steps the player has already done (e.g. booked a match before reading the tip)
-  while (tutOn() && G.tut < TUT_WIN && TUT[G.tut].done?.()) G.tut++;
+  while (tutOn() && G.tut < TUT_WIN && TUT[G.tut].done?.()) {
+    // the match the player books first is the main event: it goes to the bottom and Auto-fill books around it
+    if (TUT[G.tut].k === 'main') { const c = G.card || [], m = c.find(x => x.kind === 'match' && segPeople(x).length); if (m && !c.some(x => x.isMain)) { c.splice(c.indexOf(m), 1); c.push(m); m.isMain = true; } }
+    G.tut++;
+  }
   // the closing card bows out by itself once another show has run
   if (tutOn() && G.tut === TUT_WIN && G.tutRes && G.week > G.tutRes.wk + 1) { if (!G.tutReplay) PLAYLOG.ev('tutorial', 'done'); delete G.tut; delete G.tutRes; delete G.tutReplay; G.tutDone = 1; }
 }
@@ -18559,21 +18576,21 @@ function tutCard() {
   tutSync();
   if (!tutOn()) return '';
   const s = TUT[G.tut], n = G.tut + 1;
-  const dots = TUT.map((_, i) => `<i class="${i < G.tut ? 'ok' : i === G.tut ? 'on' : ''}"></i>`).join('');
-  return `<section class="tip tut" aria-labelledby="tut-h"><div class="row"><b class="sp" id="tut-h">${s.t}</b><span class="tiny muted">Step ${n} of ${TUT.length}</span></div>
+  const dots = TUT.slice(0, TUT_WIN).map((_, i) => `<i class="${i < G.tut ? 'ok' : i === G.tut ? 'on' : ''}"></i>`).join('');
+  return `<section class="tip tut" aria-labelledby="tut-h"><div class="row"><b class="sp" id="tut-h">${s.t}</b>${G.tut < TUT_WIN ? `<span class="tiny muted">Step ${n} of ${TUT_WIN}</span>` : ''}</div>
     <div class="tut-dots" aria-hidden="true">${dots}</div><div class="small">${s.d()}</div>
     <div class="row" style="margin-top:8px">${G.tut < TUT_WIN ? '<button class="link" data-act="tutSkip">Skip tutorial</button>' : ''}<span class="sp"></span>${s.btn ? `<button class="btn sm pri" data-act="tutNext">${s.btn}</button>` : `<span class="tiny muted">Waiting for you…</span>`}</div></section>`;
 }
 // one line inside the match editor while the coach is on "Book the opener"
 function tutSegHint(s) {
-  if (!tutOn() || TUT[G.tut].k !== 'match' || s.kind !== 'match' || UI.selWeek !== G.week) return '';
-  return '<div class="tip tut small" role="note"><b>Tutorial:</b> pick a wrestler for each side. Leave the rest as it is, then tap <b>Add to card</b>.</div>';
+  if (!tutOn() || TUT[G.tut].k !== 'main' || s.kind !== 'match' || UI.selWeek !== G.week) return '';
+  return '<div class="tip tut small" role="note"><b>Tutorial:</b> pick a wrestler for each side, two of your best. Leave the rest as it is, then tap <b>Add to card</b>.</div>';
 }
 // after every render: ring the thing to tap, and tell screen readers when the step changes
 function tutMark() {
   if (!tutOn()) { tutMark.last = null; const say = document.getElementById('tut-say'); if (say) say.remove(); return; }
   let sel = null;
-  if (UI.modal?.type === 'seg' && TUT[G.tut].k === 'match') sel = modals.querySelector('[data-act="segSave"]');
+  if (UI.modal?.type === 'seg' && TUT[G.tut].k === 'main') sel = modals.querySelector('[data-act="segSave"]');
   else if (!UI.modal && UI.tab === 'book' && UI.selWeek === G.week) { const q = TUT[G.tut].sel; const qq = typeof q === 'function' ? q() : q; if (qq) sel = root.querySelector(qq); }
   sel?.classList.add('tut-hi');
   if (tutMark.last !== G.tut && UI.tab === 'book' && !UI.modal) {
@@ -18581,9 +18598,146 @@ function tutMark() {
     let say = document.getElementById('tut-say');
     if (!say) { say = document.createElement('div'); say.id = 'tut-say'; say.className = 'sr-only'; say.setAttribute('aria-live', 'polite'); document.body.appendChild(say); }
     const tmp = document.createElement('div'); tmp.innerHTML = TUT[G.tut].d();
-    say.textContent = `Tutorial step ${G.tut + 1} of ${TUT.length}. ${TUT[G.tut].t.replace(EMO_RE, '').trim()}. ${tmp.textContent.replace(EMO_RE, '').trim()}`;
+    say.textContent = `${G.tut < TUT_WIN ? `Tutorial step ${G.tut + 1} of ${TUT_WIN}. ` : ''} ${TUT[G.tut].t.replace(EMO_RE, '').trim()}. ${tmp.textContent.replace(EMO_RE, '').trim()}`;
   }
 }
+// ----- year in review: five quick slides when a year ends (and from the awards), built from that year's shows and awards -----
+function yirData(yr) {
+  const a = (G.awards || []).find(x => x.yr === yr); if (!a) return null;
+  const shows = G.history.filter(h => h.wk > a.wk - 52 && h.wk <= a.wk && ownRec(h)); if (!shows.length) return null;
+  const aw = l => a.list.find(x => x.lbl === l), fans = shows.reduce((n, h) => n + (h.fanDelta || 0), 0), net = shows.reduce((n, h) => n + (h.net || 0), 0);
+  return { yr, a, shows, n: shows.length, avg: Math.round(shows.reduce((n, h) => n + h.rating, 0) / shows.length), best: shows.slice().sort((x, y) => y.rating - x.rating)[0], fans, net,
+    woy: aw('Wrestler of the Year'), moty: aw('Match of the Year'), feud: aw('Feud of the Year'), brk: aw('Breakout Star') };
+}
+function modalYir(m) {
+  const d = yirData(m.yr); if (!d) { UI.modal = null; return ''; }
+  const N = 5, i = clamp(+m.i || 0, 0, N - 1), w = d.woy && W(d.woy.wid);
+  const slides = [
+    `<div class="yir-k">${esc(G.promo.name)}</div><div class="yir-t">Year ${d.yr}<br>in review</div><p>${d.n} show${d.n === 1 ? '' : 's'}. An average of <b>${d.avg}</b> (${starStr(d.avg)}).</p>`,
+    `<div class="yir-k">Show of the year</div><div class="yir-t">${esc(d.best.name)}</div><div class="yir-s">${starStr(d.best.rating)}</div><p>Rated ${d.best.rating} in week ${d.best.wk}.${d.moty ? ` Match of the year: <b>${esc(d.moty.nm)}</b> (${esc(d.moty.det)}).` : ''}</p>`,
+    w ? `<div class="yir-k">Wrestler of the year</div>${av(w, 132)}<div class="yir-t">${esc(w.name)}</div><p>${esc(d.woy.det)}.${d.brk ? ` Breakout star: <b>${esc(d.brk.nm)}</b>.` : ''}</p>`
+      : `<div class="yir-k">Feud of the year</div><div class="yir-t">${esc(d.feud?.nm || 'Still to come')}</div><p>${esc(d.feud?.det || '')}</p>`,
+    `<div class="yir-k">The year in numbers</div><div class="yir-t">${d.fans >= 0 ? '+' : ''}${kfmt(d.fans)} fans</div><p>${MON() ? `${d.net >= 0 ? '+' : ''}${money(d.net)} from shows. ` : ''}${d.feud ? `Feud of the year: <b>${esc(d.feud.nm)}</b>.` : ''}</p>`,
+    `<div class="yir-k">Next up</div><div class="yir-t">Year ${d.yr + 1}</div><p>${(b => b ? `First stop: <b>${esc(bigName(b))}</b>${b > G.week ? ` in ${b - G.week} week${b - G.week === 1 ? '' : 's'}` : ''}.` : 'A new year of shows starts now.')(nextBig())}</p>
+      <div class="grid2" style="width:100%"><button class="btn" data-act="records" data-id="awards">All the awards</button><button class="btn pri" data-act="yirShare" data-id="${d.yr}">${ic('upload')} Share my year</button></div>`,
+  ];
+  const prog = Array.from({ length: N }, (_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('');
+  return modal(`Year ${d.yr} in review`, `<div class="yir"><div class="yir-p" aria-hidden="true">${prog}</div><div class="yir-c" aria-live="polite">${slides[i]}</div></div>`,
+    `${i ? `<button class="btn" data-act="yirGo" data-id="${i - 1}">Back</button>` : ''}${i < N - 1 ? `<button class="btn pri" data-act="yirGo" data-id="${i + 1}">Next</button>` : '<button class="btn pri" data-act="closeModal">Done</button>'}`, { cls: 'yir-bg' });
+}
+Object.assign(A, {
+  yir(yr) { liveTimers.forEach(clearTimeout); openModal({ type: 'yir', yr: +yr, i: 0 }); PLAYLOG.feat('yir'); },
+  yirGo(i) { if (UI.modal?.type === 'yir') { UI.modal.i = +i; render(); } },
+  async yirShare(yr) {
+    const d = yirData(+yr); if (!d) return; toast('Making your poster…');
+    const h = { ...d.best, rating: d.avg, attendance: d.shows.reduce((n, x) => n + (x.attendance || 0), 0), wk: d.a.wk, name: `Year ${d.yr}` };
+    const b = await posterBlob(h, d.yr).catch(() => null), f = b && new File([b], `${G.promo.name.replace(/[^\w]+/g, '-')}-year-${d.yr}.png`, { type: 'image/png' });
+    const url = NATIVE ? 'https://anthonymcguigan.github.io/bookit/' : location.origin + location.pathname, text = `${G.promo.name}: Year ${d.yr} in review. ${d.n} shows, best ${d.best.rating}. Booked in BookIt.`;
+    try { if (f && navigator.canShare?.({ files: [f] })) return await navigator.share({ files: [f], text, url }); if (navigator.share) return await navigator.share({ text, url }); } catch (e) { if (e?.name === 'AbortError') return; }
+    if (b) { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); toast('Poster saved.'); } else copyText(text + ' ' + url, 'Copied.');
+  },
+});
+// ----- share a great show: a poster picture for the phone's share sheet (big events and shows rated 80+) -----
+const shareWorthy = h => h && (h.big || h.rating >= 80);
+const imgLoad = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+async function posterBlob(h, yr) {
+  const W0 = 1080, H0 = 1350, c = document.createElement('canvas'); c.width = W0; c.height = H0; const x = c.getContext('2d');
+  try { await Promise.all(['BK Jersey 10', 'BK Jersey 15', 'BK Atkinson Hyperlegible'].map(f => document.fonts.load(`64px "${f}"`))); } catch (e) {}
+  const D = '"BK Jersey 10", Impact, sans-serif', C = '"BK Jersey 15", "Arial Narrow", sans-serif', B = '"BK Atkinson Hyperlegible", system-ui, sans-serif';
+  const g = x.createRadialGradient(W0 / 2, 420, 60, W0 / 2, 520, 900); g.addColorStop(0, '#3a2a10'); g.addColorStop(1, '#0c0b12'); x.fillStyle = g; x.fillRect(0, 0, W0, H0);
+  const ropes = y => { [['#e53b3b', 0], ['#eeeeee', 10], ['#3b6be5', 20]].forEach(([col, d]) => { x.fillStyle = col; x.fillRect(0, y + d, W0, 8); }); };
+  ropes(0); ropes(H0 - 28);
+  const fit = (t, font, max, size) => { let z = size; do { x.font = `${z}px ${font}`; z -= 4; } while (x.measureText(t).width > max && z > 20); };
+  const line = (t, y, font, size, col, max = W0 - 120) => { fit(t, font, max, size); x.fillStyle = col; x.textAlign = 'center'; x.fillText(t, W0 / 2, y); };
+  line(`${G.promo.name} presents`.toUpperCase(), 120, C, 44, '#a69fbd');
+  line(String(yr ? `Year ${yr} in review` : h.name).toUpperCase(), 215, D, 120, '#f6c544');
+  const ms = h.results.filter(r => r.seg.kind === 'match'), me = ms[ms.length - 1] || h.results[h.results.length - 1];
+  const sides = (me?.seg.sides || []).map(sd => sd.map(W).filter(Boolean)).filter(sd => sd.length);
+  if (sides.length >= 2) {
+    const A = sides[0][0], Bw = sides[1][0], sz = 300, gap = 120, y = 300;
+    for (const [w, cx] of [[A, W0 / 2 - gap / 2 - sz], [Bw, W0 / 2 + gap / 2]]) {
+      const ph = safePhoto(w.photo), src = ph ? photoURL(ph) : faceURL(w, false), im = await imgLoad(src);
+      x.fillStyle = w.align === 'heel' ? '#4a1018' : '#14305e'; x.fillRect(cx, y, sz, sz);
+      if (im) { x.imageSmoothingEnabled = !!ph && !isPixPng(ph); x.drawImage(im, cx, y, sz, sz); }
+      x.strokeStyle = '#322d45'; x.lineWidth = 8; x.strokeRect(cx, y, sz, sz);
+    }
+    x.font = `96px ${D}`; x.fillStyle = '#ffb547'; x.textAlign = 'center'; x.fillText('VS', W0 / 2, y + sz / 2 + 34);
+  }
+  const tl = me?.seg.title && (G.titles || []).find(t => t.id === me.seg.title);
+  line(me ? `${me.text}${tl ? ' · ' + tl.name : ''}`.replace(/\.\s·/, ' ·') : '', 720, B, 50, '#f3f0fa');
+  line(starStr(h.rating), 850, B, 120, '#f6c544');
+  line(`Rated ${h.rating} · ${h.attendance.toLocaleString()} fans · Week ${h.wk}`, 930, B, 40, '#a69fbd');
+  const best = h.results.slice().sort((a, b) => b.rating - a.rating).slice(0, 3);
+  best.forEach((r, i) => line(`${r.text}  ${starStr(r.rating)}`, 1030 + i * 60, B, 34, '#cfc8e0'));
+  line('BOOKED IN BOOKIT · WRESTLING BOOKING SIM', 1270, C, 36, '#ffb547');
+  return new Promise(res => { try { c.toBlob(b => res(b), 'image/png'); } catch (e) { res(null); } });
+}
+async function shareShow(wk) {
+  const h = histFor(+wk); if (!h) return;
+  toast('Making your poster…');
+  const url = NATIVE ? 'https://anthonymcguigan.github.io/bookit/' : location.origin + location.pathname, text = `${G.promo.name}: ${h.name} rated ${h.rating} (${starStr(h.rating)}). Booked in BookIt.`;
+  const b = await posterBlob(h).catch(() => null), f = b && new File([b], `${h.name.replace(/[^\w]+/g, '-')}.png`, { type: 'image/png' });
+  try {
+    if (f && navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f], text, url }); return PLAYLOG.feat('share:poster'); }
+    if (navigator.share) { await navigator.share({ text, url }); return PLAYLOG.feat('share:text'); }
+  } catch (e) { if (e?.name === 'AbortError') return; }
+  if (b) { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Poster saved. Share it anywhere.'); PLAYLOG.feat('share:download'); }
+  else copyText(text + ' ' + url, 'Copied. Paste it anywhere.');
+}
+Object.assign(A, { shareShow });
+// ----- next week teaser: after a show, a hook for the next one, written from titles, feuds and tonight's results -----
+// G.tease = { from: week it was made, sid: show, k: kind, a, b (wrestler ids), t (title id), text }. Shown on the Shows tab until the next show runs.
+function teaseMake(rec, card) {
+  delete G.tease;
+  if (rec.special || onEv() && !rec.big) return;
+  const ok = w => w && w.contract && !(w.injury > 0) && w.status !== 'retired', opts = [];
+  const nm = id => nameOf(id);
+  // 1. a title challenge: the top singles title, and the hottest wrestler of the other alignment
+  const tt = (G.titles || []).filter(t => !t.tag && t.holder?.length === 1 && ok(W(t.holder[0]))).sort((a, b) => (b.prestige || 0) - (a.prestige || 0))[0];
+  if (tt) {
+    const h = W(tt.holder[0]), won = new Set(rec.results.filter(r => r.seg.kind === 'match' && r.seg.winner >= 0).flatMap(r => r.seg.sides?.[r.seg.winner] || []));
+    const c = signed().filter(w => ok(w) && w.id !== h.id && w.align !== h.align && w.align !== 'tweener' && sameDiv(w, h) && divOk(tt, w)).sort((a, b) => (b.pop + (won.has(b.id) ? 12 : 0)) - (a.pop + (won.has(a.id) ? 12 : 0)))[0];
+    if (c) opts.push({ k: 'title', a: c.id, b: h.id, t: tt.id, w: 3, text: pick([`${c.name} stormed the ring after the show and demanded a shot at ${h.name}'s ${tt.name}.`, `${c.name} cut ${h.name} off on the way to the back: "That ${tt.short || 'title'} is mine. Next week."`, `${c.name} was caught staring down ${h.name}'s ${tt.short || tt.name} backstage. The fans want to see it.`]) });
+  }
+  // 2. the hottest feud that wasn't settled tonight
+  const st = (G.stories || []).filter(x => x.status === 'active' && x.a?.length && x.b?.length && ok(W(x.a[0])) && ok(W(x.b[0]))).sort((a, b) => (b.heat || 0) - (a.heat || 0))[0];
+  if (st) opts.push({ k: 'feud', a: st.a[0], b: st.b[0], s: st.id, w: 2, text: pick([`${nm(st.a[0])} and ${nm(st.b[0])} had to be pulled apart in the parking lot. Neither one is done.`, `${nm(st.b[0])} jumped ${nm(st.a[0])} on the way out of the building. Security barely stopped it.`, `${nm(st.a[0])} posted a video calling out ${nm(st.b[0])}: "Next week, you and me."`]) });
+  // 3. an upset: tonight's loser wants it back
+  const up = rec.results.filter(r => r.seg.kind === 'match' && r.seg.winner >= 0 && r.seg.sides?.length === 2 && r.seg.sides.every(x => x.length === 1)).map(r => ({ w: W(r.seg.sides[r.seg.winner][0]), l: W(r.seg.sides[1 - r.seg.winner][0]) })).filter(x => ok(x.w) && ok(x.l) && x.l.pop >= x.w.pop + 8)[0];
+  if (up) opts.push({ k: 'upset', a: up.l.id, b: up.w.id, w: 2, text: `${up.l.name} can't believe they lost to ${up.w.name} and wants a rematch, right away.` });
+  if (!opts.length) return;
+  const tot = opts.reduce((n, o) => n + o.w, 0); let r = Math.random() * tot, o = opts[0];
+  for (const x of opts) { r -= x.w; if (r <= 0) { o = x; break; } }
+  delete o.w; G.tease = { ...o, from: rec.wk, sid: G.showId };
+}
+const teaseOn = () => { const x = G.tease; return x && x.sid === G.showId && G.week > x.from && G.week <= x.from + 1 && UI.selWeek === G.week && !showRanNow() && W(x.a) && W(x.b); };
+function teaseCard() {
+  if (!teaseOn()) return '';
+  const x = G.tease, a = W(x.a), b = W(x.b), t = x.t && (G.titles || []).find(y => y.id === x.t);
+  const booked = (G.card || []).some(s => s.kind === 'match' && segPeople(s).includes(a.id) && segPeople(s).includes(b.id));
+  return `<section class="tease" aria-labelledby="tease-h"><div class="tease-k" id="tease-h">Last week on ${esc(showName(x.from))}</div>
+    <div class="tease-b">${av(a, 52, true)}<p class="sp">${esc(x.text)}</p></div>
+    ${booked ? `<div class="small" style="color:var(--good)">${ic('checkc')} Booked for tonight${t ? ' with the title on the line' : ''}.</div>` : `<div class="grid2"><button class="btn pri" data-act="teaseBook">Book ${esc(shortOf(a.id))} vs ${esc(shortOf(b.id))}${t ? ' for the title' : ''}</button><button class="btn" data-act="teaseWait">Make them wait</button></div>`}</section>`;
+}
+const TEASE_ACTIONS = {
+  teaseBook() {
+    if (!teaseOn()) return; const x = G.tease, c = G.card, a = W(x.a), b = W(x.b);
+    if (c.length >= maxSegs(G.week)) return toast('The card is full. Remove a segment first.');
+    // take them out of anything else tonight, then book it as the main event
+    for (const s of c) if (s.kind === 'match' && s.sides) s.sides = s.sides.map(sd => sd.filter(id => id !== a.id && id !== b.id));
+    for (let i = c.length - 1; i >= 0; i--) if (!segPeople(c[i]).length) c.splice(i, 1);
+    c.forEach(s => delete s.isMain);
+    const t = x.t && (G.titles || []).find(y => y.id === x.t && y.holder?.includes(b.id));
+    c.push({ id: uid(), kind: 'match', mtype: 'Singles', stip: 'Standard', sides: [[a.id], [b.id]], winner: -1, finish: 'Clean', title: t ? t.id : null, isMain: true });
+    commit(`Booked ${a.name} vs ${b.name} as tonight's main event.`);
+  },
+  teaseWait() {
+    const x = G.tease; if (!x) return;
+    const st = x.s && (G.stories || []).find(y => y.id === x.s); if (st) st.heat = clamp((st.heat || 0) + 4, 0, 100);
+    delete G.tease; commit(st ? 'Making them wait. The feud gets a little hotter.' : 'Making them wait.');
+  },
+};
+Object.assign(A, TEASE_ACTIONS);
 // the early win: a hot opening-night crowd lifts the tutorial show, and a first-show bonus follows
 const tutBoost = () => tutOn() && !G.tutReplay && G.tut < TUT_WIN && G.week === G.tutWk ? TUT_BONUS.rating : 0;
 function tutShowDone(rec) {
@@ -19072,8 +19226,9 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.115';
+const VERSION = '1.9.116';
 const WHATS_NEW = [
+  ['🔔 A hook every week', 'After a show, the Shows tab opens with what happened after the cameras cut: a title challenge, a brawl in the parking lot or a rematch demand. Book it in one tap or make them wait. Great shows (big events and anything 80+) get a Share button that makes a poster for your group chat. When a year ends, Your Year in review sums it up in five quick slides. The live show has a crowd meter, the calendar is now a one-week strip above tonight\'s card (Menu → Settings switches back to the month), and the first-show tutorial is three steps where you book the main event yourself.'],
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
   ['🌍 Update a shared world', 'Share a world again with the same name and you can update the first one instead of listing a second copy. It keeps its listing, likes and player count, and new players get the latest version. Games already started in it carry on as they are. Pick Share as new if you want both.'],
