@@ -808,6 +808,8 @@ img.tr-big { object-fit: contain; }
 .crash-in pre { text-align: left; white-space: pre-wrap; }
 .top .brand span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 440px) { .top .brand b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 16px; line-height: 1; overflow-wrap: anywhere; } } /* long company names wrap to two lines on phones instead of cutting to "THUNDE…" */
+.top .brand i { font-style: normal; } .top .brand .wk-s { display: none; }
+@media (max-width: 440px) { header.top .top-logo { display: none; } .top .brand .wk-l { display: none; } .top .brand .wk-s { display: inline; } } /* on phones the badge gives its room to the company and show names */
 img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 /* ----- photo to pixel character ----- */
@@ -9124,7 +9126,7 @@ function render() {
   root.innerHTML = iconize(`<div class="app">
     <header class="top">
       <div class="top-logo">${esc(abbr(G.promo.name))}</div>
-      <div class="brand"><b role="heading" aria-level="1">${esc(G.promo.name)}</b><span>Week ${G.week} · ${big ? '🎆 ' : ''}${esc(showName(G.week))}</span></div>
+      <div class="brand"><b role="heading" aria-level="1">${esc(G.promo.name)}</b><span><i class="wk-l">Week</i><i class="wk-s">Wk</i> ${G.week} · ${big ? '🎆 ' : ''}${esc(showName(G.week))}</span></div>
       ${G.settings.finances ? `<div class="money" style="color:${G.money < 0 ? 'var(--bad)' : 'inherit'}">${money(G.money)}</div>` : ''}
       ${multi() ? '<button class="iconbtn" data-act="cos" aria-label="Switch company">⇅</button>' : ''}
       ${(n => `<button class="iconbtn ph-btn${(G.phone || []).some(msgOpen) ? ' ring' : ''}" data-act="phone" aria-label="Messages${n ? `, ${n} new` : ''}">📱${n ? `<span class="dot" aria-hidden="true">${n}</span>` : ''}</button>`)(phoneNew())}
@@ -19070,7 +19072,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.114';
+const VERSION = '1.9.115';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
