@@ -1,5 +1,5 @@
 // Caches the game so it opens instantly and works offline after the first visit.
-const CACHE = 'bookit-v201';
+const CACHE = 'bookit-v202';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-192.png', './icons/icon-maskable-512.png', './sounds/cheer.mp3', './sounds/applause.mp3', './fonts/jersey-10-normal-400.woff2', './fonts/jersey-15-normal-400.woff2', './fonts/atkinson-hyperlegible-normal-400.woff2', './fonts/atkinson-hyperlegible-normal-700.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
