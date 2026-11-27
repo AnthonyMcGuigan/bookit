@@ -858,6 +858,9 @@ img.av.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .sup-hero h3 { margin: 6px 0 4px; font-family: var(--f-display); font-weight: 400; font-size: 26px; letter-spacing: .03em; text-transform: uppercase; }
 .sup-hero p { margin: 0; color: var(--muted); font-size: 14px; }
 .sup-star { width: 58px; height: 58px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; font-size: 28px; background: radial-gradient(circle at 35% 30%, #fff3b0, #ffd24a 55%, #c98512); box-shadow: 0 8px 24px rgba(255, 200, 60, .25); }
+.sup-star .i { width: 30px; height: 30px; color: #6b4a00; }
+.sup-free, .sup-tip { margin-bottom: 4px; } .sup-free .ic { color: var(--good); flex: none; } .sup-free b { font-size: 14px; }
+.sup-perk .ic .i { width: 18px; height: 18px; } .sup-perk:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .sup-star.spin { animation: supSpin 1.4s linear infinite; } @keyframes supSpin { to { transform: rotate(360deg); } }
 .sup-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .sup-perk { display: flex; gap: 8px; align-items: flex-start; padding: 10px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
@@ -9290,7 +9293,7 @@ function homeAcct(me) {
   return `<div class="hm-prof">${homeAv(me, 'big')}<div class="sp"><h1>${me.name ? esc(me.name) : me.signed ? 'Your account' : 'Guest booker'}</h1>${me.email ? `<div class="hm-mail">${esc(me.email)}</div>` : ''}<div class="hm-st ${me.signed ? 'ok' : ''}">${status}</div>${me.sup ? `<span class="flair sup-badge">${ic('star')} Supporter</span>` : ''}</div></div>
   ${sb && !me.signed ? `<button class="btn pri block hm-sign" data-act="cloud">${ic('user')} Sign in or create an account</button><div class="tiny muted" style="margin:6px 2px 0">Back up your games to the cloud and play them on any phone.</div>` : ''}
   <div class="hm-list" style="margin-top:14px">
-    ${supShown() ? homeRow('support', 'star', me.sup ? 'You\'re a BookIt Supporter' : 'Become a BookIt Supporter', me.sup ? 'Thank you! See your plan and perks.' : '6 cloud slots, a Supporter badge, and you keep the game running', { gold: !me.sup }) : ''}
+    ${supShown() ? homeRow('support', 'star', me.sup ? 'You\'re a BookIt Supporter' : 'Become a BookIt Supporter', me.sup ? 'Thank you! See your plan and perks.' : 'The game is free. Supporter pays for cloud saves and Community space', { gold: !me.sup }) : ''}
     ${sb ? homeRow('cloud', 'globe', 'Cloud saves', me.signed ? 'Upload or load your games on any phone' : 'Sign in to keep your games safe') : ''}
     ${homeRow('homeProfile', 'pen', 'Community profile', 'Name, bio, colour, flair and belt symbol')}
     ${homeRow('settings', 'grid', 'Settings', 'Look, sound, motion and privacy')}
@@ -10280,7 +10283,10 @@ async function supResume() {
   try { localStorage.removeItem('bookit.supIntent'); } catch (e) {}
   UI.modal = { type: 'support', plan: SUP_PLANS[x.plan] ? x.plan : 'year' }; render();
 }
-const SUP_PERKS = [['☁️', '6 cloud save slots', 'Three more than the free three.'], ['🌐', 'More Community space', 'Up to 10 shared worlds and more room for rosters and photos.'], ['⭐', 'Supporter badge', 'A gold badge next to your name in Community.'], ['🧪', 'Early access', 'Try new features before everyone else.']];
+// Anthony's rule: Supporter only covers what costs money to run, which is server space and bandwidth.
+// Everything that runs on the player's own device stays free. The badge is a thank-you and costs nothing.
+const SUP_PERKS = [['upload', '3 more cloud save slots', 'Cloud saves live on our servers. Everyone gets 3 free, Supporters get 6.'], ['globe', 'More Community space', 'Up to 10 shared worlds (3 free), room for bigger photo-heavy worlds, and 10 photo slots (5 free).'], ['star', 'Supporter badge', 'A gold badge next to your name in Community. Just a thank-you.']];
+const SUP_FREE = 'The whole game, every booking feature, all the editors, Story Mode, saves on your device, and browsing and downloading anything in Community.';
 const CLOUD_SLOTS = [1, 2, 3, 4, 5, 6], CLOUD_FREE = 3;
 const cloudErr = e => e?.code === 'full' ? FULL_MSG : e?.code === 'big' ? 'This save is too big for the cloud. Download a backup instead (Menu → Backup & transfer): files have no size limit.' : e?.code === 'permission-denied' ? 'Cloud saves are not set up yet. Try again later.' : 'Could not reach the cloud. Check your connection.';
 // a cloud save can be up to 380 KB once packed. Warn while there's still room, not only when it no longer fits.
@@ -10335,7 +10341,7 @@ function modalCloud(m) {
   const u = sbSess?.user, L = m.list;
   const sup = isSup();
   const rows = CLOUD_SLOTS.map(n => { const x = L?.[n], sm = x?.sum || {};
-    if (n > CLOUD_FREE && !sup && !x) return PLAY ? '' : `<div class="item"><div class="av" style="background:var(--card2);color:var(--muted)">${n}</div><div class="main"><div class="t">Supporter slot</div><div class="d">⭐ BookIt Supporters get 3 extra cloud slots.</div></div><button class="btn sm" data-act="support">See Supporter</button></div>`;
+    if (n > CLOUD_FREE && !sup && !x) return PLAY ? '' : `<div class="item"><div class="av" style="background:var(--card2);color:var(--muted)">${n}</div><div class="main"><div class="t">Supporter slot</div><div class="d">Cloud saves use server space, so slots 4 to 6 come with BookIt Supporter.</div></div><button class="btn sm" data-act="support">See Supporter</button></div>`;
     return `<div class="item"><div class="av" style="background:${n === meta.slot ? 'var(--accent)' : 'var(--card2)'};color:${n === meta.slot ? 'var(--accent-ink)' : 'var(--ink)'}">${n}</div><div class="main"><div class="t">${x ? esc(Array.isArray(sm.cos) && sm.cos.length > 1 ? andList(sm.cos.map(String)) : String(sm.promo || 'Saved game')) : 'Empty'}</div><div class="d">${x ? `${Array.isArray(sm.cos) && sm.cos.length > 1 ? `${sm.cos.length} companies · booking ${esc(String(sm.promo || ''))} · ` : ''}Week ${+sm.week || '?'} · ${x.at ? new Date(x.at).toLocaleString() : ''}` : L ? '—' : 'Loading…'}</div></div>
       <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${x ? `<button class="btn sm" data-act="cloudGet" data-id="${n}">Load</button>` : ''}${G && (n <= CLOUD_FREE || sup) ? `<button class="btn sm" data-act="cloudUp" data-id="${n}">Upload</button>` : ''}${x ? `<button class="btn sm bad" data-act="cloudDel" data-id="${n}" aria-label="Delete cloud slot ${n}">🗑</button>` : ''}</div></div>`; }).join('');
   const body = `<p class="small muted" style="margin-top:0">Keep your games online, and load them on another phone or computer. Only you can see your cloud saves.</p>
@@ -10361,7 +10367,7 @@ function privacyHTML() {
   ${sbOn() ? `  <h3>When you use Community</h3>
   <p>Community and feedback are stored online with Supabase, a database service. When you open Community you get a guest account with a random id. We don't ask for your name. What you post, your profile (name, bio, color), what you like, what you play or add, and who you follow can be seen by anyone who plays.</p>
   <p>Cloud saves (Menu → Cloud saves) are stored with the same guest account, and only you can read them. Delete them from that page any time.</p>
-  <p>BookIt Supporter payments are handled by Stripe. The game never sees your card. We keep only whether your plan is active, when it renews, and Stripe's customer and subscription ids. Current supporters with a Community profile show a Supporter badge.</p>
+  <p>BookIt Supporter payments are handled by Stripe. The game never sees your card. We keep only whether your plan is active, when it renews, and Stripe's customer and subscription ids. Current supporters with a Community profile show a Supporter badge. Tips go through Stripe too, and the game keeps nothing about them.</p>
   <p>If you add your email to keep your account, Supabase stores it to send you sign-in links. Other players never see it. Remove your posts and profile any time from Community → My profile.</p>
   <h3>Reports and feedback</h3>
   <p>Reports and feedback are private: only the game's owner can read them. Feedback includes the game version, your week number and your browser type, so bugs can be fixed. Crash reports include the error message.</p>
@@ -11757,7 +11763,7 @@ const A = {
     ST_DEV_DEF[id]?.(); ls.set(META, JSON.stringify(meta)); render(); toast(`${x.t} back to the defaults.`); },
   cloud() { openModal({ type: 'cloud', list: null }); cloudList(); },
   async cloudUp(n) {
-    if (!G) return; const go = async () => { try { await cloudPush(+n); toast('Uploaded to cloud slot ' + n + '.'); cloudList(); } catch (e) { toast(+n > CLOUD_FREE && e?.code === 'permission-denied' ? 'Cloud slots 4 to 6 are for BookIt Supporters.' : cloudErr(e)); } };
+    if (!G) return; const go = async () => { try { await cloudPush(+n); toast('Uploaded to cloud slot ' + n + '.'); cloudList(); } catch (e) { toast(+n > CLOUD_FREE && e?.code === 'permission-denied' ? 'Cloud slots 4 to 6 use extra server space, so they come with BookIt Supporter.' : cloudErr(e)); } };
     if (UI.modal?.list?.[n]) confirmBox('Replace cloud slot ' + n + '?', 'The game saved there is replaced with this one.', 'Replace', go); else go();
   },
   cloudGet(n) {
@@ -13599,7 +13605,10 @@ function cleanSupport(v) {
   if (u.protocol !== 'https:' || u.username || u.password || u.port || !SUPPORT_HOSTS.test(u.hostname)) return null;
   return { url: u.href.slice(0, 200), note: cleanTxt(v.note, 200) };
 }
-const supportLink = () => COMM.support || cleanSupport({ url: SUPPORT_URL });
+// the built-in tip jar: a Stripe Payment Link set to "customers choose what to pay". Test links show with ?suptest.
+// It must never carry client_reference_id, and the webhook skips tips too, so a tip can't turn into Supporter for life.
+const TIP_LIVE = '', TIP_TEST = '';
+const supportLink = () => COMM.support || cleanSupport({ url: supTesting ? TIP_TEST : TIP_LIVE }) || cleanSupport({ url: SUPPORT_URL });
 const COMM = { sups: new Set(), status: 'idle', support: null, reports: [], feedback: [], items: [], mine: [], me: null, owner: false, canWrite: null, names: Object.create(null), err: '', profiles: Object.create(null), body: {}, likes: {}, uses: {}, followers: {} };
 let cdb = null, cuser = null;
 async function commInit() {
@@ -14887,20 +14896,20 @@ function supporterHTML(m) {
   if (PLAY && !isSup()) return '';
   if (IOS && !isSup()) return iapHTML(m);
   const u = sbSess?.user, on = isSup(), plans = supUrl(SUP_LINKS.life, 'buy.stripe.com') ? ['life'] : ['month', 'year'].filter(k => supUrl(SUP_LINKS[k], 'buy.stripe.com')), life = SUP?.plan === 'life';
-  const perks = (done) => `<div class="sup-perks">${SUP_PERKS.map(([ic, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${done ? '✓' : ic}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
+  const perks = (done) => `<div class="sup-perks">${SUP_PERKS.map(([k, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${ic(done ? 'checkc' : k)}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
   if (on) {
     const portal = supUrl(SUP_PORTAL, 'billing.stripe.com'), bad = SUP.status === 'past_due';
-    return `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>You're a BookIt Supporter</h3><p>Thank you for keeping Community and cloud saves running.</p></div>
+    return `<div class="sup-hero"><div class="sup-star" aria-hidden="true">${ic('star')}</div><h3>You're a BookIt Supporter</h3><p>Thank you for paying for the servers that run cloud saves and Community.</p></div>
       <div class="card sup-status">
         <div class="row" style="justify-content:space-between;gap:10px"><div><div class="tiny muted">Your plan</div><b>${life ? 'For life' : STORE ? 'Active' : SUP.plan === 'year' ? 'Yearly · $24.99' : 'Monthly · $2.99'}</b></div>
         <div style="text-align:right"><div class="tiny muted">${bad ? 'Payment' : life ? 'Expires' : 'Renews'}</div><b>${bad ? 'Needs attention' : life ? 'Never' : new Date(SUP.end).toLocaleDateString()}</b></div></div>
-        ${bad ? '<div class="alert warn" style="margin-top:10px"><span class="ic">💳</span><div class="small">Your last payment didn\'t go through. Update your card to keep your perks.</div></div>' : ''}
+        ${bad ? `<div class="alert warn" style="margin-top:10px"><span class="ic">${ic('coin')}</span><div class="small">Your last payment didn't go through. Update your card to keep your perks.</div></div>` : ''}
         ${portal && !STORE && !life ? `<button class="btn block" style="margin-top:12px" data-act="supManage">${bad ? 'Update card' : 'Manage or cancel'}</button>` : ''}
       </div>
       <div class="sec">Your perks</div>${perks(true)}`;
   }
-  if (m.waiting) return `<div class="sup-hero"><div class="sup-star spin" aria-hidden="true">⭐</div><h3>Finishing up…</h3><p>Payment received. Unlocking your Supporter perks. This takes a few seconds.</p></div>`;
-  let h = `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>Become a BookIt Supporter</h3><p>Help keep Community and cloud saves running, and get a few extras.</p></div>${perks(false)}`;
+  if (m.waiting) return `<div class="sup-hero"><div class="sup-star spin" aria-hidden="true">${ic('star')}</div><h3>Finishing up…</h3><p>Payment received. Unlocking your Supporter perks. This takes a few seconds.</p></div>`;
+  let h = supHero() + `<div class="sec">Supporter pays for</div>${perks(false)}`;
   if (!plans.length) return h + `<div class="hs-off" style="margin-top:12px"><div class="small">Supporter opens soon. Check back shortly.</div></div>`;
   const pick = plans.includes(m.plan) ? m.plan : plans.includes('year') ? 'year' : plans[0];
   h += `<div class="sec">Choose a plan</div><div class="sup-plans" role="radiogroup" aria-label="Plan">${plans.map(k => { const p = SUP_PLANS[k];
@@ -14915,14 +14924,17 @@ function supporterHTML(m) {
     h += `<button class="btn pri block sup-cta" data-act="supJoin" data-id="${pick}">Continue · ${SUP_PLANS[pick].price} ${pick === 'life' ? 'one time' : SUP_PLANS[pick].per}</button>
       <div class="tiny muted" style="text-align:center;margin-top:6px">Signed in as ${esc(u.email)}</div>`;
   }
-  return h + `<div class="tiny muted" style="text-align:center;margin-top:8px">🔒 Secure checkout by Stripe. ${pick === 'life' ? 'One payment, no renewals.' : 'Cancel any time.'} Your card never touches the game.</div>`;
+  return h + `<div class="tiny muted" style="text-align:center;margin-top:8px">${ic('lock')} Secure checkout by Stripe. ${pick === 'life' ? 'One payment, no renewals.' : 'Cancel any time.'} Your card never touches the game.</div>`;
 }
+// the pitch: the game is free, and Supporter pays for the servers
+const supHero = () => `<div class="sup-hero"><div class="sup-star" aria-hidden="true">${ic('star')}</div><h3>The game is free</h3><p>Supporter pays for the servers behind cloud saves and Community. Nothing you play is locked.</p></div>
+  <div class="card sup-free"><div class="row" style="gap:8px;align-items:flex-start"><span class="ic" aria-hidden="true">${ic('checkc')}</span><div><b>Free for everyone, always</b><div class="small muted">${SUP_FREE}</div></div></div></div>`;
 // iPhone app: Supporter for life through Apple. No email needed: the purchase belongs to this game account
 // (a guest account is made if there isn't one), and Restore purchases moves it to the account signed in now.
 function iapHTML(m) {
-  const perks = SUP_PERKS.map(([ic, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${ic}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('');
-  let h = `<div class="sup-hero"><div class="sup-star" aria-hidden="true">⭐</div><h3>Become a BookIt Supporter</h3><p>Help keep Community and cloud saves running, and get a few extras.</p></div><div class="sup-perks">${perks}</div>`;
-  if (m.waiting) return `<div class="sup-hero"><div class="sup-star spin" aria-hidden="true">⭐</div><h3>Finishing up…</h3><p>Purchase complete. Unlocking your Supporter perks. This takes a few seconds.</p></div>`;
+  const perks = SUP_PERKS.map(([k, t, d]) => `<div class="sup-perk"><span class="ic" aria-hidden="true">${ic(k)}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('');
+  let h = supHero() + `<div class="sec">Supporter pays for</div><div class="sup-perks">${perks}</div>`;
+  if (m.waiting) return `<div class="sup-hero"><div class="sup-star spin" aria-hidden="true">${ic('star')}</div><h3>Finishing up…</h3><p>Purchase complete. Unlocking your Supporter perks. This takes a few seconds.</p></div>`;
   if (!NATIVE || !RC_IOS_KEY) return h + `<div class="hs-off" style="margin-top:12px"><div class="small">Supporter opens soon in the iPhone app. Check back shortly.</div></div>`;
   const price = m.iapPrice || SUP_PLANS.life.price;
   h += `<button class="btn pri block sup-cta" style="margin-top:14px" data-act="iapBuy" ${m.buying ? 'disabled' : ''}>${m.buying ? 'One moment…' : `Supporter for life · ${esc(price)} one time`}</button>
@@ -14954,11 +14966,12 @@ async function supAwait(okMsg, lateMsg) {
 function modalSupport(m) {
   setTimeout(commInit);
   const sp = supportLink(), host = sp ? new URL(sp.url).hostname.replace(/^www\./, '') : '';
-  let body = sbOn() && (!PLAY || isSup()) ? supporterHTML(m) : PLAY ? `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">If you enjoy BookIt, here's how to help it grow.</p></div>` : `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">${sp?.note ? esc(sp.note) : 'If you enjoy BookIt, a small tip helps keep new features and fixes coming.'}</p></div>`;
-  if (!STORE && sp) body += `<div class="sec">One-off tip</div>
-    <a class="btn block sup-go" href="${esc(sp.url)}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center">❤️ Tip on ${esc(host)}</a>
-    <div class="tiny muted" style="text-align:center;margin-top:6px">${sp.note && sbOn() ? esc(sp.note) + ' ' : ''}Opens ${esc(host)}. Tips don't unlock anything.</div>`;
-  else if (!STORE && !sbOn()) body += `<div class="hs-off"><div class="small">Tips aren't open yet. Check back soon.</div></div>`;
+  let body = sbOn() && (!PLAY || isSup()) ? supporterHTML(m) : PLAY ? `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">If you enjoy BookIt, here's how to help it grow.</p></div>` : `<div class="help" style="text-align:center">${logoSVG('logo-art sm')}<p class="small muted">BookIt is free to play. If you enjoy it, a small tip helps.</p></div>`;
+  // tip jar: a one-off, pay-what-you-like payment. It never unlocks anything, so it needs no account.
+  if (!STORE) body += `<div class="sec">${ic('heart')} Tip jar</div><div class="card sup-tip">
+    <div class="small" style="margin-bottom:10px">${sp?.note ? esc(sp.note) : 'Enjoying BookIt? Leave a one-off tip, any amount you like. Tips help with server bills and keep new features coming.'}</div>
+    ${sp ? `<a class="btn block sup-go" href="${esc(sp.url)}" target="_blank" rel="noopener noreferrer">${ic('heart')} Leave a tip</a>
+    <div class="tiny muted" style="text-align:center;margin-top:6px">Opens ${esc(host)}. One payment, no account needed. Tips don't unlock anything.</div>` : '<div class="hs-off"><div class="small">The tip jar opens soon. Check back shortly.</div></div>'}</div>`;
   body += `<div class="sec">Free ways to help</div><div class="list">
     ${PLAY ? '<div class="item"><div class="main"><div class="t">Rate BookIt on Google Play</div><div class="d">A review helps other wrestling fans find the game.</div></div></div>' : ''}
     ${IOS ? `<div class="item"><div class="main"><div class="t">Rate BookIt on the App Store</div><div class="d">A review helps other wrestling fans find the game.</div></div>${/^\d+$/.test(IOS_APP_ID) ? '<button class="btn sm" data-act="iosRate">Rate</button>' : ''}</div>` : ''}
@@ -19226,7 +19239,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.116';
+const VERSION = '1.9.117';
 const WHATS_NEW = [
   ['🔔 A hook every week', 'After a show, the Shows tab opens with what happened after the cameras cut: a title challenge, a brawl in the parking lot or a rematch demand. Book it in one tap or make them wait. Great shows (big events and anything 80+) get a Share button that makes a poster for your group chat. When a year ends, Your Year in review sums it up in five quick slides. The live show has a crowd meter, the calendar is now a one-week strip above tonight\'s card (Menu → Settings switches back to the month), and the first-show tutorial is three steps where you book the main event yourself.'],
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
