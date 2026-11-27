@@ -1,5 +1,5 @@
 // BookIt Supporter: Stripe calls this after a checkout and whenever a subscription changes.
-// A one-time checkout (the $7.99 Supporter for life) records plan 'life', which never expires.
+// A one-time checkout (the $7.99 Supporter for life) records plan 'life', which never expires. Tip jar payments are skipped.
 // It records who is a supporter in public.supporters. Nothing else in the game can write that table.
 //
 // Secrets (Supabase → Edge Functions → Secrets, set them yourself and never share them):
@@ -29,6 +29,11 @@ function row(s: Stripe.Subscription) {
   };
 }
 
+// Tip jar payments are one-off too, but they never unlock anything. A tip is any payment whose Payment Link has
+// metadata kind = tip, or any one-off payment below the $7.99 Supporter for life price.
+const LIFE_CENTS = 799;
+const isTip = (s: Stripe.Checkout.Session) => s.metadata?.kind === 'tip' || Number(s.amount_total ?? 0) < LIFE_CENTS;
+
 Deno.serve(async req => {
   if (req.method !== 'POST') return new Response('ok');
   const body = await req.text();
@@ -46,7 +51,7 @@ Deno.serve(async req => {
         const sub = await stripe.subscriptions.retrieve(typeof s.subscription === 'string' ? s.subscription : s.subscription.id);
         const { error } = await db.from('supporters').upsert({ uid, ...row(sub) }, { onConflict: 'uid' });
         if (error && error.code !== '23503') throw error; // 23503: no such player, so there is nothing to retry
-      } else if (s.mode === 'payment' && s.payment_status === 'paid' && UUID.test(uid)) {
+      } else if (s.mode === 'payment' && s.payment_status === 'paid' && UUID.test(uid) && !isTip(s)) {
         // Supporter for life: no subscription id, so later subscription events never touch this row
         const { error } = await db.from('supporters').upsert({
           uid, status: 'active', plan: 'life', period_end: '2999-12-31T00:00:00Z',
