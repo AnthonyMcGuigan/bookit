@@ -755,6 +755,7 @@ img.tr-big { object-fit: contain; }
 .avw > .av { width: 100% !important; height: 100% !important; }
 .avw .av-bt { position: absolute; left: 50%; bottom: -22%; width: 126%; max-width: none; height: auto; transform: translateX(-50%); pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
 .avw .av-tr { position: absolute; right: -26%; bottom: -4%; height: 72%; width: auto; max-width: none; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.lv-face > .avw:has(.av-bt) { margin-bottom: var(--btg, 0px); } /* the belt hangs below the face, so push the name under it instead of covering it */
 .avw .av-tr.solo { height: 76%; bottom: -10%; }
 .wz-belt { flex: none; width: 104px; padding: 0; border: 0; background: none; }
 .belt-th { width: 100%; height: auto; display: block; }
@@ -2307,7 +2308,7 @@ function newGame(opts) {
     { t: 'Book a "Chasing the Gold" match at the first big event', done: false, auto: 'bigEvent' }
   ];
   news('Welcome to ' + g.promo.name + '. You are the booker now.', 'office');
-  PLAYLOG.ev('new_game', opts.roster === 'empty' ? 'empty' : 'starter');
+  PLAYLOG.ev('new_game', opts.roster === 'empty' ? 'empty' : 'starter'); PLAYLOG.mile('company');
   return g;
 }
 
@@ -4952,6 +4953,7 @@ function runShow(opts = {}) {
   RB(); G.history.push(rec); while (G.history.length > 150 * nS) G.history.shift(); rbAdd(rec);
   datesShow(new Set(card.flatMap(segPeople)));
   PLAYLOG.ev('show', big ? 'big' : special ? 'special' : 'tv', overall);
+  PLAYLOG.mile('show1'); if (G.history.length >= 3) PLAYLOG.mile('show3'); if (big) PLAYLOG.mile('big1'); if (G.week >= 8) PLAYLOG.mile('wk8');
   if (special) news(spMiss ? `📉 The ${specialName()} missed the network's target of ${spT}. Your reputation took a hit (${spHit} prestige) and the network wants ${SPECIAL_GAP_MISS} weeks before another special.` : `📺 The ${specialName()} beat the network's target of ${spT}. +${spHit} prestige.`, 'show');
   news(`📺 ${rec.name}: ${starStr(overall)} (${overall}) · ${attendance.toLocaleString()} fans${MON() ? ` · ${net >= 0 ? '+' : ''}${money(net)}` : ''}`, 'show');
   const best = results.slice().sort((a, b) => b.rating - a.rating)[0];
@@ -9018,7 +9020,7 @@ const facesOn = () => meta.faces !== 'initials';
 const bodiesOn = () => facesOn() && meta.bodies !== false;
 function av(w, size, lazy) {
   const s = size || 38, h = avImg(w, s, lazy), b = avBadges(w, s);
-  return b ? `<span class="avw" style="width:${s}px;height:${s}px">${h}${b}</span>` : h;
+  return b ? `<span class="avw" style="width:${s}px;height:${s}px;--btg:${Math.round(s * .24)}px">${h}${b}</span>` : h;
 }
 function avImg(w, s, lazy) {
   const ph = safePhoto(w.photo);
@@ -13509,11 +13511,15 @@ const PLAYLOG = (() => {
       });
       addEventListener('pagehide', () => flush(true));
       timer = setInterval(() => { if (!document.hidden) flush(); }, 60000);
-      setTimeout(flush, 5000);
+      this.miles(); setTimeout(flush, 5000);
     },
     // ev: 'show', 'new_game', 'tutorial', 'crash'. Features are counted and sent once a minute.
     ev(ev, x = '', n = 0) { if (!started || !on()) return; Q.push([ev, String(x).slice(0, 40), +n || 0]); if (Q.length > 200) Q.shift(); if (ev === 'crash') flush(true); },
     feat(name) { if (!started || !on() || !name) return; feats[name] = (feats[name] || 0) + 1; },
+    // funnel steps: each is sent once per device, the first time the player gets there (see FUNNEL)
+    mile(k) { if (!started || !on()) return; let m; try { m = JSON.parse(ls.get('bookit.fun') || '{}'); } catch (e) { m = {}; } if (m[k]) return; m[k] = Date.now(); ls.set('bookit.fun', JSON.stringify(m)); this.feat('f:' + k); },
+    // milestones that come from opening the game: first open, and coming back on a later day
+    miles() { try { const m = JSON.parse(ls.get('bookit.fun') || '{}'); this.mile('open'); const f = m.open || Date.now(); if (new Date().toDateString() !== new Date(f).toDateString() && Date.now() > f) this.mile('back'); if (Date.now() - f >= 6 * 864e5) this.mile('wk1'); } catch (e) {} },
     // called on every render: counts each screen or tab the player opens (not every redraw of it)
     seen(modal, tab) {
       const m = modal && modal !== 'confirm' ? modal : '';
@@ -14957,6 +14963,7 @@ async function pstatLoad(force) {
 const PSTAT_NAMES = { community: 'Community', cview: 'Community post', creator: 'Creator page', cloud: 'Cloud saves', support: 'Support page', menu: 'Menu', help: 'How to play', feedback: 'Send feedback', privacy: 'Privacy', whatsnew: 'What\'s new', inbox: 'Inbox', wrestler: 'Wrestler profile', match: 'Match editor', 'tab:book': 'Shows tab', 'tab:roster': 'Roster tab', 'tab:office': 'Office tab', 'tab:news': 'News tab', 'tab:start': 'Start screen', 'tab:wizard': 'New company setup' };
 const pstatName = k => PSTAT_NAMES[k] || (k.startsWith('tab:') ? k.slice(4).replace(/^./, c => c.toUpperCase()) + ' tab' : k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()));
 const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
+const FUNNEL = [['open', 'Opened the game'], ['company', 'Started a company'], ['show1', 'Ran a first show'], ['show3', 'Ran 3 shows'], ['big1', 'Ran a big event'], ['wk8', 'Reached week 8'], ['back', 'Came back on another day'], ['wk1', 'Still playing a week later']];
 function pstatHTML() {
   if (!sbOn()) return '<div class="empty">Play stats are collected on the hosted copy of the game only.</div>';
   if (PSTAT.status === 'idle') setTimeout(pstatLoad);
@@ -14986,7 +14993,10 @@ function pstatHTML() {
   h += `<div class="sec">Where they play (players)</div>` + bars([['Web browser', +pl.web || 0], ['Installed from the browser', +pl.app || 0], ['Google Play app', +pl.play || 0]].filter(x => x[1] || ptot === 0), Math.max(1, ...Object.values(pl).map(Number)));
   const ver = Array.isArray(d.ver) ? d.ver : [];
   h += `<div class="sec">Versions (players)</div>` + bars(ver.map(([v, c]) => ['v' + v, +c || 0]), Math.max(1, ...ver.map(x => +x[1] || 0)));
-  const ft = (Array.isArray(d.feat) ? d.feat : []).filter(x => x[0] !== 'tab:start' && x[0] !== 'menu').slice(0, 20);
+  const fm = Object.fromEntries((Array.isArray(d.feat) ? d.feat : []).filter(x => String(x[0]).startsWith('f:')).map(x => [String(x[0]).slice(2), +x[1] || 0]));
+  const fTop = Math.max(1, fm.open || 0, ...Object.values(fm));
+  h += `<div class="sec">Where new players stop</div><div class="tiny muted" style="margin-bottom:6px">Players who reached each step, counted from v1.9.115 on.</div>` + bars(FUNNEL.map(([k, l]) => [l, fm[k] || 0, pct(fm[k] || 0, fTop)]), fTop);
+  const ft = (Array.isArray(d.feat) ? d.feat : []).filter(x => x[0] !== 'tab:start' && x[0] !== 'menu' && !String(x[0]).startsWith('f:')).slice(0, 20);
   h += `<div class="sec">Most used screens (players)</div>` + bars(ft.map(([k, p, u]) => [pstatName(String(k)), +p || 0, n(u) + ' opens']), Math.max(1, ...ft.map(x => +x[1] || 0)));
   const k = d.kinds || {}, g = x => +k[x] || 0, tutSkip = Object.keys(k).filter(x => x.startsWith('tutorial:skip')).reduce((a, x) => a + g(x), 0);
   h += `<div class="sec">Shows and new games</div><div class="card small">Shows: <b>${n(g('show:tv'))}</b> weekly, <b>${n(g('show:big'))}</b> big events, <b>${n(g('show:special'))}</b> TV specials.<br>New companies: <b>${n(g('new_game:starter'))}</b> starter roster, <b>${n(g('new_game:empty'))}</b> empty, <b>${n(g('new_game:community'))}</b> from a Community save.<br>Tutorial: <b>${n(g('tutorial:done'))}</b> finished, <b>${n(tutSkip)}</b> skipped.<br>Crashes: <b>${n(d.crashes)}</b>${d.crashes ? ' (details come in through Feedback when players send them)' : ''}.</div>`;
@@ -15503,7 +15513,7 @@ const CREATOR_ACTIONS = {
       if (typeof DecompressionStream === 'undefined') return toast('This browser can\'t open shared saves. Try an up-to-date browser.');
       let g; try { g = sanitizeGame(JSON.parse(await ungz(i.save))); } catch (e) { return toast('This save is damaged and can\'t be opened.'); }
       if (G) save();
-      g.event = null; G = g; meta.slot = n; save(); markUsed(key); PLAYLOG.ev('new_game', 'community');
+      g.event = null; G = g; meta.slot = n; save(); markUsed(key); PLAYLOG.ev('new_game', 'community'); PLAYLOG.mile('company');
       UI.modal = null; UI.tab = 'book'; UI.selWeek = G.week; UI.calMonth = UI.calWkv = null; render();
       toast(`Now playing ${G.promo.name} in slot ${n}.`);
     };
