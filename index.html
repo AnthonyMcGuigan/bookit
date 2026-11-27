@@ -1360,6 +1360,9 @@ button.rb-sh { width: 100%; background: none; border: 0; border-bottom: 1px soli
 .hs-off { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line); }
 .hs-off .small { flex: 1; }
 .sup-go { text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 6px; }
+a.btn, a.hm-row { text-decoration: none; color: var(--ink); }
+a.btn { display: flex; justify-content: center; align-items: center; gap: 6px; }
+a.btn .i { width: 18px; height: 18px; }
 .hs-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .hs-opt { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: inherit; cursor: pointer; font: inherit; }
 .hs-opt b { font-size: 15px; }
@@ -9227,7 +9230,7 @@ function homeMe() {
   return { pr, name, email: u?.email || '', signed: !!u?.email, sup: isSup(), c, xp, L, rank: RANKS[rankIx(xp)][1], pct: L >= MAX_LVL ? 100 : Math.round((xp - xpAt(L)) / (xpAt(L + 1) - xpAt(L)) * 100), color: pr?.color || '' };
 }
 const homeAv = (me, cls = '') => `<span class="hm-av ${cls}" aria-hidden="true"${me.color ? ` style="background:${me.color}"` : ''}>${me.name ? esc(me.name[0].toUpperCase()) : ic('user')}</span>`;
-const homeRow = (act, icon, t, d, o = {}) => `<button class="hm-row ${o.gold ? 'gold' : ''}" data-act="${act}"${o.id != null ? ` data-id="${esc(o.id)}"` : ''}><span class="hm-ic">${ic(icon)}</span><span class="hm-m"><b>${t}</b>${d ? `<span>${d}</span>` : ''}</span>${o.n ? `<span class="hm-n">${o.n}</span>` : ''}<span class="hm-ch" aria-hidden="true">›</span></button>`;
+const homeRow = (act, icon, t, d, o = {}) => { const tag = o.href ? 'a' : 'button'; return `<${tag} class="hm-row ${o.gold ? 'gold' : ''}" data-act="${act}"${o.href ? ` href="${esc(o.href)}" target="_blank" rel="noopener noreferrer"` : ''}${o.id != null ? ` data-id="${esc(o.id)}"` : ''}><span class="hm-ic">${ic(icon)}</span><span class="hm-m"><b>${t}</b>${d ? `<span>${d}</span>` : ''}</span>${o.n ? `<span class="hm-n">${o.n}</span>` : ''}<span class="hm-ch" aria-hidden="true">›</span></${tag}>`; };
 const homeBar = (pct, lbl) => `<span class="hm-bar" role="progressbar" aria-label="${lbl}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></span>`;
 const supShown = () => sbOn() && (!PLAY || isSup());
 function viewStart() {
@@ -9270,6 +9273,7 @@ function homeComm() {
   ${shelf}
   <div class="hm-list" style="margin-top:14px">
     ${homeRow('community', 'users', 'Browse Community', 'Shared worlds, rosters, wrestlers and creators')}
+    ${homeRow('subreddit', 'message', 'Join r/BookItSim', 'Share your shows, get booking help and suggest features on Reddit', { href: SUBREDDIT })}
     ${homeRow(lib().length ? 'library' : 'community', 'notebook', 'Wrestler library', 'Wrestlers you kept from Community, ready for any save', { n: lib().length || '' })}
     ${st === 'off' || st === 'error' ? '' : homeRow('import', 'clipboard', 'Paste a save', 'Load a world someone shared with you')}
   </div>`;
@@ -10427,6 +10431,8 @@ function helpHTML() {
   <h3>Your roster</h3>
   <p>Roster → <b>Build</b> makes a new wrestler. <b>Import / export</b> loads rosters from a code, file or spreadsheet. <b>Community</b> has rosters, wrestlers and saves from other players.</p>
    <p>In Community, <b>My profile</b> sets your name, bio and color. Your account is your claude.ai sign-in. Tap ❤️ to like a creation, tap a creator to see their page and follow them, and sort by Popular, New or Following.</p>
+  <h3>Join the community</h3>
+  <p>Post your shows, ask for booking help and suggest features on Reddit.</p>${subBtn()}
   <h3>Saving</h3>
   <p>The game saves itself in this browser. You have 3 slots. Export a save to move it to another device.</p></div>`;
 }
@@ -14842,6 +14848,7 @@ function modalCommunity(m) {
     body += `<input type="search" data-in="cQ" aria-label="Search creations" value="${esc(m.q || '')}" placeholder="Search creations" style="margin-bottom:8px">
       <div class="filters">${[['all', 'All'], ['roster', 'Rosters'], ['wrestler', 'Wrestlers'], ['world', '🌍 Worlds']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="cF" data-id="${k}">${l}</button>`).join('')}</div>
       <div class="list">${(list.map(i => i.kind === 'world' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">🌍</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>` : i.kind === 'save' ? `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}"><div class="av" style="background:var(--card2);color:var(--accent-t)">💾</div><div class="main"><div class="t">${esc(i.title)}</div><div class="d">Save · ${esc(String(i.sum.promo || ''))} · week ${+i.sum.week || 1} · ${+i.sum.roster || 0} wrestlers · by ${esc(authorName(i.author))}${counts(i)}</div></div></button>` : `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id)}">${i.kind === 'wrestler' && i.pack.wrestlers?.[0] ? av(cleanW(i.pack.wrestlers[0]) || { name: '?' }) : '<div class="av" style="background:var(--card2);color:var(--accent-t)">📦</div>'}<div class="main"><div class="t">${esc(i.title)}</div><div class="d">${kindLbl(i)} · by ${esc(authorName(i.author))}${counts(i)}</div>${i.desc ? `<div class="d" style="margin-top:2px">${esc(i.desc.slice(0, 90))}${i.desc.length > 90 ? '…' : ''}</div>` : ''}</div></button>`).join('') + rws.map(({ i, w, n }) => `<button class="item" data-act="cOpen" data-id="${esc(i.author + '|' + i.id + '|' + n)}">${av(w)}<div class="main"><div class="t"><span class="n-${w.align || 'face'}">${esc(w.name)}</span>${w.nick ? ` <span class="muted small">“${esc(w.nick)}”</span>` : ''}</div><div class="d">${esc([w.division, w.style, w.pop != null ? 'Pop ' + w.pop : ''].filter(Boolean).join(' · '))} · from ${esc(i.title)}</div></div></button>`).join('')) || `<div class="empty">${f === 'wrestler' ? 'No wrestlers shared yet. Share some from Share → Pick wrestlers.' : 'Nothing here yet. Be the first to share a roster.'}</div>`}</div>`;
+    body += `<div class="tiny muted" style="margin:14px 0 6px">Talk shop with other bookers, post your shows and suggest features.</div>${subBtn()}`;
   } else if (t === 'share' && !G) {
     body += `<div class="empty"><p><b>Start a company first.</b></p><p class="small">You share wrestlers, rosters and saves from a company you run.</p><button class="btn pri" data-act="needNew">🏟️ New company</button></div>`;
   } else if (t === 'share') {
@@ -15320,6 +15327,7 @@ const CREATOR_ACTIONS = {
   },
   // community
   community() { openModal({ type: 'community', tab: 'browse' }); },
+  subreddit() { PLAYLOG.feat('subreddit'); },
   support() { openModal({ type: 'support' }); supCheck().then(() => { if (UI.modal?.type === 'support') render(); }); iapPrice(); },
   supPlan(k) { if (SUP_PLANS[k]) { UI.modal.plan = k; render(); } },
   // checkout opens in this tab, and Stripe sends the player straight back to the game
@@ -19239,8 +19247,11 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.117';
+const VERSION = '1.9.118';
+const SUBREDDIT = 'https://www.reddit.com/r/BookItSim/'; // the player community on Reddit
+const subBtn = (cls = 'btn block') => `<a class="${cls}" href="${SUBREDDIT}" target="_blank" rel="noopener noreferrer" data-act="subreddit">${ic('message')} Join r/BookItSim on Reddit</a>`;
 const WHATS_NEW = [
+  ['💬 Join us on Reddit', 'BookIt has a home on Reddit: r/BookItSim. Post your shows, share rosters, get booking help and suggest features. Find it under Community on the start screen, in Community and in How to play.'],
   ['🔔 A hook every week', 'After a show, the Shows tab opens with what happened after the cameras cut: a title challenge, a brawl in the parking lot or a rematch demand. Book it in one tap or make them wait. Great shows (big events and anything 80+) get a Share button that makes a poster for your group chat. When a year ends, Your Year in review sums it up in five quick slides. The live show has a crowd meter, the calendar is now a one-week strip above tonight\'s card (Menu → Settings switches back to the month), and the first-show tutorial is three steps where you book the main event yourself.'],
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
