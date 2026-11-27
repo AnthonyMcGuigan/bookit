@@ -8490,9 +8490,12 @@ const BODY = {
   belt: ['When champion', 'Never'],
   shape: ['Usual', 'Straight', 'Curvy'],
   chest: ['Usual', 'Bare', 'Sports top'],
+  // a design on the legs of tights, shorts and pants; Usual is what each one had before (tights: a gold side stripe)
+  legs: ['Usual', 'Plain', 'Side stripe', 'Double stripe', 'Flames', 'Stars', 'Two-tone', 'Diamonds', 'Lightning', 'Checks', 'Racing stripe', 'Fade'],
+  legC: ['#f2c94c', '#f4f4f4', '#111111', '#c8102e', '#1f4fbf', '#1f8a3b', '#7b2cbf', '#ff6b00', '#0891b2', '#e23a8a', '#9aa3ad', '#c0c0c0'],
 };
-const BODY_LEN = 11;
-const BODY_MAX = [BODY.build, BODY.stance, BODY.bottoms, FACE.col, BODY.boots, FACE.col, BODY.pads, BODY.hands, BODY.belt, BODY.shape, BODY.chest].map(a => a.length);
+const BODY_LEN = 13;
+const BODY_MAX = [BODY.build, BODY.stance, BODY.bottoms, FACE.col, BODY.boots, FACE.col, BODY.pads, BODY.hands, BODY.belt, BODY.shape, BODY.chest, BODY.legs, BODY.legC].map(a => a.length);
 // [shoulder half-width, waist half-width, arm thickness, leg half-width, belly]
 const BODY_BUILD = [[9, 6, 3, 3, 0], [11, 7, 4, 4, 0], [13, 7, 5, 4, 0], [12, 10, 5, 5, 3], [15, 11, 6, 5, 1]];
 const bodyOK = c => typeof c === 'string' && c.length >= 9 && c.length <= BODY_LEN && /^[0-9a-z]+$/.test(c) && [...c].every((d, i) => parseInt(d, 36) < BODY_MAX[i]);
@@ -8511,7 +8514,7 @@ function bodyRandom(w, seed) {
 const bodyCode = w => (bodyOK(w.body) ? w.body : bodyRandom(w)).padEnd(BODY_LEN, '0');
 // any colour at all for a colour place of the look: w.lc = { f0: skin, f2: hair, f6: gear and paint, f8: mask, f9: mask trim, f14: headwear, b3: bottoms, b5: boots }.
 // A place with no entry uses the colour picked from the swatches in the look code, so older looks draw exactly as before.
-const LC_KEYS = ['f0', 'f2', 'f6', 'f8', 'f9', 'f14', 'f16', 'f17', 'b3', 'b5'];
+const LC_KEYS = ['f0', 'f2', 'f6', 'f8', 'f9', 'f14', 'f16', 'f17', 'b3', 'b5', 'b12'];
 const isHex = v => /^#[0-9a-f]{6}$/i.test(String(v));
 function lcClean(o) { if (!o || typeof o !== 'object') return undefined; const x = {}; for (const k of LC_KEYS) if (isHex(o[k])) x[k] = String(o[k]).toLowerCase(); return Object.keys(x).length ? x : undefined; }
 // a symbol from the game's icon pack on the wrestler: w.sym = { k: 'ic-star', at: chest | trunks | head, c: colour }
@@ -8600,7 +8603,7 @@ function symOn(sym, spots) {
 const lookKey = w => (w.lc ? JSON.stringify(w.lc) : '') + (w.sym ? JSON.stringify(w.sym) : '') + (w.tat ? JSON.stringify(w.tat) : '');
 // opts.map: the tattoo body map, spots tinted and the picked ones gold; opts.spots: just the spot of each pixel (for taps on the map)
 function bodySVG(w, holds, opts) {
-  const [BU, ST, BO, BC, BT, BTC, PD, HA, BE, SH, CH] = [...bodyCode(w)].map(d => parseInt(d, 36));
+  const [BU, ST, BO, BC, BT, BTC, PD, HA, BE, SH, CH, LD, LDC] = [...bodyCode(w)].map(d => parseInt(d, 36));
   const fc = faceCode(w), women = looksWomen(w), Wd = 48, H = 96;
   const LC = lcClean(w.lc) || {}, SY = symClean(w.sym), TT = tatClean(w.tat);
   const head = faceGrid(fc, w.align, w.color, women, { lc: LC, tat: TT }), { sk, sd, hc, hd, gc } = head.pal;
@@ -8628,9 +8631,24 @@ function bodySVG(w, holds, opts) {
   const legPaint = (y0, y1, c, extra) => { for (const s of [-1, 1]) { const x0 = legX(s) - (extra || 0); rect(x0, y0, lt * 2 + (extra || 0) * 2, y1 - y0, c); for (let y = y0; y < y1; y++) set(s < 0 ? x0 : x0 + lt * 2 + (extra || 0) * 2 - 1, y, faceShade(c, -.25)); } };
   for (let y = 52; y < 60; y++) span(y, Math.min(hipW, 24 - legX(-1) + (y > 57 ? 0 : 0)), sk);
   if (BO === 0) { for (let y = 52; y < 61; y++) span(y, y > 58 ? Math.max(hipW - 1, 4) : hipW, bc); span(52, hipW, faceShade(bc, .35)); rect(23, 58, 2, 3, bcd); }
-  if (BO === 1) { for (let y = 52; y < 60; y++) span(y, hipW, bc); legPaint(58, 86, bc); span(52, hipW, faceShade(bc, .35)); for (const s of [-1, 1]) for (let y = 56; y < 86; y++) set(s < 0 ? legX(s) : legX(s) + lt * 2 - 1, y, '#f2c94c'); }
-  if (BO === 2) { for (let y = 52; y < 60; y++) span(y, hipW + 1, bc); legPaint(58, 70, bc, 1); span(52, hipW + 1, '#111'); for (const s of [-1, 1]) rect(s < 0 ? legX(s) - 1 : legX(s) + lt * 2 - 1, 62, 1, 8, faceShade(bc, .4)); }
-  if (BO === 3) { for (let y = 52; y < 60; y++) span(y, hipW + 1, bc); legPaint(58, 86, bc, 1); span(52, hipW + 1, '#2a2a2a'); set(22, 52, '#c9a227'); for (const s of [-1, 1]) for (let y = 62; y < 86; y += 3) set(legX(s) + lt, y, bcd); }
+  if (BO === 1) { for (let y = 52; y < 60; y++) span(y, hipW, bc); legPaint(58, 86, bc); span(52, hipW, faceShade(bc, .35)); if (!LD) for (const s of [-1, 1]) for (let y = 56; y < 86; y++) set(s < 0 ? legX(s) : legX(s) + lt * 2 - 1, y, '#f2c94c'); }
+  if (BO === 2) { for (let y = 52; y < 60; y++) span(y, hipW + 1, bc); legPaint(58, 70, bc, 1); span(52, hipW + 1, '#111'); if (!LD) for (const s of [-1, 1]) rect(s < 0 ? legX(s) - 1 : legX(s) + lt * 2 - 1, 62, 1, 8, faceShade(bc, .4)); }
+  if (BO === 3) { for (let y = 52; y < 60; y++) span(y, hipW + 1, bc); legPaint(58, 86, bc, 1); span(52, hipW + 1, '#2a2a2a'); set(22, 52, '#c9a227'); if (!LD) for (const s of [-1, 1]) for (let y = 62; y < 86; y += 3) set(legX(s) + lt, y, bcd); }
+  // a design on the legs (tights, shorts, pants), in its own colour; boots and pads go over it
+  if (BO && LD > 1) { const dc = LC.b12 || BODY.legC[LDC] || '#f2c94c', dl = faceShade(dc, .35), ext = BO === 1 ? 0 : 1, ya = 58, yb = Math.min(BO === 2 ? 70 : 86, BT === 1 ? 66 : BT === 0 ? 76 : BT === 2 ? 82 : 86);
+    for (const s of [-1, 1]) { const x0 = legX(s) - ext, wd = lt * 2 + ext * 2;
+      for (let y = ya; y < yb; y++) for (let i = 0; i < wd; i++) { const x = x0 + i, o = s < 0 ? i : wd - 1 - i, f = y - ya, up = yb - y; let c = null;
+        if (LD === 2) c = o === 0 || o === 1 ? dc : null;
+        else if (LD === 3) c = o === 0 || o === 2 ? dc : null;
+        else if (LD === 4) { const h = 5 + Math.round(5 * Math.abs(Math.sin(i * 1.4 + (s < 0 ? 0 : 2)))) + (i % 2 ? 0 : 2); c = up <= h ? (up <= h / 2 ? dl : dc) : null; }
+        else if (LD === 5) { const cy = (f % 7), cx = (i + (Math.floor(f / 7) % 2) * 3) % Math.max(3, wd - 1); c = (cy === 3 && Math.abs(cx - 2) <= 1) || (cx === 2 && Math.abs(cy - 3) <= 1) ? dc : null; }
+        else if (LD === 6) c = o < Math.floor(wd / 2) ? dc : null;
+        else if (LD === 7) c = Math.abs((f % 6) - 3) + Math.abs(((i + 3) % 6) - 3) <= 1 ? dc : null;
+        else if (LD === 8) { const z = [0, 1, 2, 3, 2, 1][f % 6]; c = o === z || o === z + 1 ? dc : null; }
+        else if (LD === 9) c = up <= 8 && (Math.floor(i / 2) + Math.floor(f / 2)) % 2 ? dc : null;
+        else if (LD === 10) c = Math.abs(i - (wd - 1) / 2) < 1 ? dc : null;
+        else if (LD === 11) c = f > (yb - ya) / 2 && ((x * 3 + y) % 4 < Math.min(4, Math.floor((f - (yb - ya) / 2) / 2.5) + 1)) ? dc : null;
+        if (c && g[y]?.[x]) set(x, y, c); } } }
   // pads and boots
   if (PD === 1 || PD === 3) for (const s of [-1, 1]) { rect(legX(s) - 1, 69, lt * 2 + 2, 5, bt); rect(legX(s) - 1, 69, lt * 2 + 2, 1, btl); }
   if (BT === 0 || BT === 1) for (const s of [-1, 1]) { const x0 = legX(s); rect(x0, 76, lt * 2, 12, bt); for (let y = 77; y < 87; y += 2) set(x0 + lt, y, btl); rect(s < 0 ? x0 - 2 : x0, 87, lt * 2 + 2, 2, bt); rect(s < 0 ? x0 - 2 : x0, 89, lt * 2 + 2, 1, '#e8e8e8'); }
@@ -12920,6 +12938,7 @@ function lookMaker(d) {
         + lab('Ink') + `<div class="swatches">${TAT_INK.map(c => { const on = t.c === c; return `<button class="sw ${on ? 'on' : ''}" style="background:${c}" data-act="lkTat" data-f="c" data-id="${c}" aria-label="Ink ${c}" aria-pressed="${on}"></button>`; }).join('')}${anyColour('t', t.c, 'data-lc', !TAT_INK.includes(t.c))}</div>`; },
     build: () => lab('Build') + tiles('b', 0, BODY.build) + lab('Shape') + tiles('b', 9, BODY.shape) + lab('Stance') + tiles('b', 1, BODY.stance),
     ring: () => lab('Bottoms') + tiles('b', 2, BODY.bottoms) + lab('Bottoms colour') + sws('b', 3, FACE.col, 0, 'Bottoms')
+      + (ba(2) ? lab('Leg design') + tiles('b', 11, BODY.legs) + (ba(11) > 1 ? lab('Design colour') + sws('b', 12, BODY.legC, 0, 'Design', '#f2c94c', 'gold') : '') : '')
       + lab('Boots') + tiles('b', 4, BODY.boots) + (ba(4) === 4 ? '' : lab('Boots colour') + sws('b', 5, FACE.col, 0, 'Boots', '#1b1b20'))
       + lab('Pads') + tiles('b', 6, BODY.pads) + lab('Hands') + tiles('b', 7, BODY.hands)
       + ([0, 3, 6].includes(fa(5)) ? lab('Chest') + tiles('b', 10, BODY.chest) : '')
@@ -18766,7 +18785,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.105';
+const VERSION = '1.9.106';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
