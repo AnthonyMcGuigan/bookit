@@ -8173,11 +8173,12 @@ const FACE = {
   skin: [['#f6d3b3', '#dcaa86'], ['#eab98f', '#cc9068'], ['#d29a6a', '#b07a4c'], ['#b0774a', '#8c5a34'], ['#8a5532', '#6a3d22'], ['#5e3820', '#452814'], ['#fde6d4', '#e8c4a8'], ['#432716', '#2e190d'],
     ['#ffe3cc', '#e9c2a4'], ['#f1c27d', '#d4a05c'], ['#c68642', '#a46a2c'], ['#9c5a33', '#7c4222'], ['#6f4128', '#53301c'], ['#2f1b10', '#1f1109']],
   hair: ['Bald', 'Buzz', 'Spiky', 'Slicked', 'Mohawk', 'Long', 'Ponytail', 'Bob', 'Curly', 'Afro', 'Dreads', 'Braids', 'Bun', 'Pigtails', 'Undercut', 'Shaggy', 'Receding', 'Fauxhawk',
-    'Side part', 'Pompadour', 'Mullet', 'Man bun', 'Top knot', 'Long waves', 'Half shaved', 'Cornrows', 'Liberty spikes', 'Bowl cut', 'Wolf cut', 'Curtains'],
+    'Side part', 'Pompadour', 'Mullet', 'Man bun', 'Top knot', 'Long waves', 'Half shaved', 'Cornrows', 'Liberty spikes', 'Bowl cut', 'Wolf cut', 'Curtains',
+    'Flat top', 'Frohawk', 'Space buns', 'Bantu knots', 'Swoop bangs', 'Slicked long'],
   hairC: ['#1b1410', '#3b2414', '#6b3f1e', '#b8792f', '#e3c06a', '#d8d8d8', '#a3261f', '#2d5fd0', '#9b3fd0', '#e23a8a', '#f4ebc8', '#2fa84f', '#17a2a2', '#e46b12'],
   beard: ['None', 'Stubble', 'Goatee', 'Full', 'Moustache', 'Horseshoe', 'Chops', 'Long', 'Soul patch', 'Braided', 'Van Dyke', 'Handlebar', 'Chin strap', 'Fu Manchu', 'Boxed', 'Bushy', 'Pencil', 'Viking braids', 'Stubble & tache'],
-  face: ['Plain', 'Eye black', 'War paint', 'Half paint', 'Skull', 'Mask', 'Tribal', 'Star eye', 'Demon', 'Jester', 'Stripes', 'Open mask', 'Hood mask', 'Eye mask', 'Lightning', 'Tears', 'Split colour', 'Blackout eyes', 'Dots'],
-  gear: ['Bare', 'Singlet', 'Tee', 'Jacket', 'Hood', 'Tank top', 'Vest', 'Suit', 'Crop top', 'Robe', 'Rash guard', 'Hoodie', 'Cape', 'Leather jacket', 'Gi top'],
+  face: ['Plain', 'Eye black', 'War paint', 'Half paint', 'Skull', 'Mask', 'Tribal', 'Star eye', 'Demon', 'Jester', 'Stripes', 'Open mask', 'Hood mask', 'Eye mask', 'Lightning', 'Tears', 'Split colour', 'Blackout eyes', 'Dots', 'Winged mask', 'Flame mask', 'Lower mask', 'Star mask', 'Ninja mask'],
+  gear: ['Bare', 'Singlet', 'Tee', 'Jacket', 'Hood', 'Tank top', 'Vest', 'Suit', 'Crop top', 'Robe', 'Rash guard', 'Hoodie', 'Cape', 'Leather jacket', 'Gi top', 'Fur coat', 'Trench coat', 'Fringe jacket', 'Hooded cloak', 'Bomber'],
   col: ['', '#c8102e', '#1f4fbf', '#111111', '#f2b705', '#1f8a3b', '#7b2cbf', '#f4f4f4', '#ff6b00', '#0891b2', '#e23a8a', '#9aa3ad', '#6b3f1e'],
   extra: ['None', 'Headband', 'Shades', 'Earring', 'Nose ring', 'Glasses', 'Eye patch', 'Chain', 'Scar', 'Bandage', 'Gold tooth', 'Toothpick', 'Brow ring', 'Hoops', 'Monocle', 'Bandana mask', 'Mouthguard', 'Visor'],
   eyes: ['Normal', 'Narrow', 'Wide', 'Glare', 'Sleepy', 'Wild', 'Closed', 'Big', 'Squint', 'Side-eye', 'Cat eyes'],
@@ -8190,15 +8191,34 @@ const FACE = {
   detail: ['None', 'Freckles', 'Beauty mark', 'Dimples', 'Cheekbones', 'Wrinkles', 'Black eye', 'Bloody nose', 'Busted lip', 'Nose strip', 'Blush', 'Sweat', 'Cauliflower ear', 'Battle scars'],
   nose: ['Usual', 'Small', 'Wide', 'Long', 'Hooked', 'Broken'],
   jaw: ['Usual', 'Square', 'Wide', 'Pointed'],
+  // a pattern on the top, in its own colour (0 = a lighter or darker shade of the gear)
+  gearP: ['Plain', 'Stripes', 'Bands', 'Camo', 'Sparkle', 'Piping', 'Two-tone', 'Flames', 'Checks', 'Leopard'],
+  patC: ['', '#f2c94c', '#f4f4f4', '#111111', '#c8102e', '#1f4fbf', '#1f8a3b', '#7b2cbf', '#ff6b00', '#0891b2', '#e23a8a', '#9aa3ad'],
 };
+// tops that leave the chest showing
+const GEAR_BARE = new Set([0, 3, 6, 12, 13, 15, 17, 18]);
+// the colour a gear pattern is drawn in, and the pattern itself at a pixel of the top (yb = the bottom row of the top)
+const patCol = (gc, PC, lc) => lc || (PC ? FACE.patC[PC] : faceShade(gc, parseInt(gc.slice(1, 3), 16) * .3 + parseInt(gc.slice(3, 5), 16) * .59 + parseInt(gc.slice(5, 7), 16) * .11 > 150 ? -.35 : .4));
+function patOn(P, x, y, cx, yb, edge) {
+  const h = ((x * 73856093 ^ y * 19349663) >>> 0) % 11, cell = ((Math.floor(x / 3) * 7919 ^ Math.floor(y / 3) * 104729) >>> 0) % 3;
+  return P === 1 ? x % 4 === 0 : P === 2 ? y % 4 === 0 : P === 3 ? (cell === 0 ? 1 : cell === 1 ? 2 : 0) : P === 4 ? (h === 0 ? 3 : h === 1) : P === 5 ? edge
+    : P === 6 ? x >= cx : P === 7 ? yb - y <= 2 + Math.round(3 * Math.abs(Math.sin(x * 1.3))) : P === 8 ? (Math.floor(x / 2) + Math.floor(y / 2)) % 2 === 1 : P === 9 ? (h === 0 || h === 5 ? 2 : 0) : false;
+}
+// paint the pattern over every pixel of the top: 1 = pattern colour, 2 = a darker shade of the gear, 3 = white sparkle
+function patPaint(g, P, gc, gd, pc, cx, y0, y1, m) {
+  if (!P) return; const W0 = g[0].length, isG = (x, y) => (g[y]?.[x] === gc || g[y]?.[x] === gd) && (!m || m[y]?.[x]), pd = faceShade(pc, -.3), cut = [];
+  let yb = y0; for (let y = y0; y < y1; y++) for (let x = 0; x < W0; x++) if (isG(x, y)) yb = y; y1 = Math.min(y1, yb + 1);
+  for (let y = y0; y < y1; y++) for (let x = 0; x < W0; x++) { if (!isG(x, y)) continue; const v = patOn(P, x, y, cx, y1 - 1, !isG(x - 1, y) || !isG(x + 1, y)); if (v) cut.push([x, y, v === 2 ? faceShade(gc, -.45) : v === 3 ? '#ffffff' : g[y][x] === gd ? pd : pc]); }
+  for (const [x, y, c] of cut) g[y][x] = c;
+}
 // skin swatches shown light to dark
 const FACE_SKIN_ORDER = [6, 8, 0, 9, 1, 2, 10, 3, 11, 4, 12, 5, 7, 13];
 // facial hair colour and hair highlights: 0 = the same as the hair / no highlights, then the hair colours
 FACE.beardC = ['', ...FACE.hairC]; FACE.hlC = ['', ...FACE.hairC];
-const FACE_LEN = 22;
-const FACE_MAX = [FACE.skin, FACE.hair, FACE.hairC, FACE.beard, FACE.face, FACE.gear, FACE.col, FACE.extra, FACE.col, FACE.col, FACE.eyes, FACE.brows, FACE.mouth, FACE.hat, FACE.col, FACE.makeup, FACE.beardC, FACE.hlC, FACE.eyeC, FACE.detail, FACE.nose, FACE.jaw].map(a => a.length);
+const FACE_LEN = 24;
+const FACE_MAX = [FACE.skin, FACE.hair, FACE.hairC, FACE.beard, FACE.face, FACE.gear, FACE.col, FACE.extra, FACE.col, FACE.col, FACE.eyes, FACE.brows, FACE.mouth, FACE.hat, FACE.col, FACE.makeup, FACE.beardC, FACE.hlC, FACE.eyeC, FACE.detail, FACE.nose, FACE.jaw, FACE.gearP, FACE.patC].map(a => a.length);
 // masks that cover the hair, and every face choice that is a mask (shows the mask colour pickers)
-const FACE_HOOD = new Set([5, 12]), FACE_MASKS = new Set([5, 11, 12, 13]);
+const FACE_HOOD = new Set([5, 12, 19, 20, 22, 23]), FACE_MASKS = new Set([5, 11, 12, 13, 19, 20, 21, 22, 23]);
 const faceOK = c => typeof c === 'string' && c.length >= 10 && c.length <= FACE_LEN && /^[0-9a-z]+$/.test(c) && [...c].every((d, i) => parseInt(d, 36) < FACE_MAX[i]);
 const faceDigits = code => [...String(code).padEnd(FACE_LEN, '0')].map(d => parseInt(d, 36));
 const faceJoin = a => a.map(n => (+n || 0).toString(36)).join('');
@@ -8235,7 +8255,7 @@ const faceCode = w => (faceOK(w.look) ? w.look : faceRandom(w.id || w.name || '?
 function faceShade(hex, f) { const n = parseInt(hex.slice(1), 16), m = v => Math.max(0, Math.min(255, Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f))); return '#' + [n >> 16, n >> 8 & 255, n & 255].map(v => m(v).toString(16).padStart(2, '0')).join(''); }
 // the face drawn on a 32x32 grid of colours (null = empty); the body maker reuses the head from it
 function faceGrid(code, align, wcol, women, lx) {
-  const [S, H, HC, B, F, GR, GC, X, M1, M2, E, BR, MO, HW, HWC, MU, BCC, HL, EC, DT, NO, JW] = faceDigits(code), N = 32, L = lx?.lc || {}, SY = lx?.sym;
+  const [S, H, HC, B, F, GR, GC, X, M1, M2, E, BR, MO, HW, HWC, MU, BCC, HL, EC, DT, NO, JW, GP, GPC] = faceDigits(code), N = 32, L = lx?.lc || {}, SY = lx?.sym;
   const g = Array.from({ length: N }, () => Array(N).fill(null));
   const set = (x, y, c) => { if (x >= 0 && x < N && y >= 0 && y < N && c) g[y][x] = c; };
   const rect = (x, y, w, h, c) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) set(i, j, c); };
@@ -8248,6 +8268,7 @@ function faceGrid(code, align, wcol, women, lx) {
   const mask = FACE_HOOD.has(F), hair = !mask && H;
   const gold = '#f2c94c', goldD = '#b8860b';
   // hair that falls behind
+  if (hair === 35) for (let y = 9; y < 25; y++) for (let x = 7; x < 25; x++) set(x, y, (x * 7 + y * 3) % 5 ? hc : hd);
   if (hair === 5) { rect(8, 7, 16, 18, hc); rect(7, 12, 18, 13, hc); }
   if (hair === 8) for (let y = 4; y < 20; y++) for (let x = 6; x < 26; x++) if ((x - 16) ** 2 / 100 + (y - 12) ** 2 / 64 < 1) set(x, y, (x + y) % 3 ? hc : hd);
   if (hair === 9) ell(16, 10, 12, 9.5, hc, hd);
@@ -8265,8 +8286,8 @@ function faceGrid(code, align, wcol, women, lx) {
   for (let y = 26; y < N; y++) { set(15, y, sd); set(16, y, sd); }
   if (GR === 1) { for (let y = 25; y < N; y++) { rect(9, y, 3, 1, gc); rect(20, y, 3, 1, gc); } rect(9, 29, 14, 3, gc); }
   if (GR === 2) { for (let y = 26; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); rect(12, 26, 8, 1, sk); rect(13, 27, 6, 1, sk); }
-  if (GR === 3 || GR === 13) { for (let y = 25; y < N; y++) { rect(15 - sh(y), y, sh(y) - 2, 1, gc); rect(21, y, sh(y) - 3, 1, gc); } for (let y = 24; y < 29; y++) { set(35 - y, y, gd); set(y - 4, y, gd); } rect(3, 30, 2, 2, '#e9c46a'); rect(27, 30, 2, 2, '#e9c46a'); }
-  if (GR === 4) { for (let y = 4; y < N; y++) for (let x = 3; x < 29; x++) { const inH = (x - 16) ** 2 / 64 + (y - 13) ** 2 / 110 < 1; if (y > 24 ? Math.abs(x - 15.5) <= sh(y) + 1 : inH) set(x, y, x > 22 ? gd : gc); } rect(13, 25, 6, 7, sk); }
+  if (GR === 3 || GR === 13 || GR === 17) { for (let y = 25; y < N; y++) { rect(15 - sh(y), y, sh(y) - 2, 1, gc); rect(21, y, sh(y) - 3, 1, gc); } for (let y = 24; y < 29; y++) { set(35 - y, y, gd); set(y - 4, y, gd); } rect(3, 30, 2, 2, '#e9c46a'); rect(27, 30, 2, 2, '#e9c46a'); }
+  if (GR === 4 || GR === 18) { for (let y = 4; y < N; y++) for (let x = 3; x < 29; x++) { const inH = (x - 16) ** 2 / 64 + (y - 13) ** 2 / 110 < 1; if (y > 24 ? Math.abs(x - 15.5) <= sh(y) + 1 : inH) set(x, y, x > 22 ? gd : gc); } rect(13, 25, 6, 7, sk); }
   if (GR === 5) { for (let y = 26; y < N; y++) rect(10, y, 12, 1, gc); rect(10, 24, 2, 2, gc); rect(20, 24, 2, 2, gc); rect(13, 26, 6, 1, sk); rect(14, 27, 4, 1, sk); rect(19, 26, 3, 6, gd); }
   if (GR === 6) { for (let y = 25; y < N; y++) { rect(9, y, 5, 1, gc); rect(18, y, 5, 1, gc); } for (let y = 25; y < N; y++) { set(13, y, gd); set(18, y, gd); } for (const [x, y] of [[10, 27], [10, 30], [21, 27], [21, 30]]) set(x, y, '#dcdcdc'); }
   if (GR === 7) { for (let y = 24; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); for (let y = 24; y < N; y++) { const w = Math.max(1, 6 - (y - 24)); rect(16 - w, y, w * 2, 1, y < 31 ? '#f4f4f4' : gc); } for (let y = 24; y < 30; y++) { set(15 - Math.max(1, 6 - (y - 24)), y, gd); set(16 + Math.max(1, 6 - (y - 24)) - 1, y, gd); } const tie = GC === 1 || (!GC && /^#c/i.test(gc)) ? '#1f4fbf' : '#c8102e'; rect(15, 25, 2, 1, tie); rect(15, 26, 2, 4, tie); set(15, 30, faceShade(tie, -.3)); set(16, 30, faceShade(tie, -.3)); }
@@ -8277,6 +8298,14 @@ function faceGrid(code, align, wcol, women, lx) {
   if (GR === 12) { for (let y = 24; y < N; y++) { const e = 15 - sh(y); rect(e, y, 3, 1, gc); rect(14 + sh(y) - 1, y, 3, 1, gd); } rect(7, 20, 3, 6, gc); rect(22, 20, 3, 6, gd); set(7, 19, gc); set(24, 19, gd); rect(11, 26, 10, 1, gold); set(11, 26, goldD); set(20, 26, goldD); }
   if (GR === 13) { for (const [x, y] of [[5, 28], [7, 27], [9, 26], [22, 26], [24, 27], [26, 28]]) set(x, y, '#dcdcdc'); for (let y = 27; y < N; y++) set(21, y, '#b8b8b8'); }
   if (GR === 14) { for (let y = 25; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); for (let y = 25; y < N; y++) { const w = Math.max(0, 5 - (y - 25)); if (w) rect(16 - w, y, w * 2, 1, sk); set(15 - w - 1, y, gd); set(16 + w, y, gd); set(15 - w - 2, y, gd); } }
+  const fur = '#ece2cc', furD = '#c9bb9c';
+  if (GR === 15) { for (let y = 25; y < N; y++) { rect(15 - sh(y), y, sh(y) - 3, 1, gc); rect(19, y, sh(y) - 2, 1, gd); } for (let y = 23; y < 29; y++) { rect(6 + (y - 23), y, 5, 1, (y + 1) % 2 ? fur : furD); rect(21 - (y - 23), y, 5, 1, y % 2 ? fur : furD); } }
+  if (GR === 16) { for (let y = 25; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); for (let y = 25; y < N; y++) { const w = Math.max(1, 4 - (y - 25)); rect(16 - w, y, w * 2, 1, y < 29 ? sk : gd); rect(16 - w - 2, y, 2, 1, faceShade(gc, .25)); rect(16 + w, y, 2, 1, faceShade(gc, .15)); } }
+  if (GR === 17) for (let x = 1; x < 31; x++) if (g[29][x] === gc || g[29][x] === gd) { if (x % 2) { set(x, 29, faceShade(gc, .4)); set(x, 30, faceShade(gc, .4)); } }
+  if (GR === 18) { const isG = (x, y) => g[y]?.[x] === gc || g[y]?.[x] === gd, tr = []; for (let y = 6; y < N; y++) for (let x = 0; x < N; x++) if (isG(x, y) && (!isG(x - 1, y) || !isG(x + 1, y) || !isG(x, y - 1))) tr.push([x, y]); for (const [x, y] of tr) set(x, y, gold); }
+  if (GR === 19) { for (let y = 25; y < N; y++) rect(15 - sh(y), y, (sh(y) + 1) * 2, 1, gc); rect(11, 24, 10, 2, '#2a2a2e'); for (let x = 11; x < 21; x += 2) set(x, 25, '#3c3c42'); for (let y = 26; y < N; y++) set(16, y, '#b8b8b8'); }
+  // a pattern over the top
+  patPaint(g, GP, gc, gd, patCol(gc, GPC, L.f23), 16, 23, N);
   // head, ears
   const tap = y => JW === 1 ? (y > 21 ? 1 : 0) : JW === 2 ? (y > 20 ? y - 20 : 0) - (y >= 17 && y <= 20 ? 1 : 0) : JW === 3 ? (y > 17 ? Math.min(5, y - 17) : 0) : y > 19 ? y - 18 : 0;
   for (let y = 6; y < 23; y++) { const i = y < 8 ? 2 : tap(y); rect(9 + i, y, 14 - i * 2, 1, sk); }
@@ -8412,13 +8441,18 @@ function faceGrid(code, align, wcol, women, lx) {
   }
   // masks
   const m1 = L.f8 || FACE.col[M1] || '#f2b705', m2 = L.f9 || FACE.col[M2] || '#c8102e', md = faceShade(m1, -.3);
-  if (F === 5) {
+  if (F === 5 || F === 19 || F === 20 || F === 22) {
     for (let y = 5; y < 23; y++) for (let x = 7; x < 25; x++) if (isSk(x, y) || (y < 8 && x > 9 && x < 22)) set(x, y, x > 20 ? md : m1);
     for (let y = 5; y < 20; y++) { set(15, y, m2); set(16, y, m2); }
     rect(10, 13, 5, 4, m2); rect(17, 13, 5, 4, m2); eyes();
     for (const [x, y] of [[9, 11], [10, 10], [11, 11], [20, 11], [21, 10], [22, 11]]) set(x, y, m2);
     rect(13, 18, 6, 3, m2); rect(14, 19, 4, 1, lip); rect(14, 20, 4, 1, sk);
   }
+  if (F === 19) for (const [x, y] of [[8, 12], [7, 11], [6, 10], [7, 10], [8, 11], [6, 9], [23, 12], [24, 11], [25, 10], [24, 10], [23, 11], [25, 9]]) set(x, y, m2);
+  if (F === 20) for (const [o, h] of [[0, 10], [1, 14], [2, 11], [3, 7], [4, 4]]) for (const s2 of [-1, 1]) { const x = s2 < 0 ? 8 + o : 23 - o; for (let k = 0; k < h; k++) { const y = 22 - k; if (g[y][x] && y > 4) set(x, y, k >= h - 2 ? '#ffb02e' : k >= h - 4 ? '#ff6b00' : m2); } }
+  if (F === 22) { for (const [x, y] of [[19, 9], [19, 10], [19, 11], [19, 17], [19, 18], [19, 19], [14, 14], [15, 14], [16, 14], [22, 14], [23, 14], [24, 14], [16, 11], [22, 11], [16, 17], [22, 17]]) set(x, y, m2); for (let y = 5; y < 13; y++) { set(15, y, m1); set(16, y, m1); } }
+  if (F === 21) { for (let y = 16; y < 23; y++) for (let x = 8; x < 24; x++) if (isSk(x, y) || g[y][x] === lip) set(x, y, x > 20 ? md : m1); rect(8, 16, 16, 1, m2); for (let x = 12; x < 20; x += 2) set(x, 20, md); }
+  if (F === 23) { for (let y = 3; y < 24; y++) for (let x = 7; x < 25; x++) if (isSk(x, y) || (y < 8 && x > 8 && x < 23) || g[y][x] === lip) set(x, y, x > 20 ? md : m1); rect(10, 3, 12, 2, m1); rect(9, 5, 14, 1, m1); rect(10, 13, 12, 3, sk); eyes(); rect(9, 12, 14, 1, m2); rect(9, 16, 14, 1, m2); set(22, 17, m2); set(23, 18, m2); }
   if (F === 11) {
     for (let y = 5; y < 18; y++) for (let x = 7; x < 25; x++) if (isSk(x, y) || (y < 8 && x > 9 && x < 22 && !g[y][x])) set(x, y, x > 20 ? md : m1);
     for (let y = 5; y < 16; y++) { set(15, y, m2); set(16, y, m2); }
@@ -8470,6 +8504,12 @@ function faceGrid(code, align, wcol, women, lx) {
   if (hair === 27) { top(4, 11, 8, 24); rect(9, 10, 14, 1, hd); top(11, 14, 8, 10); top(11, 14, 22, 24); rect(11, 5, 9, 1, hl); }
   if (hair === 28) { top(4, 10, 8, 24); for (let x = 9; x < 23; x++) if (x % 2) set(x, 10, tx(x, 10)); for (let x = 9; x < 23; x += 3) set(x, 11, hd); for (const x of [7, 24]) for (let y = 10; y < 20; y++) if ((x + y) % 3) set(x, y, tx(x, y)); }
   if (hair === 29) { top(4, 9, 9, 23); rect(15, 4, 2, 5, hd); for (let y = 9; y < 12; y++) { const k = y - 9; top(y, y + 1, 9, 14 - k * 2); top(y, y + 1, 18 + k * 2, 23); } top(12, 16, 8, 10); top(12, 16, 22, 24); }
+  if (hair === 30) { top(1, 9, 9, 23); rect(9, 1, 14, 1, hl); top(9, 11, 8, 10); top(9, 11, 22, 24); }
+  if (hair === 31) { for (let y = 5; y < 10; y++) for (let x = 9; x < 23; x++) if (x < 13 || x > 18) set(x, y, shave); ell(16, 4, 4.2, 4.6, hc, hd); rect(14, 1, 3, 1, hl); }
+  if (hair === 32) { top(4, 9, 9, 23); top(8, 11, 8, 10); top(8, 11, 22, 24); ell(10, 3, 3, 3, hc, hd); ell(22, 3, 3, 3, hc, hd); rect(9, 1, 2, 1, hl); rect(21, 1, 2, 1, hl); }
+  if (hair === 33) { for (let y = 5; y < 9; y++) for (let x = 9; x < 23; x++) set(x, y, (x + y) % 4 ? hc : faceShade(sk, -.3)); for (const [cx, cy] of [[10, 5], [14, 3], [18, 3], [22, 5], [16, 6]]) ell(cx, cy, 1.8, 1.8, hc, hd); }
+  if (hair === 34) { top(4, 9, 9, 23); top(9, 13, 8, 10); top(9, 13, 22, 24); for (let y = 9; y < 12; y++) for (let x = 10; x < 22 - (y - 9) * 4; x++) set(x, y, tx(x, y)); rect(11, 5, 8, 1, hl); }
+  if (hair === 35) { top(4, 9, 9, 23); top(9, 11, 8, 10); top(9, 11, 22, 24); rect(11, 6, 8, 1, hl); }
   if (!mask && !H) { rect(12, 7, 2, 1, faceShade(sk, .35)); set(11, 8, faceShade(sk, .35)); }
   // headwear
   const hw = L.f14 || (HWC ? FACE.col[HWC] : safeColor(wcol) || '#c8102e'), hwd = faceShade(hw, -.3), HWX = HWC || L.f14;
@@ -8592,7 +8632,7 @@ function bodyRandom(w, seed) {
 const bodyCode = w => (bodyOK(w.body) ? w.body : bodyRandom(w)).padEnd(BODY_LEN, '0');
 // any colour at all for a colour place of the look: w.lc = { f0: skin, f2: hair, f6: gear and paint, f8: mask, f9: mask trim, f14: headwear, b3: bottoms, b5: boots }.
 // A place with no entry uses the colour picked from the swatches in the look code, so older looks draw exactly as before.
-const LC_KEYS = ['f0', 'f2', 'f6', 'f8', 'f9', 'f14', 'f16', 'f17', 'f18', 'b3', 'b5', 'b12', 'b16', 'b18'];
+const LC_KEYS = ['f0', 'f2', 'f6', 'f8', 'f9', 'f14', 'f16', 'f17', 'f18', 'f23', 'b3', 'b5', 'b12', 'b16', 'b18'];
 const isHex = v => /^#[0-9a-f]{6}$/i.test(String(v));
 function lcClean(o) { if (!o || typeof o !== 'object') return undefined; const x = {}; for (const k of LC_KEYS) if (isHex(o[k])) x[k] = String(o[k]).toLowerCase(); return Object.keys(x).length ? x : undefined; }
 // a symbol from the game's icon pack on the wrestler: w.sym = { k: 'ic-star', at: chest | trunks | head, c: colour }
@@ -8693,7 +8733,7 @@ function bodySVG(w, holds, opts) {
   const span = (y, hw, c) => rect(24 - hw, y, hw * 2, 1, c);
   const bc = LC.b3 || (BC ? FACE.col[BC] : safeColor(w.color) || '#c8102e'), bcd = faceShade(bc, -.3);
   const bt = LC.b5 || (BTC ? FACE.col[BTC] : '#1b1b20'), btd = faceShade(bt, -.3), btl = faceShade(bt, .45);
-  const gd = faceShade(gc, -.3);
+  const gd = faceShade(gc, -.3), fur = '#ece2cc', furD = '#c9bb9c';
   let [sw, ww, at, lt, belly] = BODY_BUILD[BU];
   const curvy = SH ? SH === 2 : women;
   if (curvy) sw = Math.max(8, sw - 1);
@@ -8753,7 +8793,7 @@ function bodySVG(w, holds, opts) {
   // torso
   for (let y = 30; y < 52; y++) span(y, tw(y), sk);
   for (let y = 32; y < 52; y++) set(23 + tw(y), y, sd);
-  const bareChest = [0, 3, 6, 12, 13].includes(GR) && !top;
+  const bareChest = GEAR_BARE.has(GR) && !top;
   if (bareChest && DF) {
     for (let x = 24 - sw + 3; x < 22; x++) set(x, 40, sd); for (let x = 26; x < 24 + sw - 3; x++) set(x, 40, sd); set(23, 39, sd); set(24, 39, sd);
     if (DF >= 2) { for (const y of DF === 3 ? [43, 46, 49] : [44, 47]) { set(21, y, sd); set(22, y, sd); set(25, y, sd); set(26, y, sd); } for (let y = 41; y < 51; y++) { set(23, y, sd); set(24, y, sd); } }
@@ -8769,14 +8809,15 @@ function bodySVG(w, holds, opts) {
   // neck, then the head from the pixel face (and their hair and beard below the chin)
   rect(19, 26, 10, 6, sk); rect(27, 26, 2, 6, sd);
   for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) { const c = head[y][x]; if (!c) continue; if (y <= 22 || c === hc || c === hd) set(x + 8, y + 6, c); }
-  // upper gear on the torso
+  // upper gear on the torso (gm marks its pixels, for a pattern)
+  const preG = g.map(r => r.slice()), gm = Array.from({ length: H }, () => Array(Wd).fill(false));
   const fullTop = c => { for (let y = 30; y < 53; y++) span(y, tw(y), c); for (let y = 32; y < 53; y++) set(23 + tw(y), y, faceShade(c, -.3)); };
   let sleeve = 0;
   if (GR === 0 && top) { for (let y = 36; y < 44; y++) span(y, tw(y), gc); rect(24 - sw + 3, 30, 2, 6, gc); rect(22 + sw - 3, 30, 2, 6, gc); span(43, tw(43), gd); }
   if (GR === 1) { for (let y = 38; y < 61; y++) span(y, y > 51 ? hipW : tw(y), gc); rect(24 - sw + 3, 30, 3, 8, gc); rect(21 + sw - 3, 30, 3, 8, gc); for (const s of [-1, 1]) rect(s < 0 ? 24 - hipW : 24 + hipW - 2, 38, 2, 22, gd); }
   if (GR === 2) { fullTop(gc); rect(21, 30, 6, 2, sk); rect(22, 32, 4, 1, sk); sleeve = .35; }
   if (GR === 12) { for (let y = 30; y < 86; y++) { const hw = (y < 52 ? tw(y) : hipW) + 3 + Math.floor((y - 30) / 7); for (let x = 24 - hw; x < 24 + hw; x++) if (!g[y][x]) set(x, y, x > 24 + hw - 4 ? gd : gc); } rect(17, 26, 2, 6, gc); rect(29, 26, 2, 6, gd); set(20, 31, '#f2c94c'); set(27, 31, '#f2c94c'); rect(21, 31, 6, 1, '#f2c94c'); }
-  if (GR === 3 || GR === 13) { for (let y = 30; y < 53; y++) { const hw = tw(y); rect(24 - hw, y, hw - 3, 1, gc); rect(27, y, hw - 3, 1, gc); set(20, y, gd); set(27, y, gd); } rect(18, 30, 3, 4, gd); rect(27, 30, 3, 4, gd); sleeve = 1; }
+  if (GR === 3 || GR === 13 || GR === 17) { for (let y = 30; y < 53; y++) { const hw = tw(y); rect(24 - hw, y, hw - 3, 1, gc); rect(27, y, hw - 3, 1, gc); set(20, y, gd); set(27, y, gd); } rect(18, 30, 3, 4, gd); rect(27, 30, 3, 4, gd); sleeve = 1; }
   if (GR === 4) { fullTop(gc); rect(20, 44, 8, 5, gd); rect(21, 45, 6, 3, gc); rect(23, 30, 2, 8, gd); sleeve = 1; }
   if (GR === 5) { for (let y = 32; y < 53; y++) span(y, tw(y) - 2, gc); rect(24 - sw + 4, 30, 2, 3, gc); rect(22 + sw - 4, 30, 2, 3, gc); rect(21, 32, 6, 2, sk); }
   if (GR === 6) { for (let y = 30; y < 51; y++) { const hw = tw(y); rect(24 - hw, y, hw - 4, 1, gc); rect(28, y, hw - 4, 1, gc); } for (const [x, y] of [[18, 36], [18, 42], [29, 36], [29, 42]]) set(x, y, '#dcdcdc'); }
@@ -8786,7 +8827,14 @@ function bodySVG(w, holds, opts) {
   if (GR === 10) { fullTop(gc); rect(21, 30, 6, 1, gd); for (let y = 32; y < 52; y++) { set(24 - tw(y) + 1, y, faceShade(gc, .4)); set(22 + tw(y), y, faceShade(gc, .4)); } sleeve = 1; }
   if (GR === 11) { fullTop(gc); rect(19, 28, 10, 3, gd); rect(21, 31, 6, 1, sk); for (let y = 31; y < 37; y++) { set(22, y, '#f4f4f4'); set(25, y, '#f4f4f4'); } rect(19, 45, 10, 5, gd); rect(20, 46, 8, 3, gc); sleeve = 1; }
   if (GR === 14) { fullTop(gc); for (let y = 30; y < 42; y++) { const hw = Math.max(0, 6 - Math.floor((y - 30) / 2)); if (hw) span(y, hw, sk); set(23 - hw, y, gd); set(24 + hw, y, gd); set(22 - hw, y, gd); } for (const y of [49, 50]) span(y, tw(y), '#151515'); rect(22, 51, 1, 4, '#151515'); rect(25, 51, 1, 4, '#151515'); sleeve = .5; }
+  if (GR === 15 || GR === 18) { for (let y = 30; y < (GR === 15 ? 72 : 84); y++) { const hw = (y < 52 ? tw(y) : hipW) + 1 + (GR === 18 ? Math.floor((y - 30) / 8) : 1); rect(24 - hw, y, hw - 3, 1, gc); rect(27, y, hw - 3, 1, gd); } sleeve = 1;
+    if (GR === 15) { for (let y = 27; y < 34; y++) { rect(17 + (y - 27) % 2, y, 4, 1, y % 2 ? fur : furD); rect(27 - (y - 27) % 2, y, 4, 1, y % 2 ? furD : fur); } }
+    else { for (let y = 30; y < 84; y++) for (const x of [20, 27]) if (g[y][x] === gc || g[y][x] === gd) set(x, y, '#f2c94c'); rect(19, 26, 10, 4, gd); } }
+  if (GR === 16) { for (let y = 30; y < 78; y++) { const hw = y < 52 ? tw(y) + 1 : hipW + 2 + Math.floor((y - 52) / 8); rect(24 - hw, y, hw * 2, 1, y > 52 && (y - 52) % 9 === 0 ? gd : gc); set(23 + hw, y, gd); } for (let y = 30; y < 38; y++) { const w = Math.max(1, 5 - Math.floor((y - 30) / 2)); span(y, w, y < 34 ? sk : gd); set(23 - w, y, faceShade(gc, .25)); set(24 + w, y, faceShade(gc, .25)); } span(48, tw(48) + 1, gd); span(49, tw(49) + 1, gd); rect(22, 48, 4, 2, '#c9a227'); sleeve = 1; }
+  if (GR === 17) { for (let y = 34; y < 37; y++) for (let x = 0; x < Wd; x++) if (g[y][x] === gc && x % 2 === y % 2) set(x, y, faceShade(gc, .4)); for (let y = 37; y < 40; y++) for (let x = 0; x < Wd; x++) if ((g[y][x] === gc || g[y][x] === gd) && x % 2) set(x, y, faceShade(gc, .4)); }
+  if (GR === 19) { for (let y = 30; y < 50; y++) span(y, tw(y) + 1, gc); for (let y = 32; y < 50; y++) set(23 + tw(y) + 1, y, gd); rect(19, 28, 10, 3, '#2a2a2e'); span(48, tw(48) + 1, '#2a2a2e'); span(49, tw(49) + 1, '#3c3c42'); for (let y = 31; y < 48; y++) set(24, y, '#b8b8b8'); sleeve = 1; }
   if (GR === 9) { const gl = faceShade(gc, .4); for (let y = 30; y < 82; y++) { const hw = y < 52 ? tw(y) + 1 : hipW + 2 + Math.floor((y - 52) / 6); rect(24 - hw, y, hw - 4, 1, (y + 24 - hw) % 5 ? gc : gl); rect(28, y, hw - 4, 1, (y + 28) % 5 ? gc : gl); } for (let y = 28; y < 36; y++) { rect(24 - sw - 1 + (y - 28) / 2, y, 4, 1, '#f4f4f4'); rect(20 + sw - (y - 28) / 2, y, 4, 1, '#f4f4f4'); } sleeve = 1; }
+  for (let y = 0; y < H; y++) for (let x = 0; x < Wd; x++) if (g[y][x] !== preG[y][x] && (g[y][x] === gc || g[y][x] === gd)) gm[y][x] = true;
   // arms: shoulder to elbow to hand, with a fist; sleeves recolour the arm up to their length
   const L = [24 - sw + 1, 33], R = [23 + sw - 1, 33];
   const lim = (a, b) => [Math.max(2, Math.min(45, a)), Math.max(1, b)];
@@ -8810,7 +8858,7 @@ function bodySVG(w, holds, opts) {
   const drawArm = ([s, e, hnd]) => {
     const r = at / 2, segs = [[s, e, 0], [e, hnd, .5]];
     armTag = s === L ? 'larm' : 'rarm';
-    for (const [a, b, t0] of segs) { armSeg = t0 ? 'fo' : 'up'; const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2) || 1; for (let k = 0; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, tt = t0 + t / 2; const ag = tt >= sleeve && armGear(tt, s === L); const c = tt < sleeve ? gc : ag ? ag[0] : sk, cd = tt < sleeve ? gd : ag ? ag[1] : sd; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r + .5) set(x + i, y + j, j >= r - .5 || i >= r - .5 ? cd : c); } }
+    for (const [a, b, t0] of segs) { armSeg = t0 ? 'fo' : 'up'; const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2) || 1; for (let k = 0; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, tt = t0 + t / 2; const ag = tt >= sleeve && armGear(tt, s === L); const c = tt < sleeve ? gc : ag ? ag[0] : sk, cd = tt < sleeve ? gd : ag ? ag[1] : sd; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r + .5) { set(x + i, y + j, j >= r - .5 || i >= r - .5 ? cd : c); const X = Math.round(x + i), Y = Math.round(y + j); if (gm[Y] && X >= 0 && X < Wd) gm[Y][X] = tt < sleeve; } } }
     armTag = null;
     const [hx, hy] = hnd, f = Math.max(2, Math.round(at * .8));
     const hc2 = HA === 2 || HA === 4 ? '#1b1b20' : HA === 5 ? '#f1ece0' : sk;
@@ -8823,6 +8871,8 @@ function bodySVG(w, holds, opts) {
   };
   // crossed arms: the left arm goes in front
   if (ST === 3) { drawArm(arms[1]); drawArm(arms[0]); } else arms.forEach(drawArm);
+  // a pattern over the top (and its sleeves)
+  { const GP = parseInt(fc[22], 36), GPC = parseInt(fc[23], 36); patPaint(g, GP, gc, gd, patCol(gc, GPC, LC.f23), 24, 29, 86, gm); }
   // body hair on bare skin: the chest and a trail down the stomach, forearms too when hairy
   if (BH) { const hr = '#' + [1, 3, 5].map(o => Math.round(parseInt(sk.slice(o, o + 2), 16) * .35 + parseInt(hc.slice(o, o + 2), 16) * .65).toString(16).padStart(2, '0')).join(''), isS = (x, y) => g[y][x] === sk || g[y][x] === sd;
     for (let y = 33; y < 88; y++) for (let x = 0; x < Wd; x++) { if (!isS(x, y)) continue; const a = mk2[y][x];
@@ -13036,7 +13086,8 @@ function lookMaker(d) {
     paint: () => lab('Face') + tiles('f', 4, FACE.face) + (FACE_MASKS.has(F) ? lab('Mask colour') + sws('f', 8, FACE.col, 1, 'Mask') + lab('Mask trim') + sws('f', 9, FACE.col, 1, 'Trim') : '')
       + lab('Paint colour <span class="muted">· also the gear</span>') + sws('f', 6, FACE.col, 0, 'Paint'),
     gear: () => lab('Headwear') + tiles('f', 13, FACE.hat) + (fa(13) ? lab('Headwear colour') + sws('f', 14, FACE.col, 0, 'Headwear') : '')
-      + lab('Top') + tiles('f', 5, FACE.gear) + lab('Gear colour') + sws('f', 6, FACE.col, 0, 'Gear') + lab('Extra') + tiles('f', 7, FACE.extra),
+      + lab('Top') + tiles('f', 5, FACE.gear) + lab('Gear colour') + sws('f', 6, FACE.col, 0, 'Gear')
+      + (fa(5) ? lab('Pattern <span class="muted">· on the top</span>') + tiles('f', 22, FACE.gearP) + (fa(22) ? lab('Pattern colour') + sws('f', 23, FACE.patC, 0, 'Pattern', patCol(L.f6 || (fa(6) ? FACE.col[fa(6)] : safeColor(d.color) || '#c8102e'), 0), 'a shade of the gear') : '') : '') + lab('Extra') + tiles('f', 7, FACE.extra),
     sym: () => `<p class="small muted" style="margin-top:8px">Any icon from the game, on their gear or their face, like a belt's centre piece.</p>`
       + (SY ? lab('Where it goes') + `<div class="seg-ctl">${SYM_AT.filter(([a]) => body || a === 'head' || a === 'chest').map(([a, l]) => `<button class="${SY.at === a ? 'on' : ''}" data-act="lkSym" data-f="at" data-id="${a}" aria-pressed="${SY.at === a}">${l}</button>`).join('')}</div>`
         + lab(SY.at === 'boots' ? 'Which boot' : 'Side') + `<div class="seg-ctl">${SYM_X.map(([a, l]) => { const on = (SY.x || 'c') === a; return `<button class="${on ? 'on' : ''}" data-act="lkSym" data-f="x" data-id="${a}" aria-pressed="${on}">${SY.at === 'boots' && a === 'c' ? 'Both' : l}</button>`; }).join('')}</div>`
@@ -13066,7 +13117,7 @@ function lookMaker(d) {
         + lab('Boot design') + tiles('b', 17, BODY.bootD) + (ba(17) ? lab('Boot design colour') + sws('b', 18, BODY.legC, 0, 'Boot design', '#f2c94c', 'gold') : ''))
       + lab('Pads') + tiles('b', 6, BODY.pads) + lab('Hands') + tiles('b', 7, BODY.hands)
       + lab('Arm gear') + tiles('b', 15, BODY.arm) + (ba(15) && ba(15) < 5 ? lab('Arm gear colour') + sws('b', 16, FACE.col, 0, 'Arm gear') : '')
-      + ([0, 3, 6, 12, 13].includes(fa(5)) ? lab('Chest') + tiles('b', 10, BODY.chest) : '')
+      + (GEAR_BARE.has(fa(5)) ? lab('Chest') + tiles('b', 10, BODY.chest) : '')
       + lab('Title belt') + `<div class="seg-ctl">${BODY.belt.map((l, j) => `<button class="${ba(8) === j ? 'on' : ''}" data-act="lkSet" data-f="b8" data-id="${j}" aria-pressed="${ba(8) === j}">${l}</button>`).join('')}</div>`
       + '<p class="tiny muted" style="margin-top:8px">The top half wears the gear from the Gear tab.</p>',
   };
@@ -18910,7 +18961,7 @@ const MUSIC = (() => {
 document.addEventListener('visibilitychange', () => MUSIC.sync());
 
 // ---------- crash safety ----------
-const VERSION = '1.9.110';
+const VERSION = '1.9.111';
 const WHATS_NEW = [
   ['🎨 Sharp symbols and tattoos', 'Symbols on a wrestler are now drawn as the real game icons, sharp instead of pixels. Put one on the forehead, chest, trunks or boots, on the left, centre or right (or one boot or both), small, medium or large, in any colour. New Tattoos tab: tribal, full ink, bands or script on the face, neck, chest, stomach, arms or legs, in any ink colour. Tattoos sit on bare skin, so gear covers them.'],
   ['👑 Ageing, farewells and the Hall of Fame', 'Every wrestler now has a peak age: high flyers slow down first, talkers last, and the profile shows where they are (Rising, Prime, Veteran, Twilight). Older wrestlers announce their retirement a few weeks ahead and go on a farewell tour, with their last match at a big event and a send-off moment after it. You get one try at talking them into one more year. There is a new Career Match too: the loser retires. Every year the committee nominates retired legends for the Hall of Fame. Pick the class in the Record book and they\'re inducted at the next big event. Retired legends may also call wanting one more run. Shared worlds carry their legends and Hall of Fame.'],
